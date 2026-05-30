@@ -1,0 +1,297 @@
+﻿@* @model EasyBill.Models.Entity.Sales
+
+@{
+    // यह लेआउट को कॉल करेगा जो हमने ऊपर फिक्स किया है
+    Layout = "~/Views/Shared/_InvoiceMasterLayout.cshtml";
+    decimal balance = Model.TotalPayable - Model.PaidAmount;
+}
+
+<style>
+    /* /* #region Child View Styling (Transparent for Watermark) */
+    .invoice-wrapper {
+        position: relative;
+        z-index: 10;
+        line-height: 1.5;
+    }
+
+    .mnc-info-grid {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        gap: 20px;
+    }
+
+    .info-block {
+        flex: 1;
+    }
+
+        .info-block.right-align {
+            text-align: right;
+        }
+
+    .info-label {
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--inv-primary);
+        border-bottom: 1px solid var(--inv-primary);
+        padding-bottom: 4px;
+        margin-bottom: 8px;
+        display: inline-block;
+    }
+
+    .info-value-bold {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--inv-text);
+        margin-bottom: 4px;
+    }
+
+    .info-text {
+        font-size: 11px;
+        color: var(--inv-text);
+        margin-bottom: 3px;
+    }
+
+    .mnc-table-container {
+        margin-bottom: 30px;
+    }
+
+    /* Important: Table background MUST be transparent */
+    .mnc-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: transparent !important;
+    }
+
+        .mnc-table th {
+            background-color: transparent !important;
+            color: var(--inv-primary) !important;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 10px 8px;
+            letter-spacing: 0.5px;
+            border-top: 2px solid var(--inv-primary);
+            border-bottom: 2px solid var(--inv-primary);
+        }
+
+        .mnc-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #cbd5e1;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--inv-text);
+            vertical-align: top;
+            background: transparent !important; /* Forces transparency for watermark */
+        }
+
+    .item-primary-text {
+        font-size: 11.5px;
+        font-weight: 800;
+        color: var(--inv-text);
+    }
+
+    .item-secondary-text {
+        font-size: 9px;
+        font-weight: 600;
+        color: #64748b;
+        margin-top: 4px;
+    }
+
+    .mnc-summary-grid {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        page-break-inside: avoid;
+    }
+
+    .payment-history-box {
+        width: 45%;
+    }
+
+    .totals-box {
+        width: 35%;
+        background: rgba(255, 255, 255, 0.5); /* Slight blur but mostly transparent */
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px dashed var(--inv-primary);
+    }
+
+    .calc-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        font-size: 11.5px;
+        color: var(--inv-text);
+        font-weight: 600;
+    }
+
+        .calc-row.grand-total {
+            border-top: 2px solid var(--inv-primary);
+            border-bottom: 2px solid var(--inv-primary);
+            padding: 10px 0;
+            margin-top: 6px;
+            margin-bottom: 6px;
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--inv-primary);
+        }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-block;
+        margin-top: 6px;
+    }
+
+    .status-paid {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .status-due {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+    /* /* #endregion */
+</style>
+
+<div class="invoice-wrapper">
+
+    <div class="mnc-info-grid">
+        <div class="info-block">
+            <div class="info-label">Billed To</div>
+            <div class="info-value-bold">@(Model.Customers?.Name ?? "Cash Customer")</div>
+            @if (!string.IsNullOrEmpty(Model.MobileNo))
+            {
+                <div class="info-text"><strong>Phone:</strong> @Model.MobileNo</div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Address))
+            {
+                <div class="info-text"><strong>Address:</strong> @Model.Address</div>
+            }
+            @if (Model.PharmacyDoctorId.HasValue || !string.IsNullOrEmpty(Model.DoctorRegNumber))
+            {
+                <div class="info-text" style="margin-top: 12px; border-left: 2px solid var(--inv-primary); padding-left: 8px;">
+                    <strong style="color: var(--inv-primary)">Prescribed By:</strong><br />
+                    Dr. @(Model.PharmacyDoctor?.Name ?? "Registered Doctor")
+                    @if (!string.IsNullOrEmpty(Model.DoctorRegNumber))
+                    {
+                        <span style="font-size: 9px; color: #64748b;">(Reg: @Model.DoctorRegNumber)</span>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="info-block right-align">
+            <div class="info-label">Invoice Details</div>
+            <div class="info-text"><strong>Invoice No:</strong> <span style="font-size: 13px; font-weight: 800;">@Model.BillNo</span></div>
+            <div class="info-text"><strong>Date:</strong> @(Model.BillDate?.ToString("dd MMM yyyy"))</div>
+            @if (!string.IsNullOrEmpty(Model.billingType))
+            {
+                <div class="info-text"><strong>Type:</strong> <span style="text-transform: capitalize;">@Model.billingType</span></div>
+            }
+            <div>
+                @if (balance <= 0)
+                {
+                    <span class="status-badge status-paid">Fully Paid</span>
+                }
+                else
+                {
+
+                    <span class="status-badge status-due">Due: ₹ @balance.ToString("0.00")</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="mnc-table-container">
+        <table class="mnc-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%; text-align: left;">#</th>
+                    <th style="width: 40%; text-align: left;">Item Description</th>
+                    <th style="width: 10%; text-align: center;">Qty</th>
+                    <th style="width: 15%; text-align: right;">Rate</th>
+                    <th style="width: 10%; text-align: center;">Disc%</th>
+                    <th style="width: 20%; text-align: right;">Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.SalesItems != null && Model.SalesItems.Any())
+                {
+                    int slNo = 1;
+                    foreach (var item in Model.SalesItems)
+                    {
+                        <tr>
+                            <td style="text-align: left; color: #64748b; font-weight: 700;">@slNo</td>
+                            <td>
+                                <div class="item-primary-text">@(item.ItemMaster?.Name ?? "Item Code: " + item.ItemMasterId)</div>
+                                @if (!string.IsNullOrEmpty(item.Batch) || item.Expirydate.HasValue)
+                                {
+                                    <div class="item-secondary-text">
+                                        @if (!string.IsNullOrEmpty(item.Batch))
+                                        {
+                                            <span>Batch: @item.Batch</span>
+                                        }
+                                        @if (item.Expirydate.HasValue)
+                                        {
+                                            <span style="margin-left: 10px;">Exp: @item.Expirydate.Value.ToString("MM/yy")</span>
+                                        }
+                                    </div>
+                                }
+                            </td>
+                            <td style="text-align: center;">@item.Qty</td>
+                            <td style="text-align: right;">@item.Rate.ToString("0.00")</td>
+                            <td style="text-align: center;">@item.Discount.ToString("0.##")</td>
+                            <td style="text-align: right; font-weight: 800;">@item.Amount.ToString("0.00")</td>
+                        </tr>
+                        slNo++;
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mnc-summary-grid">
+        <div class="payment-history-box">
+            @if (Model.SalsePaymentDetails != null && Model.SalsePaymentDetails.Any())
+            {
+                <div class="info-label" style="border: none; color: #64748b;">Payment History</div>
+                <table style="width: 100%; font-size: 10px; border-top: 1px solid #e2e8f0; padding-top: 5px; background: transparent;">
+                    @foreach (var pay in Model.SalsePaymentDetails)
+                    {
+                        <tr>
+                            <td style="padding: 4px 0; font-weight: 700; color: var(--inv-text);">@(pay.ModeOfPayment?.Name ?? "Cash")</td>
+                            <td style="padding: 4px 0; color: #94a3b8;">@(string.IsNullOrEmpty(pay.ReferenceNo) ? "" : $"Ref: {pay.ReferenceNo}")</td>
+                            <td style="padding: 4px 0; text-align: right; font-weight: 800; color: #166534;">₹ @pay.Amount.ToString("0.00")</td>
+                        </tr>
+                    }
+                </table>
+            }
+        </div>
+
+        <div class="totals-box">
+            <div class="calc-row"><span>Gross Amount</span><span>₹ @Model.Total.ToString("0.00")</span></div>
+            @if (Model.Totaldiscount > 0 || Model.discountAmount > 0)
+            {
+                <div class="calc-row" style="color: #dc2626;"><span>Total Discount</span><span>- ₹ @(Model.Totaldiscount > 0 ? Model.Totaldiscount : Model.discountAmount).ToString("0.00")</span></div>
+            }
+            <div class="calc-row"><span>Total GST</span><span>+ ₹ @Model.TotalGstAmt.ToString("0.00")</span></div>
+            <div class="calc-row grand-total"><span>Total Payable</span><span>₹ @Model.TotalPayable.ToString("0.00")</span></div>
+            <div class="calc-row" style="color: #166534; font-weight: 800; font-size: 12px;"><span>Amount Paid</span><span>₹ @Model.PaidAmount.ToString("0.00")</span></div>
+            @if (balance > 0)
+            {
+                <div class="calc-row" style="color: #dc2626; font-weight: 800; font-size: 13px; border-top: 1px dashed #fecaca; margin-top: 5px; padding-top: 8px;"><span>Balance Due</span><span>₹ @balance.ToString("0.00")</span></div>
+            }
+        </div>
+    </div>
+</div> *@

@@ -1,0 +1,75 @@
+﻿@model IEnumerable<EasyBill.Models.Entity.SubCategory>
+
+@{
+    ViewData["Title"] = "Index";
+} 
+
+<div class="row mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Add SubCategory
+    </div>
+</div>
+@if (User.HasPermission(Permissions.SubCategory.Create))
+{
+    <p>
+        <a asp-controller="SubCategory" asp-action="Create" class="btn btn-primary mb-1 float-end"> <i class="bi bi-plus-circle"></i> Add </a>
+    </p>
+}
+<style>
+    table.dataTable thead th {
+    background-color: #2b6ac9 !important;
+    color: white !important;
+    }
+</style>
+<table id="subcategorytable" class="table table-bordered table-striped">
+    <thead class="table">
+        <tr> 
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th>
+                Category
+            </th>
+
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model) {
+            <tr> 
+                <td>
+                    @Html.DisplayFor(modelItem => item.Name)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Category.CategoryName)
+                </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        @if (User.HasPermission(Permissions.SubCategory.Edit))
+                        {
+                            <a asp-controller="SubCategory" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                        }
+                        @if (User.HasPermission(Permissions.SubCategory.Delete))
+                        {
+                        <a asp-controller="SubCategory" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                        }
+                    </div>
+                </td>
+        </tr>
+}
+    </tbody>
+</table>
+<script>
+    $(document).ready(function(){
+        $("#subcategorytable").DataTable();
+    });
+</script>

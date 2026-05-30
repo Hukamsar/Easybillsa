@@ -1,0 +1,113 @@
+﻿@model IEnumerable<EasyBill.Models.Entity.Sales>
+
+@{
+    ViewData["Title"] = "Billwise Collection Report";
+}
+
+<h4 class="mb-3">Billwise Collection Report</h4>
+
+<form method="get">
+    <div class="row mb-3">
+
+        <div class="col-md-2">
+            <label>From Date</label>
+            <input type="date" name="fromDate" class="form-control"
+                   value="@Context.Request.Query["fromDate"]" />
+        </div>
+
+        <div class="col-md-2">
+            <label>To Date</label>
+            <input type="date" name="toDate" class="form-control"
+                   value="@Context.Request.Query["toDate"]" />
+        </div>
+
+        <div class="col-md-2">
+            <label>Bill No</label>
+            <input type="text" name="billNo" class="form-control"
+                   value="@Context.Request.Query["billNo"]" />
+        </div>
+
+        <div class="col-md-2">
+            <label>Patient Name</label>
+            <input type="text" name="patientName" class="form-control"
+                   value="@Context.Request.Query["patientName"]" />
+        </div>
+
+        <div class="col-md-2">
+            <label>UHID</label>
+            <input type="text" name="uhid" class="form-control"
+                   value="@Context.Request.Query["uhid"]" />
+        </div>
+
+        <div class="col-md-2">
+            <label>MRD No</label>
+            <input type="text" name="mrdNo" class="form-control"
+                   value="@Context.Request.Query["mrdNo"]" />
+        </div>
+
+    </div>
+
+    <button type="submit" class="btn btn-primary">Search</button>
+</form>
+
+<hr />
+
+<table class="table table-bordered table-striped">
+    <thead class="table-dark text-center">
+        <tr>
+            <th>Bill No</th>
+            <th>Date</th>
+            <th>Patient Name</th>
+            <th>UHID</th>
+            <th>MRD No</th>
+            <th>Total Amount</th>
+            <th>Paid Amount</th>
+            <th>Return</th>
+            <th>Balance</th>
+            <th>Net Collection</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @if (Model != null && Model.Any())
+        {
+            foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.BillNo</td>
+                    <td>@item.BillDate?.ToString("dd-MM-yyyy")</td>
+                    <td>@item.Customers?.Name</td>
+              @*       <td>@item.Customers?.UHID</td>
+                    <td>@item.Customers?.MrdNo</td> *@
+                    <td class="text-end">@item.TotalPayable.ToString("0.00")</td>
+                    <td class="text-end">@item.PaidAmount.ToString("0.00")</td>
+                    <td class="text-end">@item.ReturnAmount.ToString("0.00")</td>
+                    <td class="text-end">@item.Balance.ToString("0.00")</td>
+                    <td class="text-end">@item.NetCollection.ToString("0.00")</td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="10" class="text-center text-danger">
+                    No Records Found
+                </td>
+            </tr>
+        }
+    </tbody>
+
+    @if (Model != null && Model.Any())
+    {
+        <tfoot>
+            <tr style="font-weight:bold; background:#f8f9fa;">
+                <td colspan="5" class="text-end">Grand Total :</td>
+                <td class="text-end">@Model.Sum(x => x.TotalPayable).ToString("0.00")</td>
+                <td class="text-end">@Model.Sum(x => x.PaidAmount).ToString("0.00")</td>
+                <td class="text-end">@Model.Sum(x => x.ReturnAmount).ToString("0.00")</td>
+                <td class="text-end">@Model.Sum(x => x.Balance).ToString("0.00")</td>
+                <td class="text-end">@Model.Sum(x => x.NetCollection).ToString("0.00")</td>
+            </tr>
+        </tfoot>
+    }
+</table>

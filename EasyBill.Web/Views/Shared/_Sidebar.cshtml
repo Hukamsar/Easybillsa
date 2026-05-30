@@ -1,0 +1,352 @@
+@inject IMenuService MenuService
+@inject UserManager<ApplicationUsers> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+
+@{
+    var user = await UserManager.GetUserAsync(User);
+    var menus = Enumerable.Empty<AOne.Models.SideMenu.MenuSectionModel>();
+
+    if (user != null)
+    {
+        var roles = await UserManager.GetRolesAsync(user);
+        var roleName = roles.FirstOrDefault();
+        menus = await MenuService.LoadMenu(roleName ?? string.Empty);
+    }
+}
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden; /* Prevent body from scrolling */
+    }
+
+    .app-sidebar {
+        height: 100vh;
+      /*   overflow-y: auto;
+        overflow-x: hidden; */
+    }
+
+    .sidebar-wrapper {
+        height: 100%;
+        overflow-y: auto;
+        padding-bottom: 60px;
+    }
+
+    .nav-item {
+        text-align: left !important;
+        width: 100%;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start !important;
+        padding-left: 10px !important;
+    }
+
+    .nav-arrow {
+        margin-left: auto;
+    }
+
+    .nav-treeview {
+        border-left: 2px solid rgba(0, 0, 0, 0.1);
+    }
+
+        .nav-treeview.collapse {
+            transition: height 0.3s ease;
+            overflow: hidden;
+        }
+
+        /* Indentation levels */
+        .nav-treeview > .nav-item > .nav-link {
+            padding-left: 25px !important;
+        }
+
+        .nav-treeview .nav-treeview > .nav-item > .nav-link {
+            padding-left: 40px !important;
+        }
+
+        .nav-treeview .nav-treeview .nav-treeview > .nav-item > .nav-link {
+            padding-left: 55px !important;
+        }
+        .sidebar-brand{
+        background: white !important;
+        height: 4.5rem !important;
+        border:5px solid #2b6ac9;
+        }
+    .sidebar-wrapper .nav-treeview > .nav-item > .nav-link {
+    color:white;
+    }
+
+    .sidebar-wrapper .nav-link,
+    .sidebar-wrapper .nav-treeview > .nav-item > .nav-link {
+        color: #ffffff !important;
+    }
+
+        .sidebar-wrapper .nav-link:hover,
+        .sidebar-wrapper .nav-treeview > .nav-item > .nav-link:hover {
+            background-color: #ffffff;
+            color: #2b6ac9 !important;
+        }
+        .sidebar-wrapper .nav-link[aria-expanded="true"] {
+            color: #ffffff !important;
+        }
+
+    .sidebar-wrapper .nav-treeview .nav-link {
+        color: #ffffff !important;
+    }
+
+</style>
+
+
+
+
+<aside class="app-sidebar bg-body-secondary shadow" style="background-color:#2465c7f7 !important">
+    <!-- Sidebar Brand -->
+    <div class="sidebar-brand">
+        <a href="/Home/Index" class="brand-link">
+            <img src="~/assets/img/EasyBillLogo.jpeg" 
+                 alt="Logo" style="max-height: 60px;width: 245px;margin-top: 2px;padding: 10px;"
+                 class="brand-image opacity-75 shadow" />
+        </a>
+    </div>
+
+    <!-- Sidebar Wrapper -->
+    <div class="sidebar-wrapper">
+        <nav class="mt-2">
+            <div class="d-flex w-auto" id="sidenav-collapse-main">
+                <ul class="navbar-nav">
+                    @foreach (var section in menus)
+                    {
+                        <li class="nav-item w-100">
+                            @if (section.SectionItems.Any())
+                            {
+                                <ul class="nav nav-treeview">
+                                    @foreach (var item in section.SectionItems)
+                                    {
+                                        if (item.IsParent && !item.MenuItems.Any())
+                                        {
+                                            continue;
+                                        }
+
+                                        var sectionId = "submenu-" + Guid.NewGuid().ToString("N");
+
+                                        <li class="nav-item">
+                                            @if (item.IsParent && item.MenuItems.Any())
+                                            {
+                                                <a href="#" class="nav-link d-flex justify-content-between" data-bs-toggle="collapse" data-bs-target="#@sectionId">
+                                                    <i class="nav-icon bi bi-folder-fill"></i>
+                                                    <span class="ms-2">@item.Title</span>
+                                                    <i class="nav-arrow bi bi-chevron-down"></i>
+                                                </a>
+
+                                                <div class="collapse" id="@sectionId">
+                                                    <ul class="nav nav-treeview">
+                                                        @foreach (var subItem in item.MenuItems)
+                                                        {
+                                                            var subId = "submenu-" + Guid.NewGuid().ToString("N");
+
+                                                            <li class="nav-item w-100">
+                                                                @if (subItem.SubItems != null && subItem.SubItems.Any())
+                                                                {
+                                                                    <a href="#" class="nav-link d-flex justify-content-between" data-bs-toggle="collapse" data-bs-target="#@subId">
+                                                                        <i class="nav-icon bi bi-folder-fill"></i>
+                                                                        <span class="ms-2">@subItem.Title</span>
+                                                                        <i class="nav-arrow bi bi-chevron-down"></i>
+                                                                    </a>
+
+                                                                    <div class="collapse" id="@subId">
+                                                                        <!-- Removed data-bs-parent -->
+                                                                        <ul class="nav nav-treeview ">
+                                                                            @foreach (var child in subItem.SubItems)
+                                                                            {
+                                                                                <li class="nav-item w-100">
+                                                                                    <a asp-controller="@child.ControllerName" asp-action="@child.ActionName" class="nav-link">
+                                                                                        <i class="nav-icon bi bi-dot"></i>
+                                                                                        <span class="ms-2">@child.Title</span>
+                                                                                    </a>
+                                                                                </li>
+                                                                            }
+                                                                        </ul>
+                                                                    </div>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <a asp-controller="@subItem.ControllerName"
+                                                                       asp-action="@subItem.ActionName"
+                                                                       class="nav-link">
+                                                                        <i class="nav-icon bi bi-folder-fill"></i>
+                                                                        <span class="ms-2">@subItem.Title</span>
+                                                                    </a>
+                                                                }
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <a asp-controller="@item.ControllerName" asp-action="@item.ActionName" class="nav-link">
+                                                    <i class="nav-icon bi bi-folder-fill"></i>
+                                                    <span class="ms-2">@item.Title</span>
+                                                </a>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        </nav>
+    </div>
+</aside>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const sidebarWrapper = document.querySelector(".sidebar-wrapper");
+        if (!sidebarWrapper || typeof bootstrap === "undefined" || !bootstrap.Collapse) {
+            return;
+        }
+
+        const sidebarStateKey = "easybill.sidebar.openMenus";
+
+        function normalizePath(path) {
+            if (!path) return "/";
+            const cleanPath = path.split("?")[0].split("#")[0];
+            const withoutTrailingSlash = cleanPath.replace(/\/+$/, "");
+            return withoutTrailingSlash || "/";
+        }
+
+        function setToggleState(collapseElement, isExpanded) {
+            if (!collapseElement.id) return;
+
+            const toggle = sidebarWrapper.querySelector(`[data-bs-target="#${collapseElement.id}"]`);
+            if (!toggle) return;
+
+            toggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+            toggle.classList.toggle("collapsed", !isExpanded);
+        }
+
+        function saveOpenMenus() {
+            const openIds = Array.from(sidebarWrapper.querySelectorAll(".collapse.show[id]")).map(function (el) {
+                return el.id;
+            });
+            localStorage.setItem(sidebarStateKey, JSON.stringify(openIds));
+        }
+
+        function restoreOpenMenus() {
+            const raw = localStorage.getItem(sidebarStateKey);
+            if (!raw) return;
+
+            let openIds = [];
+            try {
+                openIds = JSON.parse(raw);
+            } catch {
+                openIds = [];
+            }
+
+            if (!Array.isArray(openIds)) return;
+
+            openIds.forEach(function (id) {
+                if (!id) return;
+                const target = document.getElementById(id);
+                if (!target || !target.classList.contains("collapse")) return;
+
+                bootstrap.Collapse.getOrCreateInstance(target, { toggle: false }).show();
+                setToggleState(target, true);
+            });
+        }
+
+        function closeSiblingMenus(targetMenu) {
+            const currentItem = targetMenu.closest("li.nav-item");
+            const siblingContainer = currentItem ? currentItem.parentElement : null;
+            if (!siblingContainer) return;
+
+            Array.from(siblingContainer.children).forEach(function (sibling) {
+                if (sibling === currentItem) return;
+
+                const directCollapse = Array.from(sibling.children).find(function (child) {
+                    return child.classList && child.classList.contains("collapse") && child.classList.contains("show");
+                });
+
+                if (directCollapse) {
+                    bootstrap.Collapse.getOrCreateInstance(directCollapse, { toggle: false }).hide();
+                }
+            });
+        }
+
+        sidebarWrapper.querySelectorAll("a[data-bs-toggle='collapse'][data-bs-target^='#submenu-']").forEach(function (toggleBtn) {
+            toggleBtn.addEventListener("click", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const targetId = this.getAttribute("data-bs-target");
+                if (!targetId) return;
+
+                const targetMenu = document.querySelector(targetId);
+                if (!targetMenu || !targetMenu.classList.contains("collapse")) return;
+
+                const collapse = bootstrap.Collapse.getOrCreateInstance(targetMenu, { toggle: false });
+                if (targetMenu.classList.contains("show")) {
+                    collapse.hide();
+                    setToggleState(targetMenu, false);
+                } else {
+                    closeSiblingMenus(targetMenu);
+                    collapse.show();
+                    setToggleState(targetMenu, true);
+                }
+
+                saveOpenMenus();
+            });
+        });
+
+        sidebarWrapper.querySelectorAll(".collapse[id]").forEach(function (collapseElement) {
+            collapseElement.addEventListener("shown.bs.collapse", function () {
+                setToggleState(collapseElement, true);
+                saveOpenMenus();
+            });
+
+            collapseElement.addEventListener("hidden.bs.collapse", function () {
+                setToggleState(collapseElement, false);
+                saveOpenMenus();
+            });
+        })
+
+        restoreOpenMenus();
+
+        const currentPath = normalizePath(window.location.pathname.toLowerCase());
+        const menuLinks = sidebarWrapper.querySelectorAll("a.nav-link[href]");
+        let activeLink = null;
+
+        menuLinks.forEach(function (link) {
+            const href = link.getAttribute("href");
+            if (!href || href === "#" || href.startsWith("javascript:")) return;
+
+            const linkPath = normalizePath(new URL(link.href, window.location.origin).pathname.toLowerCase());
+            if (linkPath === currentPath) {
+                activeLink = link;
+            }
+        });
+
+        if (activeLink) {
+            activeLink.classList.add("active");
+
+            let parentCollapse = activeLink.closest(".collapse");
+            while (parentCollapse) {
+                bootstrap.Collapse.getOrCreateInstance(parentCollapse, { toggle: false }).show();
+                setToggleState(parentCollapse, true);
+
+                parentCollapse = parentCollapse.parentElement
+                    ? parentCollapse.parentElement.closest(".collapse")
+                    : null;
+            }
+
+            saveOpenMenus();
+        }
+    });
+</script>
+
+

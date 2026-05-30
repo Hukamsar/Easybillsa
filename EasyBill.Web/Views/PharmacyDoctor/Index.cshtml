@@ -1,0 +1,81 @@
+﻿@model IEnumerable<PharmacyDoctor>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create" class="btn btn-primary mb-1 float-end"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Id)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PhoneNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Address)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RegistrationNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Specialized)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Commission)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Id)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PhoneNo)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Address)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.RegistrationNo)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Specialized)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Commission)
+            </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="PharmacyDoctor" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="PharmacyDoctor" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+        </tr>
+}
+    </tbody>
+</table>

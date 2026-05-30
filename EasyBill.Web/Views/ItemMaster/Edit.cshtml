@@ -1,0 +1,1600 @@
+﻿@using EasyBill.Models.ViewModels
+@model ItemMasterVM
+@{
+    ViewData["Title"] = "Edit Item";
+}
+
+<style>
+    .drug-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        margin-bottom: 6px;
+        background: #f9f9f9;
+    }
+
+        .drug-check input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .drug-check label {
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+</style>
+<style>
+    .eb-card {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 18px;
+        /* Real card feel */
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.06);
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+        opacity: 0;
+        transform: scale(0.96) translateY(12px);
+        animation: cardEnter 0.45s ease-out forwards;
+    }
+
+    .eb-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06), 0 12px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .eb-card-header {
+        padding: 9px 16px;
+        font-weight: 600;
+        font-size: 14px;
+        color: #1f2937;
+        background: linear-gradient( to bottom, #f9fafb, #f3f4f6 );
+        border-bottom: 1px solid #e5e7eb;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+    }
+
+    .eb-card-body {
+        padding: 14px 16px;
+    }
+
+    @@keyframes cardEnter {
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+
+    .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const cards = document.querySelectorAll(".eb-card");
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 120}ms`;
+        });
+    });
+</script>
+
+<form asp-controller="ItemMaster" id="ItemMasterForm" asp-action="Edit" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+    <div class="container">
+        <div class="row">
+            <!-- Left Section -->
+            <div class="col-md-6">
+
+                <div class="eb-card">
+                    <div class="eb-card-header">Basic Item Details</div>
+                    <div class="eb-card-body">
+
+                        <div class="row mb-2">
+                            <label asp-for="Name" class="col-md-3 col-form-label text-start small">Name *</label>
+                            <div class="col-md-6">
+                                <input asp-for="Name" type="text" class="form-control form-control-sm" />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="Code" class="col-md-3 col-form-label text-start small">Code *</label>
+                            <div class="col-md-6">
+                                <input asp-for="Code" type="text" class="form-control form-control-sm" readonly />
+                                <span asp-validation-for="Code" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="Barcode" class="col-md-3 col-form-label text-start small">Barcode</label>
+                            <div class="col-md-6">
+                                <input asp-for="Barcode" type="text" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label text-start">Unit</label>
+                            <div class="col-md-6">
+                                <input asp-for="Unit" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="Packing" class="col-md-3 col-form-label text-start small">Packing</label>
+                            <div class="col-md-6">
+                                <input asp-for="Packing" type="text" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="eb-card">
+                    <div class="eb-card-header">Company & Category</div>
+                    <div class="eb-card-body">
+
+                        <div class="row mb-2">
+                            <label asp-for="Companyname" class="col-md-3 col-form-label text-start">Company *</label>
+                            <div class="col-md-6">
+                                <select asp-for="CompanyId" id="companyid" asp-items="@ViewBag.company" class="form-control form-control-sm"></select>
+                                <span asp-validation-for="CompanyId" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-3 d-flex align-content-end">
+                                @* ItemMaster F2/F3 shortcut: F3-Mod added beside existing F2-New without changing popup layout. *@
+                                <div>
+                                    <a class="btnsecondary itemmaster-master-shortcut" id="companybutton" data-master-type="company" data-master-mode="new" style="cursor: pointer;" onclick="(function(event){opencompanyPopup(event);})(event)">F2-New</a><br />
+                                    <a class="btnsecondary text-danger itemmaster-master-shortcut" data-master-type="company" data-master-mode="edit" style="cursor: pointer;" onclick="opencompanyModifyPopup(event)">F3-Mod</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="DivisionName" class="col-md-3 col-form-label text-start">Division Name</label>
+                            <div class="col-md-6">
+                                <select asp-for="DivisionId" id="divisionId" asp-items="@ViewBag.division" class="form-control form-control-sm"></select>
+                                <span asp-validation-for="DivisionId" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-3 d-flex align-content-end">
+                                @* ItemMaster F2/F3 shortcut: F3-Mod added beside existing F2-New without changing popup layout. *@
+                                <div>
+                                    <a class="btnsecondary itemmaster-master-shortcut" data-master-type="division" data-master-mode="new" style="cursor: pointer;" onclick="(function(event){opendivisionpopup(event);})(event)">F2-New</a><br />
+                                    <a class="btnsecondary text-danger itemmaster-master-shortcut" data-master-type="division" data-master-mode="edit" style="cursor: pointer;" onclick="opendivisionModifyPopup(event)">F3-Mod</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="CategoryName" class="col-md-3 col-form-label text-start">Category *</label>
+                            <div class="col-md-6">
+                                <select asp-for="CategoryId" id="CategoryId" asp-items="@ViewBag.Categories" class="form-control form-control-sm"></select>
+                                <span asp-validation-for="CategoryId" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-3 d-flex align-content-end">
+                                @* ItemMaster F2/F3 shortcut: F3-Mod added beside existing F2-New without changing popup layout. *@
+                                <div>
+                                    <a class="btnsecondary itemmaster-master-shortcut" id="categorybutton" data-master-type="category" data-master-mode="new" style="cursor: pointer;" onclick="(function(event){ openPopup(event); })(event)">F2-New</a><br />
+                                    <a class="btnsecondary text-danger itemmaster-master-shortcut" data-master-type="category" data-master-mode="edit" style="cursor: pointer;" onclick="openCategoryModifyPopup(event)">F3-Mod</a>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="SubCategoryname" class="col-md-3 col-form-label text-start">Sub Category *</label>
+                            <div class="col-md-6">
+                                <select asp-for="SubCategoryId" id="subcategoryId" asp-items="@ViewBag.SubCategories" class="form-control form-control-sm"></select>
+                                <span asp-validation-for="SubCategoryId" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-3 d-flex align-content-end">
+                                @* ItemMaster F2/F3 shortcut: F3-Mod added beside existing F2-New without changing popup layout. *@
+                                <div>
+                                    <a class="btnsecondary itemmaster-master-shortcut" id="subcategorybutton" data-master-type="subcategory" data-master-mode="new" style="cursor: pointer;" onclick="(function(event){openSubCategoryPopup(event);})(event)">F2-New</a><br />
+                                    <a class="btnsecondary text-danger itemmaster-master-shortcut" data-master-type="subcategory" data-master-mode="edit" style="cursor: pointer;" onclick="openSubCategoryModifyPopup(event)">F3-Mod</a>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <div class="eb-card">
+                    <div class="eb-card-header">HSN And GST Details</div>
+                    <div class="eb-card-body">
+
+                        <div class="row mb-2">
+                            <label asp-for="HsnCode" class="col-md-3 col-form-label text-start">HSN/SAC *</label>
+                            <div class="col-md-6">
+                                <select asp-for="HsnId" id="hsnId" asp-items="@ViewBag.Hsn" class="form-control form-control-sm"></select>
+                                <span asp-validation-for="HsnId" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-3 d-flex align-content-end">
+                                @* ItemMaster F2/F3 shortcut: F3-Mod added beside existing F2-New without changing popup layout. *@
+                                <div>
+                                    <a class="btnsecondary itemmaster-master-shortcut" data-master-type="hsn" data-master-mode="new" style="cursor: pointer;" onclick="(function(event){openhsnpopup(event);})(event)">F2-New</a><br />
+                                    <a class="btnsecondary text-danger itemmaster-master-shortcut" data-master-type="hsn" data-master-mode="edit" style="cursor: pointer;" onclick="openhsnModifyPopup(event)">F3-Mod</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="Local" class="col-md-3 col-form-label text-start">Local</label>
+                            <div class="col-md-6">
+                                <select asp-for="Local" id="local" asp-items="@ViewBag.Local" class="form-control form-control-sm">
+                                </select>
+                                <span asp-validation-for="Local" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="Central" class="col-md-3 col-form-label text-start">Central</label>
+                            <div class="col-md-6">
+                                <select asp-for="Central" id="Central" asp-items="@ViewBag.Central" class="form-control form-control-sm">
+                                </select>
+                                <span asp-validation-for="Central" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <!-- First section -->
+                            <div class="col-md-4">
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-4 text-start">SGST</label>
+                                    <div class="col-md-8">
+                                        <input type="number" id="sgst" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-4 text-start">CGST</label>
+                                    <div class="col-md-8">
+                                        <input type="number" id="cgst" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Second section -->
+                            <div class="col-md-4">
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-4 text-start">IGST</label>
+                                    <div class="col-md-8">
+                                        <input type="number" id="igst" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-4 text-start">Cess</label>
+                                    <div class="col-md-8">
+                                        <input type="number" id="cess" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+            <!-- Right Section -->
+            <div class="col-md-6">
+                <div class="eb-card">
+                    <div class="eb-card-header">Pricing & Stock</div>
+                    <div class="eb-card-body">
+
+                        <div class="row mb-2">
+                            <label asp-for="Mrp" class="col-md-4 col-form-label text-start ">M.R.P</label>
+                            <div class="col-md-6">
+                                <input asp-for="Mrp" type="number" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="SalesRate1" class="col-md-4 col-form-label text-start ">Sales Rate 1</label>
+                            <div class="col-md-6">
+                                <input asp-for="SalesRate1" type="number" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="SalesRate2" class="col-md-4 col-form-label text-start">Sales Rate 2</label>
+                            <div class="col-md-6">
+                                <input asp-for="SalesRate2" type="number" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="MinimumQty" class="col-md-4 col-form-label text-start">Minimum Qty</label>
+                            <div class="col-md-6">
+                                <input asp-for="MinimumQty" type="number" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="MaximumQty" class="col-md-4 col-form-label text-start">Maximum Qty</label>
+                            <div class="col-md-6">
+                                <input asp-for="MaximumQty" type="number" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="eb-card">
+                    <div class="eb-card-header">Item Configuration</div>
+                    <div class="eb-card-body">
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label text-start">Shelf Life</label>
+
+                            <div class="col-md-3">
+                                <input asp-for="ShelfLife"
+                                       type="number"
+                                       min="0"
+                                       class="form-control form-control-sm"
+                                       placeholder="Value" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <select asp-for="ShelfLifeUnit" class="form-control form-control-sm">
+                                    <option value="Days">Days</option>
+                                    <option value="Months">Months</option>
+                                    <option value="Years">Years</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="MaximumDiscount" class="col-md-4 col-form-label text-start">Maximum Discount</label>
+                            <div class="col-md-6">
+                                <input asp-for="MaximumDiscount" type="number" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label text-start">Decemal Allowed</label>
+                            <div class="col-md-6">
+                                <div class="drug-check">
+                                    <input asp-for="DecemalAllowed" type="checkbox" id="DecemalAllowed">
+                                    <label id="decimalStatus" for="DecemalAllowed">Inactive</label>
+                                </div>
+                            </div>
+                        </div>
+                        @{
+                            bool lockConversion = ViewBag.BusinessType == 2 && ViewBag.SaleCount > 0;
+                        }
+
+                        <div class="row mb-2">
+                            <label asp-for="Conversion" class="col-md-4 col-form-label text-start">
+                                Conversion
+                                @if (lockConversion)
+                                {
+                                    <span class="text-muted ms-1"
+                                          title="This value cannot be changed because this item has already been sold.">
+                                        ⓘ
+                                    </span>
+                                }
+                            </label>
+
+                            <div class="col-md-6">
+                                <input asp-for="Conversion"
+                                       type="number"
+                                       class="form-control form-control-sm"
+                                       readonly="@lockConversion"
+                                       title="Item already sold. Conversion cannot be changed." />
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label asp-for="IsActive" class="col-md-4 col-form-label text-start">
+                                Item Status
+                            </label>
+                            <div class="col-md-6">
+                                <select asp-for="IsActive" class="form-control form-control-sm">
+                                    <option value="true">Active</option>
+                                    <option value="false">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        @if (ViewBag.BusinessType == 2)
+                        {
+                            <div class="row mb-2">
+                                <label class="col-md-4 col-form-label text-start">Drug Category</label>
+                                <div class="col-md-8">
+
+                                    <div class="form-check form-switch mb-1">
+                                        <input asp-for="Narcotics" class="form-check-input" type="checkbox" id="narcoticsChk">
+                                        <label class="form-check-label" for="narcoticsChk">Narcotics</label>
+                                    </div>
+
+                                    <div class="form-check form-switch mb-1">
+                                        <input asp-for="ScheduleH" class="form-check-input" type="checkbox" id="scheduleHChk">
+                                        <label class="form-check-label" for="scheduleHChk">Schedule H</label>
+                                    </div>
+
+                                    <div class="form-check form-switch">
+                                        <input asp-for="ScheduleH1" class="form-check-input" type="checkbox" id="scheduleH1Chk">
+                                        <label class="form-check-label" for="scheduleH1Chk">Schedule H1</label>
+                                    </div>
+
+                                </div>
+                            </div>
+                        }
+
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label text-start">Images</label>
+                            <div class="col-md-6">
+                                <input type="file" asp-for="Images" id="Images" name="Images" multiple hidden />
+                                <input type="hidden" id="PrimaryIndex" name="PrimaryIndex" value="0" />
+
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-sm"
+                                        onclick="openItemImagePopup()">
+                                    Upload Images
+                                </button>
+                                <small class="text-muted d-block mt-1">
+                                    You can upload multiple images
+                                </small>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="Salt" class="col-md-4 col-form-label text-start small"></label>
+                            <div class="col-md-6">
+                                <input asp-for="Salt" type="text" class="form-control form-control-sm" />
+                                <span asp-validation-for="Salt" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons Section -->
+        <div class="mt-3 text-end">
+            <button type="submit" class="btn btn-primary px-4">Save</button>
+            <button type="button"
+                    onclick="window.location.href='@Url.Action("Index", "ItemMaster")'"
+                    class="btn btn-secondary px-4">
+                Cancel
+            </button>
+
+        </div>
+    </div>
+    <div id="categoryPopupContainer">
+        @await Component.InvokeAsync("CategoryForm")
+    </div>
+    <div id="subcategorypopupcontainer">
+        @await Component.InvokeAsync("SubCategoryComponent")
+    </div>
+    <div id="companypopupcontainer">
+        @await Component.InvokeAsync("Company")
+    </div>
+    <div id="divisionpopupcontainer">
+        @await Component.InvokeAsync("Division")
+    </div>
+    <div id="hsnpopupcontainer">
+        @await Component.InvokeAsync("HSN")
+    </div>
+</form>
+
+
+<div id="itemImagePopup" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Item Images</h5>
+                <button type="button" class="btn-close" onclick="closeItemImagePopup()"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="file"
+                       id="itemImages"
+                       class="form-control"
+                       multiple
+                       accept="image/*" />
+
+                <div id="imagePreview" class="d-flex flex-wrap gap-2 mt-3">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-secondary"
+                        onclick="closeItemImagePopup()">
+                    Close
+                </button>
+
+                <button type="button"
+                        class="btn btn-primary"
+                        onclick="saveSelectedImages()">
+                    Done
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        let hoveredButton = null; // Store currently hovered button
+
+        if ($("#categoryDropdown").parent(".itemmaster-category-dropdown-wrap").length === 0) {
+            $("#categoryDropdown").wrap('<div class="itemmaster-category-dropdown-wrap" style="display:flex;align-items:center;"></div>');
+            $("#categoryDropdown").css({ "flex": "1", "width": "auto" }).after('<div style="width:58px;text-align:left;line-height:13px;margin-left:6px;"><a class="btnsecondary" data-master-type="category" data-master-mode="new" style="cursor:pointer;" onclick="openSubCategoryCategoryPopup(event)">F2-New</a><br /><a class="btnsecondary text-danger" data-master-type="category" data-master-mode="edit" style="cursor:pointer;" onclick="openSubCategoryCategoryModifyPopup(event)">F3-Mod</a></div>');
+        }
+        if ($("#companyDropdown").parent(".itemmaster-company-dropdown-wrap").length === 0) {
+            $("#companyDropdown").wrap('<div class="itemmaster-company-dropdown-wrap" style="display:flex;align-items:center;"></div>');
+            $("#companyDropdown").css({ "flex": "1", "width": "auto" }).after('<div style="width:58px;text-align:left;line-height:13px;margin-left:6px;"><a class="btnsecondary" data-master-type="company" data-master-mode="new" style="cursor:pointer;" onclick="openDivisionCompanyPopup(event)">F2-New</a><br /><a class="btnsecondary text-danger" data-master-type="company" data-master-mode="edit" style="cursor:pointer;" onclick="openDivisionCompanyModifyPopup(event)">F3-Mod</a></div>');
+        }
+
+        // Select all buttons that open popups
+        const buttons = document.querySelectorAll(".btnsecondary");
+
+           // Add hover event to each button
+           buttons.forEach((button) => {
+               button.addEventListener("mouseenter", function () {
+
+                   hoveredButton = button; // Set the hovered button
+               });
+
+               button.addEventListener("mouseleave", function () {
+                   hoveredButton = null; // Reset when mouse leaves
+               });
+           });
+               // ItemMaster F2/F3 shortcut: hovered shortcut links open New/Modify popup with same existing UI.
+           document.addEventListener("keydown", function (event) {
+
+               if ((event.keyCode === 113 || event.keyCode === 114) && hoveredButton) {
+                   event.preventDefault();
+                   if (typeof itemMasterOpenShortcut === "function" && hoveredButton.dataset.masterType) {
+                       itemMasterOpenShortcut(hoveredButton.dataset.masterType, event.keyCode === 114 ? "edit" : "new", event);
+                   } else {
+                       openPopupForButton(hoveredButton);
+                   }
+               }
+           });
+          function openPopupForButton(button) {
+
+               if (button.id === "categorybutton") {
+                   openPopup();
+               } else if (button.id === "subcategorybutton") {
+                   openSubCategoryPopup();
+               } else if(button.id ==="companybutton"){
+                   opencompanyPopup();
+               } else if (button.getAttribute("onclick").includes("opendivisionpopup")) {
+                   opendivisionpopup();
+               } else if (button.getAttribute("onclick").includes("openhsnpopup")) {
+                   openhsnpopup();
+               }
+           }
+
+          function openPopup(event) {
+               event?.preventDefault(); // ✅ Prevent unintended form submission
+               // ItemMaster F2/F3 shortcut: reset popup to F2-New save mode.
+               if (typeof itemMasterSetPopupMode === "function") itemMasterSetPopupMode("category", "new", 0);
+               $("#popupForm").show();
+
+                   setTimeout(() => {
+                       let form = document.getElementById("categoryForms");
+                       if (form) {
+                           form.reset();
+                       } else {
+                           console.warn("Form #categoryForms not found. Ensure it is loaded.");
+                       }
+                   }, 500); // Wait for the form to load
+               $("#CategoryName").val("");
+          }
+          function closePopup() {
+               $("#popupForm").hide();
+          }
+          function saveCategory() {
+               var categoryName = $("#CategoryName").val();
+
+               if (categoryName.trim() === "") {
+                   toastr.warning("Category name is required!");
+                   return;
+               }
+
+               $.ajax({
+                   url: "/ItemMaster/CreateCategory",
+                   type: "POST",
+                   data: { CategoryName: categoryName  },
+
+                   success: function (response) {
+
+                       if (response.success) {
+                           toastr.success(response.message);
+                           closePopup();
+                           updateCategoryDropdown(response.category?.id || response.category?.Id); // ✅ Refresh dropdown
+                       } else {
+                           toastr.warning(response.message);
+                       }
+                   },
+                   error: function () {
+                       alert("Error occurred while saving category!");
+                   }
+               });
+          }
+          function updateCategoryDropdown(selectedId) {
+
+               $.ajax({
+                   url: "/ItemMaster/GetCategories",
+                   type: "GET",
+                   success: function (data) {
+
+                       let maincategorydropdown = $("#CategoryId");
+                       let subCategoryDropdown = $("#categoryDropdown");
+                         maincategorydropdown.empty();
+                              subCategoryDropdown.empty();
+                         maincategorydropdown.append('<option disabled selected>Select Category</option>');
+                             subCategoryDropdown.append('<option disabled selected>Select Category</option>');
+                         $.each(data, function (index, category) {
+                            let option = $("<option />").val(category.value).text(category.text);
+                            if (selectedId && category.value == selectedId) {
+                                option.attr("selected", "selected");
+                            }
+                              maincategorydropdown.append(option.clone());
+                            subCategoryDropdown.append(option.clone());
+                         });
+                         if (selectedId) {
+                             maincategorydropdown.val(selectedId);
+                             subCategoryDropdown.val(selectedId);
+                         }
+                   },
+                   error: function () {
+                       alert("Failed to update categories.");
+                   }
+               });
+          }
+
+          function openSubCategoryCategoryPopup(event) {
+              event?.preventDefault();
+              if (typeof itemMasterSetPopupMode === "function") itemMasterSetPopupMode("category", "new", 0);
+              $("#popupForm").css("z-index", "1002");
+              openPopup(event);
+          }
+          function openSubCategoryCategoryModifyPopup(event) {
+              event?.preventDefault();
+              var selectedId = parseInt($("#categoryDropdown").val(), 10) || 0;
+              var selectedText = ($("#categoryDropdown option:selected").text() || "").trim();
+              if (selectedId <= 0) {
+                  toastr.warning("Please select Category first.");
+                  return;
+              }
+              if (typeof itemMasterSetPopupMode === "function") itemMasterSetPopupMode("category", "edit", selectedId);
+              $("#CategoryName").val(selectedText);
+              $("#popupForm").css("z-index", "1002").show();
+          }
+
+          function openSubCategoryPopup(event){
+              event?.preventDefault();
+              // ItemMaster F2/F3 shortcut: reset popup to F2-New save mode.
+              if (typeof itemMasterSetPopupMode === "function") itemMasterSetPopupMode("subcategory", "new", 0);
+              $("#SubCategoryPopup").show();
+              setTimeout(() => {
+                  let subcategoryform = document.getElementById("Subcategoryforms");
+                  if(subcategoryform){
+                      subcategoryform.reset();
+                  }
+              },500);
+              $("#subcategory").val("");
+                updateCategoryDropdown();
+          }
+          function closesubcategory(){
+              $("#SubCategoryPopup").hide();
+          }
+        function saveSubCategory() {
+
+            var subcategoryname = $("#subcategory").val();
+            var categoryId = $("#categoryDropdown").val();
+
+            if (subcategoryname.trim() === "") {
+                toastr.error("Subcategory name is required");
+                return;
+            }
+
+            $.ajax({
+                url: "/ItemMaster/CreateSubCategory",
+                type: "POST",
+                data: {
+                    Name: subcategoryname,
+                    CategoryId: categoryId
+                },
+                success: function (response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        closesubcategory();
+                        updatesubcategorydropdown(response.subCategory?.id || response.subCategory?.Id || response.data?.id || response.data?.Id);
+                    } else {
+                        toastr.warning(response.message);
+                    }
+                },
+                error: function () {
+                    toastr.error("Something went wrong. Please try again.");
+                }
+            });
+        }
+
+          function updatesubcategorydropdown(selectedId){
+              $.ajax({
+                  url:"/ItemMaster/GetSubCategory",
+                  type:"GET",
+
+                  success : function(data){
+                      var subcatdropdown = $("#subcategoryId");
+                      subcatdropdown.empty();
+                      subcatdropdown.append('<option disabled selected>Select SubCategory</option>');
+                      $.each(data, function(index, subcategory){
+                          var value = subcategory.val || subcategory.value;
+                          var option = $("<option />").val(value).text(subcategory.text);
+                          if (selectedId && value == selectedId) {
+                              option.attr("selected", "selected");
+                          }
+                          subcatdropdown.append(option);
+                      });
+                      if (selectedId) {
+                          subcatdropdown.val(selectedId);
+                      }
+                  },
+                  error: function(){
+                      alert("Failed to update subcategory.");
+                  }
+              });
+          }
+
+          function opencompanyPopup(event) {
+               event?.preventDefault(); // ✅ Prevent unintended form submission
+               // ItemMaster F2/F3 shortcut: reset popup to F2-New save mode.
+               if (typeof itemMasterSetPopupMode === "function") itemMasterSetPopupMode("company", "new", 0);
+               $("#companypopup").show();
+
+                      setTimeout(() => {
+                       let form = document.getElementById("companyform");
+                       if (form) {
+                           form.reset();
+                       } else {
+                           console.warn("Form #categoryForms not found. Ensure it is loaded.");
+                       }
+                   }, 500); // Wait for the form to load
+               $("#companyName").val("");
+           }
+          function closecompany() {
+           $("#companypopup").hide();
+          }
+        function savecompany() {
+
+            var companyName = $("#companyName").val();
+
+            if (companyName.trim() === "") {
+                toastr.error("Company name is required!");
+                return;
+            }
+
+            $.ajax({
+                url: "/ItemMaster/CreateCompany",
+                type: "POST",
+                data: {
+                    Name: companyName
+                },
+                success: function (response) {
+
+                    if (response.success) {
+                        toastr.success(response.message);
+                        closecompany();
+                        updatecompanyDropdown(response.company?.id || response.company?.Id);
+                    } else {
+                        toastr.warning(response.message);
+                    }
+                },
+                error: function () {
+                    toastr.error("Something went wrong. Please try again.");
+                }
+            });
+        }
+
+          function updatecompanyDropdown(selectedId) {
+
+               $.ajax({
+                   url: "/ItemMaster/GetCompanies",
+                   type: "GET",
+                   success: function (data) {
+
+                       let companydropdown = $("#companyid");
+                       let divisionCompanyDropdown = $("#companyDropdown");
+                         companydropdown.empty();
+                         divisionCompanyDropdown.empty();
+                         companydropdown.append('<option disabled selected>Select Company</option>');
+                         divisionCompanyDropdown.append('<option disabled selected>Select Company</option>');
+                         $.each(data, function (index, company) {
+                            let option = $("<option />").val(company.value).text(company.text);
+                            if (selectedId && company.value == selectedId) {
+                                option.attr("selected", "selected");
+                            }
+                              companydropdown.append(option.clone());
+                              divisionCompanyDropdown.append(option.clone());
+                         });
+                         if (selectedId) {
+                             companydropdown.val(selectedId);
+                             divisionCompanyDropdown.val(selectedId);
+                         }
+                   },
+                   error: function () {
+                       alert("Failed to update companies.");
+                   }
+               });
+          }
+
+          function openDivisionCompanyPopup(event) {
+              event?.preventDefault();
+              if (typeof itemMasterSetPopupMode === "function") itemMasterSetPopupMode("company", "new", 0);
+              $("#companypopup").css("z-index", "1002");
+              opencompanyPopup(event);
+          }
+          function openDivisionCompanyModifyPopup(event) {
+              event?.preventDefault();
+              var selectedId = parseInt($("#companyDropdown").val(), 10) || 0;
+              var selectedText = ($("#companyDropdown option:selected").text() || "").trim();
+              if (selectedId <= 0) {
+                  toastr.warning("Please select Company first.");
+                  return;
+              }
+              if (typeof itemMasterSetPopupMode === "function") itemMasterSetPopupMode("company", "edit", selectedId);
+              $("#companyName").val(selectedText);
+              $("#companypopup").css("z-index", "1002").show();
+          }
+
+          function opendivisionpopup(event){
+              event?.preventDefault();
+              // ItemMaster F2/F3 shortcut: reset popup to F2-New save mode.
+              if (typeof itemMasterSetPopupMode === "function") itemMasterSetPopupMode("division", "new", 0);
+              $("#divisionpopup").show();
+              setTimeout(() => {
+                  let divisionform = document.getElementById("divisionform");
+                  if(divisionform){
+                      divisionform.reset();
+                  }
+              },500);
+              $("#divisionname").val('');
+          }
+          function closedivision(){
+             $("#divisionpopup").hide();
+          }
+          function savedivision() {
+
+            var name = $("#divisionname").val();
+            var companyId = $("#companyDropdown").val();
+
+            if (name.trim() === "") {
+                toastr.error("Division name is required");
+                return;
+            }
+
+            $.ajax({
+                url: "/ItemMaster/CreateDivision",
+                type: "POST",
+                data: {
+                    Name: name,
+                    CompanyId: companyId
+                },
+                success: function (response) {
+                    if (response.success) {
+                        toastr.success("Division created successfully");
+                        closedivision();
+                        updatedivisiondrop(companyId, response.division?.id || response.division?.Id);
+                    } else {
+                        toastr.warning(response.message);
+                    }
+                },
+                error: function () {
+                    toastr.error("Something went wrong. Please try again.");
+                }
+            });
+        }
+
+          function updatedivisiondrop(companyId, selectedId)
+          {
+              $.ajax({
+                  url:"/ItemMaster/GetDivision",
+                  type : "GET",
+                  data: { companyId: companyId },
+                  success : function(data){
+                  var divisiondropdown = $("#divisionId");
+                     divisiondropdown.empty();
+                     $.each(data, function(index, division){
+                       var value = division.val || division.value;
+                       var option = $("<option />").val(value).text(division.text);
+                       if (selectedId && value == selectedId) {
+                           option.attr("selected", "selected");
+                       }
+                       divisiondropdown.append(option);
+                     });
+                     if (selectedId) {
+                       divisiondropdown.val(selectedId);
+                     }
+                  },
+                  error : function(){
+                      alert("Failed to update division");
+                  }
+              })
+          }
+
+          function openhsnpopup(event){
+              event?.preventDefault();
+              // ItemMaster F2/F3 shortcut: reset popup to F2-New save mode.
+              if (typeof itemMasterSetPopupMode === "function") itemMasterSetPopupMode("hsn", "new", 0);
+              $("#hsnpopup").show();
+              setTimeout(() => {
+                  let hsnform = document.getElementById("hsnform");
+                  if(hsnform){
+                      hsnform.reset();
+                  }
+              },500);
+              $("#hsncode").val('');
+          }
+          function closehsnpopup(){
+              $("#hsnpopup").hide();
+          }
+        function savehsn() {
+
+            var formData = $("#hsnform").serialize();
+
+            $.ajax({
+                url: "/ItemMaster/CreateHsn",
+                type: "POST",
+                data: formData,
+                success: function (response) {
+
+                    if (response.success) {
+                        toastr.success(response.message);
+                        closehsnpopup();
+                        updatehsndropdown(response.hsn?.id || response.hsn?.Id);
+                    }
+                    else {
+                        toastr.warning(response.message);
+                    }
+                },
+                error: function () {
+                    toastr.error("Something went wrong. Please try again.");
+                }
+            });
+        }
+
+          function updatehsndropdown(selectedId){
+              $.ajax({
+                  url : "/ItemMaster/GetHsn",
+                  type : "GET",
+                  success : function(data){
+                    let hsndropdown = $("#hsnId");
+                    hsndropdown.empty();
+                    $.each(data, function(index, hsn){
+                    var value = hsn.val || hsn.value;
+                    var option = $("<option />").val(value).text(hsn.text);
+                    if (selectedId && value == selectedId) {
+                       option.attr("selected", "selected");
+                    }
+                    hsndropdown.append(option);
+                    });
+                    if (selectedId) {
+                       hsndropdown.val(selectedId).trigger("change");
+                    }
+                  },
+                  error : function(){
+                      alert("Failed to update hsn dropdown");
+                  }
+              })
+          }
+
+          // ItemMaster F2/F3 shortcut: direct ItemMaster form dropdowns can open New/Modify with existing popup forms.
+          var itemMasterShortcutSettings = {
+              company: { popup: "#companypopup", select: "#companyid", newTitle: "Add Company", editTitle: "Modify Company", saveFunction: "savecompany", closeFunction: "closecompany", updateUrl: "/ItemMaster/UpdateCompany", label: "Company" },
+              division: { popup: "#divisionpopup", select: "#divisionId", newTitle: "Add Division", editTitle: "Modify Division", saveFunction: "savedivision", closeFunction: "closedivision", updateUrl: "/ItemMaster/UpdateDivision", label: "Division" },
+              category: { popup: "#popupForm", select: "#CategoryId", newTitle: "Add New Category", editTitle: "Modify Category", saveFunction: "saveCategory", closeFunction: "closePopup", updateUrl: "/ItemMaster/UpdateCategory", label: "Category" },
+              subcategory: { popup: "#SubCategoryPopup", select: "#subcategoryId", newTitle: "Add New SubCategory", editTitle: "Modify SubCategory", saveFunction: "saveSubCategory", closeFunction: "closesubcategory", updateUrl: "/ItemMaster/UpdateSubCategory", label: "SubCategory" },
+              hsn: { popup: "#hsnpopup", select: "#hsnId", newTitle: "Add HSN/SAC", editTitle: "Modify HSN/SAC", saveFunction: "savehsn", closeFunction: "closehsnpopup", updateUrl: "/ItemMaster/UpdateHsn", label: "HSN" }
+          };
+          var itemMasterSelectShortcutMap = {
+              companyid: "company",
+              divisionId: "division",
+              CategoryId: "category",
+              subcategoryId: "subcategory",
+              hsnId: "hsn"
+          };
+
+          function itemMasterSetPopupMode(type, mode, id) {
+              var setting = itemMasterShortcutSettings[type];
+              if (!setting) return;
+
+              var popup = $(setting.popup);
+              popup.data("itemmaster-edit-id", mode === "edit" ? id : 0);
+              popup.find("h2,h4").first().text(mode === "edit" ? setting.editTitle : setting.newTitle);
+              popup.find("button.btn-success").first()
+                  .text(mode === "edit" ? "Update" : "Save")
+                  .attr("onclick", mode === "edit" ? "itemMasterSaveModify('" + type + "')" : setting.saveFunction + "()");
+          }
+
+          function itemMasterPopupEditId(type) {
+              return parseInt($(itemMasterShortcutSettings[type].popup).data("itemmaster-edit-id"), 10) || 0;
+          }
+
+          function itemMasterSelectedId(selector) {
+              return parseInt($(selector).val(), 10) || 0;
+          }
+
+          function itemMasterSelectedText(selector) {
+              return ($(selector).find("option:selected").text() || "").trim();
+          }
+
+          function itemMasterOpenShortcut(type, mode, event) {
+              event?.preventDefault();
+              if (mode === "new") {
+                  itemMasterSetPopupMode(type, "new", 0);
+                  if (type === "company") opencompanyPopup(event);
+                  if (type === "division") opendivisionpopup(event);
+                  if (type === "category") openPopup(event);
+                  if (type === "subcategory") openSubCategoryPopup(event);
+                  if (type === "hsn") openhsnpopup(event);
+                  return;
+              }
+
+              itemMasterOpenModifyPopup(type);
+          }
+
+          function opencompanyModifyPopup(event) { itemMasterOpenShortcut("company", "edit", event); }
+          function opendivisionModifyPopup(event) { itemMasterOpenShortcut("division", "edit", event); }
+          function openCategoryModifyPopup(event) { itemMasterOpenShortcut("category", "edit", event); }
+          function openSubCategoryModifyPopup(event) { itemMasterOpenShortcut("subcategory", "edit", event); }
+          function openhsnModifyPopup(event) { itemMasterOpenShortcut("hsn", "edit", event); }
+
+          function itemMasterOpenModifyPopup(type) {
+              var setting = itemMasterShortcutSettings[type];
+              var selectedId = itemMasterSelectedId(setting.select);
+              var selectedText = itemMasterSelectedText(setting.select);
+
+              if (selectedId <= 0) {
+                  toastr.warning("Please select " + setting.label + " first.");
+                  return;
+              }
+
+              itemMasterSetPopupMode(type, "edit", selectedId);
+
+              if (type === "company") {
+                  $("#companyName").val(selectedText);
+                  $("#companypopup").show();
+              } else if (type === "division") {
+                  var companyId = itemMasterSelectedId("#companyid");
+                  if (companyId <= 0) {
+                      toastr.warning("Please select Company first.");
+                      return;
+                  }
+                  $("#divisionname").val(selectedText);
+                  $("#divisionpopup").show();
+                  if (typeof loadDivisionCompanies === "function") loadDivisionCompanies();
+                  else if (typeof loadCompanies === "function") loadCompanies();
+                  setTimeout(function () { $("#companyDropdown").val(companyId); }, 500);
+              } else if (type === "category") {
+                  $("#CategoryName").val(selectedText);
+                  $("#popupForm").show();
+              } else if (type === "subcategory") {
+                  var categoryId = itemMasterSelectedId("#CategoryId");
+                  if (categoryId <= 0) {
+                      toastr.warning("Please select Category first.");
+                      return;
+                  }
+                  $("#subcategory").val(selectedText);
+                  $("#SubCategoryPopup").show();
+                  updateCategoryDropdown();
+                  setTimeout(function () { $("#categoryDropdown").val(categoryId); }, 500);
+              } else if (type === "hsn") {
+                  $("#hsnpopup").show();
+                  $("#hsnform [name='HsnCode']").val(selectedText);
+                  $("#hsnform [name='HsnType']").val($("#hsnform [name='HsnType']").val() || "1");
+                  fetch(`/HSN/GetDetails?Id=${selectedId}`)
+                      .then(response => response.json())
+                      .then(data => {
+                          $("#hsnform [name='SGST']").val(data.sgst || 0);
+                          $("#hsnform [name='CGST']").val(data.cgst || 0);
+                          $("#hsnform [name='IGST']").val(data.igst || 0);
+                          $("#hsnform [name='Cess']").val(data.cess || 0);
+                      })
+                      .catch(() => toastr.warning("HSN details not found."));
+              }
+          }
+
+          function itemMasterSaveModify(type) {
+              var setting = itemMasterShortcutSettings[type];
+              var editId = itemMasterPopupEditId(type);
+              var data = {};
+              var refreshParentId = 0;
+
+              if (editId <= 0) {
+                  toastr.warning("Please select " + setting.label + " first.");
+                  return;
+              }
+
+              if (type === "company") {
+                  data = { Id: editId, Name: ($("#companyName").val() || "").trim() };
+                  if (data.Name === "") { toastr.warning("Company name is required."); return; }
+              } else if (type === "division") {
+                  refreshParentId = itemMasterSelectedId("#companyDropdown");
+                  data = { Id: editId, Name: ($("#divisionname").val() || "").trim(), CompanyId: refreshParentId };
+                  if (data.Name === "") { toastr.warning("Division name is required."); return; }
+                  if (data.CompanyId <= 0) { toastr.warning("Company is required."); return; }
+              } else if (type === "category") {
+                  data = { Id: editId, CategoryName: ($("#CategoryName").val() || "").trim() };
+                  if (data.CategoryName === "") { toastr.warning("Category name is required."); return; }
+              } else if (type === "subcategory") {
+                  refreshParentId = itemMasterSelectedId("#categoryDropdown");
+                  data = { Id: editId, Name: ($("#subcategory").val() || "").trim(), CategoryId: refreshParentId };
+                  if (data.Name === "") { toastr.warning("Subcategory name is required."); return; }
+                  if (data.CategoryId <= 0) { toastr.warning("Category is required."); return; }
+              } else if (type === "hsn") {
+                  var formData = $("#hsnform").serializeArray();
+                  formData.push({ name: "Id", value: editId });
+                  data = $.param(formData);
+              }
+
+              $.ajax({
+                  url: setting.updateUrl,
+                  type: "POST",
+                  data: data,
+                  success: function (response) {
+                      if (response.success) {
+                          toastr.success(response.message);
+                          itemMasterCloseModifyPopup(type);
+                          itemMasterRefreshModifiedDropdown(type, editId, refreshParentId);
+                      } else {
+                          toastr.warning(response.message);
+                      }
+                  },
+                  error: function () {
+                      toastr.error("Something went wrong. Please try again.");
+                  }
+              });
+          }
+
+          function itemMasterCloseModifyPopup(type) {
+              var setting = itemMasterShortcutSettings[type];
+              if (typeof window[setting.closeFunction] === "function") {
+                  window[setting.closeFunction]();
+              } else {
+                  $(setting.popup).hide();
+              }
+              itemMasterSetPopupMode(type, "new", 0);
+          }
+
+          function itemMasterRefreshModifiedDropdown(type, editId, parentId) {
+              if (type === "company") {
+                  updatecompanyDropdown(editId);
+                  setTimeout(function () { $("#companyid").val(editId); }, 600);
+              } else if (type === "division") {
+                  updatedivisiondrop(parentId, editId);
+                  setTimeout(function () { $("#divisionId").val(editId); }, 600);
+              } else if (type === "category") {
+                  updateCategoryDropdown(editId);
+                  setTimeout(function () { $("#CategoryId").val(editId); }, 600);
+              } else if (type === "subcategory") {
+                  updatesubcategorydropdown(editId);
+                  setTimeout(function () { $("#subcategoryId").val(editId); }, 600);
+              } else if (type === "hsn") {
+                  updatehsndropdown(editId);
+                  setTimeout(function () { $("#hsnId").val(editId).trigger("change"); }, 600);
+              }
+          }
+
+          // ItemMaster F2/F3 shortcut: keyboard support when cursor is on the master dropdown itself.
+          $(document).off("keydown.itemMasterDirectShortcuts", "#companyid,#divisionId,#CategoryId,#subcategoryId,#hsnId,.itemmaster-master-shortcut")
+              .on("keydown.itemMasterDirectShortcuts", "#companyid,#divisionId,#CategoryId,#subcategoryId,#hsnId,.itemmaster-master-shortcut", function (event) {
+                  var keyCode = event.which || event.keyCode;
+                  if (keyCode !== 113 && keyCode !== 114) return;
+
+                  var type = $(this).data("master-type") || itemMasterSelectShortcutMap[this.id];
+                  if (!type) return;
+
+                  itemMasterOpenShortcut(type, keyCode === 114 ? "edit" : "new", event);
+              });
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function(){
+            debugger;
+            const savehsnId = $("#hsnId").val();
+            if(savehsnId){
+                fetchhsndetails(savehsnId);
+            }
+            $(document).on("change","#hsnId", function(){
+                const hsnid = $(this).val();
+                if(hsnid){
+                    fetchhsndetails(hsnid);
+                }
+            });
+
+            function fetchhsndetails(hsnid){
+                fetch(`/HSN/GetDetails?Id=${hsnid}`)
+                .then(response => {
+                    if(!response.ok){
+                        throw new Error(`Details Not found: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    debugger;
+                    if(data){
+                        $('#cgst').val(data.cgst || 0);
+                        $('#sgst').val(data.sgst || 0);
+                        $('#igst').val(data.igst || 0);
+                        $('#cess').val(data.cess || 0);
+                    }
+                    else{
+                        console.warn("no details found");
+                    }
+                })
+                .catch(error => console.error("error fetching details:", error));
+            }
+        });
+    </script>
+    <script>
+        function loadDivisions(companyId, selectedDivisionId = null) {
+            const divisionDropdown = $("#divisionId");
+
+            divisionDropdown.empty();
+            divisionDropdown.append('<option value="0">Loading...</option>');
+
+            if (!companyId || companyId == "0") {
+                divisionDropdown.html('<option value="0">Select Division</option>');
+                return;
+            }
+
+            $.get("/ItemMaster/GetDivisionByCompany", { companyId: companyId })
+                .done(function (data) {
+                    divisionDropdown.empty();
+                    $.each(data, function (i, item) {
+                        divisionDropdown.append(
+                            $("<option>").val(item.value).text(item.text)
+                        );
+                    });
+
+                    if (selectedDivisionId) {
+                        divisionDropdown.val(selectedDivisionId);
+                    }
+                })
+                .fail(function () {
+                    divisionDropdown.html('<option value="0">Error loading divisions</option>');
+                });
+        }
+
+        // Company change (Create + Edit)
+        $(document).on("change", "#companyid", function () {
+            const companyId = $(this).val();
+            loadDivisions(companyId);
+        });
+    </script>
+    <script>
+        function loadSubCategories(categoryId, selectedSubCategoryId = null) {
+            const subCategoryDropdown = $("#subcategoryId");
+
+            subCategoryDropdown.empty();
+            subCategoryDropdown.append('<option value="0">Loading...</option>');
+
+            if (!categoryId || categoryId == "0") {
+                subCategoryDropdown.html('<option value="0">Select SubCategory</option>');
+                return;
+            }
+
+            $.get("/ItemMaster/GetSubCategoryByCategory", { categoryId: categoryId })
+                .done(function (data) {
+                    subCategoryDropdown.empty();
+                    $.each(data, function (i, item) {
+                        subCategoryDropdown.append(
+                            $("<option>").val(item.value).text(item.text)
+                        );
+                    });
+
+                    if (selectedSubCategoryId) {
+                        subCategoryDropdown.val(selectedSubCategoryId);
+                    }
+                })
+                .fail(function () {
+                    subCategoryDropdown.html('<option value="0">Error loading subcategories</option>');
+                });
+        }
+
+        // Category change (Create + Edit)
+        $(document).on("change", "#CategoryId", function () {
+            const categoryId = $(this).val();
+            loadSubCategories(categoryId);
+        });
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const companyId = $("#companyid").val();
+            const savedDivisionId = "@Model.DivisionId";
+
+            if (companyId && companyId != "0") {
+                loadDivisions(companyId, savedDivisionId);
+            }
+
+            const categoryId = $("#CategoryId").val();
+            const savedSubCategoryId = "@Model.SubCategoryId";
+
+            if (categoryId && categoryId != "0") {
+                loadSubCategories(categoryId, savedSubCategoryId);
+            }
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+
+            function updateDecimalStatus() {
+                if ($("#DecemalAllowed").is(":checked")) {
+                    $("#decimalStatus").text("Active").css("color", "green");
+                } else {
+                    $("#decimalStatus").text("Inactive").css("color", "red");
+                }
+            }
+
+            // Page load par bhi check kare
+            updateDecimalStatus();
+
+            // Checkbox change hone par
+            $("#DecemalAllowed").on("change", function () {
+                updateDecimalStatus();
+            });
+        });
+    </script>
+
+
+    <script>
+        function openItemImagePopup() {
+            $("#itemImagePopup").modal("show");
+        }
+
+        function closeItemImagePopup() {
+            $("#itemImagePopup").modal("hide");
+        }
+    </script>
+    <script>
+        // Pehle initialize karo
+        let selectedImages = [];
+
+        // Page load pe existing images load karo
+        document.addEventListener("DOMContentLoaded", function () {
+
+            @if (Model.ExistingImages != null && Model.ExistingImages.Any())
+            {
+                    @for (int i = 0; i < Model.ExistingImages.Count; i++)
+                    {
+                            <text>
+                            selectedImages.push({
+                                file: null,
+                                isPrimary: @Model.ExistingImages[i].IsPrimary.ToString().ToLower(),
+                                id: @Model.ExistingImages[i].Id,
+                                imagePath: "@Model.ExistingImages[i].ImagePath",
+                                markedForDelete: false
+                            });
+
+                            renderExistingImage(
+                                "@Model.ExistingImages[i].ImagePath",
+                                @i,
+                                @Model.ExistingImages[i].IsPrimary.ToString().ToLower()
+                            );
+                            </text>
+                    }
+            }
+        });
+
+        // Existing image render function
+        function renderExistingImage(src, index, isPrimary) {
+            $("#imagePreview").append(`
+                <div class="position-relative me-2 mb-2 image-box" data-index="${index}">
+                    <img src="${src}"
+                         class="img-thumbnail"
+                         style="width:120px;height:120px;object-fit:cover" />
+
+                    <span onclick="removeImage(${index})"
+                          class="position-absolute top-0 end-0 bg-danger text-white rounded-circle"
+                          style="width:20px;height:20px;display:flex;
+                                 align-items:center;justify-content:center;cursor:pointer;">×</span>
+
+                    <div class="text-center mt-1">
+                        <input type="radio"
+                               name="primaryImage"
+                               onclick="setPrimary(${index})"
+                               ${isPrimary ? "checked" : ""} />
+                        <small>Primary</small>
+                    </div>
+                </div>
+            `);
+        }
+
+        // Nai images file input se
+        $("#itemImages").on("change", function () {
+            const files = Array.from(this.files);
+
+            files.forEach(file => {
+                // Duplicate check (sirf new files ke liye)
+                if (selectedImages.some(x => x.file && x.file.name === file.name && x.file.size === file.size)) {
+                    return;
+                }
+
+                const index = selectedImages.length;
+
+                selectedImages.push({
+                    file: file,
+                    isPrimary: index === 0 && selectedImages.length === 0,
+                    id: null,
+                    markedForDelete: false
+                });
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const currentIndex = selectedImages.length - 1;
+                    $("#imagePreview").append(`
+                        <div class="position-relative me-2 mb-2 image-box" data-index="${currentIndex}">
+                            <img src="${e.target.result}"
+                                 class="img-thumbnail"
+                                 style="width:120px;height:120px;object-fit:cover" />
+
+                            <span onclick="removeImage(${currentIndex})"
+                                  class="position-absolute top-0 end-0 bg-danger text-white rounded-circle"
+                                  style="width:20px;height:20px;display:flex;
+                                         align-items:center;justify-content:center;cursor:pointer;">×</span>
+
+                            <div class="text-center mt-1">
+                                <input type="radio"
+                                       name="primaryImage"
+                                       onclick="setPrimary(${currentIndex})"
+                                       ${currentIndex === 0 ? "checked" : ""} />
+                                <small>Primary</small>
+                            </div>
+                        </div>
+                    `);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            this.value = "";
+        });
+
+        // Primary set karo
+        function setPrimary(index) {
+            selectedImages.forEach((img, i) => {
+                img.isPrimary = (i === index);
+            });
+            $("#PrimaryIndex").val(index);
+        }
+
+        // Image remove karo
+        function removeImage(index) {
+            const img = selectedImages[index];
+
+            if (!img) return;
+
+            if (img.id) {
+                // Existing DB image — mark for delete + hidden field add karo
+                img.markedForDelete = true;
+
+                // Duplicate hidden field na bane
+                $(`input[name="DeletedImageIds"][value="${img.id}"]`).remove();
+                $("#ItemMasterForm").append(
+                    `<input type="hidden" name="DeletedImageIds" value="${img.id}" />`
+                );
+            }
+
+            // Preview se hata do
+            $(`#imagePreview .image-box[data-index='${index}']`).fadeOut(200, function () {
+                $(this).remove();
+                reindexImages();
+            });
+
+            // Array se mark (splice mat karo — index shift hoga)
+            if (!img.id) {
+                selectedImages.splice(index, 1);
+            }
+        }
+
+        // Reindex preview boxes
+        function reindexImages() {
+            $("#imagePreview .image-box").each(function (i) {
+                $(this).attr("data-index", i);
+            });
+        }
+
+        // Done button — form submit ke liye files attach karo
+        function saveSelectedImages() {
+            const activeImages = selectedImages.filter(x => !x.markedForDelete);
+
+            if (activeImages.length === 0) {
+                toastr.warning("Please select at least one image");
+                return;
+            }
+
+            // Purane hidden fields hata do
+            $('input[name="PrimaryImageId"]').remove();
+            $('input[name="PrimaryNewIndex"]').remove();
+
+            const dataTransfer = new DataTransfer();
+            let newImageCount = 0;
+            let newPrimaryIndex = 0;
+            let existingPrimaryId = null;
+
+            activeImages.forEach((obj) => {
+                if (obj.isPrimary) {
+                    if (obj.id) {
+                        // Existing DB image primary hai
+                        existingPrimaryId = obj.id;
+                    } else {
+                        // New image primary hai
+                        newPrimaryIndex = newImageCount;
+                    }
+                }
+
+                if (obj.file) {
+                    dataTransfer.items.add(obj.file);
+                    newImageCount++;
+                }
+            });
+
+            // Hidden fields set karo
+            if (existingPrimaryId) {
+                $("#ItemMasterForm").append(
+                    `<input type="hidden" name="PrimaryImageId" value="${existingPrimaryId}" />`
+                );
+            }
+
+            document.getElementById("PrimaryIndex").value = newPrimaryIndex;
+            document.getElementById("Images").files = dataTransfer.files;
+
+            toastr.success(`${activeImages.length} image(s) ready (${newImageCount} new)`);
+            closeItemImagePopup();
+        }
+           function confirmSave(callback) {
+            Swal.fire({
+                title: 'Confirm Save?',
+                text: 'Do you want to save this item?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '✅ Yes, Save',
+                cancelButtonText: '❌ Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#dc3545',
+                reverseButtons: true
+            }).then((result) => {
+                callback(result.isConfirmed);
+            });
+        }
+        $(document).ready(function () {
+
+            $("#ItemMasterForm").on("submit", function (e) {
+                e.preventDefault();
+
+                let form = $(this);
+
+                confirmSave(function (ok) {
+
+                    if (!ok) return;
+
+                    $.ajax({
+                        type: "POST",
+                        url: form.attr("action"),
+                        data: new FormData(form[0]),
+                        processData: false,
+                        contentType: false,
+                        success: function (response) {
+
+                            if (response.success) {
+                                toastr.success("Item updated successfully!");
+
+                                setTimeout(function () {
+                                    window.location.href = "/ItemMaster/Index";
+                                }, 1200);
+                            }
+                            else {
+                                toastr.error(response.message || "Save failed!");
+                            }
+                        },
+                        error: function () {
+                            toastr.error("Server error while saving.");
+                        }
+                    });
+
+                });
+
+            });
+
+        });
+             
+    </script>
+    }

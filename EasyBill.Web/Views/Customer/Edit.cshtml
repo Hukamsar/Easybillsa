@@ -1,0 +1,496 @@
+﻿@using EasyBill.Models.ViewModels
+@model CustomerVM
+@{
+    ViewData["Title"] = "Edit Customer";
+}
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+        /* SweetAlert Button Styling */
+        .swal2-confirm, .swal2-cancel
+
+    {
+        border-radius: 8px !important;
+        padding: 8px 20px !important;
+        font-weight: 500 !important;
+        transition: all 0.25s ease-in-out !important;
+        margin: 0 8px !important; /* space between buttons */
+    }
+
+    .swal2-confirm:hover {
+        background-color: #157347 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(25, 135, 84, 0.4);
+    }
+
+    .swal2-cancel:hover {
+        background-color: #bb2d3b !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(220, 53, 69, 0.4);
+    }
+
+    .swal2-confirm:focus,
+    .swal2-cancel:focus {
+        outline: none !important;
+        box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.4) !important;
+    }
+    
+</style>
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;" >
+            Edit Company
+        </div>
+        <div class="card-body">
+            <form asp-controller="Customer" asp-action="Edit" method="post" id="CustomerForm">
+                <input type="hidden" asp-for="Id" />
+
+                <div class="container">
+                    <div class="row">
+                        <!-- Left Section -->
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="Name" class="col-md-4 col-form-label small">
+                                    Name <span class="text-danger">*</span>
+                                </label>
+                                <div class="col-md-8">
+                                    <input asp-for="Name" class="form-control form-control-sm" />
+                                    <span asp-validation-for="Name" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="Address" class="col-md-4 col-form-label small">
+                                    Address
+                                </label>
+                                <div class="col-md-8">
+                                    <input asp-for="Address" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="PhoneNo" class="col-md-4 col-form-label small">
+                                    Phone No <span class="text-danger">*</span>
+                                </label>
+                                <div class="col-md-8">
+                                    <input asp-for="PhoneNo" class="form-control form-control-sm" maxlength="10" />
+                                    <span asp-validation-for="PhoneNo" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="Email" class="col-md-4 col-form-label small">
+                                    Email
+                                </label>
+                                <div class="col-md-8">
+                                    <input asp-for="Email" class="form-control form-control-sm" />
+                                    <span asp-validation-for="Email" class="text-danger small"></span>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label asp-for="PaymentDays" class="col-md-4 col-form-label small">
+                                    Payment Days
+                                </label>
+                                <div class="col-md-8">
+                                    <input asp-for="PaymentDays" class="form-control form-control-sm" />
+                                    <span asp-validation-for="PaymentDays" class="text-danger small"></span>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label asp-for="Status" class="col-md-4 col-form-label small">
+                                    Status
+                                </label>
+                                <div class="col-md-8">
+                                    <select asp-for="Status" class="form-select form-select-sm">
+                                        <option value="1">Active</option>
+                                        <option value="2">Inactive</option>
+                                        <option value="3">Blocked</option>
+                                        <option value="4">Suspended</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Section -->
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="AccountGroupId" class="col-md-4 col-form-label small">
+                                    Account Group
+                                </label>
+                                <div class="col-md-8 d-flex align-items-center">
+                                    <select asp-for="AccountGroupId"
+                                            asp-items="ViewBag.AccountGroupList"
+                                            id="AccountGroupId"
+                                            class="form-select form-select-sm">
+                                        <option value="">-- Select Group --</option>
+                                    </select>
+                                    <div class="shortcut-box">
+                                        <span id="btnF2AccGrp" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3AccGrp" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                    <span asp-validation-for="AccountGroupId" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="GSTNo" class="col-md-4 col-form-label small">
+                                    GST No
+                                </label>
+                                <div class="col-md-8">
+                                    <input asp-for="GSTNo"
+                                           id="GSTNo"
+                                           class="form-control form-control-sm"
+                                           maxlength="15"
+                                           style="text-transform: uppercase;" />
+                                    <span asp-validation-for="GSTNo" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <!-- State Code Section -->
+                            <div class="row mb-2">
+                                <label class="col-md-4 col-form-label small">
+                                    State Code
+                                </label>
+                                <div class="col-md-8">
+                                    <!-- Display field (readonly) -->
+                                    <input type="text"
+                                           id="StateCodeDisplay"
+                                           class="form-control form-control-sm"
+                                           value="@(Model.StateCode.HasValue? Model.StateCode.Value.ToString("D").PadLeft(2, '0') + " - " + Model.StateCode.Value.ToString() : "")"
+                                           readonly />
+
+                                    <!-- Hidden field with value from Model -->
+                                    <input type="hidden"
+                                           asp-for="StateCode"
+                                           id="StateCodeHidden" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="GSTType" class="col-md-4 col-form-label small">
+                                    GST Type
+                                </label>
+                                <div class="col-md-8">
+                                    <!-- Disabled dropdown for display -->
+                                    <select id="GSTTypeSelect"
+                                            asp-items="ViewBag.GSTTypes"
+                                            class="form-select form-select-sm"
+                                            disabled>
+                                        <option value="">-- Select GST Type --</option>
+                                    </select>
+
+                                    <!-- Hidden field jo actual value submit karega -->
+                                    <input type="hidden"
+                                           name="GSTType"
+                                           id="GSTTypeHidden"
+                                           value="@((int)Model.GSTType)" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="Category" class="col-md-4 col-form-label small">
+                                    Category
+                                </label>
+                                <div class="col-md-8">
+                                    <select asp-for="Category"
+                                            asp-items="ViewBag.CustomerCategories"
+                                            class="form-select form-select-sm">
+                                        <option value="">-- Select Category --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Buttons Section -->
+                    <div class="mt-3 text-end">
+                        <button type="submit" class="btn btn-sm btn-primary px-4">Update</button>
+                        <a asp-controller="Customer" asp-action="Index"
+                           class="btn btn-sm btn-outline-secondary px-4">Cancel</a>
+                    </div>
+                </div>
+            </form>
+           <!-- ===== ACCOUNT GROUP MODAL ===== -->
+            <div class="modal fade" id="accGrpModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content custom-modal">
+                        <div class="modal-header">
+                            <h4 class="modal-title" id="accGrpModalTitle">Add Account Group</h4>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="modalAccGrpId" value="0" />
+                            <label>Name</label>
+                            <input type="text" id="modalAccGrpName" class="form-control modal-input" />
+
+                            <label class="mt-2">Under</label>
+                            <select id="modalAccGrpParentId" asp-items="ViewBag.ParentAccountGroupList" class="form-select form-select-sm modal-input">
+                                <option value="">select</option>
+                            </select>
+
+                            <div class="form-check mt-2">
+                                <input type="checkbox" id="modalAccGrpActive" class="form-check-input" checked />
+                                <label class="form-check-label" for="modalAccGrpActive">Active</label>
+                            </div>
+
+                            <span id="accGrpError" class="text-danger small modal-error"></span>
+                        </div>
+                        <div class="modal-footer">
+                        <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveAccGrp">Save</button>
+                        <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<link href="~/css/page.css" rel="stylesheet" />
+
+<script>
+
+    // ==============================
+    // ACCOUNT GROUP MODAL FUNCTION (GLOBAL SCOPE FIX)
+    // ==============================
+    function openAccGrpModal(mode) {
+        $("#accGrpError").text("");
+
+        if (mode === "new") {
+            $("#modalAccGrpId").val(0);
+            $("#modalAccGrpName").val("");
+            $("#modalAccGrpParentId").val("");
+            $("#modalAccGrpActive").prop("checked", true);
+            $("#accGrpModalTitle").text("Add Account Group");
+        } else {
+            let id = $("#AccountGroupId").val();
+            let text = $("#AccountGroupId option:selected").text();
+
+            if (!id) {
+                Swal.fire("Error", "Select Account Group first!", "error");
+                return;
+            }
+
+            $("#modalAccGrpId").val(id);
+            $("#modalAccGrpName").val(text);
+            $.get('/Customer/GetAccountGroups', function (data) {
+                let item = data.find(x => x.value == id);
+                if (item) {
+                    $("#modalAccGrpParentId").val(item.parentId || "");
+                    $("#modalAccGrpActive").prop("checked", item.isActive === true);
+                }
+            });
+            $("#accGrpModalTitle").text("Modify Account Group");
+        }
+
+        $("#accGrpModal").modal("show");
+
+        setTimeout(() => {
+            $("#modalAccGrpName").focus();
+        }, 200);
+    }
+
+
+    $(document).ready(function () {
+
+        // ==============================
+        // INITIALIZE GST + FORM LOGIC
+        // ==============================
+        const gstStateEnumMap = {
+            1: "JammuAndKashmir",
+            2: "HimachalPradesh",
+            3: "Punjab",
+            4: "Chandigarh",
+            5: "Uttarakhand",
+            6: "Haryana",
+            7: "Delhi",
+            8: "Rajasthan",
+            9: "UttarPradesh",
+            10: "Bihar",
+            11: "Sikkim",
+            12: "ArunachalPradesh",
+            13: "Nagaland",
+            14: "Manipur",
+            15: "Mizoram",
+            16: "Tripura",
+            17: "Meghalaya",
+            18: "Assam",
+            19: "WestBengal",
+            20: "Jharkhand",
+            21: "Odisha",
+            22: "Chhattisgarh",
+            23: "MadhyaPradesh",
+            24: "Gujarat",
+            26: "DadraNagarHaveliAndDamanDiu",
+            27: "Maharashtra",
+            28: "AndhraPradeshOld",
+            29: "Karnataka",
+            30: "Goa",
+            31: "Lakshadweep",
+            32: "Kerala",
+            33: "TamilNadu",
+            34: "Puducherry",
+            35: "AndamanNicobar",
+            36: "Telangada",
+            37: "AndhraPradesh",
+            38: "Ladakh"
+        };
+
+        function initializeFields() {
+            const stateCodeValue = parseInt($("#StateCodeHidden").val());
+            if (stateCodeValue && gstStateEnumMap[stateCodeValue]) {
+                $("#StateCodeDisplay").val(
+                    stateCodeValue.toString().padStart(2, '0') +
+                    " - " +
+                    gstStateEnumMap[stateCodeValue]
+                );
+            }
+
+            const gstTypeValue = $("#GSTTypeHidden").val();
+            if (gstTypeValue) {
+                $("#GSTTypeSelect").val(gstTypeValue);
+            }
+        }
+        initializeFields();
+
+        // GST change
+        $("#GSTNo").on("input paste", function () {
+            setTimeout(() => {
+                const gst = $(this).val().toUpperCase();
+
+                if (gst.length >= 2) {
+                    const code = parseInt(gst.substring(0, 2), 10);
+                    if (gstStateEnumMap[code]) {
+                        $("#StateCodeDisplay").val(code.toString().padStart(2, '0') + " - " + gstStateEnumMap[code]);
+                        $("#StateCodeHidden").val(code);
+                    }
+                }
+
+                if (gst.length >= 15) {
+                    $("#GSTTypeSelect").val("1");
+                    $("#GSTTypeHidden").val("1");
+                } else {
+                    $("#GSTTypeSelect").val("2");
+                    $("#GSTTypeHidden").val("2");
+                }
+
+            }, 0);
+        });
+
+        // ==============================
+        // FORM SUBMIT CONFIRM
+        // ==============================
+        let isSubmitting = false;
+
+        $("#CustomerForm").on("submit", function (e) {
+            e.preventDefault();
+            if (isSubmitting) return;
+
+            const form = this;
+            const name = $("#Name").val()?.trim();
+            const id = $("#Id").val();
+
+            if (!name) {
+                Swal.fire("Error", "Please enter Name!", "error");
+                return;
+            }
+
+            Swal.fire({
+                title: 'Confirm Update?',
+                text: 'Do you want to update this customer?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Update',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    $.ajax({
+                        url: "/Customer/CheckDuplicate",
+                        type: "GET",
+                        data: { name: name, id: id },
+                        success: function (res) {
+                            if (res.exists) {
+                                Swal.fire("Customer already exists!", "", "warning");
+                            } else {
+                                isSubmitting = true;
+                                form.submit();
+                            }
+                        }
+                    });
+
+                }
+            });
+        });
+
+        // ==============================
+        // BUTTON EVENTS (FIXED)
+        // ==============================
+        $("#btnF2AccGrp").click(() => openAccGrpModal("new"));
+        $("#btnF3AccGrp").click(() => openAccGrpModal("edit"));
+
+        $("#btnSaveAccGrp").click(function () {
+            let id = $("#modalAccGrpId").val();
+            let name = $("#modalAccGrpName").val().trim();
+            let parentId = $("#modalAccGrpParentId").val();
+            let isActive = $("#modalAccGrpActive").is(":checked");
+
+            if (!name) {
+                $("#accGrpError").text("Name required!");
+                return;
+            }
+
+            $.post('/Customer/QuickSaveAccountGroup', { id: id, name: name, parentId: parentId, isActive: isActive }, function (res) {
+                if (res.success) {
+                    $("#accGrpModal").modal('hide');
+
+                    $.get('/Customer/GetAccountGroups', function (data) {
+                        let ddl = $("#AccountGroupId");
+                        ddl.empty().append('<option value="">-- Select Group --</option>');
+
+                        $.each(data, function (i, item) {
+                            ddl.append($('<option>', {
+                                value: item.value,
+                                text: item.text,
+                                'data-parentid': item.parentId || '',
+                                'data-isactive': item.isActive,
+                                selected: item.value == res.newId
+                            }));
+                        });
+                    });
+
+                } else {
+                    $("#accGrpError").text(res.message);
+                }
+            });
+        });
+
+        $("#modalAccGrpName").keypress(function (e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                $("#btnSaveAccGrp").click();
+            }
+        });
+
+    });
+
+
+    // ==============================
+    // KEYBOARD SHORTCUTS (FIXED SCOPE ISSUE)
+    // ==============================
+    $(document).keydown(function (e) {
+
+        if (e.key === "F2") {
+            e.preventDefault();
+            openAccGrpModal("new");
+        }
+
+        if (e.key === "F3") {
+            e.preventDefault();
+            openAccGrpModal("edit");
+        }
+    });
+
+</script>

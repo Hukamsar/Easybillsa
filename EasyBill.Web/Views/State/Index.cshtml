@@ -1,0 +1,337 @@
+﻿@using EasyBill.Models.ViewModels
+@model StateVM
+
+@{
+    ViewData["Title"] = "Index";
+}
+<link href="~/css/page.css" rel="stylesheet" />
+
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    table thead.custom-header {
+        background-color: #2b6ac9 !important;
+    }
+
+        table thead.custom-header th {
+            background-color: #2b6ac9 !important;
+            color: #ffffff !important;
+            border-color: #2b6ac9 !important;
+        }
+
+    .swal2-confirm,
+    .swal2-cancel {
+        border-radius: 8px !important;
+        padding: 8px 20px !important;
+        font-weight: 500 !important;
+        transition: all 0.25s ease-in-out !important;
+        margin: 0 8px !important;
+    }
+
+        .swal2-confirm:hover {
+            background-color: #157347 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(25, 135, 84, 0.4);
+        }
+
+        .swal2-cancel:hover {
+            background-color: #bb2d3b !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(220, 53, 69, 0.4);
+        }
+
+        .swal2-confirm:focus,
+        .swal2-cancel:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.4) !important;
+        }
+</style>
+
+<!-- ===== ADD STATE FORM ===== -->
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Add State
+    </div>
+    <div class="card-body">
+        <form method="post" asp-controller="State" asp-action="Create" id="StateForm">
+            <div class="row">
+
+                <div class="col-md-6 d-flex align-items-center mb-2">
+                    <label asp-for="CountryId" class="me-2 mb-0" style="width: 100px;">
+                        Country <span class="text-danger">*</span>
+                    </label>
+                    <select asp-for="CountryId" asp-items="@ViewBag.Country" class="form-control form-control-sm">
+                        <option value="" disabled>select</option>
+                    </select>
+                    <div class="shortcut-box">
+                        <span id="btnF2Country" class="shortcut-link">F2 - New</span>
+                        <span id="btnF3Country" class="shortcut-link text-danger">F3 - Mod</span>
+                    </div>
+                    <span asp-validation-for="CountryId" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6 d-flex align-items-center mb-2">
+                    <label asp-for="Name" class="me-2 mb-0" style="width: 100px;">
+                        Name <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" asp-for="Name" class="form-control form-control-sm" />
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue mt-3">Save</button>
+        </form>
+    </div>
+</div>
+
+<!-- ===== STATE TABLE ===== -->
+<table class="table">
+    <thead class="table custom-header">
+        <tr>
+            <th>@Html.DisplayNameFor(model => model.Name)</th>
+            <th>Country</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.States)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                <td>@Html.DisplayFor(modelItem => item.Country.Name)</td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="State" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="State" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- ===== COUNTRY MODAL ===== -->
+<div class="modal fade" id="countryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+
+            <div class="modal-header">
+            </div>
+
+            <div class="modal-body">
+
+                <h2 class="modal-heading" id="countryModalTitle">Add Country</h2>
+
+                <input type="hidden" id="modalCountryId" value="0" />
+
+                <label>Name</label>
+
+                <input type="text"
+                       id="modalCountryName"
+                       class="form-control modal-input" />
+
+                <span id="countryError" class="text-danger small"></span>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button class="btn btn-success btn-sm px-4" id="btnSaveCountry">
+                    Save
+                </button>
+
+                <button class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">
+                    Close
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ===== SCRIPTS ===== -->
+<script>
+    $(document).ready(function () {
+
+        // ===== F2 F3 COUNTRY START =====
+
+        $("#btnF2Country").click(() => openCountryModal("new"));
+        $("#btnF3Country").click(() => openCountryModal("edit"));
+
+        $(document).keydown(function (e) {
+            if (e.key === "F2") {
+                e.preventDefault();
+                openCountryModal("new");
+            }
+            if (e.key === "F3") {
+                e.preventDefault();
+                openCountryModal("edit");
+            }
+        });
+
+        function openCountryModal(mode) {
+
+            $("#countryError").text("");
+
+            if (mode === "new") {
+                $("#modalCountryId").val(0);
+                $("#modalCountryName").val("");
+                $("#countryModalTitle").text("Add Country");
+            } else {
+
+                let id = $("#CountryId").val();
+                let text = $("#CountryId option:selected").text();
+
+                if (!id) {
+                    Swal.fire("Error", "Select country first!", "error");
+                    return;
+                }
+
+                $("#modalCountryId").val(id);
+                $("#modalCountryName").val(text);
+                $("#countryModalTitle").text("Modify Country");
+            }
+
+            $("#countryModal").modal("show");
+        }
+
+        $("#btnSaveCountry").click(function () {
+
+            let id = $("#modalCountryId").val();
+            let name = $("#modalCountryName").val().trim();
+
+            if (!name) {
+                $("#countryError").text("Name required!");
+                return;
+            }
+
+            $.post('/State/QuickSaveCountry', { id: id, name: name }, function (res) {
+
+                if (res.success) {
+
+                    $("#countryModal").modal('hide');
+
+                    $.get('/State/GetCountries', function (data) {
+
+                        let ddl = $("#CountryId");
+                        ddl.empty();
+
+                        $.each(data, function (i, item) {
+
+                            let opt = $('<option>', {
+                                value: item.value,
+                                text: item.text
+                            });
+
+                            if (item.value == res.newId)
+                                opt.attr('selected', 'selected');
+
+                            ddl.append(opt);
+                        });
+
+                    });
+
+                } else {
+                    $("#countryError").text(res.message);
+                }
+
+            });
+
+        });
+
+        // ===== F2 F3 COUNTRY END =====
+
+        // ===== FORM SUBMIT =====
+
+        let isSubmitting = false;
+
+        $("#StateForm").on("submit", function (e) {
+
+            if (isSubmitting) return false;
+
+            e.preventDefault();
+
+            var form = this;
+            var name = $("#Name").val()?.trim();
+            var countryId = $("#CountryId").val();
+
+            if (!name) {
+                Swal.fire("Error", "Please enter Name!", "error");
+                return;
+            }
+
+            if (!countryId) {
+                Swal.fire("Error", "Please select Country!", "error");
+                return;
+            }
+
+            Swal.fire({
+                title: 'Confirm Save?',
+                text: 'Do you want to save this State?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Save',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#dc3545',
+                reverseButtons: true,
+                focusConfirm: true,
+                buttonsStyling: true
+            }).then((result) => {
+
+                if (!result.isConfirmed) return;
+
+                $.ajax({
+                    url: "/State/CheckDuplicate",
+                    type: "GET",
+                    data: {
+                        name: name,
+                        CountryId: countryId,
+                        id: 0
+                    },
+                    success: function (response) {
+
+                        if (response.exists) {
+                            Swal.fire("Duplicate!", "State already exists for selected country!", "warning");
+                        } else {
+                            isSubmitting = true;
+                            $("#StateForm").off("submit");
+                            form.submit();
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Error checking duplicate", "error");
+                    }
+                });
+
+            });
+
+        });
+
+    });
+</script>
+
+@if (TempData["success"] != null)
+{
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: '@TempData["success"]',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#2b6ac9'
+        });
+    </script>
+}

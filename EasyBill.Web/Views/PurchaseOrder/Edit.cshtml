@@ -1,0 +1,3820 @@
+﻿@model EasyBill.Models.ViewModels.PurchaseOrderVM
+@{
+    ViewData["Title"] = "Edit";
+}
+
+<style>
+    /* ===============================
+                       BATCH MODAL STYLING
+                       =============================== */
+    .batch-row.selected td {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        font-weight: 500;
+    }
+
+    #batchModal.keyboard-nav .batch-row:hover td {
+        background-color: inherit !important;
+        color: inherit !important;
+        cursor: default;
+    }
+
+    #batchModal.mouse-nav .batch-row:hover td {
+        background-color: #f1d27a !important;
+        color: #000 !important;
+        cursor: pointer;
+    }
+
+    #batchModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #batchModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+    .batch-table-wrapper {
+        max-height: 350px;
+        overflow-y: auto;
+        position: relative;
+    }
+
+    #batchTable thead th {
+        position: sticky;
+        top: 0;
+        background-color: #2465c7f7;
+        color: #fff;
+        font-weight: 700;
+        z-index: 2;
+    }
+</style>
+
+<style>
+    /* ===============================
+                       ITEM MODAL STYLING
+                       =============================== */
+    .item-row.selected td {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        font-weight: 500;
+    }
+
+    #itemModal.keyboard-nav .item-row:hover td {
+        background-color: inherit !important;
+        color: inherit !important;
+        cursor: default;
+    }
+
+    #itemModal.mouse-nav .item-row:hover td {
+        background-color: #f1d27a !important;
+        color: #000 !important;
+        cursor: pointer;
+    }
+
+    .item-row:focus {
+        outline: none;
+    }
+
+    .item-row {
+        scroll-margin-top: 50px;
+    }
+
+    #itemModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #itemModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+    #itemTable thead th {
+        background-color: #2465c7f7 !important;
+        color: #fff !important;
+        font-weight: 700;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+</style>
+
+<style>
+    /* ===============================
+                       ITEM DETAILS MODAL
+                       =============================== */
+    #itemDetailModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #itemDetailModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+</style>
+
+<style>
+    /* ===============================
+                       SUPPLIER MODAL STYLING
+                       =============================== */
+    #supplierModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #supplierModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+    #supplierTable thead th {
+        background-color: #2465c7f7 !important;
+        color: #fff !important;
+        font-weight: 700;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .supplier-row.selected td {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        font-weight: 500;
+    }
+
+    #supplierModal.keyboard-nav .supplier-row:hover td {
+        background-color: inherit !important;
+        color: inherit !important;
+        cursor: default;
+    }
+
+    #supplierModal.mouse-nav .supplier-row:hover td {
+        background-color: #f1d27a !important;
+        color: #000 !important;
+        cursor: pointer;
+    }
+
+    .supplier-row {
+        scroll-margin-top: 50px;
+    }
+
+        .supplier-row:focus {
+            outline: none;
+        }
+</style>
+
+<style>
+    /* ===============================
+                       ADD SUPPLIER MODAL
+                       =============================== */
+    #addSupplierModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+</style>
+
+<style>
+    /* ====================================
+                       PURCHASE HISTORY TABLE STYLING
+                       ==================================== */
+    #itemExtraInfoWrapper {
+        background: linear-gradient(to bottom, #f8fbff, #ffffff);
+        border: 1.5px solid #b3d9ff !important;
+        box-shadow: 0 1px 4px rgba(0, 123, 255, 0.08);
+        max-height: 250px; /* ✅ Height limit */
+        overflow-y: auto; /* ✅ Scroll if needed */
+    }
+
+    .purchase-history-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        overflow: hidden;
+        border-radius: 6px;
+        font-size: 11px; /* ✅ Small text */
+    }
+
+        .purchase-history-table thead tr {
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 10px; /* ✅ Compact header */
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .purchase-history-table thead th {
+            border: none !important;
+            padding: 6px 5px; /* ✅ Reduced from 12px */
+            vertical-align: middle;
+            white-space: nowrap;
+            position: sticky; /* ✅ Sticky header */
+            top: 0;
+            z-index: 10;
+        }
+
+            .purchase-history-table thead th:first-child {
+                border-top-left-radius: 6px;
+            }
+
+            .purchase-history-table thead th:last-child {
+                border-top-right-radius: 6px;
+            }
+
+        .purchase-history-table tbody tr {
+            border-bottom: 1px solid #d6ebff;
+            transition: all 0.15s ease;
+        }
+
+            .purchase-history-table tbody tr:hover {
+                background-color: #e3f2fd;
+                transform: scale(1.005); /* ✅ Subtle hover */
+            }
+
+        .purchase-history-table tbody td {
+            padding: 5px 5px; /* ✅ Reduced from 10px */
+            font-size: 11px;
+            border-left: 1px solid #d6ebff;
+            border-right: 1px solid #d6ebff;
+            vertical-align: middle;
+            line-height: 1.3; /* ✅ Compact line height */
+        }
+
+            .purchase-history-table tbody td:first-child {
+                border-left: none;
+            }
+
+            .purchase-history-table tbody td:last-child {
+                border-right: none;
+            }
+
+        .purchase-history-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Alternating row colors */
+        .purchase-history-table tbody tr:nth-child(even) {
+            background-color: #f5f9ff;
+        }
+
+        .purchase-history-table tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+    /* Responsive scrolling */
+    .table-responsive {
+        border-radius: 6px;
+        overflow-x: auto;
+    }
+
+    /* Custom scrollbar */
+    #itemExtraInfoWrapper::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    #itemExtraInfoWrapper::-webkit-scrollbar-track {
+        background: #f0f7ff;
+        border-radius: 3px;
+    }
+
+    #itemExtraInfoWrapper::-webkit-scrollbar-thumb {
+        background: #b3d9ff;
+        border-radius: 3px;
+    }
+
+        #itemExtraInfoWrapper::-webkit-scrollbar-thumb:hover {
+            background: #4a90e2;
+        }
+
+    /* Empty state */
+    #itemExtraInfoBody:empty::after {
+        content: "No purchase history available";
+        display: block;
+        text-align: center;
+        padding: 20px;
+        color: #6c757d;
+        font-style: italic;
+        font-size: 11px;
+    }
+</style>
+
+<style>
+    #refreshBtn:hover {
+        opacity: 0.85;
+        transform: rotate(90deg);
+        transition: all 0.2s ease;
+    }
+</style>
+
+<style>
+    .custom-header th {
+        background: linear-gradient(180deg, #eef3f8, #d8e3ef);
+        color: #16202b;
+        font-weight: 700;
+        text-align: center;
+        border-bottom: 0px solid #b6c6d6;
+        box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+
+        <div class="card mb-2 shadow-sm" style="border-radius: 6px; overflow: hidden;">
+            <div class="card-header text-white d-flex align-items-center py-1 px-3"
+                 style="background:#2b6ac9">
+
+                <h6 class="mb-0 me-auto" style="font-size: 0.85rem;">
+                    Edit Purchase Order
+                </h6>
+
+                <button type="button"
+                        id="refreshBtn"
+                        class="btn btn-sm p-1 me-2 border-0 bg-transparent text-white"
+                        title="Refresh">
+                    <span class="fs-5">🔄</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="Edit" id="purchaseForm">
+                <input type="hidden" asp-for="Id" />
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="row">
+                    <!-- Bill No -->
+                    <div class="col-md-4 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="BillNo"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input asp-for="BillNo" id="BillNo" class="form-control form-control-sm" readonly />
+                            <span asp-validation-for="BillNo" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Bill Date -->
+                    <div class="col-md-4 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="BillDate"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="date" asp-for="BillDate" class="form-control form-control-sm" />
+                            <span asp-validation-for="BillDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious">
+                        <div class="col-md-5 ">
+                            <label>Billing Type</label>
+                        </div>
+                        <div class="col-md-5 ">
+                            <select asp-for="billingType" id="billingType" class="form-control form-control-sm">
+                                <option value="registered">Supplier</option>
+                                <option value="walkin">Cash</option>
+                               
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- ✅ SUPPLIER - TEXT INPUT + MODAL -->
+                    <div class="col-md-4 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="SupplierName"></label>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="hidden" asp-for="SupplierId" class="supplier-id" />
+                            <input type="text" class="form-control form-control-sm supplier-input" id="supplier-input" placeholder="Press Enter to select supplier" autocomplete="off" value="@Model.SupplierName" />
+                            <span asp-validation-for="SupplierId" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                                new
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Party Bill No -->
+                   @*  <div class="col-md-4 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="PartyBillNo"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input asp-for="PartyBillNo" class="form-control form-control-sm" />
+                            <span asp-validation-for="PartyBillNo" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Party Bill Date -->
+                    <div class="col-md-4 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="PartyBillDate"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="date" asp-for="PartyBillDate" class="form-control form-control-sm" />
+                            <span asp-validation-for="PartyBillDate" class="text-danger small"></span>
+                        </div>
+                    </div> *@
+                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious ">
+                        <div class="col-md-5 ">
+                            <label>Type</label>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="paymentToggle">
+                                <label class="form-check-label fw-bold" id="paymentToggleLabel" style="color: green;">
+                                    Cash
+                                </label>
+                            </div>
+
+                            <input type="hidden" asp-for="PaymentType" id="paymentTypeHidden" value="cash" />
+                        </div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious">
+                        <div class="col-md-5 ">
+                            <label>Purchase Type</label>
+                        </div>
+                        <div class="col-md-5 ">
+                            <select id="purchasetype" class="form-control form-control-sm" disabled>
+                                <option value="Local">Local</option>
+                                <option value="Central">Central</option>
+                            </select>
+                            <input type="hidden" asp-for="PurchaseType" id="purchasetypeHidden" />
+                        </div>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto; width: 100%;">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table custom-header">
+                                <tr>
+                                    <th style="min-width:30%">Item</th>
+                                    <th hidden style="min-width:30%">Batch</th>
+                                    <th hidden class="text-center">Expiry</th>
+                                    <th hidden class="text-center">Mrp</th>
+                                    <th class="text-center">Qty</th>
+                                    <th hidden class="text-center">Free</th>
+                                    <th class="text-center">Rate</th>
+                                    <th hidden class="text-center">RateA</th>
+                                    <th hidden class="text-center">RateB</th>
+                                    <th class="text-center">Disc %</th>
+                                    <th class="text-center gst-col">Gst %</th>
+                                    <th hidden class="text-center">Gst Amt</th>
+                                    <th hidden class="text-center">CGst %</th>
+                                    <th hidden class="text-center">CGst Amt</th>
+                                    <th hidden class="text-center">SGst %</th>
+                                    <th hidden class="text-center">SGst Amt</th>
+                                    <th class="text-center scgst-col">Gst %</th>
+                                    <th class="text-center">Amount</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="PurchaseItemBody">
+                                @for (int i = 0; i < Model.PurchaseOrderItemVMs.Count; i++)
+                                {
+                                    var item = Model.PurchaseOrderItemVMs[i];
+
+                                    <tr data-itemdetail-valid="true">
+                                        <!-- ✅ ITEM - TEXT INPUT + HIDDEN ID -->
+                                        <td style="min-width:250px;">
+                                            <input type="hidden" name="PurchaseOrderItemVMs[@i].ItemId" class="item-id" value="@item.ItemId" />
+                                            <input type="text"
+                                                   name="PurchaseOrderItemVMs[@i].ItemName"
+                                                   class="form-control form-control-sm item-input"
+                                                   placeholder="Press Enter to select item"
+                                                   value="@item.ItemName" />  <!-- ✅ Seedha use karo -->
+                                        </td>
+
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].Batch" value="@item.Batch" class="form-control form-control-sm batch" /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].ExpiryDate" value="@item.ExpiryDate?.ToString("MM/yyyy")" class="form-control form-control-sm expirydate" placeholder="MM/YYYY" maxlength="7" /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].Mrp" value="@item.Mrp" class="form-control form-control-sm mrp" /></td>
+                                        <td><input name="PurchaseOrderItemVMs[@i].Qty" value="@item.Qty" class="form-control form-control-sm qty" /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].FreeQty" value="@item.FreeQty" class="form-control form-control-sm freeqty" /></td>
+                                        <td><input name="PurchaseOrderItemVMs[@i].Rate" value="@item.Rate" class="form-control form-control-sm rate" /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].salserateA" value="@item.salserateA" class="form-control form-control-sm salserateA" /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].salserateB" value="@item.salserateB" class="form-control form-control-sm salserateB" /></td>
+                                        <td hidden>
+                                            <select name="PurchaseOrderItemVMs[@i].HsnId" class="form-control form-control-sm hsn-dropdown">
+                                                <option value="">-- Select HSN --</option>
+                                                @foreach (var hsn in ViewBag.Hsn)
+                                                {
+                                                    <option value="@hsn.Value" selected="@(hsn.Value == item.HsnId.ToString())">@hsn.Text</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td><input name="PurchaseOrderItemVMs[@i].Discount" value="@item.Discount" class="form-control form-control-sm discount" min="0" max="100" step="0.01" /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].DiscountAmt" value="@item.DiscountAmt" class="form-control form-control-sm discount-amt" readonly /></td>
+                                        <td class="gst-col"><input name="PurchaseOrderItemVMs[@i].Gst" value="@item.Gst" class="form-control form-control-sm gst" readonly /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].GstAmount" value="@item.GstAmount" class="form-control form-control-sm gstamt" readonly /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].CGst" value="@item.CGst" class="form-control form-control-sm cgst" readonly /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].CGstAmount" value="@item.CGstAmount" class="form-control form-control-sm cgstamt" readonly /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].SGst" value="@item.SGst" class="form-control form-control-sm sgst" readonly /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].SGstAmount" value="@item.SGstAmount" class="form-control form-control-sm sgstamt" readonly /></td>
+                                        <td class="scgst-col"><input name="PurchaseOrderItemVMs[@i].SCGst" value="@item.SCGst" class="form-control form-control-sm scgst" /></td>
+                                        <td><input name="PurchaseOrderItemVMs[@i].TotalAmt" value="@item.TotalAmt" class="form-control form-control-sm total" readonly /></td>
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].BatchWiseCose" value="@item.BatchWiseCose" class="form-control form-control-sm batch-wise" readonly /></td>
+
+                                        <td hidden><input name="PurchaseOrderItemVMs[@i].Barcode" value="@item.Barcode" class="form-control form-control-sm barcode" readonly /></td>
+                                        <td><u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u></td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th class="float-start">
+                                        <u id="addRow" style="color:green; cursor:pointer;">Add Row</u>
+                                    </th>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <!-- ✅ ITEM PURCHASE HISTORY + TOTALS SECTION -->
+                        <div class="row mt-3">
+                            <div class="col-md-9">
+                                @* <strong>Payment Details</strong>
+                                <table class="table table-bordered table-striped">
+                                    <thead class="table custom-header">
+                                        <tr>
+                                            <th style="min-width:30%">Payment Mode</th>
+                                            <th class="text-center">Amount</th>
+                                            <th class="text-center">Reference NO</th>
+                                            <th class="text-center">Description</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="PaymentDetailsBody">
+                                        @for (int i = 0; i < Model.PaymentDetails?.Count; i++)
+                                        {
+                                            <tr>
+                                                <td hidden><input type="hidden" asp-for="@Model.PaymentDetails[@i].Id" /></td>
+                                                <td style="min-width:185px;">
+                                                    <select asp-for="PaymentDetails[@i].PaymentModeId" asp-items="@ViewBag.PaymentMode" class="form-control form-control-sm paymentMode-dropdown" required>
+                                                        <option value="">Select</option>
+                                                    </select>
+                                                </td>
+                                                <td><input name="PaymentDetails[@i].Amount" class="form-control form-control-sm paymentAmount" value="@Model.PaymentDetails[i].Amount" /></td>
+                                                <td><input name="PaymentDetails[@i].ReferenceNo" class="form-control form-control-sm paymentReferenceNO" value="@Model.PaymentDetails[i].ReferenceNo" /></td>
+                                                <td><input name="PaymentDetails[@i].Description" class="form-control form-control-sm paymentDescription" value="@Model.PaymentDetails[i].Description" /></td>
+                                                <td><u class="remove-paymentrow-btn text-danger" style="cursor:pointer;">Remove</u></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th class="float-start">
+                                                <u id="addPaymentRow" style="color:green; text-align:right; cursor:pointer;">Add Row</u>
+                                            </th>
+                                        </tr>
+                                    </tfoot>
+                                </table> *@
+
+                                <div id="itemExtraInfoWrapper" class="border rounded p-3 h-90" style="display:none;">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0 text-center purchase-history-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Supplier</th>
+                                                    <th>Bill No</th>
+                                                    <th>Bill Date</th>
+                                                    <th>Qty</th>
+                                                    <th>Batch</th>
+                                                    <th>MRP</th>
+                                                    <th>Rate</th>
+                                                    <th>Expiry</th>
+                                                    @*  <th>Total Discount</th> *@
+                                                    <th>Cost</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="itemExtraInfoBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT: TOTALS (COMPACT) -->
+                            <div class="col-md-3">
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-6 col-form-label small">Total</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="Total" class="form-control form-control-sm total-input text-end" readonly />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-6 col-form-label small">Bill Discount</label>
+                                    <div class="col-md-3 text-end">
+                                        <input asp-for="discountPercent" id="discountPercent" class="form-control form-control-sm discount-input text-end"
+                                               min="0"
+                                               max="100"
+                                               step="0.01" />
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        <input asp-for="discountAmount" id="discountamount" class="form-control form-control-sm total-input text-end" />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-6 col-form-label small">Total Discount</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="Totaldiscount" class="form-control form-control-sm total-input text-end" readonly />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2 align-items-center  gst-row">
+                                    <label class="col-md-6 col-form-label small">Gst</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="TotalGstAmt" class="form-control form-control-sm total-input text-end" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2 align-items-center sgst-row">
+                                    <label class="col-md-6 col-form-label small">SGst</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="TotalSGstAmt" class="form-control form-control-sm text-end"
+                                               readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2 align-items-center cgst-row">
+                                    <label class="col-md-6 col-form-label small">CGst</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="TotalCGstAmt" class="form-control form-control-sm text-end" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2 align-items-center scgst-row">
+                                    <label class="col-md-6 col-form-label small">Gst</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="TotalSCGstAmt" class="form-control form-control-sm text-end" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2 align-items-center">
+                                    <label asp-for="RoundOffAmount" class="col-md-6 col-form-label small"></label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="RoundOffAmount" id="roundOffAmount" class="form-control form-control-sm text-end" readonly />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-6 col-form-label small fw-bold">Total Payable</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="TotalPayable" id="totalPayable" class="form-control form-control-sm total-input text-end fw-bold" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2" hidden>
+                                    <label asp-for="PaidAmount" class="col-md-3 col-form-label text-start small">Paid Amount</label>
+                                    <div class="col-md-4"></div>
+                                    <div class="col-md-5">
+                                        <input asp-for="PaidAmount" id="paidAmout" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2" hidden>
+                                    <label asp-for="Balance" class="col-md-3 col-form-label text-start small">Balance</label>
+                                    <div class="col-md-4"></div>
+                                    <div class="col-md-5">
+                                        <input asp-for="Balance" id="balance" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2" hidden>
+                                    <label asp-for="ReturnAmount" class="col-md-3 col-form-label text-start small">Return Amt</label>
+                                    <div class="col-md-4"></div>
+                                    <div class="col-md-5">
+                                        <input asp-for="ReturnAmount" id="returnAmount" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-sm btn-primary">End | Update 💾</button>
+                    <a asp-controller="PurchaseOrder" asp-action="Index" id="btnCancel" class="btn btn-sm btn-outline-secondary">F11 | Cancel ❌</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ ITEM DETAILS MODAL -->
+<div class="modal fade" id="itemDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Item Details</h5>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Expiry Date</label>
+                    <input type="text" class="form-control expirydate" id="popupExpiry" placeholder="MM/YYYY" maxlength="7" />
+                    <span class="text-danger field-error" data-field="popupExpiry"></span>
+                </div>
+                <div class="form-group">
+                    <label>MRP</label>
+                    <input type="text" class="form-control" id="popupMrp" />
+                    <span class="text-danger field-error" data-field="MRP"></span>
+                </div>
+                <div class="form-group">
+                    <label>Sales RateA</label>
+                    <input class="form-control" id="popupSalseRateA" />
+                </div>
+                <div class="form-group">
+                    <label>Sales RateB</label>
+                    <input class="form-control" id="popupSalseRateB" />
+                </div>
+                <div class="form-group">
+                    <label>Barcode</label>
+                    <input class="form-control" id="popupBarcode" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-primary" id="saveItemPopup">Save</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ BATCH MODAL -->
+<div class="modal fade" id="batchModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Batch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="batch-table-wrapper">
+                    <table id="batchTable" class="table mb-0">
+                        <thead class="table-light">
+                            <tr><th>Batch No</th><th>Expiry</th><th>Rate</th><th>Mrp</th><th>Qty</th><th>Barcode</th></tr>
+                        </thead>
+                        <tbody id="batchTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ ITEM SELECTION MODAL -->
+<div class="modal fade" id="itemModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <input type="text" id="itemSearch" class="form-control form-control-sm" placeholder="Search by item name..." />
+                </div>
+                <div class="item-table-wrapper" style="max-height: 350px; overflow-y: auto;">
+                    <table id="itemTable" class="table table-sm table-bordered mb-0">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 2;">
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Qty</th>
+                                <th>Unit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ SUPPLIER SELECTION MODAL -->
+<div class="modal fade" id="supplierModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Supplier</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <input type="text" id="supplierSearch" class="form-control form-control-sm" placeholder="Search by supplier name..." />
+                </div>
+                <div class="supplier-table-wrapper" style="max-height: 350px; overflow-y: auto;">
+                    <table id="supplierTable" class="table table-sm table-bordered mb-0">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 2;">
+                            <tr>
+                                <th>Name</th>
+                                <th>Area</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supplierTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ ADD NEW SUPPLIER MODAL -->
+<div class="modal fade" id="addSupplierModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="supplierForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Supplier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label>Full Name *</label>
+                        <input name="FirstName" id="firstname" class="form-control" />
+                        <span class="text-danger field-error" data-field="FirstName"></span>
+                    </div>
+                    <div class="mb-2">
+                        <label>Phone No *</label>
+                        <input name="PhoneNO" class="form-control" />
+                        <span class="text-danger field-error" data-field="PhoneNO"></span>
+                    </div>
+                    <div class="mb-2">
+                        <label>Email *</label>
+                        <input name="Email" type="email" class="form-control" />
+                        <span class="text-danger field-error" data-field="Email"></span>
+                    </div>
+                    <div class="mb-2">
+                        <label>Address *</label>
+                        <input name="Address" class="form-control" />
+                        <span class="text-danger field-error" data-field="Address"></span>
+                    </div>
+                    <div class="mb-2">
+                        <label>Area *</label>
+                        <input name="Area" class="form-control" />
+                        <span class="text-danger field-error" data-field="Area"></span>
+                    </div>
+                    <div class="mb-2">
+                        <label>City *</label>
+                        <input name="City" class="form-control" />
+                        <span class="text-danger field-error" data-field="City"></span>
+                    </div>
+                    <div class="mb-2">
+                        <label>Pin Code *</label>
+                        <input name="PinCode" class="form-control" />
+                        <span class="text-danger field-error" data-field="PinCode"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <!-- ================================================================
+         🔹 GLOBAL VARIABLES & STATE
+         ================================================================ -->
+    <script>
+        let selectedRow = null;
+        let popupOpen = false;
+        let currentRow = null;
+        let currentBatchIndex = -1;
+        let rowIndex = @Model.PurchaseOrderItemVMs.Count;
+       // let subrowIndex = Model.PaymentDetails?.Count ?? 0;
+        let lastFocusSource = null;
+        let itemDetailSaved = false;
+        let currentItemIndex = -1;
+        let currentRowForItemModal = null;
+        let focusBatchAfterItemSelect = false;
+
+        const phoneRegex = /^[6-9][0-9]{9}$/;
+
+        // TOGGLE ITEM DETAIL VALIDATION
+        const ENABLE_ITEM_DETAIL_VALIDATION = false;
+
+        // ITEM MODAL VARIABLES
+        let itemNavMode = "keyboard";
+        let isKeyboardScrollingItemModal = false;
+
+        // BATCH MODAL VARIABLES
+        let batchNavMode = "keyboard";
+        let isKeyboardScrollingBatchModal = false;
+
+        // SUPPLIER MODAL VARIABLES
+        let supplierNavMode = "keyboard";
+        let isKeyboardScrollingSupplierModal = false;
+        let currentSupplierIndex = -1;
+        let supplierWasSelected = false;
+
+
+        let minPurchaseExpiryDays = 0;
+    </script>
+
+    <script>
+        const supplierRules = {
+            FirstName: {
+                required: true,
+                min: 3,
+                message: "Party Name is required (min 3 chars)"
+            },
+            PhoneNO: {
+                required: true,
+                regex: /^[6-9][0-9]{9}$/,
+                message: "Enter valid 10-digit mobile number"
+            },
+            Email: {
+                required: true,
+                regex: /^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                message: "Enter valid email address"
+            },
+            Address: {
+                required: true,
+                min: 3,
+                message: "Address is required"
+            },
+            Area: {
+                required: true,
+                min: 3,
+                message: "Area is required"
+            },
+            City: {
+                required: true,
+                min: 3,
+                message: "City is required"
+            },
+            PinCode: {
+                required: true,
+                regex: /^[1-9][0-9]{5}$/,
+                message: "Enter valid 6-digit Pin Code"
+            }
+        };
+    </script>
+
+    <!-- ================================================================
+         🔹 VALIDATION HELPERS
+         ================================================================ -->
+    <script>
+        // function isValidSupplier() {
+        //     const supplierId = $(".supplier-id").val();
+        //     return supplierId && supplierId !== "0";
+        // }
+        function isValidSupplier() {
+
+            const billingType = $("#billingType").val();
+            const supplierId = $(".supplier-id").val();
+
+            if (billingType === "registered") {
+                if (!supplierId || supplierId === "0") {
+                   // alert("Please select Supplier");
+                    return false;
+                }
+            }
+            return true;
+        }
+        function isValidPartyBillNo() {
+            return $("#PartyBillNo").val().trim().length > 0;
+        }
+
+        function isValidPartyBillDate() {
+            const date = $("#PartyBillDate").val();
+            return date && date.length > 0;
+        }
+
+        function isValidQty(value) {
+            const qty = parseFloat(value);
+            return !isNaN(qty) && qty > 0;
+        }
+
+        function isValidRate(value) {
+            const rate = parseFloat(value);
+            return !isNaN(rate) && rate > 0;
+        }
+
+        function validateHeaderFields() {
+            if (!isValidSupplier()) {
+                toastr.error("Please select a supplier", "Validation Error");
+                $(".supplier-input").focus();
+                return false;
+            }
+
+            // if (!isValidPartyBillNo()) {
+            //     toastr.error("Party Bill No is required", "Validation Error");
+            //     $("#PartyBillNo").focus().select();
+            //     return false;
+            // }
+
+            // if (!isValidPartyBillDate()) {
+            //     toastr.error("Party Bill Date is required", "Validation Error");
+            //     $("#PartyBillDate").focus();
+            //     return false;
+            // }
+
+            return true;
+        }
+
+        function validateRow(row) {
+            debugger;
+            const itemId = row.find(".item-id").val();
+            const batch = row.find(".batch").val().trim();
+            const qty = row.find(".qty").val();
+            const rate = row.find(".rate").val();
+
+            if (!itemId || itemId === "") {
+                toastr.error("Please select an item", "Validation Error");
+                row.find(".item-input").focus();
+                return false;
+            }
+
+            // if (!batch) {
+            //     toastr.error("Batch is required", "Validation Error");
+            //     row.find(".batch").focus().select();
+            //     return false;
+            // }
+
+            if (!isValidQty(qty)) {
+                toastr.error("Quantity must be greater than 0", "Validation Error");
+                row.find(".qty").focus().select();
+                return false;
+            }
+
+            if (!isValidRate(rate)) {
+                toastr.error("Rate must be greater than 0", "Validation Error");
+                row.find(".rate").focus().select();
+                return false;
+            }
+
+            return true;
+        }
+
+        function validateAllRows() {
+            let isValid = true;
+
+            $("#PurchaseItemBody tr").each(function() {
+                const row = $(this);
+                const itemId = row.find(".item-id").val();
+                const batch = row.find(".batch").val().trim();
+                const qty = row.find(".qty").val();
+                const rate = row.find(".rate").val();
+
+                if (itemId || batch || qty || rate) {
+                    if (!validateRow(row)) {
+                        isValid = false;
+                        return false;
+                    }
+                }
+            });
+
+            return isValid;
+        }
+
+        function checkPendingItemDetailAndOpenModal() {
+            if (!ENABLE_ITEM_DETAIL_VALIDATION) return true;
+
+            let invalidRow = null;
+
+            $("#PurchaseItemBody tr").each(function () {
+                const row = $(this);
+                const itemId = row.find(".item-id").val();
+                const batch = row.find(".batch").val().trim();
+
+                if (!itemId && !batch) return;
+
+                if (row.attr("data-itemdetail-valid") !== "true") {
+                    invalidRow = row;
+                    return false;
+                }
+            });
+
+            if (invalidRow) {
+                currentRow = invalidRow;
+                selectedRow = invalidRow;
+                popupOpen = true;
+
+                setTimeout(() => {
+                    invalidRow.find(".batch").focus().select();
+                }, 50);
+
+                $("#itemDetailModal").modal("show");
+                return false;
+            }
+
+            return true;
+        }
+
+        function validateSupplierField(input, showError = true) {
+            const name = input.name;
+            const value = input.value.trim();
+            const rule = supplierRules[name];
+            const errorSpan = $(`[data-field='${name}']`);
+
+            errorSpan.text("");
+
+            if (!rule) return true;
+
+            if (rule.required && !value) {
+                if (showError) errorSpan.text(rule.message);
+                return false;
+            }
+
+            if (rule.min && value.length < rule.min) {
+                if (showError) errorSpan.text(rule.message);
+                return false;
+            }
+
+            if (rule.regex && !rule.regex.test(value)) {
+                if (showError) errorSpan.text(rule.message);
+                return false;
+            }
+
+            return true;
+        }
+
+        function normalizeText(value) {
+            return value.replace(/\s+/g, " ").trim();
+        }
+
+        function validateExpiry(showError = true) {
+            if (!ENABLE_ITEM_DETAIL_VALIDATION) return true;
+
+            const expiry = $("#popupExpiry").val().trim();
+            const errorSpan = $("[data-field='popupExpiry']");
+            errorSpan.text("");
+
+            if (!expiry) {
+                if (showError) errorSpan.text("Expiry Date is required");
+                return false;
+            }
+
+            // ✅ Support both MM/YYYY and MM/YY formats
+            const regex4Digit = /^(0[1-9]|1[0-2])\/\d{4}$/;
+            const regex2Digit = /^(0[1-9]|1[0-2])\/\d{2}$/;
+
+            let normalizedExpiry = expiry;
+
+            if (regex2Digit.test(expiry)) {
+                // Convert MM/YY to MM/YYYY
+                const [month, yy] = expiry.split("/");
+                const fullYear = "20" + yy;
+                normalizedExpiry = `${month}/${fullYear}`;
+
+                // Update input field
+                $("#popupExpiry").val(normalizedExpiry);
+            } else if (!regex4Digit.test(expiry)) {
+                if (showError) errorSpan.text("Format should be MM/YYYY or MM/YY");
+                return false;
+            }
+
+            // ✅ Validate year range
+            const year = parseInt(normalizedExpiry.split("/")[1]);
+            const currentYear = new Date().getFullYear();
+
+            if (year < currentYear) {
+                if (showError) errorSpan.text("Expiry year cannot be in the past");
+                return false;
+            }
+
+            return true;
+        }
+
+        // ✅ Auto-format expiry date on blur
+        $(document).on("blur", "#popupExpiry", function() {
+            validateExpiry(false); // Auto-format without showing error
+        });
+
+
+        function validateMrp(showError = true) {
+            if (!ENABLE_ITEM_DETAIL_VALIDATION) return true;
+
+            const mrp = $("#popupMrp").val().trim();
+            const errorSpan = $("[data-field='MRP']");
+
+            errorSpan.text("");
+
+            if (mrp === "") {
+                if (showError) errorSpan.text("MRP is required");
+                return false;
+            }
+
+            if (isNaN(mrp) || parseFloat(mrp) < 0) {
+                if (showError) errorSpan.text("MRP must be 0 or greater");
+                return false;
+            }
+
+            return true;
+        }
+    </script>
+
+    <!-- ================================================================
+         🔹 INPUT FORMATTING & VALIDATION
+         ================================================================ -->
+    <script>
+        $(document).on("input", "#addSupplierModal input[name='PhoneNO']", function () {
+            this.value = this.value.replace(/\D/g, "").substring(0, 10);
+        });
+
+        $(document).on("input", "#addSupplierModal input[name='PinCode']", function () {
+            this.value = this.value.replace(/\D/g, "").substring(0, 6);
+        });
+
+        $(document).on("blur", "#addSupplierModal input", function () {
+            if (this.type !== "email" && this.name !== "PhoneNO" && this.name !== "PinCode") {
+                this.value = normalizeText(this.value);
+            }
+        });
+
+        $(document).on("input", "#addSupplierModal input", function () {
+            validateSupplierField(this, false);
+        });
+
+        $("#popupExpiry").on("input", function () {
+            validateExpiry(false);
+        });
+
+        $("#popupMrp").on("input", function () {
+            validateMrp(false);
+
+            let mrpVal = $(this).val();
+            $("#popupSalseRateA").val(mrpVal);
+        });
+
+        $("#popupSalseRateA").on("input", function () {
+            let salseRateA = $(this).val();
+            $("#popupSalseRateB").val(salseRateA);
+        });
+
+        function formatExpiryDateInput(input) {
+            $(input).on("input", function () {
+                let value = $(this).val().replace(/[^0-9]/g, "");
+                if (value.length >= 2) {
+                    value = value.substring(0, 2) + "/" + value.substring(2, 6);
+                }
+                $(this).val(value.substring(0, 7));
+            });
+        }
+
+        formatExpiryDateInput("#popupExpiry");
+    </script>
+
+    <!-- ================================================================
+         🔹 FOCUS SOURCE TRACKING
+         ================================================================ -->
+    <script>
+        $(document).on("keydown", function (e) {
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "Tab"].includes(e.key)) {
+                lastFocusSource = "keyboard";
+            }
+        });
+
+        $(document).on("mousedown", "input, select", function () {
+            lastFocusSource = "mouse";
+        });
+
+        $(document).on("focus", ".batch, .qty, .freeqty, .rate, .discount", function() {
+            const input = this;
+            setTimeout(() => {
+                if (lastFocusSource === "keyboard") {
+                    input.select();
+                }
+                lastFocusSource = null;
+            }, 0);
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+
+           $("#itemTable tbody tr").each(function () {
+              // $(this).find(".item-input").trigger("change");
+               calculateRow($(this));
+           });
+            var paymentType = "@Model.PaymentType";
+
+            if (paymentType === "credit") {
+                $("#paymentToggle").prop("checked", true);
+                $("#paymentToggleLabel").text("Credit");
+                $("#paymentTypeHidden").val("credit");
+            } else {
+                $("#paymentToggle").prop("checked", false);
+                $("#paymentToggleLabel").text("Cash");
+                $("#paymentTypeHidden").val("cash");
+            }
+
+            $(document).on("change", "#paymentToggle", function () {
+                if ($(this).is(":checked")) {
+                    $("#paymentToggleLabel").text("Credit");
+                    $("#paymentTypeHidden").val("credit");
+                    // Auto change Billing Type to Customer
+                    $("#billingType").val("registered");
+                } else {
+                    $("#paymentToggleLabel").text("Cash");
+                    $("#paymentTypeHidden").val("cash");
+                    // Auto change Billing Type to Cash (walkin)
+                    $("#billingType").val("walkin");
+                }
+
+                // Apply Billing Type behavior (enable/disable fields)
+                applyBillingType($("#billingType").val());
+            });
+        });
+
+        $(document).on("focus", "#billingType", function() {
+            const select = this;
+
+            setTimeout(() => {
+                if ('showPicker' in HTMLSelectElement.prototype) {
+                    select.showPicker();
+                } else {
+                    $(select).trigger('click');
+                }
+            }, 50);
+        });
+
+
+        function applyBillingType(type) {
+            debugger;
+            setTimeout(() => {
+
+                $("#supplier-input").prop("disabled", true);
+
+
+                if (type === "walkin") {
+                    $("#supplier-input, #customeraddress")
+                        .val("")
+                        .prop("disabled", true);
+
+                    //hidePhoneError();
+                }
+                else if (type === "registered") {
+                   $("#supplier-input").prop("disabled", false);
+                    $("#supplier-input").focus();
+                }
+
+            }, 100);
+        }
+        $("#billingType").on("change", function () {
+            isEnterNavigation = false;
+            const billingType = this.value;
+
+            // Auto change Payment Type based on Billing Type
+            if (billingType === "registered") {
+
+            } else if (billingType === "walkin") {
+                $("#paymentToggle").prop("checked", false);
+                $("#paymentToggleLabel").text("Cash");
+                $("#paymentTypeHidden").val("cash");
+            }
+            applyBillingType(this.value);
+        });
+        $("#purchasetype").on("change", function () {
+
+            var purchasetype = $(this).val();
+
+            if (purchasetype === "Local") {
+
+                $(".gst-row").hide();
+                $(".sgst-row").hide();
+                $(".cgst-row").hide();
+
+                $(".scgst-row").show();
+
+                $(".scgst-col").show();
+                $(".gst-col").hide();
+
+            }
+            else {
+
+                $(".gst-row").show();
+
+                $(".sgst-row").hide();
+                $(".cgst-row").hide();
+                $(".scgst-row").hide();
+                $(".scgst-col").hide();
+                $(".gst-col").show();
+
+            }
+            $("#PurchaseItemBody tr").each(function () {
+                calculateRow($(this));
+            });
+
+
+        });
+        $(document).ready(function () {
+             $("#purchasetype").trigger("change");
+            $("#supplier-input").prop("disabled", true);
+            applyBillingType($("#billingType").val());
+        });
+         $(document).on("keydown", "#BillDate", function (e) {
+            if (e.key !== "Enter") return;
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            //$("#billingType").focus();
+            $("#paymentToggle").focus();
+        });
+
+        $(document).on("keydown", "#billingType", function (e) {
+            if (e.key === "ArrowUp" || e.key === "ArrowDown") return;
+
+            if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                const type = this.value;
+
+                if (type === "registered") {
+                    $("#supplier-input").prop("disabled", false).focus();
+                } else {
+                    $("#supplier-input, #customer, #customeraddress").val("").prop("disabled", true);
+                    focusItemGrid();
+                  //  $("#PartyBillNo").focus();
+
+                   // hidePhoneError();
+
+                    // if ($("#doctorMobile").length && $("#doctorMobile").is(":visible") &&
+                    //     !$("#doctorMobile").is(":disabled")) {
+                    //     $("#doctorMobile").focus();
+                    // } else {
+                    //     focusItemGrid();
+                    // }
+                }
+            }
+        });
+
+        $(document).on("keydown", "#paymentToggle", function (e) {
+            // Arrow Left/Right for toggle
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                e.preventDefault();
+
+                // Toggle the checkbox
+                $(this).prop("checked", !$(this).is(":checked")).trigger("change");
+                return;
+            }
+
+            // Enter key - move to Billing Type
+            if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                // Focus on Billing Type and open dropdown
+                const billingTypeSelect = document.getElementById("billingType");
+                if (billingTypeSelect) {
+                    billingTypeSelect.focus();
+
+                    setTimeout(() => {
+                        if ('showPicker' in HTMLSelectElement.prototype) {
+                            billingTypeSelect.showPicker();
+                        } else {
+                            $(billingTypeSelect).trigger('click');
+                        }
+                    }, 50);
+                }
+            }
+        });
+    </script>
+    <!-- ================================================================
+         🔹 KEYBOARD NAVIGATION - HEADER
+         ================================================================ -->
+    <script>
+        $(document).ready(function () {
+            setTimeout(() => $("#BillDate").focus(), 100);
+
+            // $("#BillDate").on("keydown", function(e) {
+            //     if (e.key === "Enter") {
+            //         e.preventDefault();
+            //         $(".supplier-input").focus();
+            //     }
+            // });
+
+            $(".supplier-input").on("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    const typedText = $(this).val().trim();
+                    openSupplierModal(typedText);
+                    return;
+                }
+
+                if (e.key === "Tab") {
+                    if (!isValidSupplier()) {
+                        e.preventDefault();
+                        toastr.warning("Please select a supplier");
+                        return;
+                    }
+                }
+            });
+
+            $("#PartyBillNo").on("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!isValidPartyBillNo()) {
+                        toastr.warning("Party Bill No is required");
+                        return;
+                    }
+                    $("#PartyBillDate").focus();
+                }
+            });
+
+            $("#PartyBillDate").on("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!isValidPartyBillDate()) {
+                        toastr.warning("Party Bill Date is required");
+                        return;
+                    }
+                    focusItemGrid();
+                }
+            });
+             $("#purchasetype").on("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    focusItemGrid();
+                }
+            });
+        });
+
+        function focusItemGrid() {
+            setTimeout(() => {
+                const firstRow = $("#PurchaseItemBody tr:first");
+                if (firstRow.length) {
+                    firstRow.find(".item-input").focus();
+                } else {
+                    addNewRow();
+                    setTimeout(() => $("#PurchaseItemBody tr:first .item-input").focus(), 150);
+                }
+            }, 100);
+        }
+    </script>
+
+    <!-- ================================================================
+         🔹 SUPPLIER MODAL - COMPLETE SECTION
+         ================================================================ -->
+    <script>
+        function openSupplierModal(searchText = "") {
+            showLoader("Loading suppliers...");
+
+            $.get('/Purchase/GetAllSuppliers', function (suppliers) {
+                hideLoader();
+
+                let rows = "";
+                suppliers.forEach(sup => {
+                    rows += `
+                        <tr class="supplier-row" tabindex="0"
+                            data-supplierid="${sup.id}"
+                            data-name="${sup.firstName}"
+                            data-phone="${sup.phoneNO || ''}"
+                            data-email="${sup.email || ''}"
+                            data-gstno="${sup.gstNo || ''}">
+                            <td>${sup.firstName}</td>
+                            <td>${sup.area || '--'}</td>
+                        </tr>`;
+                });
+
+                $("#supplierTableBody").html(rows);
+                $("#supplierSearch").val(searchText);
+                $("#supplierSearch").trigger("input");
+
+                $("#supplierModal").modal("show");
+
+            }).fail(function() {
+                hideLoader();
+                toastr.error("Error loading suppliers");
+            });
+        }
+
+        $(document).on("input", "#supplierSearch", function () {
+            const searchWords = $(this).val()
+                .toLowerCase()
+                .trim()
+                .split(/\s+/);
+
+            $("#supplierTableBody tr").each(function () {
+                const supplierText = $(this).find("td:first").text().toLowerCase();
+                const supplierWords = supplierText.split(/\s+/);
+
+                let match = true;
+
+                for (let i = 0; i < searchWords.length; i++) {
+                    if (!supplierWords[i] || !supplierWords[i].startsWith(searchWords[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                $(this).toggle(match);
+            });
+
+            currentSupplierIndex = -1;
+            $("#supplierTableBody .supplier-row").removeClass("selected");
+        });
+
+        $(document).on("keydown", function (e) {
+            if (!$("#supplierModal").is(":visible")) return;
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                supplierNavMode = "keyboard";
+                isKeyboardScrollingSupplierModal = true;
+                $("#supplierModal")
+                    .addClass("keyboard-nav")
+                    .removeClass("mouse-nav");
+
+                setTimeout(() => {
+                    isKeyboardScrollingSupplierModal = false;
+                }, 300);
+            }
+
+            const $rows = $(".supplier-row:visible");
+            if (!$rows.length) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+
+                if (currentSupplierIndex === -1) {
+                    currentSupplierIndex = 0;
+                } else if (currentSupplierIndex < $rows.length - 1) {
+                    currentSupplierIndex++;
+                }
+
+                highlightSupplierRow($rows, currentSupplierIndex);
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (currentSupplierIndex <= 0) return;
+                currentSupplierIndex--;
+                highlightSupplierRow($rows, currentSupplierIndex);
+            }
+            else if (e.key === "Enter" && currentSupplierIndex >= 0) {
+                e.preventDefault();
+                $rows.eq(currentSupplierIndex).trigger("click");
+            }
+        });
+
+        function highlightSupplierRow($rows, index) {
+            $rows.removeClass("selected");
+            const $row = $rows.eq(index);
+            $row.addClass("selected");
+            $row[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+
+        $(document).on("mouseenter", ".supplier-row", function () {
+            if (!$("#supplierModal").is(":visible")) return;
+            if (isKeyboardScrollingSupplierModal) return;
+
+            supplierNavMode = "mouse";
+
+            $("#supplierModal")
+                .addClass("mouse-nav")
+                .removeClass("keyboard-nav");
+
+            const $rows = $(".supplier-row:visible");
+            $rows.removeClass("selected");
+            $(this).addClass("selected");
+
+            currentSupplierIndex = $rows.index(this);
+        });
+
+        $(document).on("mousemove", "#supplierModal", function (e) {
+            if (e.originalEvent && e.originalEvent.movementX !== undefined) {
+                const movement = Math.abs(e.originalEvent.movementX) + Math.abs(e.originalEvent.movementY);
+                if (movement > 3) {
+                    isKeyboardScrollingSupplierModal = false;
+                }
+            } else {
+                isKeyboardScrollingSupplierModal = false;
+            }
+        });
+
+        $(document).on("click", ".supplier-row", function () {
+            const supplierId = $(this).data("supplierid");
+            const supplierName = $(this).data("name");
+
+            if (!supplierId) return;
+
+            $(".supplier-id").val(supplierId);
+            $(".supplier-input").val(supplierName);
+
+            supplierWasSelected = true;
+            checkSupplierTax(supplierId)
+
+            $("#supplierModal").modal("hide");
+        });
+
+        $('#supplierModal').on('shown.bs.modal', function () {
+            supplierWasSelected = false;
+            supplierNavMode = "keyboard";
+
+            $("#supplierModal")
+                .addClass("keyboard-nav")
+                .removeClass("mouse-nav");
+
+            const $rows = $(".supplier-row:visible");
+            currentSupplierIndex = -1;
+
+            if ($rows.length) {
+                currentSupplierIndex = 0;
+                highlightSupplierRow($rows, currentSupplierIndex);
+            }
+
+            setTimeout(() => {
+                $("#supplierSearch").focus().select();
+            }, 200);
+        });
+
+        $('#supplierModal').on('hidden.bs.modal', function () {
+            setTimeout(() => {
+                if (supplierWasSelected) {
+                   // $("#PartyBillNo").focus().select();
+                    focusItemGrid();
+                    supplierWasSelected = false;
+                } else {
+                    $(".supplier-input").focus();
+                }
+            }, 150);
+        });
+         function checkSupplierTax(supplierId) {
+
+            $.get('/Purchase/GetSupplierGst', { supplierId: supplierId }, function (data) {
+
+                var companyGst = $("#companygst").val();
+
+                // GST null ya empty check
+                if (!data || !data.gst || data.gst.length < 2 || !companyGst || companyGst.length < 2) {
+                   $("#purchasetype").val("Local"); // default rakh do
+                   $("#purchasetypeHidden").val("Local");
+                   return;
+                }
+
+                var supplierState = data.gst.substring(0, 2);
+                var companyState = companyGst.substring(0, 2);
+
+                if (supplierState === companyState) {
+                    $("#purchasetype").val("Local");
+                    $("#purchasetypeHidden").val("Local");
+                } else {
+                    $("#purchasetype").val("Central");
+                    $("#purchasetypeHidden").val("Central");
+                }
+
+                 $("#purchasetype").trigger("change");
+
+            });
+        }
+    </script>
+
+    <!-- ================================================================
+         🔹 KEYBOARD NAVIGATION - ITEM GRID
+         ================================================================ -->
+    <script>
+        $(document).on("keydown", ".item-input", function (e) {
+            const row = $(this).closest("tr");
+
+            if (e.key === "ArrowRight") {
+                e.preventDefault();
+                row.find(".batch").focus().select();
+                return;
+            }
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                const nextRow = row.next("tr");
+                if (nextRow.length) nextRow.find(".item-input").focus();
+                return;
+            }
+
+            if (e.key === "ArrowUp") {
+                e.preventDefault();
+                const prevRow = row.prev("tr");
+                if (prevRow.length) {
+                    prevRow.find(".item-input").focus();
+                } else {
+                    $("#PartyBillDate").focus();
+                }
+                return;
+            }
+
+            if (e.key === "Enter") {
+                e.preventDefault();
+                currentRow = row;
+                currentRowForItemModal = row;
+
+                const typedText = $(this).val().trim();
+                openItemModal(typedText);
+            }
+        });
+
+        function openItemModal(searchText = "") {
+            var purchaseType = $("#purchasetype").val();
+            showLoader("Loading items...");
+
+            $.get('/Purchase/GetAllItems', { purchaseType: purchaseType }, function (items) {
+                hideLoader();
+
+                let rows = "";
+                 const businessType = @ViewBag.BusinessType;
+                items.forEach(item => {
+                    rows += `
+                        <tr class="item-row" tabindex="0"
+                            data-itemid="${item.id}"
+                            data-name="${item.name}"
+                            data-gst="${item.gst}"
+                            data-cgst="${item.cgst}"
+                            data-sgst="${item.sgst}"
+                            data-hsn="${item.hsn || ''}"
+                            data-purchaserate="${item.purchaseRate || 0}">
+                            <td>${item.name}</td>
+                            ${
+                            businessType === 2
+                            ? `
+                                <td style="display:none;">${item.qty}</td>
+                                <td>${item.availableQty}</td>
+                              `
+                            : `
+                                <td>${item.qty}</td>
+                              `
+                            }
+                            <td>${item.unit || 'N/A'}</td>
+                        </tr>`;
+                });
+
+                $("#itemTableBody").html(rows);
+                $("#itemSearch").val(searchText);
+                $("#itemSearch").trigger("input");
+
+                $("#itemModal").modal("show");
+
+            }).fail(function() {
+                hideLoader();
+                toastr.error("Error loading items");
+            });
+        }
+
+        $(document).on("input", "#itemSearch", function () {
+            const searchWords = $(this).val()
+                .toLowerCase()
+                .trim()
+                .split(/\s+/);
+
+            $("#itemTableBody tr").each(function () {
+                const itemText = $(this).find("td:first").text().toLowerCase();
+                const itemWords = itemText.split(/\s+/);
+
+                let match = true;
+
+                for (let i = 0; i < searchWords.length; i++) {
+                    if (!itemWords[i] || !itemWords[i].startsWith(searchWords[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                $(this).toggle(match);
+            });
+
+            currentItemIndex = -1;
+            $("#itemTableBody .item-row").removeClass("selected");
+        });
+
+        $(document).on("keydown", function (e) {
+            if (!$("#itemModal").is(":visible")) return;
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                itemNavMode = "keyboard";
+                isKeyboardScrollingItemModal = true;
+                $("#itemModal")
+                    .addClass("keyboard-nav")
+                    .removeClass("mouse-nav");
+
+                setTimeout(() => {
+                    isKeyboardScrollingItemModal = false;
+                }, 300);
+            }
+
+            const $rows = $(".item-row:visible");
+            if (!$rows.length) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+
+                if (currentItemIndex === -1) {
+                    currentItemIndex = 0;
+                }
+                else if (currentItemIndex < $rows.length - 1) {
+                    currentItemIndex++;
+                }
+
+                highlightItemRow($rows, currentItemIndex);
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (currentItemIndex <= 0) return;
+                currentItemIndex = (currentItemIndex - 1 + $rows.length) % $rows.length;
+                highlightItemRow($rows, currentItemIndex);
+            }
+            else if (e.key === "Enter" && currentItemIndex >= 0) {
+                e.preventDefault();
+                $rows.eq(currentItemIndex).trigger("click");
+            }
+        });
+
+        function highlightItemRow($rows, index) {
+            $rows.removeClass("selected");
+            const $row = $rows.eq(index);
+            $row.addClass("selected");
+            $row[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+
+        $(document).on("click", ".item-row", function () {
+            const itemId = $(this).data("itemid");
+            const itemName = $(this).data("name");
+            const gst = $(this).data("gst");
+            const hsn = $(this).data("hsn");
+             const purchaseType = $("#purchasetype").val();
+
+           const cgst = $(this).data("cgst");
+           const sgst = $(this).data("sgst");
+           var scgst = cgst+sgst;
+            if (!itemId || !currentRowForItemModal) return;
+
+            if (purchaseType === "Local") {
+                   currentRowForItemModal.find(".cgst").val(cgst);
+                   currentRowForItemModal.find(".sgst").val(sgst);
+                   currentRowForItemModal.find(".scgst").val(scgst);
+                   currentRowForItemModal.find(".gst").val(0);
+             } else {
+                 currentRowForItemModal.find(".gst").val(gst);
+                 currentRowForItemModal.find(".cgst").val(0);
+                 currentRowForItemModal.find(".sgst").val(0);
+                 currentRowForItemModal.find(".scgst").val(0);
+             }
+
+            currentRowForItemModal.find(".item-id").val(itemId);
+            currentRowForItemModal.find(".item-input").val(itemName);
+           // currentRowForItemModal.find(".gst").val(gst);
+            currentRowForItemModal.find(".hsn-dropdown").val(hsn);
+            currentRowForItemModal.find(".rate").val(purchaseRate).trigger("input");
+            $("#itemModal").modal("hide");
+
+          //  processItemSelection(itemId, currentRowForItemModal);
+            loadItemSupplierPurchaseInfo(itemId);
+        });
+
+        $(document).on("mouseenter", ".item-row", function () {
+            if (!$("#itemModal").is(":visible")) return;
+            if (isKeyboardScrollingItemModal) return;
+
+            itemNavMode = "mouse";
+
+            $("#itemModal")
+                .addClass("mouse-nav")
+                .removeClass("keyboard-nav");
+
+            const $rows = $(".item-row:visible");
+            $rows.removeClass("selected");
+            $(this).addClass("selected");
+
+            currentItemIndex = $rows.index(this);
+        });
+
+        $(document).on("mousemove", "#itemModal", function (e) {
+            if (e.originalEvent && e.originalEvent.movementX !== undefined) {
+                const movement = Math.abs(e.originalEvent.movementX) + Math.abs(e.originalEvent.movementY);
+                if (movement > 3) {
+                    isKeyboardScrollingItemModal = false;
+                }
+            } else {
+                isKeyboardScrollingItemModal = false;
+            }
+        });
+
+        $('#itemModal').on('shown.bs.modal', function () {
+            itemNavMode = "keyboard";
+
+            $("#itemModal")
+                .addClass("keyboard-nav")
+                .removeClass("mouse-nav");
+
+            const $rows = $(".item-row:visible");
+
+            currentItemIndex = -1;
+
+            if ($rows.length) {
+                currentItemIndex = 0;
+                highlightItemRow($rows, currentItemIndex);
+            }
+
+            setTimeout(() => {
+                $("#itemSearch").focus().select();
+            }, 200);
+        });
+
+        // $('#itemModal').on('hidden.bs.modal', function () {
+        //     setTimeout(() => {
+        //         if (focusBatchAfterItemSelect && currentRowForItemModal) {
+        //             currentRowForItemModal.find(".batch").focus().select();
+        //             focusBatchAfterItemSelect = false;
+        //             return;
+        //         }
+
+        //         if (currentRowForItemModal && currentRowForItemModal.length) {
+        //             currentRowForItemModal.find(".item-input").focus();
+        //         }
+        //     }, 150);
+        // });
+          $('#itemModal').on('hidden.bs.modal', function () {
+            setTimeout(() => {
+
+                if (currentRowForItemModal && currentRowForItemModal.length) {
+                    currentRowForItemModal.find(".qty").focus().select(); // ✅ ALWAYS QTY
+                }
+
+            }, 150);
+        });
+        $(document).on("keydown", ".batch", function(e) {
+            if (e.key === "Enter" && !popupOpen) {
+                e.preventDefault();
+                const row = $(this).closest("tr");
+                if (!$(this).val().trim()) {
+                    toastr.warning("Batch is required");
+                    return;
+                }
+                row.find(".qty").focus().select();
+            }
+        });
+
+        $(document).on("keydown", ".qty", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                const row = $(this).closest("tr");
+                if (!isValidQty($(this).val())) {
+                    toastr.warning("Quantity must be greater than 0");
+                    $(this).focus().select();
+                    return;
+                }
+                row.find(".rate").focus().select();
+               // row.find(".freeqty").focus().select();
+            }
+        });
+
+        $(document).on("keydown", ".freeqty", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                $(this).closest("tr").find(".rate").focus().select();
+            }
+        });
+
+        $(document).on("keydown", ".rate", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                const row = $(this).closest("tr");
+                if (!isValidRate($(this).val())) {
+                    toastr.warning("Rate must be greater than 0");
+                    $(this).focus().select();
+                    return;
+                }
+                row.find(".discount").focus().select();
+            }
+        });
+
+        $(document).on("keydown", ".discount", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                const row = $(this).closest("tr");
+
+                if (!validateRow(row)) return;
+
+                const isItemDetailValid = row.attr("data-itemdetail-valid") === "true";
+
+                if (ENABLE_ITEM_DETAIL_VALIDATION && !isItemDetailValid) {
+                    currentRow = row;
+                    selectedRow = row;
+                    popupOpen = true;
+                    $("#itemDetailModal").modal("show");
+                    return;
+                }
+
+                const isLastRow = row.is("#PurchaseItemBody tr:last");
+
+                if (isLastRow) {
+                    addNewRow();
+                    setTimeout(() => $("#PurchaseItemBody tr:last .item-input").focus(), 150);
+                } else {
+                    const nextRow = row.next("tr");
+                    if (nextRow.length) nextRow.find(".item-input").focus();
+                }
+            }
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 ARROW KEY NAVIGATION
+         ================================================================ -->
+    <script>
+        $(document).on("keydown", ".batch, .qty, .freeqty, .rate, .discount", function(e) {
+            const row = $(this).closest("tr");
+            const current = $(this);
+
+            if (e.key === "ArrowRight") {
+                e.preventDefault();
+                if (current.hasClass("batch")) row.find(".qty").focus().select();
+                else if (current.hasClass("qty")) row.find(".freeqty").focus().select();
+                else if (current.hasClass("freeqty")) row.find(".rate").focus().select();
+                else if (current.hasClass("rate")) row.find(".discount").focus().select();
+            }
+
+            if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                if (current.hasClass("discount")) row.find(".rate").focus().select();
+                else if (current.hasClass("rate")) row.find(".freeqty").focus().select();
+                else if (current.hasClass("freeqty")) row.find(".qty").focus().select();
+                else if (current.hasClass("qty")) row.find(".batch").focus().select();
+                else if (current.hasClass("batch")) row.find(".item-input").focus();
+            }
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                const nextRow = row.next("tr");
+                if (!nextRow.length) return;
+
+                if (current.hasClass("batch")) nextRow.find(".batch").focus().select();
+                else if (current.hasClass("qty")) nextRow.find(".qty").focus().select();
+                else if (current.hasClass("freeqty")) nextRow.find(".freeqty").focus().select();
+                else if (current.hasClass("rate")) nextRow.find(".rate").focus().select();
+                else if (current.hasClass("discount")) nextRow.find(".discount").focus().select();
+            }
+
+            if (e.key === "ArrowUp") {
+                e.preventDefault();
+                const prevRow = row.prev("tr");
+
+                if (!prevRow.length) {
+                    $("#PartyBillDate").focus();
+                    return;
+                }
+
+                if (current.hasClass("batch")) prevRow.find(".batch").focus().select();
+                else if (current.hasClass("qty")) prevRow.find(".qty").focus().select();
+                else if (current.hasClass("freeqty")) prevRow.find(".freeqty").focus().select();
+                else if (current.hasClass("rate")) prevRow.find(".rate").focus().select();
+                else if (current.hasClass("discount")) prevRow.find(".discount").focus().select();
+            }
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 ADD ROW & REMOVE ROW
+         ================================================================ -->
+    <script>
+        $(document).ready(function() {
+            $("#addRow").click(function() {
+                if (!validateHeaderFields()) return;
+
+                if ($("#PurchaseItemBody tr").length > 0) {
+                    if (!validateAllRows()) return;
+                }
+
+                let invalidRow = null;
+                $("#PurchaseItemBody tr").each(function () {
+                    if ($(this).attr("data-itemdetail-valid") !== "true") {
+                        invalidRow = $(this);
+                        return false;
+                    }
+                });
+
+                if (ENABLE_ITEM_DETAIL_VALIDATION && invalidRow) {
+                    currentRow = invalidRow;
+                    selectedRow = invalidRow;
+                    popupOpen = true;
+                    $("#itemDetailModal").modal("show");
+                    return;
+                }
+
+                addNewRow();
+                setTimeout(() => $("#PurchaseItemBody tr:last .item-input").focus(), 150);
+            });
+        });
+
+        function addNewRow() {
+            let purchasetype = $("#purchasetype").val();
+            let newRow = `
+                <tr data-itemdetail-valid="false">
+                    <td style="min-width:250px;">
+                       <input type="hidden" name="PurchaseOrderItemVMs[${rowIndex}].ItemId" class="item-id" />
+                       <input type="text" name="PurchaseOrderItemVMs[${rowIndex}].ItemName" class="form-control form-control-sm item-input" placeholder="Press Enter to select item" />
+                    </td>
+                    <td hidden>
+                      <input name="PurchaseOrderItemVMs[${rowIndex}].Batch" class="form-control form-control-sm batch" />
+                    </td>
+                    <td hidden>
+                      <input type="text" name="PurchaseOrderItemVMs[${rowIndex}].ExpiryDate" class="form-control form-control-sm expirydate" placeholder="MM/YYYY" maxlength="7" />
+                    </td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].Mrp" class="form-control form-control-sm mrp" /></td>
+                    <td><input name="PurchaseOrderItemVMs[${rowIndex}].Qty" class="form-control form-control-sm qty" value="1" /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].FreeQty" class="form-control form-control-sm freeqty" value="0" /></td>
+                    <td><input name="PurchaseOrderItemVMs[${rowIndex}].Rate" class="form-control form-control-sm rate" /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].salserateA" class="form-control form-control-sm salserateA" /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].salserateB" class="form-control form-control-sm salserateB" /></td>
+                    <td hidden style="min-width:100px;">
+                        <select name="PurchaseOrderItemVMs[${rowIndex}].HsnId" class="form-control form-control-sm hsn-dropdown">
+                            <option value="">-- Select Item --</option>
+        @foreach (var item in ViewBag.Hsn)
+        {
+                                                                                   <option value="@item.Value">@item.Text</option>
+        }
+                        </select>
+                    </td>
+                    <td><input name="PurchaseOrderItemVMs[${rowIndex}].Discount" class="form-control form-control-sm discount" value="0" min="0" max="100" step="0.01" /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].DiscountAmt" class="form-control form-control-sm discount-amt" readonly /></td>
+                    <td class="gst-col"><input name="PurchaseOrderItemVMs[${rowIndex}].Gst" class="form-control form-control-sm gst" readonly /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].GstAmount" class="form-control form-control-sm gstamt" readonly /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].CGst" class="form-control form-control-sm cgst" readonly /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].CGstAmount" class="form-control form-control-sm cgstamt" readonly /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].SGst" class="form-control form-control-sm sgst" readonly /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].SGstAmount" class="form-control form-control-sm sgstamt" readonly /></td>
+                    <td class="scgst-col"><input name="PurchaseOrderItemVMs[${rowIndex}].SCGst" class="form-control form-control-sm scgst" readonly /></td>
+                    <td><input name="PurchaseOrderItemVMs[${rowIndex}].TotalAmt" class="form-control form-control-sm total" readonly /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].BatchWiseCose" class="form-control form-control-sm batch-wise" readonly /></td>
+                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].Barcode" class="form-control form-control-sm barcode" readonly /></td>
+                    <td><u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u></td>
+                </tr>`;
+
+            $("#PurchaseItemBody").append(newRow);
+            let newTr = $("#PurchaseItemBody tr:last");
+
+            if (purchasetype === "Local") {
+
+                newTr.find(".gst-col").hide();
+                newTr.find(".scgst-col").show();
+
+            } else {
+
+                newTr.find(".gst-col").show();
+                newTr.find(".scgst-col").hide();
+
+            }
+            rowIndex++;
+        }
+
+        $(document).on("click", ".remove-row-btn", function() {
+            $(this).closest("tr").remove();
+            calculateTotalSummary();
+        });
+    </script>
+
+    <script>
+        $(document).on("keydown", ".item-input, .batch, .qty, .freeqty, .rate, .discount", function (e) {
+            if (e.key !== "Tab") return;
+
+            const row = $(this).closest("tr");
+
+            const itemId = row.find(".item-id").val();
+            const batch = row.find(".batch").val()?.trim();
+            const qty = row.find(".qty").val();
+            const rate = row.find(".rate").val();
+
+            const isBlankRow =
+                (!itemId || itemId === "") &&
+                (!batch || batch === "") &&
+                (!rate || rate === "0" || rate === "");
+
+            if (!isBlankRow) return;
+
+            const totalRows = $("#PurchaseItemBody tr").length;
+
+            if (totalRows <= 1) {
+                e.preventDefault();
+                toastr.error("At least one item row is required", "Validation Error");
+                return;
+            }
+
+            e.preventDefault();
+            row.remove();
+
+            setTimeout(() => {
+                $("#discountPercent").focus().select();
+            }, 50);
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 FOOTER NAVIGATION & FORM SUBMIT
+         ================================================================ -->
+    <script>
+        $(document).on("keydown", "#Total, #discountPercent, #discountamount", function (e) {
+             if (e.key !== "Enter") return;
+
+             e.preventDefault();
+             e.stopImmediatePropagation();
+
+             const id = this.id;
+
+             switch (id) {
+                 case "Total":
+                     $("#discountPercent").focus().select();
+                     break;
+
+                 case "discountPercent":
+                     $("#discountamount").focus().select();
+                     break;
+
+                 case "discountamount":
+                     openPaymentGrid();
+                     break;
+             }
+         });
+
+        $(document).on("keydown", function(e) {
+            if (e.key === "End") {
+                e.preventDefault();
+                saveData();
+            }
+        });
+        function openPaymentGrid() {
+            setTimeout(() => {
+                const firstPaymentMode = $("#PaymentDetailsBody tr:first .paymentMode-dropdown");
+
+                if (firstPaymentMode.length) {
+                    firstPaymentMode.focus();
+                    return;
+                }
+
+                addPaymentRow();
+                setTimeout(() => {
+                    $("#PaymentDetailsBody tr:first .paymentMode-dropdown").focus();
+                }, 150);
+            }, 100);
+        }
+         $(document).on("focus", ".paymentMode-dropdown", function() {
+            const select = this;
+
+            if (document.activeElement === select) {
+                setTimeout(() => {
+                    if ('showPicker' in HTMLSelectElement.prototype) {
+                        select.showPicker();
+                    } else {
+                        $(select).trigger('click');
+                    }
+                }, 50);
+            }
+        });
+
+        $(document).on("keydown",
+            ".paymentMode-dropdown, .paymentAmount, .paymentReferenceNO, .paymentDescription",
+            function (e) {
+                const row = $(this).closest("tr");
+                const input = $(this);
+
+                const isMode = input.hasClass("paymentMode-dropdown");
+                const isAmount = input.hasClass("paymentAmount");
+                const isRef = input.hasClass("paymentReferenceNO");
+                const isDesc = input.hasClass("paymentDescription");
+
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+
+                    const paymentMode = row.find(".paymentMode-dropdown").val();
+
+                    if (!paymentMode) {
+                        row.find(".paymentMode-dropdown").focus();
+                        return;
+                    }
+
+                    if (isMode) {
+                        const amt = row.find(".paymentAmount");
+                        amt.focus();
+                        setTimeout(() => {
+                            amt.select();
+                        }, 0);
+                        return;
+                    }
+
+                    if (isAmount) {
+                        if (input.val().trim() === "") input.val("0");
+                        row.find(".paymentReferenceNO").focus();
+                        return;
+                    }
+
+                    if (isRef) {
+                        row.find(".paymentDescription").focus();
+                        return;
+                    }
+
+                    if (isDesc) {
+                        const isLastRow = row.is("#PaymentDetailsBody tr:last");
+                        if (!isLastRow) return;
+
+                        const amountInput = row.find(".paymentAmount");
+                        const amountVal = parseFloat(amountInput.val());
+
+                        if (!amountVal || amountVal <= 0) {
+                            amountInput.focus().select();
+                            return;
+                        }
+
+                        addPaymentRow();
+                        setTimeout(() => {
+                            $("#PaymentDetailsBody tr:last .paymentMode-dropdown").focus();
+                        }, 150);
+                        return;
+                    }
+                }
+
+                if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    if (isMode) row.find(".paymentAmount").focus();
+                    else if (isAmount) row.find(".paymentReferenceNO").focus();
+                    else if (isRef) row.find(".paymentDescription").focus();
+                }
+
+                if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    if (isDesc) row.find(".paymentReferenceNO").focus();
+                    else if (isRef) row.find(".paymentAmount").focus();
+                    else if (isAmount) row.find(".paymentMode-dropdown").focus();
+                }
+
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    const next = row.next("tr");
+                    if (!next.length) return;
+
+                    if (isMode) next.find(".paymentMode-dropdown").focus();
+                    else if (isAmount) next.find(".paymentAmount").focus();
+                    else if (isRef) next.find(".paymentReferenceNO").focus();
+                    else if (isDesc) next.find(".paymentDescription").focus();
+                }
+
+                if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const prev = row.prev("tr");
+                    if (!prev.length) return;
+
+                    if (isMode) prev.find(".paymentMode-dropdown").focus();
+                    else if (isAmount) prev.find(".paymentAmount").focus();
+                    else if (isRef) prev.find(".paymentReferenceNO").focus();
+                    else if (isDesc) prev.find(".paymentDescription").focus();
+                }
+            }
+        );
+        function saveData() {
+            toastr.options = {
+                closeButton: true,
+                progressBar: true,
+                positionClass: "toast-top-right",
+                timeOut: 3000
+            };
+
+            if (!validateHeaderFields()) return;
+
+            if ($("#PurchaseItemBody tr").length === 0) {
+                toastr.error("Please add at least one item");
+                $("#addRow").focus();
+                return;
+            }
+
+            if (!validateAllRows()) return;
+
+            if (!checkPendingItemDetailAndOpenModal()) return;
+
+            confirmSave(function (ok) {
+                if (!ok) return;
+
+                showLoader("Updating purchase...");
+                document.getElementById("purchaseForm").submit();
+            });
+        }
+
+        $("#purchaseForm").on("submit", function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const form = this;
+
+            toastr.options = {
+                closeButton: true,
+                progressBar: true,
+                positionClass: "toast-top-right",
+                timeOut: 3000
+            };
+
+            if (!validateHeaderFields()) return false;
+
+            if ($("#PurchaseItemBody tr").length === 0) {
+                toastr.error("Please add at least one item");
+                $("#addRow").focus();
+                return false;
+            }
+
+            if (!validateAllRows()) return false;
+
+            if (!checkPendingItemDetailAndOpenModal()) return false;
+
+            confirmSave(function (ok) {
+                if (!ok) return;
+
+                showLoader("Updating purchase...");
+                form.submit();
+            });
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 BATCH MODAL & ITEM DETAILS
+         ================================================================ -->
+    <script>
+        $(document).on("keydown", ".batch", function (e) {
+            if (e.key !== "Enter" || popupOpen) return;
+
+            e.preventDefault();
+
+            let row = $(this).closest("tr");
+            let itemId = row.find(".item-id").val();
+            let enteredBatch = $(this).val()?.trim();
+
+            if (!itemId) {
+                toastr.warning("Please select an item first");
+                row.find(".item-input").focus();
+                return;
+            }
+
+            if (!enteredBatch) {
+                toastr.warning("Batch is required");
+                return;
+            }
+
+            currentRow = row;
+            showLoader("Checking batch...");
+
+            $.get(`/Purchase/GetBatchesByItemId?id=${itemId}`, function (response) {
+                hideLoader();
+
+                let existingBatch = response.groupedResult?.find(
+                    b => b.batch.toLowerCase() === enteredBatch.toLowerCase()
+                );
+
+                if (existingBatch) {
+                    let batchRows = '';
+                    response.groupedResult.forEach(batch => {
+                        const d = new Date(batch.expiry);
+                        const formattedExpiry = ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear();
+                        const encoded = encodeURIComponent(JSON.stringify(batch));
+
+                        batchRows += `
+                            <tr class="batch-row" data-batch="${encoded}">
+                                <td>${batch.batch}</td>
+                                <td>${formattedExpiry}</td>
+                                <td>${batch.rate}</td>
+                                <td>${batch.mrp}</td>
+                                <td>${batch.qty}</td>
+                                <td hidden>${batch.salserateA}</td>
+                                <td hidden>${batch.salserateB}</td>
+                                <td>${batch.barcode}</td>
+                            </tr>`;
+                    });
+
+                    $("#batchTableBody").html(batchRows);
+
+                    currentBatchIndex = response.groupedResult.findIndex(
+                        b => b.batch.toLowerCase() === enteredBatch.toLowerCase()
+                    );
+
+                    $("#batchModal").modal("show");
+                } else {
+                    row.find(".qty").val("1");
+                    row.find(".freeqty").val("0");
+                    row.find(".rate").val("");
+                    row.find(".discount").val("0");
+                    row.find(".mrp").val("");
+                    row.find(".expirydate").val("");
+                    row.find(".salserateA").val("");
+                    row.find(".salserateB").val("");
+                    row.find(".discount-amt").val("");
+                    row.find(".total").val("");
+                    row.find(".batch-wise").val("");
+
+                    row.attr("data-itemdetail-valid", "false");
+
+                    $("#popupExpiry").val("");
+                    $("#popupMrp").val("");
+                    $("#popupSalseRateA").val("");
+                    $("#popupSalseRateB").val("");
+
+                    let existingBarcode = row.find(".barcode").val() || response.barcode || "";
+                    $("#popupBarcode").val(existingBarcode);
+
+                    selectedRow = row;
+                    popupOpen = true;
+                    $("#itemDetailModal").modal("show");
+                }
+
+            }).fail(function() {
+                hideLoader();
+                toastr.error("Error loading batches");
+            });
+        });
+
+        function openBatchModalWithData(itemId, currentRow) {
+            selectedRow = currentRow;
+            popupOpen = true;
+
+            let rowExpiry = currentRow.find(".expirydate").val();
+            let rowMrp = currentRow.find(".mrp").val();
+            let rowRateA = currentRow.find(".salserateA").val();
+            let rowRateB = currentRow.find(".salserateB").val();
+            let rowBarcode = currentRow.find(".barcode").val();
+
+            $.get(`/Purchase/GetBatchesByItemId?id=${itemId}`, function (response) {
+                $("#popupExpiry").val(rowExpiry || "");
+                $("#popupMrp").val(rowMrp || "");
+                $("#popupSalseRateA").val(rowRateA || "");
+                $("#popupSalseRateB").val(rowRateB || "");
+                $("#popupBarcode").val(rowBarcode || response.barcode || "");
+
+                $("#itemDetailModal").modal("show");
+            });
+        }
+
+        $("#saveItemPopup").click(function () {
+            if (!validateExpiry(true)) {
+                $("#popupExpiry").focus();
+                return;
+            }
+
+            if (!validateMrp(true)) {
+                $("#popupMrp").focus();
+                return;
+            }
+
+            itemDetailSaved = true;
+
+            if (selectedRow) {
+                selectedRow.find(".expirydate").val($("#popupExpiry").val());
+                selectedRow.find(".mrp").val(parseFloat($("#popupMrp").val()).toFixed(2));
+                selectedRow.find(".salserateA").val($("#popupSalseRateA").val());
+                selectedRow.find(".salserateB").val($("#popupSalseRateB").val());
+                selectedRow.find(".barcode").val($("#popupBarcode").val());
+                selectedRow.attr("data-itemdetail-valid", "true");
+            }
+
+            $("#itemDetailModal").modal("hide");
+            popupOpen = false;
+
+            setTimeout(() => {
+                if (selectedRow) selectedRow.find(".qty").focus().select();
+            }, 150);
+        });
+
+        $('#itemDetailModal').on('shown.bs.modal', function () {
+            $("#popupExpiry").focus().select();
+        });
+
+        $('#itemDetailModal').on('hidden.bs.modal', function () {
+            popupOpen = false;
+            if (!itemDetailSaved && currentRow) {
+                currentRow.attr("data-itemdetail-valid", "false");
+            }
+            itemDetailSaved = false;
+        });
+
+        $(document).on("keydown", "#itemDetailModal input", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+
+            const id = this.id;
+
+            if (id === "popupExpiry") {
+                if (!validateExpiry(true)) return;
+                $("#popupMrp").focus().select();
+                return;
+            }
+
+            if (id === "popupMrp") {
+                if (!validateMrp(true)) return;
+                $("#popupSalseRateA").focus().select();
+                return;
+            }
+
+            const inputs = $("#itemDetailModal input:visible");
+            const index = inputs.index(this);
+
+            if (index > -1 && index < inputs.length - 1) {
+                inputs.eq(index + 1).focus().select();
+            } else {
+                $("#saveItemPopup").focus();
+            }
+        });
+
+        // function processItemSelection(itemId, row) {
+        //     currentRow = row;
+
+        //     showLoader("Checking batches...");
+
+        //     $.get(`/Purchase/GetBatchesByItemId?id=${itemId}`, function (response) {
+        //         hideLoader();
+
+        //         if (response.groupedResult && response.groupedResult.length > 0) {
+        //             let batchRows = '';
+        //             response.groupedResult.forEach(batch => {
+        //                 const d = new Date(batch.expiry);
+        //                 const formattedExpiry = ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear();
+        //                 const encoded = encodeURIComponent(JSON.stringify(batch));
+
+        //                 batchRows += `
+        //                     <tr class="batch-row" data-batch="${encoded}">
+        //                         <td>${batch.batch}</td>
+        //                         <td>${formattedExpiry}</td>
+        //                         <td>${batch.rate}</td>
+        //                         <td>${batch.mrp}</td>
+        //                         <td>${batch.qty}</td>
+        //                         <td hidden>${batch.salserateA}</td>
+        //                         <td hidden>${batch.salserateB}</td>
+        //                         <td>${batch.barcode}</td>
+        //                     </tr>`;
+        //             });
+
+        //             $("#batchTableBody").html(batchRows);
+        //             currentBatchIndex = -1;
+        //             $("#batchModal").modal("show");
+        //         } else {
+        //             focusBatchAfterItemSelect = true;
+        //         }
+
+        //     }).fail(function() {
+        //         hideLoader();
+        //         toastr.error("Error loading batches");
+        //         setTimeout(() => row.find(".batch").focus().select(), 150);
+        //     });
+        // }
+
+
+        function processItemSelection(itemId, row) {
+            currentRow = row;
+
+            showLoader("Checking batches...");
+
+            $.get(`/Purchase/GetBatchesByItemId?id=${itemId}`, function (response) {
+                hideLoader();
+
+                if (response.groupedResult && response.groupedResult.length > 0) {
+                    // ✅ GET EXISTING VALUES FROM ROW (all identifying fields)
+                    const existingBatch = row.find(".batch").val()?.trim().toLowerCase() || "";
+                    const existingExpiry = row.find(".expirydate").val()?.trim() || "";
+                    const existingMrp = parseFloat(row.find(".mrp").val()) || 0;
+                    const existingRate = parseFloat(row.find(".rate").val()) || 0;
+
+                    let batchRows = '';
+                    response.groupedResult.forEach(batch => {
+                        const d = new Date(batch.expiry);
+                        const formattedExpiry = ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear();
+                        const encoded = encodeURIComponent(JSON.stringify(batch));
+
+                        batchRows += `
+                            <tr class="batch-row" data-batch="${encoded}">
+                                <td>${batch.batch}</td>
+                                <td>${formattedExpiry}</td>
+                                <td>${batch.rate}</td>
+                                <td>${batch.mrp}</td>
+                                <td>${batch.qty}</td>
+                                <td hidden>${batch.salserateA}</td>
+                                <td hidden>${batch.salserateB}</td>
+                                <td>${batch.barcode}</td>
+                            </tr>`;
+                    });
+
+                    $("#batchTableBody").html(batchRows);
+
+                    // FIND EXACT MATCH (Batch + Expiry + MRP + Rate)
+                    currentBatchIndex = -1;
+
+                    if (existingBatch) {
+                        currentBatchIndex = response.groupedResult.findIndex(b => {
+                            // Match batch name
+                            const batchMatch = b.batch.toLowerCase() === existingBatch;
+
+                            // Match expiry (MM/YYYY format)
+                            let expiryMatch = true;
+                            if (existingExpiry && b.expiry) {
+                                const batchDate = new Date(b.expiry);
+                                const batchExpiry = ("0" + (batchDate.getMonth() + 1)).slice(-2) + "/" + batchDate.getFullYear();
+                                expiryMatch = batchExpiry === existingExpiry;
+                            }
+
+                            // Match MRP (with tolerance for decimal precision)
+                            const mrpMatch = Math.abs((b.mrp || 0) - existingMrp) < 0.01;
+
+                            // ✅ Match Rate (with tolerance for decimal precision)
+                            const rateMatch = Math.abs((b.rate || 0) - existingRate) < 0.01;
+
+                            // ALL must match
+                            return batchMatch && expiryMatch && mrpMatch && rateMatch;
+                        });
+                    }
+
+                    // If no exact match found, default to first (0)
+                    if (currentBatchIndex === -1) {
+                        currentBatchIndex = 0;
+                    }
+
+                    $("#batchModal").modal("show");
+                } else {
+                    focusBatchAfterItemSelect = true;
+                }
+
+            }).fail(function() {
+                hideLoader();
+                toastr.error("Error loading batches");
+                setTimeout(() => row.find(".batch").focus().select(), 150);
+            });
+        }
+    </script>
+
+    <!-- ================================================================
+         🔹 BATCH MODAL NAVIGATION
+         ================================================================ -->
+    <script>
+        $('#batchModal').on('shown.bs.modal', function () {
+            batchNavMode = "keyboard";
+            isKeyboardScrollingBatchModal = false;
+
+            $("#batchModal")
+                .addClass("keyboard-nav")
+                .removeClass("mouse-nav");
+
+            const $rows = $(".batch-row:visible");
+
+            if (currentBatchIndex >= 0 && currentBatchIndex < $rows.length) {
+                highlightBatchRow($rows, currentBatchIndex);
+            } else {
+                currentBatchIndex = 0;
+                if ($rows.length) {
+                    highlightBatchRow($rows, currentBatchIndex);
+                }
+            }
+        });
+
+        function highlightBatchRow($rows, index) {
+            $rows.removeClass("selected");
+
+            const $row = $rows.eq(index);
+            if (!$row.length) return;
+
+            $row.addClass("selected");
+
+            const container = document.querySelector("#batchModal .batch-table-wrapper");
+            if (!container) return;
+
+            const rowRect = $row[0].getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const headerHeight = document.querySelector("#batchTable thead")?.offsetHeight || 50;
+
+            if (rowRect.top < containerRect.top + headerHeight) {
+                container.scrollTop -= (containerRect.top + headerHeight - rowRect.top);
+            }
+            else if (rowRect.bottom > containerRect.bottom) {
+                container.scrollTop += (rowRect.bottom - containerRect.bottom);
+            }
+        }
+
+        $(document).on("click", ".batch-row", function () {
+            $(".batch-row").removeClass("selected");
+            $(this).addClass("selected");
+
+            const encoded = $(this).attr("data-batch");
+            try {
+                const batch = JSON.parse(decodeURIComponent(encoded));
+                if (currentRow) {
+                    let formatted = "";
+
+                    // GET CURRENT ROW VALUES FIRST (ye line missing thi)
+                    const currentBatchValue = currentRow.find(".batch").val().trim();
+                    const currentQtyValue = currentRow.find(".qty").val();
+
+                    currentRow.find(".batch").val(batch.batch);
+                    currentRow.find(".rate").val(batch.rate || 0);
+                    currentRow.find(".mrp").val(batch.mrp || 0);
+
+                    // QTY LOGIC FOR EDIT PAGE
+                    // If same batch as before → keep existing qty
+                    // If different batch → set 1 (if stock available)
+                    if (currentBatchValue.toLowerCase() === batch.batch.toLowerCase()) {
+                        // Same batch → retain current qty
+                        currentRow.find(".qty").val(currentQtyValue);
+                    } else {
+                        // Different batch → set 1 if stock available
+                        if (batch.qty && parseFloat(batch.qty) > 0) {
+                            currentRow.find(".qty").val(1);
+                        } else {
+                            currentRow.find(".qty").val(0);
+                        }
+                    }
+
+                    //currentRow.find(".qty").val(batch.qty || 0);
+
+                    currentRow.find(".salserateA").val(batch.salserateA || 0);
+                    currentRow.find(".salserateB").val(batch.salserateB || 0);
+                    currentRow.find(".barcode").val(batch.barcode);
+
+                    if (batch.expiry) {
+                        let date = new Date(batch.expiry);
+                        formatted = ("0" + (date.getMonth() + 1)).slice(-2) + "/" + date.getFullYear();
+                        currentRow.find(".expirydate").val(formatted);
+                    }
+
+                    if (formatted) {
+                        $("#popupExpiry").val(formatted);
+                    }
+
+                    if (batch.mrp !== undefined && batch.mrp !== null) {
+                        $("#popupMrp").val(batch.mrp);
+                    }
+
+                    if (batch.salserateA !== undefined && batch.salserateA !== null) {
+                        $("#popupSalseRateA").val(batch.salserateA);
+                    }
+
+                    if (batch.salserateB !== undefined && batch.salserateB !== null) {
+                        $("#popupSalseRateB").val(batch.salserateB);
+                    }
+
+                    if (batch.barcode) {
+                        $("#popupBarcode").val(batch.barcode);
+                    }
+
+                    currentRow.attr("data-itemdetail-valid", "true");
+                    calculateRow(currentRow);
+                }
+                $("#batchModal").modal("hide");
+
+                popupOpen = true;
+                selectedRow = currentRow;
+
+                setTimeout(() => {
+                    $("#itemDetailModal").modal("show");
+                }, 150);
+
+            } catch (err) {
+                alert("Invalid batch data.");
+                console.error(err);
+            }
+        });
+
+        $(document).on("mousemove", "#batchModal", function (e) {
+            if (e.originalEvent && e.originalEvent.movementX !== undefined) {
+                const movement = Math.abs(e.originalEvent.movementX) + Math.abs(e.originalEvent.movementY);
+                if (movement > 3) {
+                    isKeyboardScrollingBatchModal = false;
+                    batchNavMode = "mouse";
+                }
+            } else {
+                isKeyboardScrollingBatchModal = false;
+            }
+        });
+
+        $(document).on("keydown", function (e) {
+            if (!$("#batchModal").is(":visible")) return;
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                batchNavMode = "keyboard";
+                isKeyboardScrollingBatchModal = true;
+
+                $("#batchModal")
+                    .addClass("keyboard-nav")
+                    .removeClass("mouse-nav");
+
+                setTimeout(() => {
+                    isKeyboardScrollingBatchModal = false;
+                }, 300);
+            }
+
+            const $rows = $(".batch-row:visible");
+            if (!$rows.length) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+
+                if (currentBatchIndex === -1) {
+                    currentBatchIndex = 0;
+                } else if (currentBatchIndex < $rows.length - 1) {
+                    currentBatchIndex++;
+                }
+
+                highlightBatchRow($rows, currentBatchIndex);
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (currentBatchIndex <= 0) return;
+
+                currentBatchIndex--;
+                highlightBatchRow($rows, currentBatchIndex);
+            }
+            else if (e.key === "Enter" && currentBatchIndex >= 0) {
+                e.preventDefault();
+                $rows.eq(currentBatchIndex).trigger("click");
+            }
+        });
+
+        $(document).on("mouseenter", ".batch-row", function () {
+            if (!$("#batchModal").is(":visible")) return;
+
+            if (isKeyboardScrollingBatchModal) return;
+
+            batchNavMode = "mouse";
+
+            $("#batchModal")
+                .addClass("mouse-nav")
+                .removeClass("keyboard-nav");
+
+            const $rows = $(".batch-row:visible");
+            $rows.removeClass("selected");
+
+            $(this).addClass("selected");
+            currentBatchIndex = $rows.index(this);
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 CALCULATIONS
+         ================================================================ -->
+    <script>
+        $(document).on("input", ".qty, .discount, .rate", function () {
+            calculateRow($(this).closest("tr"));
+        });
+
+        // ITEM DISCOUNT VALIDATION
+        $(document).on("input", ".discount", function() {
+            let value = parseFloat($(this).val()) || 0;
+
+            // HARD LIMIT: Cannot exceed 100%
+            if (value > 100) {
+                toastr.error("Item discount cannot exceed 100%", "Invalid Discount");
+                $(this).val(100);
+                calculateRow($(this).closest("tr"));
+                return;
+            }
+
+            // WARNING: If discount > 50%
+            if (value > 50) {
+                toastr.warning("High item discount: " + value + "%", "Review Required");
+            }
+        });
+
+        // function calculateRow(row) {
+        //     let qty = parseFloat(row.find(".qty").val()) || 0;
+        //     let freeQty = parseFloat(row.find(".freeqty").val()) || 0;
+        //     let rate = parseFloat(row.find(".rate").val()) || 0;
+        //     let gst = parseFloat(row.find(".gst").val()) || 0;
+        //     let discount = parseFloat(row.find(".discount").val()) || 0;
+
+        //     let grossAmount = qty * rate;
+        //     let discountAmt = (grossAmount * discount) / 100;
+        //     let amountAfterDiscount = grossAmount - discountAmt;
+        //     let gstAmt = (amountAfterDiscount * gst) / 100;
+        //     let total = amountAfterDiscount + gstAmt;
+
+
+        //     let totalQty = qty + freeQty;
+        //     let netCost = totalQty > 0 ? total / totalQty: 0;
+        //     row.find(".discount-amt").val(discountAmt.toFixed(2));
+        //     row.find(".total").val(total.toFixed(2));
+        //     row.find(".batch-wise").val(netCost.toFixed(4));
+
+
+        //     row.find(".discount-amt").val(discountAmt.toFixed(2));
+        //     row.find(".total").val(total.toFixed(2));
+
+        //     calculateTotalSummary();
+        // }
+
+        function calculateRow(row) {
+
+            let purchaseType = $("#purchasetype").val();
+
+            let qty = parseFloat(row.find(".qty").val()) || 0;
+            let freeQty = parseFloat(row.find(".freeqty").val()) || 0;
+            let rate = parseFloat(row.find(".rate").val()) || 0;
+
+            let igst = parseFloat(row.find(".gst").val()) || 0;
+            let sgst = parseFloat(row.find(".sgst").val()) || 0;
+            let cgst = parseFloat(row.find(".cgst").val()) || 0;
+
+            let discount = parseFloat(row.find(".discount").val()) || 0;
+
+            // ROW-LEVEL CALCULATION
+            let grossAmount = qty * rate;
+
+            let discountAmt = (grossAmount * discount) / 100;
+            let amountAfterDiscount = grossAmount - discountAmt;
+
+            let igstAmt = 0;
+            let sgstAmt = 0;
+            let cgstAmt = 0;
+
+            if (purchaseType === "Local") {
+
+                sgstAmt = (amountAfterDiscount * sgst) / 100;
+                cgstAmt = (amountAfterDiscount * cgst) / 100;
+
+            } else {
+
+                igstAmt = (amountAfterDiscount * igst) / 100;
+
+            }
+
+            let gstAmt = igstAmt + sgstAmt + cgstAmt;
+
+            let total = amountAfterDiscount + gstAmt;
+
+            // BILL DISCOUNT
+            let billDiscountPercent = parseFloat($("#discountPercent").val()) || 0;
+            let billDiscountAmt = (amountAfterDiscount * billDiscountPercent) / 100;
+
+            let finalAmount = amountAfterDiscount - billDiscountAmt;
+
+            // GST AFTER BILL DISCOUNT
+            let finalGstAmt = 0;
+
+            if (purchaseType === "Local") {
+
+                finalGstAmt =
+                    (finalAmount * sgst / 100) +
+                    (finalAmount * cgst / 100);
+
+            } else {
+
+                finalGstAmt = (finalAmount * igst) / 100;
+
+            }
+
+            let totalWithBillDiscount = finalAmount + finalGstAmt;
+
+            // BATCH-WISE COST
+            let totalQty = qty + freeQty;
+            let netCost = totalQty > 0 ? totalWithBillDiscount / totalQty : 0;
+
+            // UPDATE ROW
+            row.find(".discount-amt").val(discountAmt.toFixed(2));
+
+            row.find(".gstamt").val(igstAmt.toFixed(2));
+            row.find(".cgstamt").val(cgstAmt.toFixed(2));
+            row.find(".sgstamt").val(sgstAmt.toFixed(2));
+            row.find(".scgst").val((sgst + cgst).toFixed(2));
+            row.find(".total").val(total.toFixed(2));
+            row.find(".batch-wise").val(netCost.toFixed(4));
+
+            calculateTotalSummary();
+        }
+        function calculateTotalSummary() {
+
+            let total = 0, totalGst = 0, totalDiscount = 0, totalamt = 0;
+            let totalCgst = 0, totalSgst = 0;
+
+            let gstRows = [];
+            let purchaseType = $("#purchasetype").val();
+
+            $("#PurchaseItemBody tr").each(function () {
+
+                let row = $(this);
+
+                let qty = parseFloat(row.find(".qty").val()) || 0;
+                let rate = parseFloat(row.find(".rate").val()) || 0;
+                let gst = parseFloat(row.find(".gst").val()) || 0;
+                let discount = parseFloat(row.find(".discount").val()) || 0;
+
+                let igst = parseFloat(row.find(".gst").val()) || 0;
+                let cgst = parseFloat(row.find(".cgst").val()) || 0;
+                let sgst = parseFloat(row.find(".sgst").val()) || 0;
+
+                let grossAmount = qty * rate;
+
+                let discountAmt = (grossAmount * discount) / 100;
+
+                let amountAfterDiscount = grossAmount - discountAmt;
+
+                let igstAmt = 0;
+                let cgstAmt = 0;
+                let sgstAmt = 0;
+
+                if (purchaseType === "Local") {
+
+                    cgstAmt = (amountAfterDiscount * cgst) / 100;
+                    sgstAmt = (amountAfterDiscount * sgst) / 100;
+
+                    totalCgst += cgstAmt;
+                    totalSgst += sgstAmt;
+
+                }
+                else {
+
+                    igstAmt = (amountAfterDiscount * igst) / 100;
+
+                    totalGst += igstAmt;
+
+                }
+
+                total += amountAfterDiscount;
+                totalamt += amountAfterDiscount;
+                totalDiscount += discountAmt;
+
+                gstRows.push({
+                    rate: amountAfterDiscount,
+                    gst: gst,
+                    cgst: cgst,
+                    sgst: sgst
+                });
+
+            });
+
+
+            let percentInput = parseFloat($("#discountPercent").val()) || 0;
+            let amountInput = parseFloat($("#discountamount").val()) || 0;
+
+            let globalDiscountPercent = 0;
+            let globalDiscountAmt = 0;
+
+            if ($("#discountPercent").is(":focus") || (percentInput > 0 && amountInput === 0)) {
+
+                globalDiscountPercent = percentInput;
+
+                globalDiscountAmt = (total * globalDiscountPercent) / 100;
+
+                $("#discountamount").val(globalDiscountAmt.toFixed(2));
+
+            }
+            else if ($("#discountamount").is(":focus") || (amountInput > 0 && percentInput === 0)) {
+
+                globalDiscountAmt = amountInput;
+
+                globalDiscountPercent = total > 0 ? (globalDiscountAmt / total) * 100 : 0;
+
+                $("#discountPercent").val(globalDiscountPercent.toFixed(2));
+
+            }
+            else if (percentInput > 0 && amountInput > 0) {
+
+                globalDiscountPercent = percentInput;
+
+                globalDiscountAmt = (total * globalDiscountPercent) / 100;
+
+                $("#discountamount").val(globalDiscountAmt.toFixed(2));
+
+            }
+
+
+            if (globalDiscountAmt > 0) {
+
+                totalDiscount += globalDiscountAmt;
+
+                totalamt = total - globalDiscountAmt;
+
+                totalGst = 0;
+                totalCgst = 0;
+                totalSgst = 0;
+
+                gstRows.forEach(row => {
+
+                    let rowDiscountAmt = (row.rate * globalDiscountPercent) / 100;
+
+                    let rowAfterGlobalDiscount = row.rate - rowDiscountAmt;
+
+                    if (purchaseType === "Local") {
+
+                        let cgstAmt = (rowAfterGlobalDiscount * row.cgst) / 100;
+                        let sgstAmt = (rowAfterGlobalDiscount * row.sgst) / 100;
+
+                        totalCgst += cgstAmt;
+                        totalSgst += sgstAmt;
+
+                    }
+                    else {
+
+                        let gstAmt = (rowAfterGlobalDiscount * row.gst) / 100;
+
+                        totalGst += gstAmt;
+
+                    }
+
+                });
+
+            }
+
+
+            let totalTax = purchaseType === "Local"
+                ? totalCgst + totalSgst
+                : totalGst;
+            let totalscgst = purchaseType === "Local"
+                ? totalCgst + totalSgst
+                : 0;
+
+            let totalPayable = totalamt + totalTax;
+
+            let roundedPayable = Math.round(totalPayable);
+
+            let roundOffAmount = Number((roundedPayable - totalPayable).toFixed(2));
+
+
+            $("[name='Total']").val(total.toFixed(2));
+
+            $("[name='Totaldiscount']").val(totalDiscount.toFixed(2));
+
+
+            if (purchaseType === "Local") {
+
+                $("[name='TotalCGstAmt']").val(totalCgst.toFixed(2));
+
+                $("[name='TotalSGstAmt']").val(totalSgst.toFixed(2));
+                $("[name='TotalSCGstAmt']").val(totalscgst.toFixed(2));
+
+                $("[name='TotalGstAmt']").val(0);
+
+            }
+            else {
+
+                $("[name='TotalGstAmt']").val(totalGst.toFixed(2));
+
+                $("[name='TotalCGstAmt']").val(0);
+
+                $("[name='TotalSGstAmt']").val(0);
+                $("[name='TotalSCGstAmt']").val(0);
+
+            }
+
+
+            $("[name='TotalPayable']").val(roundedPayable);
+
+            $("[name='RoundOffAmount']").val(roundOffAmount);
+
+        }
+
+        // $("#discountPercent, #discountamount").on("input", function () {
+        //     calculateTotalSummary();
+        // });
+        $("#discountPercent, #discountamount").on("input", function () {
+            // Recalculate all rows (to update batch-wise cost)
+            $("#PurchaseItemBody tr").each(function() {
+                calculateRow($(this));
+            });
+
+            calculateTotalSummary();
+        });
+
+        // NEW VALIDATION HANDLER (Bill discount validation)
+        $("#discountPercent").on("input", function() {
+            let value = parseFloat($(this).val()) || 0;
+
+            // HARD LIMIT: Cannot exceed 100%
+            if (value > 100) {
+                toastr.error("Discount cannot exceed 100%", "Invalid Discount");
+                $(this).val(100); // Set to max 100
+                return;
+            }
+
+            // WARNING: If discount > 50%
+            if (value > 50) {
+                toastr.warning("High discount alert: " + value + "%", "Review Required");
+            }
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 ADD SUPPLIER MODAL (CREATE NEW SUPPLIER)
+         ================================================================ -->
+    <script>
+        $(document).ready(function() {
+            $("#supplierForm").submit(function (e) {
+                e.preventDefault();
+
+                let isFormValid = true;
+
+                $("#addSupplierModal input").each(function () {
+                    if (!validateSupplierField(this, true)) {
+                        $(this).focus().select();
+                        isFormValid = false;
+                        return false;
+                    }
+                });
+
+                if (!isFormValid) return;
+
+                showLoader("Creating supplier...");
+
+                $.post('/Supplier/CreateSupplier', $(this).serialize(), function (res) {
+                    hideLoader();
+
+                    if (res.success) {
+                        $(".supplier-id").val(res.id);
+                        $(".supplier-input").val(res.firstName);
+
+                        $("#supplierForm")[0].reset();
+
+                        $('#addSupplierModal').one('hidden.bs.modal', function () {
+                            document.activeElement.blur();
+
+                            requestAnimationFrame(() => {
+                                $(".supplier-input").trigger('focus');
+                            });
+
+                        }).modal('hide');
+
+                        toastr.success("Supplier created successfully");
+                    }
+                    else {
+                        toastr.error(res.message || "Supplier already exists");
+                        $("input[name='PhoneNO']").focus().select();
+                    }
+                }).fail(function () {
+                    hideLoader();
+                    toastr.error("Server error while creating supplier");
+                });
+            });
+
+            $('#addSupplierModal').on('shown.bs.modal', function () {
+                $('#firstname').trigger('focus');
+            });
+        });
+
+        $(document).on("keydown", "#addSupplierModal input", function (e) {
+            if (e.key !== "Enter") return;
+
+            e.preventDefault();
+
+            if (!validateSupplierField(this, true)) {
+                $(this).focus().select();
+                return;
+            }
+
+            const inputs = $("#addSupplierModal input:visible");
+            const index = inputs.index(this);
+
+            if (index < inputs.length - 1) {
+                inputs.eq(index + 1).focus().select();
+            } else {
+                $("#supplierForm button[type='submit']").focus();
+            }
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 ITEM PURCHASE HISTORY
+         ================================================================ -->
+    <script>
+        function loadItemSupplierPurchaseInfo(itemId) {
+            $("#itemExtraInfoWrapper").show();
+
+            $.get(`/Purchase/GetItemPurchaseHistory?id=${itemId}`, function (res) {
+                if (!res || !res.success || !res.data || res.data.length === 0) {
+                    $("#itemExtraInfoBody").html(`
+                        <tr>
+                            <td colspan="9" class="text-warning fw-semibold text-center">
+                                This item has not been purchased yet
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                let rows = "";
+
+                res.data.forEach(x => {
+                    rows += `
+                        <tr>
+                            <td>${x.supplier}</td>
+                            <td>${x.billNo}</td>
+                            <td>${x.billDate ? formatDate(x.billDate) : "--"}</td>
+                            <td>${x.qty}</td>
+                            <td>${x.batch ?? "--"}</td>
+                            <td>${x.mrp}</td>
+                            <td>${x.rate}</td>
+                            <td>${x.expiryDate ? formatDate(x.expiryDate) : "--"}</td>
+
+                            <td>${x.batchWiseCost}</td>
+                        </tr>`;
+                });
+
+                $("#itemExtraInfoBody").html(rows);
+            });
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            if (isNaN(d)) return "--";
+
+            return (
+                ("0" + d.getDate()).slice(-2) + "/" +
+                ("0" + (d.getMonth() + 1)).slice(-2) + "/" +
+                d.getFullYear()
+            );
+        }
+
+        // ✅ Calculate totals on page load
+        calculateTotalSummary();
+    </script>
+    <script>
+        $(document).ready(function () {
+            $('#batchModal').on('hidden.bs.modal', function () {
+
+                // Agar batch select nahi hua (Esc ya ❌ se band hua)
+                setTimeout(function () {
+                    if (currentRow && currentRow.length) {
+                        currentRow.find(".batch").focus().select();
+                    }
+                }, 150);
+
+            });
+        });
+    </script>
+    <script>
+        function validateExpiry(showError = true) {
+            // ✅ EXPIRY VALIDATION ALWAYS RUNS (independent of ENABLE_ITEM_DETAIL_VALIDATION)
+            const expiry = $("#popupExpiry").val().trim();
+            const errorSpan = $("[data-field='popupExpiry']");
+            errorSpan.text("");
+
+            if (!expiry) {
+                if (showError) errorSpan.text("Expiry Date is required");
+                return false;
+            }
+
+            // ✅ Support both MM/YYYY and MM/YY formats
+            const regex4Digit = /^(0[1-9]|1[0-2])\/\d{4}$/;
+            const regex2Digit = /^(0[1-9]|1[0-2])\/\d{2}$/;
+
+            let normalizedExpiry = expiry;
+
+            if (regex2Digit.test(expiry)) {
+                const [month, yy] = expiry.split("/");
+                const fullYear = "20" + yy;
+                normalizedExpiry = `${month}/${fullYear}`;
+                $("#popupExpiry").val(normalizedExpiry);
+            } else if (!regex4Digit.test(expiry)) {
+                if (showError) errorSpan.text("Format should be MM/YYYY or MM/YY");
+                return false;
+            }
+
+            // ✅ Parse expiry date (first day of month, as in DB)
+            const [month, year] = normalizedExpiry.split("/");
+            const expiryDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+            const currentDate = new Date();
+            currentDate.setHours(0, 0, 0, 0);
+
+            // ✅ Cannot be in past
+            if (expiryDate < currentDate) {
+                if (showError) errorSpan.text("Expiry date cannot be in the past");
+                return false;
+            }
+
+            // ✅ Minimum expiry days validation
+            if (minPurchaseExpiryDays > 0) {
+                const minExpiryDate = new Date();
+                minExpiryDate.setDate(minExpiryDate.getDate() + minPurchaseExpiryDays);
+                minExpiryDate.setHours(0, 0, 0, 0);
+
+                if (expiryDate < minExpiryDate) {
+                    if (showError) {
+                        errorSpan.text(`Expiry must be at least ${minPurchaseExpiryDays} days from today`);
+                    }
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    </script>
+    <!-- ================================================================
+         🔹 LOAD MIN EXPIRY DAYS SETTING ON PAGE LOAD
+         ================================================================ -->
+    <script>
+        $(document).ready(function () {
+            // ✅ Load settings on page load
+            function loadMinExpiryDays() {
+                $.ajax({
+                    url: '@Url.Action("GetSidebarSettings", "PurchaseSetting")',
+                    type: 'GET',
+                    success: function (data) {
+                        minPurchaseExpiryDays = data.minPurchaseExpiryDays || 0;
+                        console.log("✅ Min Purchase Expiry Days Loaded (Edit):", minPurchaseExpiryDays);
+                    },
+                    error: function (xhr) {
+                        console.error("❌ Error loading expiry settings:", xhr.status);
+                    }
+                });
+            }
+
+            loadMinExpiryDays();
+        });
+    </script>
+    <script>
+        $(document).on("keydown", function (e) {
+            // F10 pressed
+            if (e.key === "F10") {
+
+                // ❌ Browser refresh band
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                // ❌ Agar koi modal open hai to kuch mat karo
+                if ($(".modal.show").length > 0) return;
+
+                $("#refreshBtn").trigger("click");
+            }
+
+            // F11 pressed
+            if (e.key === "F11") {
+
+                // ❌ Browser refresh band
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                // ❌ Agar koi modal open hai to kuch mat karo
+                if ($(".modal.show").length > 0) return;
+
+                $("#btnCancel").trigger("click");
+            }
+        });
+
+        function confirmCancel(callback) {
+            Swal.fire({
+                title: 'Confirm Cancel?',
+                text: 'Changes will be lost. Do you want to cancel?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '❌ Yes, Cancel',
+                cancelButtonText: '↩ No, Stay',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then((result) => {
+                callback(result.isConfirmed);
+            });
+        }
+
+        $("#btnCancel").on("click", function (e) {
+            e.preventDefault();
+
+            confirmCancel(function (isConfirmed) {
+                if (isConfirmed) {
+                    window.location.href = $("#btnCancel").attr("href");
+                }
+            });
+        });
+
+        $(document).on("click", "#refreshBtn", function () {
+            Swal.fire({
+                title: 'Refresh Page?',
+                html: `
+                    <p class="text-danger mb-2">⚠️ Any unsaved changes will be lost!</p>
+                    <p class="mb-0">All items, payments, and customer details will be cleared.</p>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '🔄 Yes, Refresh',
+                cancelButtonText: '❌ No, Stay',
+                reverseButtons: true,
+                customClass: {
+                    confirmButton: 'btn btn-primary',
+                    cancelButton: 'btn btn-secondary'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loader while refreshing
+                    showLoader("Refreshing page...");
+                    location.reload();
+                }
+            });
+        });
+    </script>
+     
+   @*  <script>
+        $(document).ready(function () {
+            $("#addPaymentRow").click(function () {
+                addPaymentRow();
+            });
+
+            $(document).on("click", ".remove-paymentrow-btn", function () {
+                $(this).closest("tr").remove();
+                updatePaymentRowIndices();
+                calculateTotalPaid();
+                togglePaymentAddButton();
+            });
+
+            $(document).on("keyup", ".paymentAmount", function () {
+                calculateTotalPaid();
+            });
+
+            togglePaymentAddButton();
+        });
+
+        function addPaymentRow() {
+            let newRow = `
+                <tr>
+                    <td style="min-width:185px;">
+                        <select name="SalsePaymentDetails[${subrowIndex}].PaymentModeId"
+                                class="form-control form-control-sm paymentMode-dropdown" required>
+                            <option value="">-- Select --</option>
+                            ${getPaymentOptions()}
+                        </select>
+                    </td>
+                    <td>
+                        <input name="SalsePaymentDetails[${subrowIndex}].Amount"
+                               class="form-control form-control-sm paymentAmount" value="0" />
+                    </td>
+                    <td>
+                        <input name="SalsePaymentDetails[${subrowIndex}].ReferenceNo"
+                               class="form-control form-control-sm paymentReferenceNO" />
+                    </td>
+                    <td>
+                        <input name="SalsePaymentDetails[${subrowIndex}].Description"
+                               class="form-control form-control-sm rate paymentDescription" />
+                    </td>
+                    <td>
+                        <u class="remove-paymentrow-btn text-danger" style="cursor:pointer;">Remove</u>
+                    </td>
+                </tr>`;
+
+            $("#PaymentDetailsBody").append(newRow);
+             
+            let rowCount = $("#PaymentDetailsBody tr").length;
+
+            if (rowCount === 1) {
+                let totalPayable = parseFloat($("#totalPayable").val()) || 0;
+                if (totalPayable > 0) {
+                    $("#PaymentDetailsBody tr:last .paymentAmount")
+                        .val(totalPayable.toFixed(2));
+                }
+            } else {
+                let balance = parseFloat($("#balance").val()) || 0;
+                if (balance > 0) {
+                    $("#PaymentDetailsBody tr:last .paymentAmount")
+                        .val(balance.toFixed(2));
+                } else {
+                    $("#PaymentDetailsBody tr:last .paymentAmount").val("0");
+                }
+            }
+
+            subrowIndex++;
+            calculateTotalPaid();
+            togglePaymentAddButton();
+        }
+
+        function getPaymentOptions() {
+            return `@foreach (var item in ViewBag.PaymentMode)
+        {
+                         <option value="@item.Value">@item.Text</option>
+        }
+            `;
+        }
+
+        function calculateTotalPaid() {
+            let totalPaid = 0;
+            $(".paymentAmount").each(function () {
+                let val = parseFloat($(this).val()) || 0;
+                totalPaid += val;
+            });
+
+            $("#paidAmout").val(totalPaid.toFixed(2));
+            calculateTotalPaymentSummary();
+        }
+
+        function calculateTotalPaymentSummary() {
+            let returnAmt = 0;
+            let balance = 0;
+            var totalPayable = parseFloat($("#totalPayable").val()) || 0;
+            var paidAmt = parseFloat($("#paidAmout").val()) || 0;
+
+            if (paidAmt > totalPayable && paidAmt > 0) {
+                returnAmt = paidAmt - totalPayable;
+                balance = 0;
+            } else {
+                balance = totalPayable - paidAmt;
+            }
+            $("#returnAmount").val(returnAmt.toFixed(2));
+            $("#ReturnAmount").val(returnAmt.toFixed(2));
+            $("#balance").val(balance.toFixed(2));
+            $("#returnAmountDisplay").text(returnAmt.toFixed(2));
+        }
+
+        function updatePaymentRowIndices() {
+            const rows = document.querySelectorAll('#PaymentDetailsBody tr');
+            subrowIndex = 0;
+            rows.forEach(row => {
+                row.querySelectorAll('input, select').forEach(input => {
+                    const name = input.name;
+                    if (name) {
+                        input.name = name.replace(/\[\d+\]/, `[${subrowIndex}]`);
+                    }
+                });
+                subrowIndex++;
+            });
+        }
+
+        function togglePaymentAddButton() {
+            if ($("#PaymentDetailsBody tr").length > 0) {
+                $("#addPaymentRow").hide();
+            } else {
+                $("#addPaymentRow").show();
+            }
+        }
+    </script> *@
+}

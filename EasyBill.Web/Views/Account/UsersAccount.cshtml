@@ -1,0 +1,62 @@
+﻿@model List<EasyBill.Models.ViewModels.ApplicationUserVM>
+@{
+    ViewData["Title"] = "Users Account";
+}
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+
+<div class="card mb-3">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            Users Account
+    </div>
+</div>
+
+
+<table id="UserTbl" class="table table-bordered table-striped">
+    <thead class="table custom-header">
+        <tr>
+            <th>Users Id</th>
+            <th>Name</th>
+            <th>User Name</th>
+            <th>Role</th>
+            <th>Phone No</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Id</td>
+                @if (item.EmployeeId != null)
+                {
+                    <td>@item.EmployeeName (Employee)</td>
+                } 
+                else
+                {
+                    <td>@item.TenantName (Clinic/ Company)</td>
+                }
+                <td>@item.Email</td>
+                <td>@item.Role</td>
+                <td>@item.MobileNo</td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="Account" asp-action="EditUsersAccount" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<script>
+    $(document).ready(function () {
+        $("#UserTbl").DataTable();
+    });
+</script>

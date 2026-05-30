@@ -1,0 +1,41 @@
+﻿
+
+
+<div class="mb-2">
+    <button onclick="startListening()">🎤 Start Listening</button>
+    <button onclick="stopListening()">🛑 Stop</button>
+</div>
+
+<textarea id="transcript" class="form-control" rows="6" placeholder="Speech will appear here..."></textarea>
+
+@section Scripts {
+ 
+
+<script>
+    let recognition;
+    function startListening() {
+        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        recognition = new SpeechRecognition();
+        recognition.interimResults = true;
+        recognition.continuous = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = function (event) {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                transcript += event.results[i][0].transcript;
+            }
+            document.getElementById("transcript").value = transcript;
+        };
+
+        recognition.start();
+    }
+
+    function stopListening() {
+        if (recognition) {
+            recognition.stop();
+        }
+    }
+</script>
+}

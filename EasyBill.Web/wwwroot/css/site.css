@@ -1,0 +1,51 @@
+
+
+.navbar-nav .nav-item .nav-link {
+    padding: 0.5rem 1rem;
+}
+
+.navbar-nav .nav-item .nav-link[data-bs-toggle="collapse"] {
+    position: relative;
+}
+
+.navbar-nav .nav-item .nav-link[data-bs-toggle="collapse"] .fa-chevron-down {
+    transition: transform 0.3s ease;
+}
+
+.navbar-nav .nav-item .nav-link[data-bs-toggle="collapse"][aria-expanded="true"] .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.collapse {
+    transition: height 0.3s ease;
+}
+
+.collapse.show {
+    height: auto;
+}
+
+.card-header-bg {
+    background: #00b0fd;
+    color: white;
+}
+
+/* Header color remove only: keep existing modal layout and behavior untouched. */
+.modal-header {
+    background: transparent !important;
+    color: #333 !important;
+}
+
+.main-laoyout .main-content {
+    min-height: 450px;
+}
+.red-color {
+   color:red !important;
+}
+:root, [data-bs-theme=light] {
+    --bs-body-font-size: 0.875rem;
+}
+
+html, body {
+    font-size: 0.875rem !important;
+}
+ 

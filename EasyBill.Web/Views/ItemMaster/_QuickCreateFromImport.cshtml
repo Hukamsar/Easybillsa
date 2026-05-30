@@ -1,0 +1,756 @@
+﻿@using System.Globalization
+@using System.Linq
+@using EasyBill.Models.ViewModels
+@model QuickCreateItemFromImportVM
+@{
+    var companies = ViewBag.ImportQuickCreateCompanies as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var divisions = ViewBag.ImportQuickCreateDivisions as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var categories = ViewBag.ImportQuickCreateCategories as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var subCategories = ViewBag.ImportQuickCreateSubCategories as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var hsns = ViewBag.ImportQuickCreateHsns as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var locals = ViewBag.Local as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var centrals = ViewBag.Central as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var sourceSgst = Model.SourceSgst ?? 0m;
+    var sourceCgst = Model.SourceCgst ?? 0m;
+    var sourceIgst = Model.SourceGst ?? 0m;
+    var sourceCess = Model.SourceCess ?? 0m;
+}
+
+<style>
+    .import-card {
+        background: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .import-card-header {
+        padding: 8px 12px;
+        font-weight: 600;
+        font-size: 13px;
+        color: #1f2937;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e5e7eb;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+
+
+        align-items: center;
+    }
+
+    .import-card-body {
+        padding: 12px;
+    }
+
+    .f2-link {
+        font-size: 0.75rem;
+        color: #0d6efd;
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+        .f2-link:hover {
+            text-decoration: underline;
+        }
+
+    /* 🟢 Z-Index Fix For Popups */
+    .master-overlay-fixed {
+        z-index: 1080 !important;
+        position: fixed !important;
+        top: 10% !important;
+        left: 0 !important;
+        right: 0 !important;
+        margin: auto !important;
+        background: #fff !important;
+        box-shadow: 0 5px 25px rgba(0,0,0,0.5) !important;
+        border-radius: 8px !important;
+        max-width: 500px !important;
+    }
+</style>
+
+<form id="importQuickCreateItemForm" enctype="multipart/form-data">
+    <input type="hidden" name="RowKey" value="@Model.RowKey" />
+
+    <div class="alert alert-info py-2 mb-3 shadow-sm border-0" style="font-size:0.82rem; background-color: #e9f2ff;">
+        <div class="fw-semibold mb-2 text-primary"><i class="bi bi-info-circle me-1"></i> Imported Row Summary</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge bg-primary-subtle text-dark border border-primary-subtle px-2 py-1">Item: @(string.IsNullOrWhiteSpace(Model.SourceItemName) ? Model.Name : Model.SourceItemName)</span>
+            @if (!string.IsNullOrWhiteSpace(Model.SourceBatch))
+            {
+                <span class="badge bg-light text-dark border px-2 py-1">Batch: @Model.SourceBatch</span>
+            }
+            @if (Model.SourceQty.HasValue)
+            {
+                <span class="badge bg-light text-dark border px-2 py-1">Qty: @Model.SourceQty</span>
+            }
+            @if (Model.SourceRate.HasValue)
+            {
+                <span class="badge bg-light text-dark border px-2 py-1">Rate: @Model.SourceRate.Value.ToString("0.##", CultureInfo.InvariantCulture)</span>
+            }
+        </div>
+    </div>
+
+    <div class="import-card">
+        <div class="import-card-header">Basic Item Details</div>
+        <div class="import-card-body">
+            <div class="row g-2 mb-2">
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Code *</label>
+                    <input type="text" class="form-control form-control-sm bg-light" id="importQuickCreateCode" name="Code" value="@Model.Code" readonly />
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="Code"></span>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Item Name *</label>
+                    <input type="text" class="form-control form-control-sm border-primary" id="importQuickCreateName" name="Name" value="@Model.Name" required />
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="Name"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Barcode</label>
+                    <input type="text" class="form-control form-control-sm" id="importQuickCreateBarcode" name="Barcode" value="@Model.Barcode" />
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="Barcode"></span>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Unit</label>
+                    <input type="text" class="form-control form-control-sm" id="importQuickCreateUnit" name="Unit" value="@Model.Unit" placeholder="e.g. PCS / STRIP" />
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="Unit"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Packing</label>
+                    <input type="text" class="form-control form-control-sm" id="importQuickCreatePacking" name="Packing" value="@Model.Packing" placeholder="e.g. 10X10" />
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="Packing"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Conversion</label>
+                    <select class="form-select form-select-sm" id="importQuickCreateConversion" name="Conversion">
+                        <option value="1" selected="@(Model.Conversion == 1)">1</option>
+                        <option value="10" selected="@(Model.Conversion == 10)">10</option>
+                        <option value="15" selected="@(Model.Conversion == 15)">15</option>
+                        <option value="30" selected="@(Model.Conversion == 30)">30</option>
+                    </select>
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="Conversion"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-2">
+        <div class="col-md-6">
+            <div class="import-card h-100">
+                <div class="import-card-header">Company & Category</div>
+                <div class="import-card-body">
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-end mb-0">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Company *</label>
+                            <a class="f2-link" onclick="opencompanyPopup(event)">New</a>
+                        </div>
+                        <select class="form-select form-select-sm border-primary" id="importQuickCreateCompanyId" name="CompanyId" required>
+                            <option value="0">Select Company</option>
+                            @foreach (var company in companies)
+                            {
+                                <option value="@company.Id" selected="@((int)company.Id == (Model.CompanyId ?? 0))">@company.Name</option>
+                            }
+                        </select>
+                        <span class="text-danger small d-block mt-1" data-valmsg-for="CompanyId"></span>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-end mb-0">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Division Name *</label>
+                            <a class="f2-link" onclick="opendivisionpopup(event)">New</a>
+                        </div>
+                        <select class="form-select form-select-sm" id="importQuickCreateDivisionId" name="DivisionId">
+                            <option value="0">Select Division</option>
+                            @foreach (var division in divisions)
+                            {
+                                <option value="@division.Id" selected="@((int)division.Id == (Model.DivisionId ?? 0))">@division.Name</option>
+                            }
+                        </select>
+                        <span class="text-danger small d-block mt-1" data-valmsg-for="DivisionId"></span>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-end mb-0">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Category *</label>
+                            <a class="f2-link" onclick="openPopup(event)">New</a>
+                        </div>
+                        <select class="form-select form-select-sm border-primary" id="importQuickCreateCategoryId" name="CategoryId" required>
+                            <option value="0">Select Category</option>
+                            @foreach (var category in categories)
+                            {
+                                <option value="@category.Id" selected="@((int)category.Id == (Model.CategoryId ?? 0))">@category.CategoryName</option>
+                            }
+                        </select>
+                        <span class="text-danger small d-block mt-1" data-valmsg-for="CategoryId"></span>
+                    </div>
+                    <div class="mb-0">
+                        <div class="d-flex justify-content-between align-items-end mb-0">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Sub Category *</label>
+                            <a class="f2-link" onclick="openSubCategoryPopup(event)">New</a>
+                        </div>
+                        <select class="form-select form-select-sm" id="importQuickCreateSubCategoryId" name="SubCategoryId">
+                            <option value="0">Select Sub Category</option>
+                            @foreach (var subCategory in subCategories)
+                            {
+                                <option value="@subCategory.Id" selected="@((int)subCategory.Id == (Model.SubCategoryId ?? 0))">@subCategory.Name</option>
+                            }
+                        </select>
+                        <span class="text-danger small d-block mt-1" data-valmsg-for="SubCategoryId"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="import-card h-100">
+                <div class="import-card-header">Pricing & Stock</div>
+                <div class="import-card-body">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">M.R.P</label>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="importQuickCreateMrp" name="Mrp" value="@Model.Mrp.ToString(CultureInfo.InvariantCulture)" />
+                            <span class="text-danger small d-block mt-1" data-valmsg-for="Mrp"></span>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Max Discount %</label>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="importQuickCreateMaximumDiscount" name="MaximumDiscount" value="@Model.MaximumDiscount.ToString(CultureInfo.InvariantCulture)" />
+                            <span class="text-danger small d-block mt-1" data-valmsg-for="MaximumDiscount"></span>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Sales Rate 1</label>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="importQuickCreateSalesRate1" name="SalesRate1" value="@Model.SalesRate1.ToString(CultureInfo.InvariantCulture)" />
+                            <span class="text-danger small d-block mt-1" data-valmsg-for="SalesRate1"></span>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Sales Rate 2</label>
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="importQuickCreateSalesRate2" name="SalesRate2" value="@Model.SalesRate2.ToString(CultureInfo.InvariantCulture)" />
+                            <span class="text-danger small d-block mt-1" data-valmsg-for="SalesRate2"></span>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Minimum Qty</label>
+                            <input type="number" class="form-control form-control-sm" id="importQuickCreateMinimumQty" name="MinimumQty" value="@Model.MinimumQty" />
+                            <span class="text-danger small d-block mt-1" data-valmsg-for="MinimumQty"></span>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Maximum Qty</label>
+                            <input type="number" class="form-control form-control-sm" id="importQuickCreateMaximumQty" name="MaximumQty" value="@Model.MaximumQty" />
+                            <span class="text-danger small d-block mt-1" data-valmsg-for="MaximumQty"></span>
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Shelf Life</label>
+                            <input type="number" class="form-control form-control-sm" id="importQuickCreateShelfLife" name="ShelfLife" value="@Model.ShelfLife" />
+                            <span class="text-danger small d-block mt-1" data-valmsg-for="ShelfLife"></span>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Unit</label>
+                            <select class="form-select form-select-sm" id="importQuickCreateShelfLifeUnit" name="ShelfLifeUnit">
+                                <option value="Days" selected="@(string.IsNullOrWhiteSpace(Model.ShelfLifeUnit) || Model.ShelfLifeUnit == "Days")">Days</option>
+                                <option value="Months" selected="@(Model.ShelfLifeUnit == "Months")">Months</option>
+                                <option value="Years" selected="@(Model.ShelfLifeUnit == "Years")">Years</option>
+                            </select>
+                            <span class="text-danger small d-block mt-1" data-valmsg-for="ShelfLifeUnit"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="import-card">
+        <div class="import-card-header">HSN And GST Details</div>
+        <div class="import-card-body">
+            <div class="row g-2 mb-2">
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-between align-items-end mb-0">
+                        <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">HSN/SAC *</label>
+                        <a class="f2-link" onclick="openhsnpopup(event)">F2-New</a>
+                    </div>
+                    <select class="form-select form-select-sm border-primary"
+                            id="importQuickCreateHsnId"
+                            name="HsnId"
+                            data-source-igst="@sourceIgst.ToString(CultureInfo.InvariantCulture)"
+                            data-source-cgst="@sourceCgst.ToString(CultureInfo.InvariantCulture)"
+                            data-source-sgst="@sourceSgst.ToString(CultureInfo.InvariantCulture)"
+                            data-source-cess="@sourceCess.ToString(CultureInfo.InvariantCulture)"
+                            required>
+                        <option value="0">Select Code</option>
+                        @foreach (var hsn in hsns)
+                        {
+                            <option value="@hsn.Id"
+                                    data-igst="@Convert.ToDecimal(hsn.IGST).ToString(CultureInfo.InvariantCulture)"
+                                    data-cgst="@Convert.ToDecimal(hsn.CGST).ToString(CultureInfo.InvariantCulture)"
+                                    data-sgst="@Convert.ToDecimal(hsn.SGST).ToString(CultureInfo.InvariantCulture)"
+                                    data-cess="@Convert.ToDecimal(hsn.Cess).ToString(CultureInfo.InvariantCulture)"
+                                    selected="@((int)hsn.Id == (Model.HsnId ?? 0))">@hsn.HsnCode</option>
+                        }
+                    </select>
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="HsnId"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Local</label>
+                    <select class="form-select form-select-sm" id="importQuickCreateLocal" name="Local" asp-items="locals"></select>
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="Local"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Central</label>
+                    <select class="form-select form-select-sm" id="importQuickCreateCentral" name="Central" asp-items="centrals"></select>
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="Central"></span>
+                </div>
+            </div>
+            <div class="row g-2 bg-light p-2 rounded border border-light m-0">
+                <div class="col-md-3 d-flex align-items-center">
+                    <label class="fw-semibold text-muted me-2 mb-0" style="font-size: 0.72rem; width: 40px;">SGST</label>
+                    <input type="text" id="importQuickCreateSgst" class="form-control form-control-sm text-end" readonly value="@sourceSgst.ToString("0.##", CultureInfo.InvariantCulture)" />
+                </div>
+                <div class="col-md-3 d-flex align-items-center">
+                    <label class="fw-semibold text-muted me-2 mb-0" style="font-size: 0.72rem; width: 40px;">CGST</label>
+                    <input type="text" id="importQuickCreateCgst" class="form-control form-control-sm text-end" readonly value="@sourceCgst.ToString("0.##", CultureInfo.InvariantCulture)" />
+                </div>
+                <div class="col-md-3 d-flex align-items-center">
+                    <label class="fw-semibold text-muted me-2 mb-0" style="font-size: 0.72rem; width: 40px;">IGST</label>
+                    <input type="text" id="importQuickCreateIgst" class="form-control form-control-sm text-end" readonly value="@sourceIgst.ToString("0.##", CultureInfo.InvariantCulture)" />
+                </div>
+                <div class="col-md-3 d-flex align-items-center">
+                    <label class="fw-semibold text-muted me-2 mb-0" style="font-size: 0.72rem; width: 40px;">Cess</label>
+                    <input type="text" id="importQuickCreateCess" class="form-control form-control-sm text-end" readonly value="@sourceCess.ToString("0.##", CultureInfo.InvariantCulture)" />
+                </div>
+            </div>
+            <div id="importQuickCreateTaxPreview" class="small text-muted mt-2"></div>
+        </div>
+    </div>
+
+    <div class="import-card mb-1">
+        <div class="import-card-header">Configuration & Media</div>
+        <div class="import-card-body">
+            <div class="row g-2 mb-2">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Item Status</label>
+                    <select class="form-select form-select-sm" id="importQuickCreateIsActive" name="IsActive">
+                        <option value="true" selected="@(Model.IsActive != false)">Active</option>
+                        <option value="false" selected="@(Model.IsActive == false)">Inactive</option>
+                    </select>
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="IsActive"></span>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold text-muted mb-0" style="font-size: 0.72rem;">Salt</label>
+                    <input type="text" class="form-control form-control-sm" id="importQuickCreateSalt" name="Salt" value="@Model.Salt" placeholder="Enter salt composition" />
+                    <span class="text-danger small d-block mt-1" data-valmsg-for="Salt"></span>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <input type="file" id="importQuickCreateImages" name="Images" multiple hidden accept="image/*" />
+                    <input type="hidden" id="importQuickCreatePrimaryIndex" name="PrimaryIndex" value="@Model.PrimaryIndex" />
+                    <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="openImportImagePopup()">
+                        <i class="bi bi-image"></i> Images
+                    </button>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-4 mt-3 pt-2 border-top">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="importQuickCreateDecAllowed" name="DecemalAllowed" value="true" checked="@Model.DecemalAllowed">
+                    <label class="form-check-label fw-semibold text-dark" style="font-size: 0.75rem;" for="importQuickCreateDecAllowed">Decimals Allowed</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input text-danger" type="checkbox" id="importQuickCreateNarcotics" name="Narcotics" value="true" checked="@Model.Narcotics">
+                    <label class="form-check-label fw-semibold text-danger" style="font-size: 0.75rem;" for="importQuickCreateNarcotics">Narcotics</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input text-warning" type="checkbox" id="importQuickCreateSchH" name="ScheduleH" value="true" checked="@Model.ScheduleH">
+                    <label class="form-check-label fw-semibold text-warning" style="font-size: 0.75rem;" for="importQuickCreateSchH">Schedule H</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input text-danger" type="checkbox" id="importQuickCreateSchH1" name="ScheduleH1" value="true" checked="@Model.ScheduleH1">
+                    <label class="form-check-label fw-semibold text-danger" style="font-size: 0.75rem;" for="importQuickCreateSchH1">Schedule H1</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<div id="categoryPopupContainer">@await Component.InvokeAsync("CategoryForm")</div>
+<div id="subcategorypopupcontainer">@await Component.InvokeAsync("SubCategoryComponent")</div>
+<div id="companypopupcontainer">@await Component.InvokeAsync("Company")</div>
+<div id="divisionpopupcontainer">@await Component.InvokeAsync("Division")</div>
+<div id="hsnpopupcontainer">@await Component.InvokeAsync("HSN")</div>
+
+<div id="importItemImagePopup" class="modal fade" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title">Upload Item Images</h6>
+                <button type="button" class="btn-close btn-close-white" onclick="closeImportImagePopup()"></button>
+            </div>
+            <div class="modal-body">
+                <input type="file" id="importQuickCreateImageInput" class="form-control form-control-sm" multiple accept="image/*" />
+                <div id="importQuickCreateImagePreview" class="d-flex flex-wrap gap-2 mt-3"></div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="closeImportImagePopup()">Close</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="saveImportSelectedImages()">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $(document).off("change", "#importQuickCreateCompanyId").on("change", "#importQuickCreateCompanyId", function () {
+            const companyId = parseInt($(this).val(), 10) || 0;
+            const divisionDropdown = $("#importQuickCreateDivisionId");
+
+            divisionDropdown.empty().append('<option value="0">Loading...</option>');
+
+            if (companyId <= 0) {
+                divisionDropdown.empty().append('<option value="0">Select Division</option>');
+                return;
+            }
+
+            $.ajax({
+                url: "/ItemMaster/GetDivisionByCompany",
+                type: "GET",
+                data: { companyId: companyId },
+                success: function (data) {
+                    divisionDropdown.empty().append('<option value="0">Select Division</option>');
+                    $.each(data, function (i, item) {
+                        divisionDropdown.append($("<option>").val(item.value).text(item.text));
+                    });
+                }
+            });
+        });
+
+        $(document).off("change", "#importQuickCreateCategoryId").on("change", "#importQuickCreateCategoryId", function () {
+            const categoryId = parseInt($(this).val(), 10) || 0;
+            const subCategoryDropdown = $("#importQuickCreateSubCategoryId");
+
+            subCategoryDropdown.empty().append('<option value="0">Loading...</option>');
+
+            if (categoryId <= 0) {
+                subCategoryDropdown.empty().append('<option value="0">Select Sub Category</option>');
+                return;
+            }
+
+            $.ajax({
+                url: "/ItemMaster/GetSubCategoryByCategory",
+                type: "GET",
+                data: { categoryId: categoryId },
+                success: function (data) {
+                    subCategoryDropdown.empty().append('<option value="0">Select Sub Category</option>');
+                    $.each(data, function (i, item) {
+                        subCategoryDropdown.append($("<option>").val(item.value).text(item.text));
+                    });
+                }
+            });
+        });
+
+        $(document).off("change", "#importQuickCreateHsnId").on("change", "#importQuickCreateHsnId", function () {
+            if (typeof updateImportQuickCreateTaxPreview === "function") {
+                updateImportQuickCreateTaxPreview();
+            }
+        });
+
+        if (typeof updateImportQuickCreateTaxPreview === "function") {
+            updateImportQuickCreateTaxPreview();
+        }
+    });
+
+    window.importSelectedImages = [];
+    $("#importQuickCreateImagePreview").empty();
+    $("#importQuickCreatePrimaryIndex").val(0);
+    $("#importQuickCreateImageInput").val("");
+    $("#importQuickCreateImages").val("");
+
+    function openImportImagePopup() { $("#importItemImagePopup").modal("show"); }
+    function closeImportImagePopup() { $("#importItemImagePopup").modal("hide"); }
+
+    $(document).off("change", "#importQuickCreateImageInput").on("change", "#importQuickCreateImageInput", function () {
+        const files = Array.from(this.files || []);
+
+        files.forEach(file => {
+            if (window.importSelectedImages.some(x => x.file.name === file.name && x.file.size === file.size)) {
+                return;
+            }
+
+            window.importSelectedImages.push({ file: file, isPrimary: window.importSelectedImages.length === 0 });
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const index = window.importSelectedImages.length - 1;
+                $("#importQuickCreateImagePreview").append(`
+                    <div class="position-relative me-2 mb-2 image-box border p-1 rounded" data-index="${index}">
+                        <img src="${e.target.result}" class="img-fluid rounded" style="width:80px;height:80px;object-fit:cover" />
+                        <span onclick="removeImportImage(${index})" class="position-absolute top-0 end-0 bg-danger text-white rounded-circle shadow-sm" style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;transform:translate(30%,-30%);">×</span>
+                        <div class="text-center mt-1">
+                            <input type="radio" name="importPrimaryImage" onclick="setImportPrimary(${index})" ${index === 0 ? "checked" : ""} />
+                        </div>
+                    </div>
+                `);
+            };
+
+            reader.readAsDataURL(file);
+        });
+
+        this.value = "";
+    });
+
+    function setImportPrimary(index) {
+        window.importSelectedImages.forEach((img, i) => img.isPrimary = (i === index));
+        $("#importQuickCreatePrimaryIndex").val(index);
+    }
+
+    function removeImportImage(index) {
+        const wasPrimary = window.importSelectedImages[index]?.isPrimary;
+
+        window.importSelectedImages.splice(index, 1);
+        $("#importQuickCreateImagePreview").find(`[data-index='${index}']`).remove();
+        $("#importQuickCreateImagePreview .image-box").each(function (i) {
+            $(this).attr("data-index", i);
+            $(this).find(".bg-danger").attr("onclick", `removeImportImage(${i})`);
+            $(this).find("input[type='radio']").attr("onclick", `setImportPrimary(${i})`);
+        });
+
+        if (wasPrimary && window.importSelectedImages.length > 0) {
+            window.importSelectedImages[0].isPrimary = true;
+            $("#importQuickCreatePrimaryIndex").val(0);
+            $("input[name='importPrimaryImage']").first().prop("checked", true);
+        }
+
+        if (window.importSelectedImages.length === 0) {
+            $("#importQuickCreatePrimaryIndex").val(0);
+        }
+    }
+
+    function saveImportSelectedImages() {
+        const dataTransfer = new DataTransfer();
+        let primaryIndex = 0;
+
+        window.importSelectedImages.forEach((obj, i) => {
+            dataTransfer.items.add(obj.file);
+            if (obj.isPrimary) {
+                primaryIndex = i;
+            }
+        });
+
+        document.getElementById("importQuickCreatePrimaryIndex").value = primaryIndex;
+        document.getElementById("importQuickCreateImages").files = dataTransfer.files;
+
+        if (window.importSelectedImages.length > 0) {
+            toastr.success(window.importSelectedImages.length + " images attached");
+        }
+
+        closeImportImagePopup();
+    }
+
+    function reloadDropdown(url, targetId, defaultText, selectedValue, triggerChange = false) {
+        $.ajax({
+            url: url,
+            type: "GET",
+            success: function (data) {
+                const dropdown = $(targetId);
+                dropdown.empty().append($("<option />").val("0").text(defaultText));
+
+                $.each(data, function (index, item) {
+                    const value = item.value ?? item.id ?? "";
+                    if (String(value) === "0") {
+                        return;
+                    }
+
+                    dropdown.append($("<option />").val(value).text(item.text ?? item.name ?? ""));
+                });
+
+                if (selectedValue !== undefined && selectedValue !== null && String(selectedValue) !== "") {
+                    dropdown.val(String(selectedValue));
+                }
+
+                if (triggerChange) {
+                    dropdown.trigger("change");
+                }
+            }
+        });
+    }
+
+    window.opencompanyPopup = function (e) {
+        if (e) e.preventDefault();
+        $("#companypopup").addClass("master-overlay-fixed").show();
+        const form = document.getElementById("companyform");
+        if (form) form.reset();
+    };
+
+    window.closecompany = function () { $("#companypopup").hide(); };
+
+    window.savecompany = function () {
+        const name = $("#companyName").val();
+        if (!name) {
+            toastr.warning("Company name is required!");
+            return;
+        }
+
+        $.post("/ItemMaster/CreateCompany", { Name: name }, function (res) {
+            if (res.success) {
+                toastr.success(res.message);
+                closecompany();
+                reloadDropdown("/ItemMaster/GetCompanies", "#importQuickCreateCompanyId", "Select Company", res.company?.id, true);
+            } else {
+                toastr.warning(res.message);
+            }
+        });
+    };
+
+    window.openPopup = function (e) {
+        if (e) e.preventDefault();
+        $("#popupForm").addClass("master-overlay-fixed").show();
+        const form = document.getElementById("categoryForms");
+        if (form) form.reset();
+    };
+
+    window.closePopup = function () { $("#popupForm").hide(); };
+
+    window.saveCategory = function () {
+        const name = $("#CategoryName").val();
+        if (!name) {
+            toastr.warning("Category name is required!");
+            return;
+        }
+
+        $.post("/ItemMaster/CreateCategory", { CategoryName: name }, function (res) {
+            if (res.success) {
+                toastr.success(res.message);
+                closePopup();
+                reloadDropdown("/ItemMaster/GetCategories", "#importQuickCreateCategoryId", "Select Category", res.category?.id, true);
+            } else {
+                toastr.warning(res.message);
+            }
+        });
+    };
+
+    window.openSubCategoryPopup = function (e) {
+        if (e) e.preventDefault();
+        $("#SubCategoryPopup").addClass("master-overlay-fixed").show();
+
+        const form = document.getElementById("Subcategoryforms");
+        if (form) form.reset();
+
+        const currentCategoryId = parseInt($("#importQuickCreateCategoryId").val(), 10) || 0;
+        $.get("/ItemMaster/GetCategories", function (data) {
+            const catDrop = $("#categoryDropdown");
+            catDrop.empty().append('<option value="0">Select Category</option>');
+            $.each(data, function (i, cat) {
+                if (String(cat.value) === "0") {
+                    return;
+                }
+                catDrop.append($("<option />").val(cat.value).text(cat.text));
+            });
+
+            if (currentCategoryId > 0) {
+                catDrop.val(String(currentCategoryId));
+            }
+        });
+    };
+
+    window.closesubcategory = function () { $("#SubCategoryPopup").hide(); };
+
+    window.saveSubCategory = function () {
+        const name = $("#subcategory").val();
+        const catId = $("#categoryDropdown").val();
+
+        if (!name || !catId || catId === "0") {
+            toastr.warning("Name and Category required!");
+            return;
+        }
+
+        $.post("/ItemMaster/CreateSubCategory", { Name: name, CategoryId: catId }, function (res) {
+            if (res.success) {
+                toastr.success(res.message);
+                closesubcategory();
+                $("#importQuickCreateCategoryId").val(String(catId));
+                reloadDropdown(`/ItemMaster/GetSubCategoryByCategory?categoryId=${catId}`, "#importQuickCreateSubCategoryId", "Select SubCategory", res.subCategory?.id || res.data?.id);
+            } else {
+                toastr.warning(res.message);
+            }
+        });
+    };
+
+    window.opendivisionpopup = function (e) {
+        if (e) e.preventDefault();
+        $("#divisionpopup").addClass("master-overlay-fixed").show();
+
+        const form = document.getElementById("divisionform");
+        if (form) form.reset();
+
+        const currentCompanyId = parseInt($("#importQuickCreateCompanyId").val(), 10) || 0;
+        $.get("/ItemMaster/GetCompanies", function (data) {
+            let compDrop = $("#companyDropdown");
+            if (compDrop.length === 0) compDrop = $("#companyId");
+
+            compDrop.empty().append('<option value="0">Select Company</option>');
+            $.each(data, function (i, comp) {
+                if (String(comp.value) === "0") {
+                    return;
+                }
+                compDrop.append($("<option />").val(comp.value).text(comp.text));
+            });
+
+            if (currentCompanyId > 0) {
+                compDrop.val(String(currentCompanyId));
+            }
+        });
+    };
+
+    window.closedivision = function () { $("#divisionpopup").hide(); };
+
+    window.savedivision = function () {
+        const name = $("#divisionname").val();
+        const compId = $("#companyDropdown").val();
+
+        if (!name || !compId || compId === "0") {
+            toastr.warning("Name and Company required!");
+            return;
+        }
+
+        $.post("/ItemMaster/CreateDivision", { Name: name, CompanyId: compId }, function (res) {
+            if (res.success) {
+                toastr.success(res.message);
+                closedivision();
+                $("#importQuickCreateCompanyId").val(String(compId));
+                reloadDropdown(`/ItemMaster/GetDivisionByCompany?companyId=${compId}`, "#importQuickCreateDivisionId", "Select Division", res.division?.id);
+            } else {
+                toastr.warning(res.message);
+            }
+        });
+    };
+
+    window.openhsnpopup = function (e) {
+        if (e) e.preventDefault();
+        $("#hsnpopup").addClass("master-overlay-fixed").show();
+
+        const form = document.getElementById("hsnform");
+        if (form) form.reset();
+
+        $("#hsnform [name='SGST']").val($("#importQuickCreateSgst").val() || 0);
+        $("#hsnform [name='CGST']").val($("#importQuickCreateCgst").val() || 0);
+        $("#hsnform [name='IGST']").val($("#importQuickCreateIgst").val() || 0);
+        $("#hsnform [name='Cess']").val($("#importQuickCreateCess").val() || 0);
+    };
+
+    window.closehsnpopup = function () { $("#hsnpopup").hide(); };
+
+    window.savehsn = function () {
+        const formData = $("#hsnform").serialize();
+        $.post("/ItemMaster/CreateHsn", formData, function (res) {
+            if (res.success) {
+                toastr.success(res.message);
+                closehsnpopup();
+                reloadDropdown("/ItemMaster/GetHsn", "#importQuickCreateHsnId", "Select Code", res.hsn?.id, true);
+            } else {
+                toastr.warning(res.message);
+            }
+        });
+    };
+</script>

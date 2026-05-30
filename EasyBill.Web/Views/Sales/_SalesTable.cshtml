@@ -1,0 +1,138 @@
+﻿@model IEnumerable<Sales>
+
+<table class="table table-bordered table-striped" id="salesTable">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.BillNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.BillDate)
+            </th>
+            <th>
+                Customer
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.MobileNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Address)
+            </th>
+           
+            <th>
+               Taxable Amt
+            </th>
+            <th>
+                Gst Amt
+            </th>
+            <th>
+                Round Off
+            </th>
+            <th>
+                Total Amount
+            </th>
+            
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.BillNo)
+                </td>
+                <td>
+                    @item.BillDate?.ToString("dd/MM/yyyy")
+                </td>
+                <td>
+                    @{
+                        if (!string.IsNullOrEmpty(item.Customers?.Name))
+                        {
+                            @item.Customers.Name
+                        }
+                        else
+                        {
+                            @item.billingType
+                        }
+                    }
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.MobileNo)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Address)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Total)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalGstAmt)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.RoundOffAmount)
+                </td>
+            
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalPayable)
+                </td>
+              
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                       <a asp-controller="Sales" asp-action="Print"
+                               class="btn-print"
+                               title="Print Invoice"
+                               target="_blank"
+                               asp-route-id="@item.Id">
+                                <i class="bi bi-printer-fill text-success p-1"></i>
+                            </a>
+                        <a href="javascript:void(0)"
+                           class="btn-thermal-print"
+                           title="Thermal Print"
+                           data-id="@item.Id">
+                            <i class="bi bi-receipt text-info p-1"></i>
+                        </a>
+                        <a asp-controller="Sales" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="Sales" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<script>
+    $(document).ready(function(){
+        $("#salesTable").DataTable();
+    });
+</script>
+<script>
+        $(document).ready(function(){
+        $("#salesTable").DataTable();
+
+        // THERMAL PRINT
+        $(document).on("click", ".btn-thermal-print", function() {
+            const saleId = $(this).data("id");
+
+            // Settings se paper size lo
+            $.get('/SalseSetting/GetSidebarSettings', function(data) {
+                const paperSize = (data.thermalPaperSize?.toString() === '58') ? '58mm' : '80mm';
+                const thermalUrl = "/ThermalReceipt/Index?saleId=" + saleId + "&paperSize=" + paperSize;
+                window.open(thermalUrl, "_blank", "width=400,height=650");
+            }).fail(function() {
+                // Fallback - default 80mm
+                window.open("/ThermalReceipt/Index?saleId=" + saleId + "&paperSize=80mm", "_blank", "width=400,height=650");
+            });
+        });
+    });
+</script>

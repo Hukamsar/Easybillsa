@@ -1,0 +1,111 @@
+﻿@model IEnumerable<PurchaseOrder>
+
+@{
+    ViewData["Title"] = "List";
+}
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+    }
+</style>
+
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Purchase Order List
+    </div>
+</div>
+
+<p>
+    <a asp-controller="PurchaseOrder" asp-action="Create" class="btn btn-primary mb-1" style="float:right"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table id="purchaseorderTbl" class="table table-bordered table-striped">
+    <thead class="custom-header">
+        <tr>
+            <th>
+                Supplier
+            </th>
+
+            <th>
+                @Html.DisplayNameFor(model => model.BillNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.BillDate)
+            </th> 
+            <th> Taxable Amt </th>
+            <th>  Gst Amount </th>
+            <th>Round Off</th>
+            <th> Total Amount </th>
+
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.Suppliers.FirstName)
+                </td>
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.BillNo)
+                </td>
+                <td>
+                    @item.BillDate?.ToString("dd/MM/yyyy")
+                </td> 
+                <td>
+                    @item.Total
+                </td>
+                <td>
+                    @if (item.PurchaseType == "Local")
+                    {
+                        @((item.TotalCGstAmt) + (item.TotalSGstAmt))
+                    }
+                    else if (item.PurchaseType == "Central")
+                    {
+                        @(item.TotalGstAmt)
+                    }
+                </td>
+                <td>
+                    @item.RoundOffAmount
+                </td>
+                <td>
+                    @item.TotalPayable
+                </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="PurchaseOrder" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="PurchaseOrder" asp-action="Delete" class="btn-delete" title="Delete" asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#purchaseorderTbl").DataTable({
+                "order": [[2, "asc"]]
+            });
+        });
+    </script>
+}

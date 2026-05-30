@@ -1,0 +1,313 @@
+﻿@using EasyBill.Models.ViewModels
+@model EmployeeVM
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Edit Employee
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" method="post" id="Employeefromedit">
+            <input type="hidden" asp-for="Id" id="employeeId" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="row">
+                <!-- Name & Initials Row -->
+                <div class="row mb-2 align-items-center">
+                    <label asp-for="Name" class="col-md-4 col-form-label text-start small">
+                        Name <i class="text-danger">*</i>
+                    </label>
+
+                    <div class="col-md-2">
+                        <select asp-for="Initials"
+                                asp-items="Html.GetEnumSelectList<Initials>()"
+                                id="initials"
+                                class="form-select form-select-sm">
+                            <option value="">Select</option>
+                        </select>
+                        <span asp-validation-for="Initials" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <input asp-for="Name"
+                               id="Name"
+                               type="text"
+                               class="form-control form-control-sm"
+                               required />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+                </div>
+                    <div class="row mb-2">
+                        <label asp-for="DepartMentId" class="col-md-4 col-form-label text-start small">Departmet Name <i class="text-danger">*</i></label>
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <select asp-for="DepartMentId" asp-items="@ViewBag.Department" id="DepartMentId" class="form-control form-control-sm" required>
+                                    <option value="">-- Select Department --</option>
+                                </select>
+                                <div class="shortcut-box">
+                                    <span id="btnF2Dept" class="shortcut-link">F2 - New</span>
+                                    <span id="btnF3Dept" class="shortcut-link text-danger">F3 - Mod</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span asp-validation-for="DepartMentId" class="text-danger"></span>
+                    </div>
+                    <div class="row mb-1">
+                        <label asp-for="DesignationId" class="col-md-4 col-form-label text-start small">Designation <i class="text-danger">*</i></label>
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <select asp-for="DesignationId" asp-items="@ViewBag.Designation" id="DesignationId" class="form-control form-control-sm" required>
+                                    <option value="">-- Select Designation --</option>
+                                </select>
+                                <div class="shortcut-box">
+                                    <span id="btnF2Desig" class="shortcut-link">F2 - New</span>
+                                    <span id="btnF3Desig" class="shortcut-link text-danger">F3 - Mod</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span asp-validation-for="DesignationId" class="text-danger"></span>
+                    </div>
+
+                <div class="row mb-2">
+                    <label asp-for="Email" class="col-md-4 col-form-label text-start small">Email <i class="text-danger">*</i></label>
+                    <div class="col-md-8">
+                        <input asp-for="Email" type="email" id="emailAddress" class="form-control form-control-sm" required />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                        <span id="emailMessage" class="text-danger"></span>
+                    </div>
+
+                </div>
+                <div class="row mb-2">
+                    <label asp-for="Phone" class="col-md-4 col-form-label text-start small">Phone <i class="text-danger">*</i></label>
+                    <div class="col-md-8">
+                        <input asp-for="Phone" id="phoneNo" class="form-control form-control-sm" required />
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                        <span id="PhoneMessage" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <label asp-for="RequiredCreditional" class="col-md-4 col-form-label text-start small">Required Creditional </label>
+                    <div class="col-md-8">
+                        <input asp-for="RequiredCreditional" readonly class="flaticon-checked" />
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue">Submit</button>
+                <a asp-controller="Employee" asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- SIRF YE MODALS ADD KIYE -->
+<div class="modal fade" id="deptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header"><h4 class="modal-title" id="deptModalTitle">Add Department</h4></div>
+            <div class="modal-body">
+                <input type="hidden" id="modalDeptId" value="0" />
+                <label>Name</label>
+                <input type="text" id="modalDeptName" class="form-control modal-input" />
+                <span id="deptError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success btn-sm px-4" id="btnSaveDept">Save</button>
+                <button class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="desigModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header"><h4 class="modal-title" id="desigModalTitle">Add Designation</h4></div>
+            <div class="modal-body">
+                <input type="hidden" id="modalDesigId" value="0" />
+                <label>Name</label>
+                <input type="text" id="modalDesigName" class="form-control modal-input" />
+                <span id="desigError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success btn-sm px-4" id="btnSaveDesig">Save</button>
+                <button class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<link href="~/css/page.css" rel="stylesheet" />
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
+
+<script>
+    $(document).ready(function () {
+          $("#emailAddress").on("blur", function () {
+              debugger;
+            var email = $(this).val().trim();
+              var id = $("#employeeId").val() ;
+            if (email === "") return;
+            $.ajax({
+                url: '/Employee/CheckEmailAddress',
+                type: 'GET',
+                data: { email: email, id:id },
+                success: function (response) {
+                    if (response.exists) {
+                        $("#emailMessage").text(email + " is already registered.");
+                        $("#emailAddress").val('').focus();
+                    } else {
+                        $("#emailMessage").text('');
+                    }
+                },
+                error: function () {
+                    $("#emailMessage").text("An error occurred. Please try again.");
+                }
+            });
+        });
+        $("#phoneNo").on("blur", function () {
+            var phoneNo = $(this).val().trim();
+              var id = $("#companyId").val() || 0;
+            if (phoneNo === "") return;
+            $.ajax({
+                url: '/Employee/CheckPhoneNo',
+                type: 'GET',
+                data: { phoneNo: phoneNo,id:id },
+                success: function (response) {
+                    if (response.exists) {
+                        $("#PhoneMessage").text( phoneNo + " is already registered.");
+                        $("#phoneNo").val('').focus();
+                    } else {
+                        $("#PhoneMessage").text('');
+                    }
+                },
+                error: function () {
+                    $("#PhoneMessage").text("An error occurred. Please try again.");
+                }
+            });
+        });
+
+    });
+</script>
+<script>
+    $(document).ready(function () {
+
+        $("#Employeefromedit").on("submit", function (e) {
+
+            e.preventDefault();
+            let form = this;
+
+            Swal.fire({
+                title: 'Confirm Update?',
+                text: 'Do you want to update this company?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Update',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#dc3545',
+                reverseButtons: true,
+                focusConfirm: true,   // 👈 Default focus Confirm button
+                buttonsStyling: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+
+        });
+
+    });
+</script>
+
+<!-- SIRF YE SCRIPT BLOCK ADD KIYA -->
+<script>
+    $(document).ready(function () {
+        $("#btnF2Dept").click(() => openDeptModal("new"));
+        $("#btnF3Dept").click(() => openDeptModal("edit"));
+
+        function openDeptModal(mode) {
+            $("#deptError").text("");
+            if (mode === "new") {
+                $("#modalDeptId").val(0); $("#modalDeptName").val(""); $("#deptModalTitle").text("Add Department");
+            } else {
+                let id = $("#DepartMentId").val(); let text = $("#DepartMentId option:selected").text();
+                if (!id) { Swal.fire("Error", "Select department first!", "error"); return; }
+                $("#modalDeptId").val(id); $("#modalDeptName").val(text); $("#deptModalTitle").text("Modify Department");
+            }
+            $("#deptModal").modal("show");
+            setTimeout(() => { $("#modalDeptName").focus(); }, 200);
+        }
+
+        $("#btnSaveDept").click(function () {
+            let id = $("#modalDeptId").val(); let name = $("#modalDeptName").val().trim();
+            if (!name) { $("#deptError").text("Name required!"); return; }
+            $.post('/Employee/QuickSaveDepartment', { id: id, name: name }, function (res) {
+                if (res.success) {
+                    $("#deptModal").modal('hide');
+                    $.get('/Employee/GetDepartments', function (data) {
+                        let ddl = $("#DepartMentId"); let prevVal = ddl.val(); ddl.empty();
+                        ddl.append('<option value="">-- Select Department --</option>');
+                        $.each(data, function (i, item) {
+                            let opt = $('<option>', { value: item.value, text: item.text });
+                            if (item.value == res.newId) opt.attr('selected', 'selected');
+                            else if (item.value == prevVal) opt.attr('selected', 'selected');
+                            ddl.append(opt);
+                        });
+                    });
+                } else { $("#deptError").text(res.message); }
+            });
+        });
+
+        $("#btnF2Desig").click(() => openDesigModal("new"));
+        $("#btnF3Desig").click(() => openDesigModal("edit"));
+
+        function openDesigModal(mode) {
+            $("#desigError").text("");
+            if (mode === "new") {
+                $("#modalDesigId").val(0); $("#modalDesigName").val(""); $("#desigModalTitle").text("Add Designation");
+            } else {
+                let id = $("#DesignationId").val(); let text = $("#DesignationId option:selected").text();
+                if (!id) { Swal.fire("Error", "Select designation first!", "error"); return; }
+                $("#modalDesigId").val(id); $("#modalDesigName").val(text); $("#desigModalTitle").text("Modify Designation");
+            }
+            $("#desigModal").modal("show");
+            setTimeout(() => { $("#modalDesigName").focus(); }, 200);
+        }
+
+        $("#btnSaveDesig").click(function () {
+            let id = $("#modalDesigId").val(); let name = $("#modalDesigName").val().trim();
+            if (!name) { $("#desigError").text("Name required!"); return; }
+            $.post('/Employee/QuickSaveDesignation', { id: id, name: name }, function (res) {
+                if (res.success) {
+                    $("#desigModal").modal('hide');
+                    $.get('/Employee/GetDesignations', function (data) {
+                        let ddl = $("#DesignationId"); let prevVal = ddl.val(); ddl.empty();
+                        ddl.append('<option value="">-- Select Designation --</option>');
+                        $.each(data, function (i, item) {
+                            let opt = $('<option>', { value: item.value, text: item.text });
+                            if (item.value == res.newId) opt.attr('selected', 'selected');
+                            else if (item.value == prevVal) opt.attr('selected', 'selected');
+                            ddl.append(opt);
+                        });
+                    });
+                } else { $("#desigError").text(res.message); }
+            });
+        });
+
+        $(document).keydown(function (e) {
+            if (e.key === "F2") {
+                e.preventDefault();
+                if (document.activeElement === $("#DepartMentId")[0] || document.activeElement === $("#btnF2Dept")[0] || document.activeElement === $("#btnF3Dept")[0]) openDeptModal("new");
+                else openDesigModal("new");
+            }
+            if (e.key === "F3") {
+                e.preventDefault();
+                if (document.activeElement === $("#DepartMentId")[0] || document.activeElement === $("#btnF2Dept")[0] || document.activeElement === $("#btnF3Dept")[0]) openDeptModal("edit");
+                else openDesigModal("edit");
+            }
+        });
+
+        $("#modalDeptName").keypress(function (e) { if (e.which === 13) { e.preventDefault(); $("#btnSaveDept").click(); } });
+        $("#modalDesigName").keypress(function (e) { if (e.which === 13) { e.preventDefault(); $("#btnSaveDesig").click(); } });
+    });
+</script>

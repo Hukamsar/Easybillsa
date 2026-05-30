@@ -1,0 +1,145 @@
+﻿@using EasyBill.Models.ViewModels
+@model IEnumerable<PurchaseVM>
+@{
+    var suppliers = ViewBag.Supplier as List<Supplier>; // adjust according to your model
+    int? selectedSupplierId = ViewBag.SelectedSupplierId as int?;
+}
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center" style="background: #2b6ac9;">
+        Purchase Entry Report - Supplier Wise
+        <span class="ms-auto">
+            Total Gst : <span class="fw-bold">@ViewBag.TotalGst.ToString("0.00")</span> |
+            Total Amount : <span class="fw-bold">@ViewBag.TotalAmount</span>
+        </span>
+    </div>
+</div>
+<!-- FILTER FORM -->
+<form method="get" asp-action="PurchaseReportSupplierWise" asp-controller="Purchase">
+    <div class="row align-items-end g-2">
+
+        <div class="col-md-2">
+            <label>From Date</label>
+            <input type="date"
+                   name="fromDate"
+                   class="form-control"
+                   value="@ViewBag.FromDate" />
+        </div>
+
+        <div class="col-md-2">
+            <label>To Date</label>
+            <input type="date"
+                   name="toDate"
+                   class="form-control"
+                   value="@ViewBag.ToDate" />
+        </div>
+
+        <div class="col-md-3">
+            <select name="SupplierId" class="form-select w-auto d-inline" onchange="this.form.submit()">
+                <option value="">-- All Suppliers --</option>
+                @foreach (var supplier in suppliers)
+                {
+                    <option value="@supplier.Id" selected="@(selectedSupplierId == supplier.Id ? "selected" : null)">
+                        @supplier.FirstName
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <button type="submit" class="btn w-100 text-light" style="background:#2b6ac9;">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </div>
+
+    </div>
+</form>
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="ExportPurchaseSupplierWiseExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-SupplierId="@selectedSupplierId"
+           class="me-2">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+
+        <a asp-action="ExportPurchaseSupplierWisePdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-SupplierId="@selectedSupplierId">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+    </div>
+</div>
+
+
+<table id="purchaseRptTbl" class="table table-bordered  table-striped table-sm">
+    <thead class="table-primary">
+        <tr>
+            <th>S.No</th>
+            <th>Bill No</th>
+            <th>Bill Date</th>
+            <th>Supplier</th>
+            <th class="text-end">Gst Amount</th>
+            <th class="text-end">Total Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            int sr = 1;
+        }
+        @foreach (var purchase in Model)
+        {
+            <tr>
+                <td>@sr</td>
+                <td>@purchase.BillNo</td>
+                <td>@purchase.BillDate?.ToString("dd-MM-yyyy")</td>
+                <td>@purchase.SupplierName</td>
+                <td class="text-end">@purchase.TotalGstAmt.ToString("0.00")</td>
+                <td class="text-end">@purchase.TotalPayable</td>
+            </tr>
+            sr++;
+        }
+    </tbody>
+    <tfoot class="table-secondary fw-bold">
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="text-end">TOTAL</td>
+            <td class="text-end">@ViewBag.TotalGst.ToString("0.00")</td>
+            <td class="text-end">@ViewBag.TotalAmount</td>
+        </tr>
+    </tfoot>
+</table>
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var t = $("#purchaseRptTbl").DataTable({
+                "order": [[2, "desc"]],
+                "columnDefs": [
+                    { "orderable": false, "targets": "_all" }
+                ]
+                  });
+
+            t.on('order.dt search.dt', function () {
+                t.column(0, { search: 'applied', order: 'applied' }).nodes().each(function (cell, i) {
+                    cell.innerHTML = i + 1;
+                });
+            }).draw();
+        });
+
+    </script>
+}

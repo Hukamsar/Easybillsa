@@ -1,0 +1,93 @@
+﻿@model IEnumerable<AOne.Models.Entity.Hsn>
+
+@{
+    ViewData["Title"] = "Index";
+} 
+<style>
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background:#2b6ac9">
+        <h6 class="mb-0">
+            HSN
+        </h6>
+    </div>
+</div>
+<p>
+    <a asp-controller="HSN" asp-action="Create" class="btn mb-1 float-end text-light" style="background:#2b6ac9"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table id="hsntable" class="table table-bordered table-striped">
+    <thead class="table-primary">
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.HsnCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.SGST)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CGST)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.IGST)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cess)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.HsnType)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>            
+            <td>
+                @Html.DisplayFor(modelItem => item.HsnCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.SGST)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CGST)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.IGST)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Cess)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.HsnType)
+            </td>
+            
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="HSN" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="HSN" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+        </tr>
+}
+    </tbody>
+</table>
+@section Scripts {
+<script>
+    $(document).ready(function(){
+        $("#hsntable").DataTable();
+    });
+</script>
+}

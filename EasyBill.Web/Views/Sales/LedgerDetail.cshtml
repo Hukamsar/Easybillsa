@@ -1,0 +1,121 @@
+﻿@using EasyBill.Models.ViewModels
+@model List<LedgerDetailVM>
+
+<div class="card border-0 rounded-2 mb-4">
+    <div class="p-2 row text-white" style="background:#2b6ac9;">
+        <div class="col-sm-2">
+            <h5 class="mb-0">Ledger Detail</h5>
+        </div>
+        <div class="col-sm-9"></div>
+        <div class="col-sm-1">
+            <a href="@Url.Action("LedgerReportPage", "Sales")" class="btn btn-sm btn-light">
+                Back
+            </a>
+        </div>
+    </div>
+</div>
+<div class="row mb-2">
+    <div class="col text-end">
+        <a href="javascript:void(0);"
+           onclick="shareOnWhatsApp('@ViewBag.Phone')">
+            <i class="fa-brands fa-whatsapp text-success fs-5"></i>
+        </a>
+        <a asp-action="ExportLedgerDetailExcel"
+           asp-route-id="@ViewBag.Id"
+           asp-route-type="@ViewBag.Type">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+
+        <a asp-action="ExportLedgerDetailPdf"
+           asp-route-id="@ViewBag.Id"
+           asp-route-type="@ViewBag.Type">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+
+    </div>
+</div>
+
+
+<table class="table table-bordered table-striped table-sm mb-0">
+    <thead style="background:#2b6ac9;">
+        <tr>
+            <th style="width:120px;">Date</th>
+            <th>Particulars</th>
+            <th style="width:140px;">Type</th>
+            <th class="text-end">Debit (Dr)</th>
+            <th class="text-end">Credit (Cr)</th>
+            <th class="text-end">Balance</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @{
+            decimal totalDr = 0;
+            decimal totalCr = 0;
+        }
+
+        @foreach (var item in Model)
+        {
+            totalDr += item.Debit;
+            totalCr += item.Credit;
+
+            <tr>
+                <td>@item.Date.ToString("dd-MM-yy")</td>
+
+                <td class="fw-semibold">@item.Particular</td>
+                <td>@item.Type</td>
+
+                <td class="text-end text-danger">
+                    @(item.Debit > 0 ? item.Debit.ToString("N2") : "")
+                </td>
+
+                <td class="text-end text-success">
+                    @(item.Credit > 0 ? item.Credit.ToString("N2") : "")
+                </td>
+
+                <!-- ✅ BALANCE COLOR WITHOUT DrCr -->
+                <td class="text-end fw-bold @(item.Balance < 0 ? "text-danger" : "text-success")">
+                    @Math.Abs(item.Balance).ToString("N2")
+                </td>
+            </tr>
+        }
+
+        <!-- 🔥 CLOSING BALANCE -->
+        @{
+            var closing = Model.LastOrDefault();
+        }
+
+        <tr style="background:#cce5e5;font-weight:bold;">
+            <td colspan="3">Closing Balance</td>
+
+            <td class="text-end">@totalDr.ToString("N2")</td>
+            <td class="text-end">@totalCr.ToString("N2")</td>
+
+            <td class="text-end fw-bold @(closing != null && closing.Balance < 0 ? "text-danger" : "text-success")">
+                @(closing != null ? Math.Abs(closing.Balance).ToString("N2") : "0.00")
+            </td>
+        </tr>
+
+    </tbody>
+</table>
+<script>
+    function shareOnWhatsApp(phone) {
+
+        var token = '@ViewBag.WhatsAppToken';
+
+        var liveDomain = "https://easybill.hospicarx.com";
+        var url = liveDomain + '/Sales/DownloadPublicLedgerPdf?token=' + encodeURIComponent(token);
+
+        if (phone) {
+            phone = phone.replace(/\D/g, '');
+        } else {
+            phone = "";
+        }
+
+        var message = "Hello! Please download your pending ledger report from the link below:\n\n" + url;
+
+        var whatsappUrl = "https://wa.me/" + phone + "?text=" + encodeURIComponent(message);
+
+        window.open(whatsappUrl, '_blank');
+    }
+</script>

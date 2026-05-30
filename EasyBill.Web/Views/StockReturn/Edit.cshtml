@@ -1,0 +1,3815 @@
+﻿@using EasyBill.Models.ViewModels
+@model StockReturnVM
+@{
+    ViewData["Title"] = "Edit Stock Return";
+}
+
+<style>
+    /* ===============================
+           ITEM MODAL STYLING
+           =============================== */
+    #itemModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #itemModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+    #itemTable thead th {
+        background-color: #2465c7f7 !important;
+        color: #fff !important;
+        font-weight: 700;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .item-row.selected td {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        font-weight: 500;
+    }
+
+    #itemModal.keyboard-nav .item-row:hover td {
+        background-color: inherit !important;
+        color: inherit !important;
+        cursor: default;
+    }
+
+    #itemModal.mouse-nav .item-row:hover td {
+        background-color: #f1d27a !important;
+        color: #000 !important;
+        cursor: pointer;
+    }
+
+    .item-row:focus {
+        outline: none;
+    }
+
+    .item-row {
+        scroll-margin-top: 50px;
+    }
+
+    .item-table-wrapper {
+        max-height: 350px;
+        overflow-y: auto;
+        position: relative;
+    }
+
+    .shortcut-box {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        line-height: 14px;
+        margin-left: 6px;
+    }
+
+    .shortcut-link {
+        font-size: 11px;
+        color: #2465c7;
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+        .shortcut-link:hover {
+            text-decoration: underline;
+        }
+
+    #customerListModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #customerListModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+    .customer-table-wrapper {
+        min-height: 50px;
+        max-height: 350px;
+        overflow-y: auto;
+    }
+
+    #customerTable thead th {
+        position: sticky;
+        top: 0;
+        background-color: #2465c7f7 !important;
+        color: #fff !important;
+        font-weight: 700;
+        z-index: 2;
+    }
+
+    .customer-row.selected td {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        font-weight: 500;
+    }
+
+    #customerListModal.keyboard-nav .customer-row:hover td {
+        background-color: inherit !important;
+        color: inherit !important;
+        cursor: default;
+    }
+
+    #customerListModal.mouse-nav .customer-row:hover td {
+        background-color: #f1d27a !important;
+        color: #000 !important;
+        cursor: pointer;
+    }
+
+    .customer-row {
+        scroll-margin-top: 50px;
+    }
+
+        .customer-row:focus {
+            outline: none;
+        }
+</style>
+<style>
+    /* ===============================
+                   BATCH MODAL STYLING
+                   =============================== */
+    #batchModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #batchModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+    #batchTable thead th {
+        background-color: #2465c7f7 !important;
+        color: #fff !important;
+        font-weight: 700;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .batch-row.selected td {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        font-weight: 500;
+    }
+
+    #batchModal.keyboard-nav .batch-row:hover td {
+        background-color: inherit !important;
+        color: inherit !important;
+        cursor: default;
+    }
+
+    #batchModal.mouse-nav .batch-row:hover td {
+        background-color: #f1d27a !important;
+        color: #000 !important;
+        cursor: pointer;
+    }
+
+    .batch-row:focus {
+        outline: none;
+    }
+
+    .batch-row {
+        scroll-margin-top: 50px;
+    }
+
+    .batch-table-wrapper {
+        max-height: 350px;
+        overflow-y: auto;
+        position: relative;
+    }
+
+    /* ===============================
+                   DOCTOR MODAL STYLING
+                   =============================== */
+    #createDoctorModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #createDoctorModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+</style>
+<style>
+    #refreshBtn:hover {
+        opacity: 0.85;
+        transform: rotate(90deg);
+        transition: all 0.2s ease;
+    }
+</style>
+<style>
+    .custom-header th {
+        background: linear-gradient(180deg, #eef3f8, #d8e3ef);
+        color: #16202b;
+        font-weight: 700;
+        text-align: center;
+        border-bottom: 0px solid #b6c6d6;
+        box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
+    }
+</style>
+<div class="card mb-2 shadow-sm" style="border-radius: 6px; overflow: hidden;">
+    <div class="card-header text-white d-flex align-items-center py-1 px-3"
+         style="background:#2b6ac9">
+
+        <h6 class="mb-0 me-auto" style="font-size: 0.85rem;">
+            Edit Sales Return
+        </h6>
+
+        <button type="button"
+                id="refreshBtn"
+                class="btn btn-sm p-1 me-2 border-0 bg-transparent text-white"
+                title="Refresh">
+            <span class="fs-5">🔄</span>
+        </button>
+    </div>
+</div>
+<hr />
+
+<form asp-controller="StockReturn" asp-action="Edit" method="post">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="CustomerId" />
+    <input type="hidden" asp-for="PharmacyDoctorId" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="container">
+        <div class="row">
+            <div class="row mb-2">
+
+                <label asp-for="ChallanNo" class="col-md-2 col-form-label text-start small"> Challan No <i class="redColor">*</i> </label>
+                <div class="col-md-2">
+                    <input asp-for="ChallanNo" type="text" class="form-control form-control-sm" required readonly />
+                    <span asp-validation-for="ChallanNo" class="text-danger"></span>
+                </div>
+                 
+                <label asp-for="ChallanDate" class="col-md-2 col-form-label text-start small">Challan Date <i class="redColor">*</i></label>
+                <div class="col-md-2">
+                    <input type="date" asp-for="ChallanDate" class="form-control form-control-sm" id="ChallanDate" required />
+                    <span asp-validation-for="ChallanDate" class="text-danger"></span>
+                </div>
+                <label class="col-md-2 ">Billing Type</label>
+                <div class="col-md-2">
+                    <select asp-for="billingType" id="billingType" class="form-control form-control-sm">
+                        <option value="walkin">Cash</option>
+                        <option value="registered">Customer</option>
+                    </select>
+                </div>
+                <label class="col-md-2 col-form-label text-start small">Mobile No <i class="redColor">*</i></label>
+                <div class="col-md-2 d-flex align-items-center">
+                    <div class="w-100">
+                        <input asp-for="MobileNo" type="text" class="form-control form-control-sm" id="mobilenumber" />
+                        @* <span asp-validation-for="MobileNo" class="text-danger"></span> *@
+                        <span id="phoneError" class="text-danger d-none"></span>
+                    </div>
+                    <div class="shortcut-box">
+                        <span id="btnF1CustomerList" class="shortcut-link">F1 - List</span>
+                    </div>
+                </div>
+
+                <label class="col-md-2 col-form-label text-start small">Customer <i class="redColor">*</i></label>
+                <div class="col-md-2">
+                    <input asp-for="CustomerName" class="form-control form-control-sm" id="customer" readonly />
+                    <span asp-validation-for="CustomerId" class="text-danger"></span>
+                </div>
+
+                <label class="col-md-2 col-form-label text-start small">Address <i class="redColor">*</i></label>
+                <div class="col-md-2 mt-2 mt-md-0">
+                    <input asp-for="Address" id="customeraddress" class="form-control form-control-sm" readonly />
+                    <span asp-validation-for="Address" class="text-danger"></span>
+                </div>
+
+                @if (Model.DoctorRequired)
+                {
+                    <label class="col-md-2 col-form-label small">Doctor Mobile No <i class="redColor">*</i></label>
+                    <div class="col-md-2">
+                        <input type="text" asp-for="DoctorMobileNumber" class="form-control form-control-sm" id="doctorMobile" />
+                    </div>
+
+                    <label class="col-md-2 col-form-label small">Doctor <i class="redColor"></i></label>
+                    <div class="col-md-2">
+                        <input type="text" asp-for="DoctorName" class="form-control form-control-sm" id="doctorname" />
+                    </div>
+
+                    <label class="col-md-2 col-form-label small">Registration Number <i class="redColor"></i></label>
+                    <div class="col-md-2">
+                        <input type="text" asp-for="DoctorRegNumber" class="form-control form-control-sm" id="doctorregno" />
+                    </div>
+                }
+
+                <label class="col-md-2 col-form-label text-start small">Type</label>
+                <div class="col-md-2 d-flex align-items-center">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="paymentToggle">
+                        <label class="form-check-label fw-bold" id="paymentToggleLabel" style="color: green;">
+                            Cash
+                        </label>
+                    </div>
+                    <input type="hidden" asp-for="PaymentType" id="paymentTypeHidden" value="cash" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div style="overflow-x: auto; width: 100%;">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead class="table custom-header">
+                        <tr>
+                            <th style="min-width:30%">Item</th>
+                            <th style="min-width:30%">Batch</th>
+                            <th class="text-center">Expiry</th>
+                            <th class="text-center">Mrp</th>
+
+                            @if (ViewBag.BusinessType == 2)
+                            {
+                                <th class="text-center" id="qtyView">Qty</th>
+                                <th class="text-center" id="qtyTabsView">Tabs</th>
+                            }
+                            else
+                            {
+                                <th class="text-center">Qty</th>
+                            }
+                            @*    <th class="text-center">Qty</th> *@
+                            <th class="text-center">Rate</th>
+                            <th class="text-center">Gst</th>
+                            <th class="text-center">Cess</th>
+                            <th class="text-center">Discount</th>
+                            <th class="text-center">Amount</th>
+                            <th class="text-center">Reason</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="StockReturnItemBody">
+                        @{
+                            int rowIndex = 0;
+                            foreach (var item in Model.StockReturnItemVMs)
+                            {
+                                <tr>
+                                    <td hidden>
+                                        <input name="StockReturnItemVMs[@rowIndex].Id" value="@item.Id" class="row-id" />
+                                        <input type="hidden" class="original-qty" value="@item.Qty" />
+                                    </td>
+                                    <td style="min-width:250px;">
+                                        <input type="hidden" name="StockReturnItemVMs[@rowIndex].ItemMasterId" class="item-id" value="@item.ItemMasterId" />
+                                        <input type="text" name="StockReturnItemVMs[@rowIndex].ItemName" class="form-control form-control-sm item-input" value="@item.ItemName" autocomplete="off" />
+                                    </td>
+                                    <td><input name="StockReturnItemVMs[@rowIndex].Batch" class="form-control form-control-sm batch" value="@item.Batch" readonly /></td>
+                                    <td><input name="StockReturnItemVMs[@rowIndex].Expirydate" value="@item.Expirydate?.ToString("MM/yyyy")" class="form-control form-control-sm expirydate" readonly /></td>
+                                    <td><input name="StockReturnItemVMs[@rowIndex].Mrp" value="@item.Mrp" class="form-control form-control-sm mrp" /></td>
+                                    <td><input name="StockReturnItemVMs[@rowIndex].Qty" class="form-control form-control-sm qty" value="@item.Qty" /></td>
+                                    @if (ViewBag.BusinessType == 2)
+                                    {
+                                        <td>
+                                            <input name="StockReturnItemVMs[@rowIndex].TabletQty"
+                                                   class="form-control form-control-sm tablet-qty"
+                                                   value="@item.TabletQty" />
+                                        </td>
+                                    }
+                                    <td hidden><input name="StockReturnItemVMs[@rowIndex].Rate" class="form-control form-control-sm rate" value="@item.Rate" readonly /></td>
+                                    <td><input name="StockReturnItemVMs[@rowIndex].StripRate" class="form-control form-control-sm stripe-rate" value="@item.StripRate" readonly /></td>
+                                    <td><input name="StockReturnItemVMs[@rowIndex].Gst" class="form-control form-control-sm gst" value="@item.Gst" readonly /></td>
+                                    <td><input name="StockReturnItemVMs[@rowIndex].Cess" class="form-control form-control-sm cess" value="@item.Cess" /></td>
+                                    <td><input name="StockReturnItemVMs[@rowIndex].Discount" class="form-control form-control-sm discount" value="@item.Discount" /></td>
+                                    <td><input name="StockReturnItemVMs[@rowIndex].Amount" class="form-control form-control-sm Amount" value="@item.Amount" readonly /></td>
+                                    <td><input name="StockReturnItemVMs[@rowIndex].Reason" class="form-control form-control-sm reason" value="@item.Reason" /></td>
+                                    <td><u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u></td>
+                                </tr>
+                                rowIndex++;
+                            }
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="11">
+                                <u id="addRow" style="color:green; cursor:pointer;">Add Row</u>
+                            </th>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <!-- Totals -->
+                <div class="row mt-3">
+
+                    <!-- ===============================
+                    LEFT : ITEM EXTRA INFO (WIDER)
+                    =============================== -->
+                    <div class="col-md-8">
+                        <div id="itemExtraInfoWrapper" class="border rounded p-2 h-100" style="display:none;">
+                            <table class="table table-bordered table-sm mb-0 text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>BillNo</th>
+                                        <th>Batch</th>
+                                        <th>SalesQty</th>
+                                        <th>ReturnQty</th>
+                                        <th>Remaining</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemExtraInfoBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ===============================
+                    RIGHT : TOTALS (COMPACT)
+                    =============================== -->
+                    <div class="col-md-4">
+                        <div class="row mb-2">
+                            <label asp-for="Total" class="col-md-3 col-form-label text-start small">Total</label>
+                            <div class="col-md-4"></div>
+                            <div class="col-md-5">
+                                <input asp-for="Total" class="form-control form-control-sm" readonly />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label text-start small">Bill Discount</label>
+                            <div class="col-md-4"></div>
+                            <div class="col-md-2">
+                                <input asp-for="discountPercent" id="discountPercent" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-md-3">
+                                <input asp-for="discountAmount" id="discountamount" class="form-control form-control-sm" placeholder="amount" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="Totaldiscount" class="col-md-3 col-form-label text-start small">Total Discount</label>
+                            <div class="col-md-4"></div>
+                            <div class="col-md-5">
+                                <input asp-for="Totaldiscount" id="Totaldiscount" class="form-control form-control-sm" readonly />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="TotalGstAmt" class="col-md-3 col-form-label text-start small">Gst</label>
+                            <div class="col-md-4"></div>
+                            <div class="col-md-5">
+                                <input asp-for="TotalGstAmt" class="form-control form-control-sm" readonly />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="TotalCessAmt" class="col-md-3 col-form-label text-start small">TotalCess Amt</label>
+                            <div class="col-md-4"></div>
+                            <div class="col-md-5">
+                                <input asp-for="TotalCessAmt" class="form-control form-control-sm" readonly />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="TotalPayable" class="col-md-3 col-form-label text-start small">Total Amount</label>
+                            <div class="col-md-4"></div>
+                            <div class="col-md-5">
+                                <input asp-for="TotalPayable" class="form-control form-control-sm" readonly />
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="mt-3 text-end">
+            <button type="submit" class="btn btn-sm btn-primary">End | Save 💾</button>
+            <a href="@(ViewBag.ReturnUrl ?? Url.Action("Index"))" id="btnCancel" class="btn btn-sm btn-secondary">F11 | Cancel ❌</a>
+        </div>
+    </div>
+</form>
+
+<!-- Customer List Modal -->
+<div class="modal fade" id="customerListModal" tabindex="-1" aria-labelledby="customerListModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerListModalLabel">Select Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <input type="text"
+                           id="customerSearch"
+                           class="form-control form-control-sm"
+                           placeholder="Search by customer name or mobile no..." />
+                </div>
+                <div class="customer-table-wrapper">
+                    <table id="customerTable" class="table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Customer Name</th>
+                                <th>Mobile No</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Doctor Modal -->
+<div class="modal fade" id="createDoctorModal" tabindex="-1" aria-labelledby="createDoctorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="newDoctorForm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Doctor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" name="PhoneNo" id="newDoctorPhone" class="form-control form-control-sm mb-2" placeholder="Phone No" readonly />
+                    <input type="text" name="Name" class="form-control form-control-sm mb-2" placeholder="Doctor Name" required />
+                    <input type="text" name="Address" class="form-control form-control-sm mb-2" placeholder="Address" />
+                    <input type="text" name="RegistrationNo" class="form-control form-control-sm mb-2" placeholder="Registration No" />
+                    <input type="text" name="Specialized" class="form-control form-control-sm mb-2" placeholder="Specialization" />
+                    <input type="number" name="Commission" class="form-control form-control-sm mb-2" placeholder="Commission %" />
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-sm btn-success">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Item Modal -->
+<div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Search Box -->
+                <div class="mb-2">
+                    <input type="text" id="itemSearch"
+                           class="form-control form-control-sm"
+                           placeholder="Search by item name..." />
+                </div>
+
+                <!-- Item Table -->
+                <div class="item-table-wrapper">
+                    <table id="itemTable" class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Item Name</th>
+                                @if (ViewBag.BusinessType == 2)
+                                {
+                                    <th style="display:none;">Qty</th>
+                                    <th>Strip:Tabs</th>
+                                }
+                                else
+                                {
+                                    <th>Qty</th>
+                                }
+                               @*  <th>Qty</th> *@
+                                <th>Unit</th>
+                                <th>MRP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Modal -->
+<div class="modal fade" id="batchModal" tabindex="-1" aria-labelledby="batchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Batch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="batch-table-wrapper">
+                    <table id="batchTable" class="table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Batch No</th>
+                                <th>Expiry</th>
+                                <th>Rate</th>
+                                <th>Mrp</th>
+                                @* <th>Qty</th> *@
+                                @if (ViewBag.BusinessType == 2)
+                                {
+                                    <th style="display:none;">Qty</th>
+                                    <th>Strip:Tabs</th>
+                                }
+                                else
+                                {
+                                    <th>Qty</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody id="batchTableBody">
+                            <!-- JS will insert batch rows here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var paymentType = "@Model.PaymentType";
+             applyBillingType($("#billingType").val());
+            if (paymentType === "credit") {
+                $("#paymentToggle").prop("checked", true);
+                $("#paymentToggleLabel").text("Credit");
+                $("#paymentTypeHidden").val("credit");
+            } else {
+                $("#paymentToggle").prop("checked", false);
+                $("#paymentToggleLabel").text("Cash");
+                $("#paymentTypeHidden").val("cash");
+            }
+
+            $(document).on("change", "#paymentToggle", function () {
+                if ($(this).is(":checked")) {
+                    $("#paymentToggleLabel").text("Credit");
+                    $("#paymentTypeHidden").val("credit");
+                    // Auto change Billing Type to Customer
+                    $("#billingType").val("registered");
+                } else {
+                    $("#paymentToggleLabel").text("Cash");
+                    $("#paymentTypeHidden").val("cash");
+                    // Auto change Billing Type to Cash (walkin)
+                    $("#billingType").val("walkin");
+                }
+
+                // Apply Billing Type behavior (enable/disable fields)
+                applyBillingType($("#billingType").val());
+            });
+        });
+
+         function applyBillingType(type) {
+            setTimeout(() => {
+                if (type === "walkin") {
+                    $("#mobilenumber, #customer, #customeraddress")
+                        .val("")
+                        .prop("disabled", true);
+
+                    // Hide phone validation error when disabled
+                    hidePhoneError();
+                } else if (type === "registered") {
+                    $("#mobilenumber, #customer, #customeraddress")
+                        .prop("disabled", false);
+                    $("#mobilenumber").focus();
+                }
+                isEnterNavigation = false;
+            }, 100);
+        }
+        $("#billingType").on("change", function () {
+            isEnterNavigation = false;
+            const billingType = this.value;
+
+            // Auto change Payment Type based on Billing Type
+            if (billingType === "registered") {
+                // $("#paymentToggle").prop("checked", true);
+                // $("#paymentToggleLabel").text("Credit");
+                // $("#paymentTypeHidden").val("credit");
+            } else if (billingType === "walkin") {
+                $("#paymentToggle").prop("checked", false);
+                $("#paymentToggleLabel").text("Cash");
+                $("#paymentTypeHidden").val("cash");
+            }
+            applyBillingType(this.value);
+        });
+
+        $(document).on("keydown", "#ChallanDate", function (e) {
+            debugger;
+            if (e.key !== "Enter") return;
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            //$("#billingType").focus();
+            $("#paymentToggle").focus();
+        });
+
+        $(document).on("keydown", "#billingType", function (e) {
+            if (e.key === "ArrowUp" || e.key === "ArrowDown") return;
+
+            if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                const type = this.value;
+
+                if (type === "registered") {
+                    $("#mobilenumber").prop("disabled", false).focus();
+                } else {
+                    $("#mobilenumber, #customer, #customeraddress")
+                        .val("")
+                        .prop("disabled", true);
+
+                    hidePhoneError();
+
+                    if ($("#doctorMobile").length && $("#doctorMobile").is(":visible") &&
+                        !$("#doctorMobile").is(":disabled")) {
+                        $("#doctorMobile").focus();
+                    } else {
+                        //focusItemGrid();
+                        focusItemGridOrAddRow();
+                    }
+                }
+            }
+        });
+    </script>
+    <script>
+        // ================================================================
+        // 🔹 PAYMENT TOGGLE NAVIGATION
+        // ================================================================
+        $(document).on("keydown", "#paymentToggle", function (e) {
+            // Arrow Left/Right for toggle
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                e.preventDefault();
+
+                // Toggle the checkbox
+                $(this).prop("checked", !$(this).is(":checked")).trigger("change");
+                return;
+            }
+
+            // Enter key - move to Billing Type
+            if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                // Focus on Billing Type and open dropdown
+                const billingTypeSelect = document.getElementById("billingType");
+                if (billingTypeSelect) {
+                    billingTypeSelect.focus();
+
+                    setTimeout(() => {
+                        if ('showPicker' in HTMLSelectElement.prototype) {
+                            billingTypeSelect.showPicker();
+                        } else {
+                            $(billingTypeSelect).trigger('click');
+                        }
+                    }, 50);
+                }
+            }
+        });
+    </script>
+    <script>
+        // ==========================================================
+        // 🌐 GLOBAL VARIABLES
+        // ==========================================================
+        window.selectedCustomerId = null;
+        window.customerItemList = [];
+        window.returnedQtyData = [];
+        window.currentRow = null;
+        window.currentRowForItemModal = null;
+        window.currentBatchIndex = -1;
+        window.currentItemIndex = -1;
+        window.groupedPurchaseData = [];
+        window.rowIndex = 0;
+        window.tempRowIdCounter = -1;
+        window.deletedOriginalQtyRecords = [];
+        let isFormSubmitting = false;
+
+        // TABLET-WISE SUPPORT
+        let isTabletWiseMode = false;
+        let itemConversionMap = {};
+
+        // NAVIGATION MODE TRACKING
+        let batchNavMode = "keyboard";
+        let isKeyboardScrollingBatchModal = false;
+        let itemNavMode = "keyboard";
+        let isKeyboardScrollingItemModal = false;
+        let lastFocusSource = null;
+        let currentCustomerIndex = -1;
+        let customerNavMode = "keyboard";
+        let isKeyboardScrollingCustomerModal = false;
+
+        // ==========================================================
+        // 🔹 FOCUS SOURCE TRACKING
+        // ==========================================================
+        $(document).on("keydown", function (e) {
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "Tab"].includes(e.key)) {
+                lastFocusSource = "keyboard";
+            }
+        });
+
+        $(document).on("mousedown", "input, select", function () {
+            lastFocusSource = "mouse";
+        });
+
+        $(document).on("focus", ".mrp, .qty, .discount", function() {
+            const input = this;
+            setTimeout(() => {
+                if (lastFocusSource === "keyboard") {
+                    input.select();
+                }
+                lastFocusSource = null;
+            }, 0);
+        });
+
+        // ==========================================================
+        // 🔹 GRID MANAGEMENT
+        // ==========================================================
+        function toggleAddRowButton() {
+            if ($("#StockReturnItemBody tr").length > 0) {
+                $("#addRow").hide();
+            } else {
+                $("#addRow").show();
+            }
+        }
+
+        // ===============================
+        // MOBILE NUMBER VALIDATION
+        // ===============================
+
+        const phoneRegex = /^[6-9][0-9]{9}$/;
+
+        function isValidIndianMobile(mobile) {
+            return phoneRegex.test(mobile);
+        }
+
+        function showPhoneError(message) {
+            $("#mobilenumber").addClass("is-invalid");
+            $("#phoneError").text(message).removeClass("d-none");
+        }
+
+        function hidePhoneError() {
+            $("#mobilenumber").removeClass("is-invalid");
+            $("#phoneError").addClass("d-none");
+        }
+
+        // 🔹 Input event (typing)
+        $("#mobilenumber").on("input", function () {
+            let value = $(this).val().replace(/\D/g, '');
+            $(this).val(value);
+
+            if (value.length === 0) {
+                showPhoneError("Mobile number is required");
+            }
+            else if (!isValidIndianMobile(value)) {
+                showPhoneError("Enter a valid 10-digit mobile number");
+            }
+            else {
+                hidePhoneError();
+            }
+        });
+
+        // 🔹 Prevent more than 10 digits
+        $("#mobilenumber").on("keypress", function (e) {
+            if (this.value.length >= 10) {
+                e.preventDefault();
+            }
+        });
+
+        // 🔹 Paste validation
+        $("#mobilenumber").on("paste", function (e) {
+            let pastedData = e.originalEvent.clipboardData.getData('text');
+            let digitsOnly = pastedData.replace(/\D/g, '');
+
+            if ((this.value.length + digitsOnly.length) > 10) {
+                e.preventDefault();
+            }
+        });
+
+        // NEW: Mobile change detection
+        let previousMobile = $("#mobilenumber").val();
+        let isCustomerChangeInProgress = false;
+
+        // Enter key handler for mobile
+        $(document).on("keydown", "#mobilenumber", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+
+                let mobileNo = $(this).val();
+
+                if (mobileNo.length < 10) {
+                    toastr.warning("Please enter a valid 10-digit mobile number");
+                    return;
+                }
+
+                if (!isValidIndianMobile(mobileNo)) {
+                    toastr.warning("Please enter a valid mobile number");
+                    return;
+                }
+
+                $(this).blur();
+            }
+        });
+
+        // Blur event with change detection
+        $("#mobilenumber").on("blur", function () {
+            if (isCustomerChangeInProgress) return;
+
+            let newMobile = $(this).val().trim();
+
+            if (!newMobile) {
+                showPhoneError("Mobile number is required");
+                return;
+            }
+
+            if (!isValidIndianMobile(newMobile)) {
+                showPhoneError("Enter a valid 10-digit mobile number");
+                return;
+            }
+
+            hidePhoneError();
+
+            // 🔥 MOBILE ACTUALLY CHANGED
+            if (previousMobile && previousMobile !== newMobile) {
+
+                // ✅ CHECK: If items exist, confirm first
+                if ($("#StockReturnItemBody tr").length > 0) {
+                    isCustomerChangeInProgress = true;
+
+                    confirmCustomerChange(function (confirmed) {
+                        isCustomerChangeInProgress = false;
+
+                        if (!confirmed) {
+                            // ❌ USER SAID NO → revert mobile
+                            $("#mobilenumber").val(previousMobile);
+
+                            setTimeout(() => {
+                                $("#mobilenumber").focus().select();
+                            }, 100);
+
+                            return;
+                        }
+
+                        // ✅ USER SAID YES → CLEAR + FETCH NEW CUSTOMER
+                        resetItemGrid();
+                        $("#itemExtraInfoWrapper").hide();
+
+                        $("#CustomerId").val("");
+                        $("#customer").val("");
+                        $("#customeraddress").val("");
+
+                        window.selectedCustomerId = null;
+                        window.customerItemList = [];
+                        window.returnedQtyData = [];
+                        window.groupedPurchaseData = [];
+                        window.deletedOriginalQtyRecords = [];
+
+                        // NOW FETCH NEW CUSTOMER
+                        proceedCustomerSearch(newMobile);
+                        previousMobile = newMobile;
+                    });
+
+                    return;
+                }
+
+                // NO ITEMS, DIRECTLY FETCH NEW CUSTOMER
+                proceedCustomerSearch(newMobile);
+                previousMobile = newMobile;
+                return;
+            }
+
+            // SAME MOBILE (no change) - still verify customer exists
+            if (newMobile && newMobile.length === 10) {
+                proceedCustomerSearch(newMobile);
+            }
+        });
+
+        function addNewRow() {
+            // if (!window.selectedCustomerId) {
+            //     toastr.warning("Please select a customer first.");
+            //     return;
+            // }
+
+            let tabletQtyColumn = '';
+
+            if (@ViewBag.BusinessType === 2) {
+                tabletQtyColumn = `
+                    <td>
+                        <input name="StockReturnItemVMs[${window.rowIndex}].TabletQty"
+                               class="form-control form-control-sm tablet-qty" value="0" />
+                    </td>
+                `;
+            }
+
+            let newRow = `
+                <tr>
+                    <td hidden>
+                        <input type="hidden" name="StockReturnItemVMs[${window.rowIndex}].Id" class="row-id" value="${window.tempRowIdCounter}" />
+                        <input type="hidden" class="original-qty" value="0" />
+                    </td>
+                    <td style="min-width:250px;">
+                        <input type="hidden" name="StockReturnItemVMs[${window.rowIndex}].ItemMasterId" class="item-id" />
+                        <input type="text" name="StockReturnItemVMs[${window.rowIndex}].ItemName" class="form-control form-control-sm item-input" placeholder="Press Enter to select item" autocomplete="off" />
+                    </td>
+                    <td><input name="StockReturnItemVMs[${window.rowIndex}].Batch" class="form-control form-control-sm batch" readonly /></td>
+                    <td><input type="text" name="StockReturnItemVMs[${window.rowIndex}].Expirydate" class="form-control form-control-sm expirydate" placeholder="MM/YYYY" maxlength="7" readonly /></td>
+                    <td><input name="StockReturnItemVMs[${window.rowIndex}].Mrp" class="form-control form-control-sm mrp" /></td>
+                    <td><input name="StockReturnItemVMs[${window.rowIndex}].Qty" class="form-control form-control-sm qty" value="1" /></td>
+                    ${tabletQtyColumn}
+                    <td hidden><input name="StockReturnItemVMs[${window.rowIndex}].Rate" class="form-control form-control-sm rate" readonly /></td>
+                    <td><input name="StockReturnItemVMs[${rowIndex}].StripRate" class="form-control form-control-sm stripe-rate" readonly /></td>
+                    <td><input name="StockReturnItemVMs[${window.rowIndex}].Gst" class="form-control form-control-sm gst" readonly /></td>
+                    <td><input name="StockReturnItemVMs[${window.rowIndex}].Cess" class="form-control form-control-sm cess" /></td>
+                    <td><input type="number" name="StockReturnItemVMs[${window.rowIndex}].Discount" class="form-control form-control-sm discount" value="0" /></td>
+                    <td><input name="StockReturnItemVMs[${window.rowIndex}].Amount" class="form-control form-control-sm Amount" readonly /></td>
+                    <td><input name="StockReturnItemVMs[${window.rowIndex}].Reason" class="form-control form-control-sm reason" /></td>
+                    <td><u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u></td>
+                </tr>`;
+
+            $("#StockReturnItemBody").append(newRow);
+
+            // APPLY TABLET-WISE MODE
+            const newRowElement = $("#StockReturnItemBody tr:last");
+            applyTabletWiseMode(newRowElement);
+
+            window.rowIndex++;
+            window.tempRowIdCounter--;
+            updateRowIndices();
+            toggleAddRowButton();
+        }
+
+        function updateRowIndices() {
+            const rows = document.querySelectorAll('#StockReturnItemBody tr');
+            window.rowIndex = 0;
+            rows.forEach(row => {
+                row.querySelectorAll('input, select').forEach(input => {
+                    const name = input.name;
+                    if (name) input.name = name.replace(/\[\d+\]/, `[${window.rowIndex}]`);
+                });
+                window.rowIndex++;
+            });
+        }
+
+        function calculateRow(row) {
+            let qty = parseFloat(row.find(".qty").val()) || 0;
+            let rate = parseFloat(row.find(".rate").val()) || 0;
+            let gst = parseFloat(row.find(".gst").val()) || 0;
+            let cess = parseFloat(row.find(".cess").val()) || 0;
+            let discount = parseFloat(row.find(".discount").val()) || 0;
+            let stripRate = parseFloat(row.find(".stripe-rate").val()) || 0;
+            // TABLET-WISE CALCULATION
+            let grossAmount = 0;
+            let totalTablets = qty;
+
+            if (isTabletWiseMode) {
+                const itemId = row.find(".item-id").val();
+                let conversion = parseFloat(row.attr("data-conversion"));
+
+                if (!conversion || conversion <= 0) {
+                    conversion = itemConversionMap[itemId] || 1;
+                }
+
+                const tabletQty = parseFloat(row.find(".tablet-qty").val()) || 0;
+
+                // TOTAL TABLETS = (Strips × Conversion) + Remaining Tablets
+                totalTablets = (qty * conversion) + tabletQty;
+
+                // RATE IS PER TABLET
+               // grossAmount = totalTablets * rate;
+                grossAmount = (totalTablets / conversion) * stripRate;
+            } else {
+                // STRIP-WISE: Rate is per strip
+               // grossAmount = qty * rate;
+
+                const itemId = row.find(".item-id").val();
+                let conversion = parseFloat(row.attr("data-conversion"));
+
+                if (!conversion || conversion <= 0) {
+                    conversion = itemConversionMap[itemId] || 1;
+                }
+
+                let totalTablets = qty * conversion;
+                 
+                grossAmount = totalTablets * stripRate;
+            }
+
+            let discountAmt = (grossAmount * discount) / 100;
+            let amountAfterDiscount = grossAmount - discountAmt;
+            let gstAmt = (amountAfterDiscount * gst) / 100;
+            let cessAmt = (amountAfterDiscount * cess) / 100;
+            let total = amountAfterDiscount + gstAmt + cessAmt;
+
+            row.find(".discount-amt").val(discountAmt.toFixed(2));
+            row.find(".Amount").val(total.toFixed(2));
+
+            calculateTotalSummary();
+        }
+
+        // // ==========================================================
+        // // CALCULATIONS
+        // // ==========================================================
+        // function calculateRow(row) {
+        //     let qty = parseFloat(row.find(".qty").val()) || 0;
+        //     let rate = parseFloat(row.find(".rate").val()) || 0;
+        //     let gst = parseFloat(row.find(".gst").val()) || 0;
+        //     let discount = parseFloat(row.find(".discount").val()) || 0;
+
+        //     let grossAmount = qty * rate;
+        //     let discountAmt = (grossAmount * discount) / 100;
+        //     let amountAfterDiscount = grossAmount - discountAmt;
+        //     let gstAmt = (amountAfterDiscount * gst) / 100;
+        //     let total = amountAfterDiscount + gstAmt;
+
+        //     row.find(".discount-amt").val(discountAmt.toFixed(2));
+        //     row.find(".Amount").val(total.toFixed(2));
+
+        //     calculateTotalSummary();
+        // }
+
+         function calculateTotalSummary() {
+            let total = 0;
+            let totalGst = 0;
+            let totalCess = 0;
+            let totalDiscount = 0, totalamt = 0;
+            let gstRows = [];
+
+            $("#StockReturnItemBody tr").each(function () {
+                let row = $(this);
+                let qty = parseFloat(row.find(".qty").val()) || 0;
+                let rate = parseFloat(row.find(".rate").val()) || 0;
+                let gst = parseFloat(row.find(".gst").val()) || 0;
+                let cess = parseFloat(row.find(".cess").val()) || 0;
+                let discount = parseFloat(row.find(".discount").val()) || 0;
+                let stripRate = parseFloat(row.find(".stripe-rate").val()) || 0;
+                // TABLET-WISE CALCULATION
+                let grossAmount = 0;
+                let totalTablets = qty;
+
+                if (isTabletWiseMode) {
+                    const itemId = row.find(".item-id").val();
+                    let conversion = parseFloat(row.attr("data-conversion"));
+
+                    if (!conversion || conversion <= 0) {
+                        conversion = itemConversionMap[itemId] || 1;
+                    }
+
+                    const tabletQty = parseFloat(row.find(".tablet-qty").val()) || 0;
+
+                    totalTablets = (qty * conversion) + tabletQty;
+                   // grossAmount = totalTablets * rate;
+                    grossAmount = (totalTablets / conversion) * stripRate;
+                } else {
+                   // grossAmount = qty * rate;
+                     const itemId = row.find(".item-id").val();
+                     let conversion = parseFloat(row.attr("data-conversion"));
+
+                     if (!conversion || conversion <= 0) {
+                         conversion = itemConversionMap[itemId] || 1;
+                     }
+
+                     let totalTablets = qty * conversion;
+
+                    grossAmount = totalTablets * stripRate;
+                }
+
+                let discountAmt = (grossAmount * discount) / 100;
+                let amountAfterDiscount = grossAmount - discountAmt;
+                let gstAmt = (amountAfterDiscount * gst) / 100;
+                let cessAmt = (amountAfterDiscount * cess) / 100;
+
+                total += amountAfterDiscount;
+                totalamt += amountAfterDiscount;
+                totalGst += gstAmt;
+                totalCess += cessAmt;
+                totalDiscount += discountAmt;
+
+                gstRows.push({ rate: amountAfterDiscount, gst: gst, cess : cess });
+            });
+
+            let percentInput = parseFloat($("#discountPercent").val()) || 0;
+            let amountInput = parseFloat($("#discountamount").val()) || 0;
+
+            let globalDiscountPercent = 0;
+            let globalDiscountAmt = 0;
+            if ($("#discountPercent").is(":focus") || (percentInput > 0 && amountInput === 0)) {
+                globalDiscountPercent = percentInput;
+                globalDiscountAmt = (total * globalDiscountPercent) / 100;
+                $("#discountamount").val(globalDiscountAmt.toFixed(2));
+            }
+            else if ($("#discountamount").is(":focus") || (amountInput > 0 && percentInput === 0)) {
+                globalDiscountAmt = amountInput;
+                globalDiscountPercent = (globalDiscountAmt / total) * 100;
+                $("#discountPercent").val(globalDiscountPercent.toFixed(2));
+            }else if (percentInput > 0 && amountInput > 0) {
+                globalDiscountPercent = percentInput;
+                globalDiscountAmt = amountInput;
+
+                globalDiscountAmt = (total * globalDiscountPercent) / 100;
+                $("#discountamount").val(globalDiscountAmt.toFixed(2));
+            }
+
+            if (globalDiscountAmt > 0) {
+                totalDiscount += globalDiscountAmt;
+                totalamt = total - globalDiscountAmt;
+
+                totalGst = 0;
+                totalCess = 0;
+                gstRows.forEach(row => {
+                    let rowDiscountAmt = (row.rate * globalDiscountPercent) / 100;
+                    let rowAfterGlobalDiscount = row.rate - rowDiscountAmt;
+                    let gstAmt = (rowAfterGlobalDiscount * row.gst) / 100;
+                     let cessAmt = (rowAfterGlobalDiscount * row.cess) / 100;
+                    totalGst += gstAmt;
+                    totalCess += cessAmt;
+                });
+            }
+
+            let totalPayable = totalamt + totalGst + totalCess;
+
+            $("[name='Total']").val(totalamt.toFixed(2));
+            $("[name='TotalGstAmt']").val(totalGst.toFixed(2));
+            $("[name='TotalCessAmt']").val(totalCess.toFixed(2));
+            $("[name='Totaldiscount']").val(totalDiscount.toFixed(2));
+            $("[name='TotalPayable']").val(totalPayable.toFixed(2));
+        }
+
+
+        // NEW VALIDATION HANDLER (Bill discount validation)
+        $("#discountPercent").on("input", function() {
+            let value = parseFloat($(this).val()) || 0;
+
+            // HARD LIMIT: Cannot exceed 100%
+            if (value > 100) {
+                toastr.error("Discount cannot exceed 100%", "Invalid Discount");
+                $(this).val(100); // Set to max 100
+                return;
+            }
+
+            // WARNING: If discount > 50%
+            if (value > 50) {
+                toastr.warning("High discount alert: " + value + "%", "Review Required");
+            }
+        });
+
+        // function calculateTotalSummary() {
+        //     let total = 0;
+        //     let totalGst = 0;
+        //     let totalDiscount = 0, totalamt = 0;
+        //     let gstRows = [];
+
+        //     $("#StockReturnItemBody tr").each(function () {
+        //         let row = $(this);
+        //         let qty = parseFloat(row.find(".qty").val()) || 0;
+        //         let rate = parseFloat(row.find(".rate").val()) || 0;
+        //         let gst = parseFloat(row.find(".gst").val()) || 0;
+        //         let discount = parseFloat(row.find(".discount").val()) || 0;
+
+        //         let grossAmount = qty * rate;
+        //         let discountAmt = (grossAmount * discount) / 100;
+        //         let amountAfterDiscount = grossAmount - discountAmt;
+        //         let gstAmt = (amountAfterDiscount * gst) / 100;
+
+        //         total += amountAfterDiscount;
+        //         totalamt += amountAfterDiscount;
+        //         totalGst += gstAmt;
+        //         totalDiscount += discountAmt;
+
+        //         gstRows.push({ rate: amountAfterDiscount, gst: gst });
+        //     });
+
+        //     let percentInput = parseFloat($("#discountPercent").val()) || 0;
+        //     let amountInput = parseFloat($("#discountamount").val()) || 0;
+
+        //     let globalDiscountPercent = 0;
+        //     let globalDiscountAmt = 0;
+        //     if ($("#discountPercent").is(":focus") || (percentInput > 0 && amountInput === 0)) {
+        //         globalDiscountPercent = percentInput;
+        //         globalDiscountAmt = (total * globalDiscountPercent) / 100;
+        //         $("#discountamount").val(globalDiscountAmt.toFixed(2));
+        //     }
+        //     else if ($("#discountamount").is(":focus") || (amountInput > 0 && percentInput === 0)) {
+        //         globalDiscountAmt = amountInput;
+        //         globalDiscountPercent = (globalDiscountAmt / total) * 100;
+        //         $("#discountPercent").val(globalDiscountPercent.toFixed(2));
+        //     }else if (percentInput > 0 && amountInput > 0) {
+        //         globalDiscountPercent = percentInput;
+        //         globalDiscountAmt = amountInput;
+        //     }
+
+
+        //     if (globalDiscountAmt > 0) {
+        //         totalDiscount += globalDiscountAmt;
+        //         totalamt = total - globalDiscountAmt;
+
+        //         totalGst = 0;
+        //         gstRows.forEach(row => {
+        //             let rowDiscountAmt = (row.rate * globalDiscountPercent) / 100;
+        //             let rowAfterGlobalDiscount = row.rate - rowDiscountAmt;
+        //             let gstAmt = (rowAfterGlobalDiscount * row.gst) / 100;
+        //             totalGst += gstAmt;
+        //         });
+        //     }
+
+        //     let totalPayable = totalamt + totalGst;
+
+        //     $("[name='Total']").val(total.toFixed(2));
+        //     $("[name='TotalGstAmt']").val(totalGst.toFixed(2));
+        //     $("[name='Totaldiscount']").val(totalDiscount.toFixed(2));
+        //     $("[name='TotalPayable']").val(totalPayable.toFixed(2));
+        // }
+
+
+
+        function validateQtyPure($input) {
+            const $row = $input.closest("tr");
+
+            const itemId = $row.find(".item-id").val();
+            const batch = $row.find(".batch").val()?.trim();
+            const expiry = $row.find(".expirydate").val()?.trim();
+            const mrp = parseFloat($row.find(".mrp").val()) || 0;
+            const rate = parseFloat($row.find(".rate").val()) || 0;
+
+            console.group("🧮 QTY VALIDATION START (EDIT MODE)");
+            console.log("📝 Row Values:", { itemId, batch, expiry, mrp, rate });
+
+            if (!itemId || !batch || !expiry || !expiry.includes('/')) {
+                console.warn("❌ Missing basic row data");
+                console.groupEnd();
+                return;
+            }
+
+            const [mm, yyyy] = expiry.split('/');
+            const formattedExpiry = `${yyyy}-${mm.padStart(2, '0')}-01`;
+            console.log("📅 Formatted Expiry:", formattedExpiry);
+
+            // ================================================================
+            // 🔹 STEP 1: FIND MATCHED PURCHASE RECORD
+            // ================================================================
+            const matched = window.groupedPurchaseData.find(g => {
+                const gExpiry = g.expiry?.split("T")[0];
+                return (
+                    g.itemId == itemId &&
+                    g.batch?.toLowerCase() === batch.toLowerCase() &&
+                    gExpiry === formattedExpiry &&
+                    parseFloat(g.mrp) === mrp &&
+                    parseFloat(g.rate) === rate
+                );
+            });
+
+            console.log("✅ Matched Purchase Record:", matched);
+
+            if (!matched) {
+                console.error("❌ NO MATCHED PURCHASE RECORD");
+                toastr.error("No purchase record found for this item group.");
+                $input.val(0);
+                if ($input.hasClass("tablet-qty")) {
+                    $row.find(".qty").val(0);
+                }
+                console.groupEnd();
+                return;
+            }
+
+            // ================================================================
+            // 🔹 STEP 2: GET CONVERSION (for TabletWise mode)
+            // ================================================================
+            let conversion = 1;
+
+            if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                conversion =
+                    parseFloat($row.attr("data-conversion")) ||
+                    itemConversionMap[itemId] ||
+                    1;
+
+                console.log("🔢 Conversion Factor:", conversion);
+            }
+
+            // ================================================================
+            // 🔹 STEP 3: CALCULATE TOTAL ALREADY ENTERED (IN TABLETS)
+            // ================================================================
+            let totalEnteredTablets = 0;
+
+            $("#StockReturnItemBody tr").each(function () {
+                const row = $(this);
+
+                const rowItemId = row.find(".item-id").val();
+                const rowBatch = row.find(".batch").val()?.trim();
+                const rowExpiry = row.find(".expirydate").val()?.trim();
+                const rowMrp = parseFloat(row.find(".mrp").val()) || 0;
+                const rowRate = parseFloat(row.find(".rate").val()) || 0;
+
+                if (!rowExpiry || !rowExpiry.includes('/')) return;
+
+                const [rmm, ryyyy] = rowExpiry.split('/');
+                const rowFormattedExpiry = `${ryyyy}-${rmm.padStart(2, '0')}-01`;
+
+                // ✅ CHECK IF SAME ITEM GROUP
+                if (
+                    rowItemId == itemId &&
+                    rowBatch?.toLowerCase() === batch.toLowerCase() &&
+                    rowFormattedExpiry === formattedExpiry &&
+                    rowMrp === mrp &&
+                    rowRate === rate
+                ) {
+                    if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                        // ✅ TABLETWISE: Convert strips + tabs → total tablets
+                        let strips = parseFloat(row.find(".qty").val()) || 0;
+                        let tabs = parseFloat(row.find(".tablet-qty").val()) || 0;
+                        let rowTotalTablets = (strips * conversion) + tabs;
+
+                        totalEnteredTablets += rowTotalTablets;
+
+                        console.log(`Row Contribution: ${strips} strips + ${tabs} tabs = ${rowTotalTablets} tablets`);
+                    } else {
+                        // ✅ STRIPWISE: Just add qty
+                        let rowQty = parseFloat(row.find(".qty").val()) || 0;
+                        totalEnteredTablets += rowQty;
+                    }
+                }
+            });
+
+            console.log("📊 Total Entered (Current Grid):", totalEnteredTablets);
+
+            // ================================================================
+            // 🔹 STEP 4: GET ALREADY RETURNED QTY (from previous returns)
+            // ================================================================
+            const alreadyReturned = window.returnedQtyData.find(r =>
+                r.itemMasterId == itemId &&
+                r.batch?.toLowerCase() === batch.toLowerCase() &&
+                r.expiry?.split('T')[0] === formattedExpiry &&
+                parseFloat(r.mrp) === mrp &&
+                parseFloat(r.rate) === rate
+            )?.returnedQty || 0;
+
+            console.log("📦 Already Returned (Previous):", alreadyReturned);
+
+            // ================================================================
+            // 🔹 STEP 5: CALCULATE AVAILABLE QTY (in tablets)
+            // ================================================================
+            let totalAvailableTablets = 0;
+
+            if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                // ✅ TABLETWISE: matched.qty is in STRIPS, convert to tablets
+                totalAvailableTablets = matched.qty * conversion;
+
+                console.log(`💊 Available: ${matched.qty} strips × ${conversion} = ${totalAvailableTablets} tablets`);
+            } else {
+                // ✅ STRIPWISE: matched.qty is already in correct unit
+                totalAvailableTablets = matched.qty;
+
+                console.log(`📦 Available: ${totalAvailableTablets} qty`);
+            }
+
+            // ================================================================
+            // 🔹 STEP 6: VALIDATE & SET TO 0 IF EXCEEDED
+            // ================================================================
+            if (totalEnteredTablets > totalAvailableTablets) {
+
+                if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                    // ✅ TABLETWISE: Set both Strip and Tabs to 0
+
+                    toastr.error(
+                        `Only ${totalAvailableTablets} tablets available for return. Please enter correct quantity.`,
+                        "Quantity Exceeded"
+                    );
+
+                    console.log(`❌ Resetting to: Strip=0, Tabs=0`);
+
+                    // ✅ Set both to 0
+                    $row.find(".qty").val(0);
+                    $row.find(".tablet-qty").val(0);
+
+                } else {
+                    // ✅ STRIPWISE: Set to 0 (old behavior)
+
+                    toastr.error(
+                        `Only ${totalAvailableTablets} qty available for return. Please enter correct quantity.`,
+                        "Quantity Exceeded"
+                    );
+
+                    $input.val(0);
+                }
+            }
+
+            console.groupEnd();
+            calculateRow($row);
+        }
+
+
+        // // QTY VALIDATION FUNCTION
+
+        // function validateQtyPure($input) {
+
+        //     const $row = $input.closest("tr");
+
+        //     const itemId = $row.find(".item-id").val();
+        //     const batch = $row.find(".batch").val()?.trim();
+        //     const expiry = $row.find(".expirydate").val()?.trim();
+        //     const mrp = parseFloat($row.find(".mrp").val()) || 0;
+        //     const rate = parseFloat($row.find(".rate").val()) || 0;
+        //     const enteredQty = parseFloat($input.val()) || 0;
+
+        //     console.group("🧮 QTY VALIDATION START");
+        //     console.log("📝 Row Values:", { itemId, batch, expiry, mrp, rate, enteredQty });
+        //     console.log("🔍 Current Row Index:", $("#StockReturnItemBody tr").index($row));
+
+        //     if (!itemId || !batch || !expiry || !expiry.includes('/')) {
+        //         console.warn("❌ Missing basic row data");
+        //         console.groupEnd();
+        //         return;
+        //     }
+
+        //     const [mm, yyyy] = expiry.split('/');
+        //     const formattedExpiry = `${yyyy}-${mm.padStart(2, '0')}-01`;
+        //     console.log("📅 Formatted Expiry:", formattedExpiry);
+
+        //     // MATCH PURCHASE DATA
+        //     console.log("🔎 Searching in groupedPurchaseData:", window.groupedPurchaseData.length, "records");
+
+        //     const matched = window.groupedPurchaseData.find(g => {
+        //         const gExpiry = g.expiry?.split("T")[0];
+        //         const isItemMatch = g.itemId == itemId;
+        //         const isBatchMatch = g.batch?.toLowerCase() === batch.toLowerCase();
+        //         const isExpiryMatch = gExpiry === formattedExpiry;
+        //         const isMrpMatch = parseFloat(g.mrp) === mrp;
+        //         const isRateMatch = parseFloat(g.rate) === rate;
+
+        //         if (isItemMatch && isBatchMatch) {
+        //             console.log("🔍 Checking batch:", {
+        //                 batch: g.batch,
+        //                 itemMatch: isItemMatch,
+        //                 batchMatch: isBatchMatch,
+        //                 expiryMatch: isExpiryMatch,
+        //                 mrpMatch: isMrpMatch,
+        //                 rateMatch: isRateMatch,
+        //                 gExpiry: gExpiry,
+        //                 formattedExpiry: formattedExpiry
+        //             });
+        //         }
+
+        //         return isItemMatch && isBatchMatch && isExpiryMatch && isMrpMatch && isRateMatch;
+        //     });
+
+        //     console.log("✅ Matched Purchase Record:", matched);
+
+        //     if (!matched) {
+        //         console.error("❌ NO MATCHED PURCHASE RECORD");
+        //         toastr.error("No purchase record found for this item group.");
+        //         $input.val(0);
+        //         console.groupEnd();
+        //         return;
+        //     }
+
+        //     // TOTAL ENTERED IN GRID
+        //     let totalEntered = 0;
+        //     let totalOriginalQty = 0;
+        //     let rowBreakdown = [];
+
+        //     console.log("📊 Calculating totals from all rows...");
+
+        //     $("#StockReturnItemBody tr").each(function (index) {
+        //         const r = $(this);
+
+        //         const rItemId = r.find(".item-id").val();
+        //         const rBatch = r.find(".batch").val()?.trim();
+        //         const rExpiry = r.find(".expirydate").val()?.trim();
+        //         const rMrp = parseFloat(r.find(".mrp").val()) || 0;
+        //         const rRate = parseFloat(r.find(".rate").val()) || 0;
+        //         const rQty = parseFloat(r.find(".qty").val()) || 0;
+        //         const rOriginal = parseFloat(r.find(".original-qty").val()) || 0;
+
+        //         if (!rExpiry || !rExpiry.includes('/')) return;
+
+        //         const [rmm, ryyyy] = rExpiry.split('/');
+        //         const rFormatted = `${ryyyy}-${rmm.padStart(2, '0')}-01`;
+
+        //         const isMatch = (
+        //             rItemId == itemId &&
+        //             rBatch?.toLowerCase() === batch.toLowerCase() &&
+        //             rFormatted === formattedExpiry &&
+        //             rMrp === mrp &&
+        //             rRate === rate
+        //         );
+
+        //         if (isMatch) {
+        //             totalEntered += rQty;
+        //             totalOriginalQty += rOriginal;
+
+        //             rowBreakdown.push({
+        //                 rowIndex: index + 1,
+        //                 isCurrent: r.is($row),
+        //                 qty: rQty,
+        //                 original: rOriginal
+        //             });
+        //         }
+        //     });
+
+        //     // 🔹 DELETED ROW ADJUSTMENT
+        //     let deletedQty = 0;
+        //     window.deletedOriginalQtyRecords.forEach(d => {
+        //         if (
+        //             d.itemId == itemId &&
+        //             d.batch === batch.toLowerCase() &&
+        //             d.expiry === formattedExpiry &&
+        //             d.mrp === mrp &&
+        //             d.rate === rate
+        //         ) {
+        //             deletedQty += d.originalQty;
+        //         }
+        //     });
+
+        //     const returnedRecord = window.returnedQtyData.find(r => {
+        //         const rExpiry = r.expiry?.split('T')[0];
+        //         const isMatch = (
+        //             r.itemMasterId == itemId &&
+        //             r.batch?.toLowerCase() === batch.toLowerCase() &&
+        //             rExpiry === formattedExpiry &&
+        //             parseFloat(r.mrp) === mrp &&
+        //             parseFloat(r.rate) === rate
+        //         );
+
+        //         if (isMatch) {
+        //             console.log("💾 Found Returned Record:", r);
+        //         }
+
+        //         return isMatch;
+        //     });
+
+        //     const alreadyReturned = returnedRecord?.returnedQty || 0;
+        //     console.log("💾 Already Returned (DB):", alreadyReturned);
+
+        //     // Edit ke time ALWAYS sold qty allow
+        //     const allowedQty = matched.qty;
+
+        //     console.log("✅ Allowed Qty (EDIT MODE):", allowedQty);
+
+        //     // 🎯 CALCULATE MAX ALLOWED FOR THIS ROW
+        //     const currentRowQty = enteredQty;
+        //     const otherRowsTotal = totalEntered - currentRowQty;
+        //     const maxAllowedForThisRow = allowedQty - otherRowsTotal;
+
+        //     console.log("🎯 CALCULATION BREAKDOWN:");
+        //     console.log("   - Allowed Qty (Sold):", allowedQty);
+        //     console.log("   - Current Row Input:", currentRowQty);
+        //     console.log("   - Total Entered (All Rows):", totalEntered);
+        //     console.log("   - Other Rows Total:", otherRowsTotal);
+        //     console.log("   - Max Allowed for THIS Row:", maxAllowedForThisRow);
+
+        //     if (totalEntered > allowedQty) {
+        //         console.error("❌ VALIDATION FAILED!");
+        //         console.error(`   Total Entered (${totalEntered}) > Allowed (${allowedQty})`);
+        //         console.error(`   Auto-correcting to: ${maxAllowedForThisRow}`);
+
+        //         toastr.error(`Only ${maxAllowedForThisRow} qty available for this row (Total Sold: ${allowedQty}, Other Rows: ${otherRowsTotal})`);
+        //         $input.val(maxAllowedForThisRow);
+        //     } else {
+        //         console.log("✅ VALIDATION PASSED");
+        //     }
+
+        //     console.groupEnd();
+
+        //     calculateRow($row);
+        // }
+
+
+        // // QTY VALIDATION FUNCTION
+        // function validateQtyPure($input) {
+
+        //     const $row = $input.closest("tr");
+
+        //     const itemId = $row.find(".item-id").val();
+        //     const batch = $row.find(".batch").val()?.trim();
+        //     const expiry = $row.find(".expirydate").val()?.trim();
+        //     const mrp = parseFloat($row.find(".mrp").val()) || 0;
+        //     const rate = parseFloat($row.find(".rate").val()) || 0;
+        //     const enteredQty = parseFloat($input.val()) || 0;
+
+        //     console.group("🧮 QTY VALIDATION START");
+        //     console.log("Row Values", { itemId, batch, expiry, mrp, rate, enteredQty });
+
+        //     if (!itemId || !batch || !expiry || !expiry.includes('/')) {
+        //         console.warn("❌ Missing basic row data");
+        //         console.groupEnd();
+        //         return;
+        //     }
+
+        //     const [mm, yyyy] = expiry.split('/');
+        //     const formattedExpiry = `${yyyy}-${mm.padStart(2, '0')}-01`;
+
+        //     // MATCH PURCHASE DATA
+        //     const matched = window.groupedPurchaseData.find(g =>
+        //         g.itemId == itemId &&
+        //         g.batch?.toLowerCase() === batch.toLowerCase() &&
+        //         g.expiry?.split("T")[0] === formattedExpiry &&
+        //         parseFloat(g.mrp) === mrp &&
+        //         parseFloat(g.rate) === rate
+        //     );
+
+        //     console.log("Matched Purchase Record", matched);
+
+        //     if (!matched) {
+        //         console.error("❌ NO MATCHED PURCHASE RECORD");
+        //         toastr.error("No purchase record found for this item group.");
+        //         $input.val(0);
+        //         console.groupEnd();
+        //         return;
+        //     }
+
+        //     // TOTAL ENTERED IN GRID
+        //     let totalEntered = 0;
+        //     let totalOriginalQty = 0;
+
+        //     $("#StockReturnItemBody tr").each(function () {
+        //         const r = $(this);
+
+        //         const rItemId = r.find(".item-id").val();
+        //         const rBatch = r.find(".batch").val()?.trim();
+        //         const rExpiry = r.find(".expirydate").val()?.trim();
+        //         const rMrp = parseFloat(r.find(".mrp").val()) || 0;
+        //         const rRate = parseFloat(r.find(".rate").val()) || 0;
+        //         const rQty = parseFloat(r.find(".qty").val()) || 0;
+        //         const rOriginal = parseFloat(r.find(".original-qty").val()) || 0;
+
+        //         if (!rExpiry || !rExpiry.includes('/')) return;
+
+        //         const [rmm, ryyyy] = rExpiry.split('/');
+        //         const rFormatted = `${ryyyy}-${rmm.padStart(2, '0')}-01`;
+
+        //         if (
+        //             rItemId == itemId &&
+        //             rBatch?.toLowerCase() === batch.toLowerCase() &&
+        //             rFormatted === formattedExpiry &&
+        //             rMrp === mrp &&
+        //             rRate === rate
+        //         ) {
+        //             totalEntered += rQty;
+        //             totalOriginalQty += rOriginal;
+        //         }
+        //     });
+
+        //     console.log("Total Entered Qty (Grid)", totalEntered);
+        //     console.log("Total Original Qty (Grid)", totalOriginalQty);
+
+        //     // 🔹 DELETED ROW ADJUSTMENT
+        //     let deletedQty = 0;
+        //     window.deletedOriginalQtyRecords.forEach(d => {
+        //         if (
+        //             d.itemId == itemId &&
+        //             d.batch === batch.toLowerCase() &&
+        //             d.expiry === formattedExpiry &&
+        //             d.mrp === mrp &&
+        //             d.rate === rate
+        //         ) {
+        //             deletedQty += d.originalQty;
+        //         }
+        //     });
+
+        //     console.log("Deleted Original Qty", deletedQty);
+
+        //     // ALREADY RETURNED (DB)
+        //     const alreadyReturned =
+        //         window.returnedQtyData.find(r =>
+        //             r.itemMasterId == itemId &&
+        //             r.batch?.toLowerCase() === batch.toLowerCase() &&
+        //             r.expiry?.split('T')[0] === formattedExpiry &&
+        //             parseFloat(r.mrp) === mrp &&
+        //             parseFloat(r.rate) === rate
+        //         )?.returnedQty || 0;
+
+        //     console.log("Already Returned (DB)", alreadyReturned);
+
+        //     // Edit ke time ALWAYS sold qty allow
+        //     const allowedQty = matched.qty;
+
+        //     console.log("Allowed Qty (EDIT MODE)", allowedQty);
+
+        //     if (totalEntered > allowedQty) {
+        //         toastr.error(`Only ${allowedQty} qty available for return.`);
+        //         $input.val(allowedQty);
+        //     }
+
+        //     // if (enteredQty < 1) {
+        //     //     toastr.error("Quantity must be at least 1.");
+        //     //     $input.val(1);
+        //     // }
+
+        //     console.groupEnd();
+
+        //     calculateRow($row);
+        // }
+
+
+        // ==========================================================
+        // 🔹 UTILITY FUNCTIONS
+        // ==========================================================
+        function highlightItemRow($rows, index) {
+            $rows.removeClass("selected");
+            const $row = $rows.eq(index);
+            $row.addClass("selected");
+            $row[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+
+        function highlightBatchRow($rows, index) {
+            $rows.removeClass("selected");
+
+            const $row = $rows.eq(index);
+            if (!$row.length) return;
+
+            $row.addClass("selected");
+
+            const container = document.querySelector("#batchModal .batch-table-wrapper");
+            if (!container) return;
+
+            const rowRect = $row[0].getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const headerHeight = document.querySelector("#batchTable thead")?.offsetHeight || 50;
+
+            if (rowRect.top < containerRect.top + headerHeight) {
+                container.scrollTop -= (containerRect.top + headerHeight - rowRect.top);
+            }
+            else if (rowRect.bottom > containerRect.bottom) {
+                container.scrollTop += (rowRect.bottom - containerRect.bottom);
+            }
+        }
+
+        function loadReturnedQtyData(customerId) { 
+            $.get(`/StockReturn/GetReturnedQtyDataForEditOnly?customerId=${customerId}`, function (data) {
+                window.returnedQtyData = data;
+            });
+        }
+       
+        function fetchItemsByCustomerId(customerId) {
+            let billingType = $('#billingType').val();
+            $.ajax({
+                url: '/StockReturn/GetItemsByCustomerIdForEditOnly',
+                type: 'GET',
+                data: { customerId: customerId, billingType: billingType },
+                success: function (res) {
+                    if (res.success) {
+                        window.customerItemList = res.items;
+                    } else {
+                        toastr.warning("No items found for this customer.");
+                        window.customerItemList = [];
+                    }
+                },
+                error: function () {
+                    toastr.error("Failed to load items for customer.");
+                    window.customerItemList = [];
+                }
+            });
+        }
+
+        function formatExpiryDateInput(input) {
+            let value = $(input).val().replace(/[^\d]/g, '');
+
+            if (value.length >= 2) {
+                let month = value.substring(0, 2);
+                let year = value.substring(2, 6);
+
+                if (parseInt(month) > 12) {
+                    month = "12";
+                } else if (parseInt(month) < 1) {
+                    month = "01";
+                }
+
+                value = month;
+                if (year) {
+                    value += '/' + year;
+                }
+            }
+
+            $(input).val(value.substring(0, 7));
+        }
+
+        function initializeGroupedPurchaseDataForEdit() {
+            $("#StockReturnItemBody tr").each(function () {
+                const row = $(this);
+                const itemId = row.find(".item-id").val();
+                const customerId = $('#CustomerId').val();
+                if (itemId && customerId) {
+                    $.get('/StockReturn/GetBatchesByItemIdForEditOnly', { id: itemId, customerId: customerId }, function (data) {
+                        if (data.groupedResult?.length > 0) {
+                            window.groupedPurchaseData.push(...data.groupedResult);
+                        }
+                    });
+                }
+            });
+        }
+
+        // ==========================================================
+        // 🔹 ITEM MODAL FUNCTIONS
+        // ==========================================================
+        function openItemModal(searchText = "") {
+            showLoader("Loading items...");
+
+            let customerId = $('#CustomerId').val();
+            let billingType = $('#billingType').val();
+            $.ajax({
+                url: '/StockReturn/GetItemsByCustomerIdForEditOnly',
+                type: 'GET',
+                data: { customerId: customerId, billingType: billingType },
+                success: function (res) {
+                    hideLoader();
+
+                    if (!res.success || !res.items || res.items.length === 0) {
+                        toastr.warning("No items found for this customer.");
+                        return;
+                    }
+
+                    const businessType = @ViewBag.BusinessType;
+
+                    let rows = "";
+                    res.items.forEach(item => {
+                        rows += `
+                            <tr class="item-row" tabindex="0"
+                                data-itemid="${item.value}"
+                                data-name="${item.text}"
+                                data-conversion="${item.conversion || 1}">
+                                <td>${item.text}</td>
+                                ${
+                                    businessType === 2
+                                    ? `
+                                        <td style="display:none;">${item.qty || 0}</td>
+                                        <td>${item.displayQty || '0:0'}</td>
+                                      `
+                                    : `
+                                        <td>${item.qty || 0}</td>
+                                      `
+                                }
+                                <td>${item.unit || 'N/A'}</td>
+                                <td>${item.mrp || 0}</td>
+                            </tr>`;
+                    });
+
+                    $("#itemTableBody").html(rows);
+                    $("#itemSearch").val(searchText);
+                    $("#itemSearch").trigger("input");
+
+                    $("#itemModal").modal("show");
+                },
+                error: function () {
+                    hideLoader();
+                    toastr.error("Error loading items");
+                }
+            });
+        }
+
+        $(document).on("input", "#itemSearch", function () {
+            const searchWords = $(this).val()
+                .toLowerCase()
+                .trim()
+                .split(/\s+/);
+
+            $("#itemTableBody tr").each(function () {
+                const itemText = $(this).find("td:first").text().toLowerCase();
+                const itemWords = itemText.split(/\s+/);
+
+                let match = true;
+
+                for (let i = 0; i < searchWords.length; i++) {
+                    if (!itemWords[i] || !itemWords[i].startsWith(searchWords[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                $(this).toggle(match);
+            });
+
+            currentItemIndex = -1;
+            $("#itemTableBody .item-row").removeClass("selected");
+        });
+
+        // $(document).on("click", ".item-row", function () {
+        //     const itemId = $(this).data("itemid");
+        //     const itemName = $(this).data("name");
+        //     const customerId = $("#CustomerId").val();
+
+        //     if (!itemId || !currentRowForItemModal) return;
+
+        //     currentRowForItemModal.find(".item-id").val(itemId);
+        //     currentRowForItemModal.find(".item-input").val(itemName);
+
+        //     $("#itemModal").modal("hide");
+
+        //     // Load batches for selected item
+        //     loadBatchesForItem(itemId, currentRowForItemModal);
+
+        //     // Load item sales return summary
+        //     loadItemSalesReturnSummary(customerId, itemId);
+        // });
+        $(document).on("click", ".item-row", function () {
+            const itemId = $(this).data("itemid");
+            const itemName = $(this).data("name");
+            const conversion = parseFloat($(this).data("conversion")) || 1;
+            const customerId = $("#CustomerId").val();
+
+            if (!itemId || !currentRowForItemModal) return;
+
+            currentRowForItemModal.find(".item-id").val(itemId);
+            currentRowForItemModal.find(".item-input").val(itemName);
+            currentRowForItemModal.attr("data-conversion", conversion);
+
+            // ✅ Store globally
+            itemConversionMap[itemId] = conversion;
+
+            $("#itemModal").modal("hide");
+
+            // Load batches for selected item
+            loadBatchesForItem(itemId, currentRowForItemModal);
+
+            // Load item sales return summary
+            loadItemSalesReturnSummary(customerId, itemId);
+        });
+
+        $(document).on("mouseenter", ".item-row", function () {
+            if (!$("#itemModal").is(":visible")) return;
+            if (isKeyboardScrollingItemModal) return;
+
+            itemNavMode = "mouse";
+
+            $("#itemModal")
+                .addClass("mouse-nav")
+                .removeClass("keyboard-nav");
+
+            const $rows = $(".item-row:visible");
+            $rows.removeClass("selected");
+            $(this).addClass("selected");
+
+            currentItemIndex = $rows.index(this);
+        });
+
+        $(document).on("mousemove", "#itemModal", function () {
+            isKeyboardScrollingItemModal = false;
+        });
+
+        $('#itemModal').on('shown.bs.modal', function () {
+            itemNavMode = "keyboard";
+
+            $("#itemModal")
+                .addClass("keyboard-nav")
+                .removeClass("mouse-nav");
+
+            const $rows = $(".item-row:visible");
+
+            currentItemIndex = -1;
+
+            if ($rows.length) {
+                currentItemIndex = 0;
+                highlightItemRow($rows, currentItemIndex);
+            }
+
+            setTimeout(() => {
+                $("#itemSearch").focus().select();
+            }, 200);
+        });
+
+        $('#itemModal').on('hidden.bs.modal', function () {
+            setTimeout(() => {
+                if (currentRowForItemModal && currentRowForItemModal.length) {
+                    currentRowForItemModal.find(".item-input").focus();
+                }
+            }, 150);
+        });
+
+        // Item Modal Keyboard Navigation
+        $(document).on("keydown", function (e) {
+            if (!$("#itemModal").is(":visible")) return;
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                itemNavMode = "keyboard";
+                isKeyboardScrollingItemModal = true;
+                $("#itemModal")
+                    .addClass("keyboard-nav")
+                    .removeClass("mouse-nav");
+            }
+
+            const $rows = $(".item-row:visible");
+            if (!$rows.length) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+
+                if (currentItemIndex === -1) {
+                    currentItemIndex = 0;
+                }
+                else if (currentItemIndex < $rows.length - 1) {
+                    currentItemIndex++;
+                }
+
+                highlightItemRow($rows, currentItemIndex);
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (currentItemIndex <= 0) return;
+                currentItemIndex--;
+                highlightItemRow($rows, currentItemIndex);
+            }
+            else if (e.key === "Enter" && currentItemIndex >= 0) {
+                e.preventDefault();
+                $rows.eq(currentItemIndex).trigger("click");
+            }
+        });
+
+        // ==========================================================
+        // BATCH MODAL FUNCTIONS
+        // ==========================================================
+        function loadBatchesForItem(itemId, row) {
+            window.currentRow = row;
+            showLoader("Loading batches...");
+            let billingType = $('#billingType').val();
+            let customerId = $('#CustomerId').val();
+            $.get('/StockReturn/GetBatchesByItemIdForEditOnly', { id: itemId, customerId: customerId, billingType: billingType }, function (data) {
+                hideLoader();
+
+                if (data.error || !data.groupedResult || data.groupedResult.length === 0) {
+                    toastr.info("No batches found for this item");
+                    return;
+                }
+
+                // ✅ MERGE instead of OVERWRITE
+                if (data.groupedResult && data.groupedResult.length > 0) {
+                    data.groupedResult.forEach(newBatch => {
+                        const exists = window.groupedPurchaseData.some(existing =>
+                            existing.itemId == newBatch.itemId &&
+                            existing.batch?.toLowerCase() === newBatch.batch?.toLowerCase() &&
+                            existing.expiry === newBatch.expiry &&
+                            parseFloat(existing.mrp) === parseFloat(newBatch.mrp) &&
+                            parseFloat(existing.rate) === parseFloat(newBatch.rate)
+                        );
+
+                        if (!exists) {
+                            window.groupedPurchaseData.push(newBatch);
+                        }
+                    });
+
+                    console.log(` Merged batch data. Total records: ${window.groupedPurchaseData.length}`);
+                }
+
+                const businessType = @ViewBag.BusinessType;
+
+                let batchRows = '';
+
+                data.groupedResult.forEach(batch => {
+                    const expiryDate = new Date(batch.expiry);
+                    const month = String(expiryDate.getMonth() + 1).padStart(2, '0');
+                    const year = expiryDate.getFullYear();
+                    const formattedExpiry = `${month}/${year}`;
+                    const encoded = encodeURIComponent(JSON.stringify(batch));
+
+                    batch.conversion = batch.conversion || 1;
+
+                    let qtyColumns = '';
+
+                    if (businessType === 2) {
+                        qtyColumns = `
+                            <td style="display:none;">${batch.qty}</td>
+                            <td>${batch.stripTabsQty || '0:0'}</td>
+                        `;
+                    } else {
+                        qtyColumns = `<td>${batch.qty}</td>`;
+                    }
+
+                    batchRows += `
+                        <tr class="batch-row" tabindex="0" data-batch="${encoded}">
+                            <td>${batch.batch}</td>
+                            <td>${formattedExpiry}</td>
+                            <td hidden>${batch.rate.toFixed(4)}</td>
+                            <td>${batch.striprate.toFixed(2)}</td>
+                            <td>${batch.mrp}</td>
+                            ${qtyColumns}
+                        </tr>`;
+                });
+
+                window.currentRow.find(".gst").val(data.gst);
+                window.currentRow.find(".cess").val(data.cess);
+                $("#batchTableBody").html(batchRows);
+
+                const $rows = $(".batch-row");
+                window.currentBatchIndex = -1;
+
+                if ($rows.length) {
+                    window.currentBatchIndex = 0;
+                    highlightBatchRow($rows, window.currentBatchIndex);
+                }
+
+                $("#batchModal").modal("show");
+            }).fail(function() {
+                hideLoader();
+                toastr.error("Error loading batches");
+            });
+        }
+
+        $('#batchModal').on('shown.bs.modal', function () {
+            batchNavMode = "keyboard";
+            isKeyboardScrollingBatchModal = false;
+
+            $("#batchModal")
+                .addClass("keyboard-nav")
+                .removeClass("mouse-nav");
+
+            const $rows = $(".batch-row:visible");
+            window.currentBatchIndex = -1;
+
+            if ($rows.length) {
+                window.currentBatchIndex = 0;
+                highlightBatchRow($rows, window.currentBatchIndex);
+            }
+        });
+
+        $('#batchModal').on('hidden.bs.modal', function () {
+            setTimeout(() => {
+                if (window.currentRow && window.currentRow.length) {
+                    // TabletWise mode → Focus Tabs, else Qty
+                    if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                        window.currentRow.find(".tablet-qty").focus().select();
+                    } else {
+                        window.currentRow.find(".qty").focus().select();
+                    }
+                }
+            }, 200);
+        });
+
+        // $('#batchModal').on('hidden.bs.modal', function () {
+        //     setTimeout(() => {
+        //         if (window.currentRow && window.currentRow.length) {
+        //             window.currentRow.find(".qty").focus().select();
+        //         }
+        //     }, 200);
+        // });
+
+        $(document).on("click", ".batch-row", function () {
+            $(".batch-row").removeClass("selected");
+            $(this).addClass("selected");
+
+            const encoded = $(this).attr("data-batch");
+            try {
+                const batch = JSON.parse(decodeURIComponent(encoded));
+                if (window.currentRow) {
+                    const $row = window.currentRow;
+
+                    const rowId = $row.find(".row-id").val();
+                    const isExistingRow = rowId && parseInt(rowId) > 0;
+                    const originalQty = parseFloat($row.find(".original-qty").val()) || 0;
+
+                    $row.find(".batch").val(batch.batch);
+                    $row.find(".rate").val(batch.rate || 0);
+                    $row.find(".rate").val(batch.rate.toFixed(4) || 0);
+                    $row.find(".stripe-rate").val(batch.striprate.toFixed(2) || 0);
+                    $row.find(".mrp").val(batch.mrp || 0);
+
+                    if (batch.expiry) {
+                        let date = new Date(batch.expiry);
+                        let formatted = ("0" + (date.getMonth() + 1)).slice(-2) + "/" + date.getFullYear();
+                        $row.find(".expirydate").val(formatted);
+                    }
+
+                    // ✅ STORE CONVERSION
+                    const itemId = $row.find(".item-id").val();
+                    const conversion = parseFloat(batch.conversion) || 1;
+                    $row.attr("data-conversion", conversion);
+                    itemConversionMap[itemId] = conversion;
+
+                    if (isExistingRow && originalQty > 0) {
+                        $row.find(".qty").val(originalQty);
+                    } else {
+                        if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                            $row.find(".qty").val(0);
+                        }else{
+                            $row.find(".qty").val(1);
+                        }
+                    }
+
+                    calculateRow($row);
+                }
+                $("#batchModal").modal("hide");
+            } catch (err) {
+                alert("Invalid batch data.");
+                console.error(err);
+            }
+        });
+
+        // $(document).on("click", ".batch-row", function () {
+        //     $(".batch-row").removeClass("selected");
+        //     $(this).addClass("selected");
+
+        //     const encoded = $(this).attr("data-batch");
+        //     try {
+        //         const batch = JSON.parse(decodeURIComponent(encoded));
+        //         if (window.currentRow) {
+        //             const $row = window.currentRow;
+
+        //             // ✅ CHECK: Is this an EXISTING row with data?
+        //             const rowId = $row.find(".row-id").val();
+        //             const isExistingRow = rowId && parseInt(rowId) > 0;
+        //             const originalQty = parseFloat($row.find(".original-qty").val()) || 0;
+
+        //             // ✅ SET VALUES
+        //             $row.find(".batch").val(batch.batch);
+        //             $row.find(".rate").val(batch.rate || 0);
+        //             $row.find(".mrp").val(batch.mrp || 0);
+
+        //             if (batch.expiry) {
+        //                 let date = new Date(batch.expiry);
+        //                 let formatted = ("0" + (date.getMonth() + 1)).slice(-2) + "/" + date.getFullYear();
+        //                 $row.find(".expirydate").val(formatted);
+        //             }
+
+        //             // ✅ SMART QTY LOGIC:
+        //             // Existing row with original qty → Keep it
+        //             // New row → Set to 1
+        //             if (isExistingRow && originalQty > 0) {
+        //                 $row.find(".qty").val(originalQty);
+        //                 console.log(`✅ Existing row: Kept original qty = ${originalQty}`);
+        //             } else {
+        //                 $row.find(".qty").val(1);
+        //                 console.log(`✅ New row: Set qty = 1`);
+        //             }
+
+        //             // ✅ Calculate (NO validation for edit mode)
+        //             calculateRow($row);
+        //         }
+        //         $("#batchModal").modal("hide");
+        //     } catch (err) {
+        //         alert("Invalid batch data.");
+        //         console.error(err);
+        //     }
+        // });
+
+        // Batch Modal Keyboard Navigation
+        $(document).on("keydown", function (e) {
+            if (!$("#batchModal").is(":visible")) return;
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                batchNavMode = "keyboard";
+                isKeyboardScrollingBatchModal = true;
+
+                $("#batchModal")
+                    .addClass("keyboard-nav")
+                    .removeClass("mouse-nav");
+            }
+
+            const $rows = $(".batch-row:visible");
+            if (!$rows.length) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+
+                if (window.currentBatchIndex === -1) {
+                    window.currentBatchIndex = 0;
+                } else if (window.currentBatchIndex < $rows.length - 1) {
+                    window.currentBatchIndex++;
+                }
+
+                highlightBatchRow($rows, window.currentBatchIndex);
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (window.currentBatchIndex <= 0) return;
+
+                window.currentBatchIndex--;
+                highlightBatchRow($rows, window.currentBatchIndex);
+            }
+            else if (e.key === "Enter" && window.currentBatchIndex >= 0) {
+                e.preventDefault();
+                $rows.eq(window.currentBatchIndex).trigger("click");
+            }
+        });
+
+        $(document).on("mouseenter", ".batch-row", function () {
+            if (!$("#batchModal").is(":visible")) return;
+
+            if (isKeyboardScrollingBatchModal) return;
+
+            batchNavMode = "mouse";
+
+            $("#batchModal")
+                .addClass("mouse-nav")
+                .removeClass("keyboard-nav");
+
+            const $rows = $(".batch-row:visible");
+            $rows.removeClass("selected");
+
+            $(this).addClass("selected");
+            window.currentBatchIndex = $rows.index(this);
+        });
+
+        $(document).on("mousemove", "#batchModal", function () {
+            isKeyboardScrollingBatchModal = false;
+        });
+
+        // ==========================================================
+        // 🔹 ITEM SALES RETURN SUMMARY
+        // ==========================================================
+        function loadItemSalesReturnSummary(customerId, itemId) {
+            $("#itemExtraInfoWrapper").show();
+
+            $.get(`/StockReturn/GetSalesReturnSummary`, {
+                customerId: customerId,
+                itemId: itemId
+            }, function (res) {
+
+                if (!res || !res.success || !res.data || res.data.length === 0) {
+                    $("#itemExtraInfoBody").html(`
+                        <tr>
+                            <td colspan="5" class="text-warning text-center fw-semibold">
+                                No sales / return data found
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                let rows = "";
+
+                res.data.forEach(x => {
+                    rows += `
+                        <tr>
+                            <td>${x.billNo}</td>
+                            <td>${x.batch}</td>
+                            <td class="text-end">${x.salesQty}</td>
+                            <td class="text-end">${x.returnQty}</td>
+                            <td class="text-end fw-semibold">
+                                ${x.remainingQty}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                $("#itemExtraInfoBody").html(rows);
+            });
+        }
+
+        // ==========================================================
+        // 🔹 DOCUMENT READY - MAIN EVENTS
+        // ==========================================================
+        $(document).ready(function () {
+        
+            // LOAD SETTINGS ON PAGE LOAD
+            $.ajax({
+                url: '/SalseSetting/GetSidebarSettings',
+                type: 'GET',
+                success: function (data) {
+                    isTabletWiseMode = (data.itemConversion === "TabletWise");
+            
+                    if (isTabletWiseMode) {
+                        $('#qtyView').text('Strip');
+                    } else {
+                        $('#qtyView').text('Qty');
+                    }
+            
+                    // ✅ APPLY TO EXISTING ROWS
+                    $("#StockReturnItemBody tr").each(function() {
+                        applyTabletWiseMode($(this));
+                    });
+                },
+                error: function () {
+                    console.error("❌ Could not load settings");
+                }
+            });
+
+            const customerId = $('#CustomerId').val();
+
+            if (customerId && customerId !== '0') {
+                window.selectedCustomerId = customerId;
+                loadReturnedQtyData(customerId);
+                fetchItemsByCustomerId(customerId);
+            }
+
+            toggleAddRowButton();
+            window.rowIndex = $("#StockReturnItemBody tr").length;
+
+            initializeGroupedPurchaseDataForEdit();
+
+            // Focus on ChallanDate on page load
+            setTimeout(() => $("#ChallanDate").focus(), 200);
+
+            // Doctor mobile blur
+            $('#doctorMobile').on("blur", function () {
+                const mobile = $(this).val();
+                if (mobile.length < 10) return;
+
+                showLoader("Searching doctor...");
+
+                $.ajax({
+                    url: '/PharmacyDoctor/GetDoctorByMobile',
+                    type: 'GET',
+                    data: { phoneNo: mobile },
+                    success: function (res) {
+                        hideLoader();
+
+                        if (res.found) {
+                            $('#PharmacyDoctorId').val(res.data.id);
+                            $('#doctorname').val(res.data.name);
+                            $('#doctorregno').val(res.data.registrationNo);
+                            toastr.success("Doctor found and assigned.");
+                        } else {
+                            if (confirm("Doctor not found. Do you want to create a new one?")) {
+                                $('#createDoctorModal').modal('show');
+                                $('#newDoctorPhone').val(mobile);
+                            }
+                        }
+                    },
+                    error: function () {
+                        hideLoader();
+                        alert("Error while searching doctor.");
+                    }
+                });
+            });
+
+            // Doctor form submit
+            $('#newDoctorForm').submit(function (e) {
+                e.preventDefault();
+
+                const formData = {
+                    Name: $('#newDoctorForm [name="Name"]').val(),
+                    PhoneNo: $('#newDoctorForm [name="PhoneNo"]').val(),
+                    Address: $('#newDoctorForm [name="Address"]').val(),
+                    RegistrationNo: $('#newDoctorForm [name="RegistrationNo"]').val(),
+                    Specialized: $('#newDoctorForm [name="Specialized"]').val(),
+                    Commission: parseFloat($('#newDoctorForm [name="Commission"]').val()) || 0
+                };
+
+                showLoader("Creating doctor...");
+
+                $.ajax({
+                    url: '/PharmacyDoctor/CreateDoctor',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    success: function (res) {
+                        hideLoader();
+
+                        if (res.success) {
+                            $('#PharmacyDoctorId').val(res.data.id);
+                            $('#doctorname').val(res.data.name);
+                            $('#doctorregno').val(res.data.registrationNo);
+                            $('#createDoctorModal').modal('hide');
+                            toastr.success("Doctor created and assigned.");
+                        } else {
+                            toastr.error("Doctor not created.");
+                        }
+                    },
+                    error: function () {
+                        hideLoader();
+                        toastr.error("Error saving doctor.");
+                    }
+                });
+            });
+
+            // Add row button
+            $("#addRow").click(function () {
+                addNewRow();
+            });
+
+            // Item input Enter key
+            $(document).on("keydown", ".item-input", function (e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    const row = $(this).closest("tr");
+                    currentRowForItemModal = row;
+
+                    const typedText = $(this).val().trim();
+                    openItemModal(typedText);
+                }
+            });
+
+            // Expiry date formatting
+            $('.expirydate').each(function () {
+                let val = $(this).val();
+                if (val.includes('-')) {
+                    let parts = val.split('-');
+                    if (parts.length >= 2) {
+                        let formatted = parts[1] + '/' + parts[0];
+                        $(this).val(formatted);
+                    }
+                } else {
+                    formatExpiryDateInput(this);
+                }
+            });
+
+            $(document).on('input click', '.expirydate', function () {
+                formatExpiryDateInput(this);
+            });
+
+            // QTY VALIDATION ON INPUT
+            $(document).on("input", ".qty", function () {
+                validateQtyPure($(this));
+            });
+
+            // QTY VALIDATION ON FOCUS
+            $(document).on("focus", ".qty", function () {
+                validateQtyPure($(this));
+            });
+
+            // QTY VALIDATION ON CLICK
+            $(document).on("click", ".qty", function () {
+                validateQtyPure($(this));
+            });
+
+
+            // ================================================================
+            // TABLET-QTY VALIDATION (NEW - ADD THIS)
+            // ================================================================
+            $(document).on("input", ".tablet-qty", function () {
+                validateQtyPure($(this));
+            });
+            
+            $(document).on("focus", ".tablet-qty", function () {
+                validateQtyPure($(this));
+            });
+            
+            $(document).on("click", ".tablet-qty", function () {
+                validateQtyPure($(this));
+            });
+
+
+            // Discount input
+            $(document).on("input", ".discount", function () {
+                let row = $(this).closest("tr");
+                calculateRow(row);
+            });
+
+            // Bill discount inputs
+            $("#discountPercent, #discountamount").on("input", function () {
+                calculateTotalSummary();
+            });
+
+            // Remove row
+            $(document).on("click", ".remove-row-btn", function () {
+                const $row = $(this).closest("tr");
+
+                const itemId = $row.find(".item-id").val();
+                const batch = $row.find(".batch").val()?.trim();
+                const expiry = $row.find(".expirydate").val()?.trim();
+                const mrp = parseFloat($row.find(".mrp").val()) || 0;
+                const rate = parseFloat($row.find(".rate").val()) || 0;
+                const originalQty = parseFloat($row.find(".original-qty").val()) || 0;
+
+                if (itemId && batch && expiry) {
+                    const [mm, yyyy] = expiry.split('/');
+                    const formattedExpiry = `${yyyy}-${mm.padStart(2, '0')}-01`;
+
+                    window.deletedOriginalQtyRecords.push({
+                        itemId,
+                        batch: batch.toLowerCase(),
+                        expiry: formattedExpiry,
+                        mrp,
+                        rate,
+                        originalQty
+                    });
+                }
+
+                $row.remove();
+                calculateTotalSummary();
+                updateRowIndices();
+                toggleAddRowButton();
+            });
+
+            // Form submit validation
+            $("form").submit(function (e) {
+                $("#employeeId").prop("disabled", false);
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                const form = this;
+
+                if (isFormSubmitting) return false;
+
+                toastr.options = {
+                    closeButton: true,
+                    progressBar: true,
+                    positionClass: "toast-top-right",
+                    timeOut: 3000,
+                    extendedTimeOut: 1000,
+                    preventDuplicates: true
+                };
+
+                const customerName = $("#customer").val()?.trim();
+
+                // if (!customerName) {
+                //     e.preventDefault();
+                //     toastr.error("Customer name is required.", "Customer Required");
+                //     return false;
+                // }
+
+                let hasValidItemRow = false;
+                let firstZeroQtyRow = null;
+                let firstIncompleteRow = null;
+
+                $("#StockReturnItemBody tr").each(function () {
+                    const row = $(this);
+                    const itemId = row.find(".item-id").val();
+                    const qty = parseFloat(row.find(".qty").val()) || 0;
+                    const batch = row.find(".batch").val();
+                    const tabletQty = parseFloat(row.find(".tablet-qty").val()) || 0;
+
+                    if ((!itemId && !firstIncompleteRow) || (itemId && (!batch || batch.trim() === "") && !firstIncompleteRow)) {
+                        firstIncompleteRow = row;
+                    }
+
+                    // if (itemId && qty <= 0 && !firstZeroQtyRow) {
+                    //     firstZeroQtyRow = row;
+                    // }
+                     
+
+                    // quantity validation
+                    if (itemId && qty <= 0 && tabletQty <= 0 && !firstZeroQtyRow) {
+                        firstZeroQtyRow = row;
+                    }
+
+                    // if (itemId && qty > 0) {
+                    //     hasValidItemRow = true;
+                    // }
+                    if (itemId && (qty > 0 || tabletQty > 0)) {
+                        hasValidItemRow = true;
+                    }
+                });
+
+                if (firstIncompleteRow) {
+                    e.preventDefault();
+                    toastr.error("Please complete or remove all item rows before saving.", "Incomplete Item Row");
+                    firstIncompleteRow.find(".item-input").focus();
+                    return false;
+                }
+
+                if (firstZeroQtyRow) {
+                    e.preventDefault();
+                    toastr.error("Quantity cannot be less than 1. Please enter valid quantity.", "Invalid Quantity");
+                    firstZeroQtyRow.find(".qty").focus().select();
+                    return false;
+                }
+
+                if (!hasValidItemRow) {
+                    e.preventDefault();
+                    toastr.error("Please add at least one item with quantity before saving.", "Item Required");
+                    return false;
+                }
+
+                // CONFIRMATION ADDED HERE
+                confirmSave(function (ok) {
+                    if (!ok) return;
+
+                    isFormSubmitting = true;
+                    showLoader("Saving sales return...");
+                    form.submit(); // REAL submit
+                });
+            });
+
+            // Discount initialization
+            var percentInput = $("#discountPercent");
+            if (parseFloat(percentInput.val()) === 0) {
+                percentInput.val(0);
+            }
+        });
+    </script>
+
+    <script>
+        /* ============================================================
+           🚀 KEYBOARD NAVIGATION
+           ============================================================ */
+
+        // Header fields navigation
+        $(document).on("keydown",
+            "#ChallanNo, #ChallanDate, #mobilenumber, #customer, #customeraddress, #doctorMobile, #doctorname, #doctorregno",
+            function (e) {
+
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+
+                const id = this.id;
+
+                switch (id) {
+                    case "ChallanNo":
+                        $("#ChallanDate").focus();
+                        break;
+
+                    // case "ChallanDate":
+                    //     $("#mobilenumber").focus();
+                    //     break;
+
+                    case "mobilenumber":
+                        $("#customer").focus();
+                        break;
+
+                    case "customer":
+                        $("#customeraddress").focus();
+                        break;
+
+                    case "customeraddress":
+                        if ($("#doctorMobile").length && $("#doctorMobile").is(":visible") && !$("#doctorMobile").is(":disabled")) {
+                            $("#doctorMobile").focus();
+                        } else {
+                            focusItemGridOrAddRow();
+                        }
+                        break;
+
+                    case "doctorMobile":
+                        $("#doctorname").focus();
+                        break;
+
+                    case "doctorname":
+                        $("#doctorregno").focus();
+                        break;
+
+                    case "doctorregno":
+                        focusItemGridOrAddRow();
+                        break;
+                }
+            }
+        );
+
+        function focusItemGridOrAddRow() {
+            setTimeout(() => {
+                const existingRows = $("#StockReturnItemBody tr").length;
+
+                if (existingRows > 0) {
+                    $("#StockReturnItemBody tr:first .item-input").focus();
+                } else {
+                    $("#addRow").click();
+
+                    setTimeout(() => {
+                        $("#StockReturnItemBody tr:first .item-input").focus();
+                    }, 150);
+                }
+            }, 100);
+        }
+
+        // Item input navigation
+        $(document).on("keydown", ".item-input", function (e) {
+            const row = $(this).closest("tr");
+
+            // Prevent option change on Left Arrow
+            if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                return;
+            }
+
+            if (e.key === "ArrowRight") {
+                e.preventDefault();
+                // TABLET-WISE: Item → Mrp
+                // STRIP-WISE: Item → Qty
+                if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                    row.find(".mrp").focus().select();
+                } else {
+                    row.find(".qty").focus().select();
+                }
+
+                //row.find(".qty").focus().select();
+                return;
+            }
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                const nextRow = row.next("tr");
+                if (nextRow.length) {
+                    nextRow.find(".item-input").focus();
+                }
+                return;
+            }
+
+            if (e.key === "ArrowUp") {
+                e.preventDefault();
+                const prevRow = row.prev("tr");
+                if (prevRow.length) {
+                    prevRow.find(".item-input").focus();
+                } else {
+                    $("#customeraddress").focus();
+                }
+            }
+        });
+         $(document).on("input", ".stripe-rate", function () {
+                let row = $(this).closest("tr");
+
+                let stripRate = parseFloat($(this).val()) || 0;
+
+                const itemId = row.find(".item-id").val();
+                let conversion = parseFloat(row.attr("data-conversion"));
+
+                if (!conversion || conversion <= 0) {
+                    conversion = itemConversionMap[itemId] || 1;
+                }
+
+                // 👇 reverse calculation
+                let tabletRate = stripRate / conversion;
+
+                // 👇 actual rate update karo (hidden field)
+                row.find(".rate").val(tabletRate.toFixed(4));
+
+                // 🔥 recalculation trigger
+                calculateRow(row);
+            });
+        // Item grid fields navigation
+        $(document).on("keydown", ".mrp, .qty, .tablet-qty, .discount, .reason", function (e) {
+            const row = $(this).closest("tr");
+            const input = $(this);
+
+            const isMrp = input.hasClass("mrp");
+            const isQty = input.hasClass("qty");
+            const isTabletQty = input.hasClass("tablet-qty");
+            const isDiscount = input.hasClass("discount");
+            const isReason = input.hasClass("reason");
+
+            // ================================================================
+            // 🔹 ENTER KEY NAVIGATION
+            // ================================================================
+            if (e.key === "Enter") {
+                e.preventDefault();
+
+                if (isMrp) {
+                    // MRP → TabletQty (TabletWise) or Qty (StripWise)
+                    if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                        row.find(".tablet-qty").focus().select();
+                    } else {
+                        row.find(".qty").focus().select();
+                    }
+                }
+                else if (isTabletQty) {
+                    // TabletQty → Discount (skip readonly Qty)
+                    row.find(".discount").focus().select();
+                }
+                else if (isQty) {
+                    // Qty → Discount
+                    row.find(".discount").focus().select();
+                }
+                else if (isDiscount) {
+                    // Discount → Reason
+                    row.find(".reason").focus().select();
+                }
+                else if (isReason) {
+                    // Reason → Validation and Next Row Logic
+                    const itemId = row.find(".item-id").val();
+                    const batch = row.find(".batch").val();
+
+                    if (!itemId || !batch) {
+                        toastr.warning("Please select Item and Batch before adding new row.");
+                        if (!itemId) {
+                            row.find(".item-input").focus();
+                        } else if (!batch) {
+                            row.find(".item-input").focus();
+                        }
+                        return;
+                    }
+
+                    // Validate quantity
+                    const $qtyInput = row.find(".qty");
+                    const qty = parseFloat($qtyInput.val()) || 0;
+
+                    if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                        const $qtyTabsInput = row.find(".tablet-qty");
+                        const qtyTabs = parseFloat($qtyTabsInput.val()) || 0;
+
+                        if (qty === 0 && qtyTabs === 0) {
+                            toastr.warning("Please enter quantity or tablet quantity.");
+                            $qtyTabsInput.focus().select();
+                            return;
+                        }
+
+                        if (qty < 0 || qtyTabs < 0) {
+                            toastr.warning("Quantity cannot be negative.");
+                            (qty < 0 ? $qtyInput : $qtyTabsInput).focus().select();
+                            return;
+                        }
+                    } else {
+                        if (qty < 1) {
+                            toastr.warning("Quantity cannot be less than 1.");
+                            $qtyInput.focus().select();
+                            return;
+                        }
+                    }
+
+                    // Add new row or go to next
+                    const isLastRow = row.is("#StockReturnItemBody tr:last");
+
+                    if (isLastRow) {
+                        $("#addRow").click();
+                        setTimeout(() => {
+                            $("#StockReturnItemBody tr:last .item-input").focus();
+                        }, 150);
+                    } else {
+                        const nextRow = row.next("tr");
+                        if (nextRow.length) {
+                            nextRow.find(".item-input").focus();
+                        }
+                    }
+                }
+
+                return;
+            }
+
+            // ================================================================
+            // 🔹 ARROW RIGHT NAVIGATION
+            // ================================================================
+            if (e.key === "ArrowRight") {
+                e.preventDefault();
+
+                if (isMrp) {
+                    // MRP → TabletQty (TabletWise) or Qty (StripWise)
+                    if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                        row.find(".tablet-qty").focus().select();
+                    } else {
+                        row.find(".qty").focus().select();
+                    }
+                }
+                else if (isTabletQty) {
+                    // TabletQty → Discount
+                    row.find(".discount").focus().select();
+                }
+                else if (isQty) {
+                    // Qty → Discount
+                    row.find(".discount").focus().select();
+                }
+                else if (isDiscount) {
+                    // Discount → Reason
+                    row.find(".reason").focus().select();
+                }
+
+                return;
+            }
+
+            // ================================================================
+            // 🔹 ARROW LEFT NAVIGATION
+            // ================================================================
+            if (e.key === "ArrowLeft") {
+                e.preventDefault();
+
+                if (isReason) {
+                    // Reason → Discount
+                    row.find(".discount").focus().select();
+                }
+                else if (isDiscount) {
+                    // Discount → TabletQty (TabletWise) or Qty (StripWise)
+                    if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                        row.find(".tablet-qty").focus().select();
+                    } else {
+                        row.find(".qty").focus().select();
+                    }
+                }
+                else if (isTabletQty) {
+                    // TabletQty → MRP
+                    row.find(".mrp").focus().select();
+                }
+                else if (isQty) {
+                    // Qty → MRP
+                    row.find(".mrp").focus().select();
+                }
+                else if (isMrp) {
+                    // MRP → Item
+                    row.find(".item-input").focus();
+                }
+
+                return;
+            }
+
+            // ================================================================
+            // 🔹 ARROW DOWN NAVIGATION
+            // ================================================================
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                const nextRow = row.next("tr");
+                if (!nextRow.length) return;
+
+                if (isMrp) {
+                    nextRow.find(".mrp").focus().select();
+                }
+                else if (isTabletQty) {
+                    nextRow.find(".tablet-qty").focus().select();
+                }
+                else if (isQty) {
+                    nextRow.find(".qty").focus().select();
+                }
+                else if (isDiscount) {
+                    nextRow.find(".discount").focus().select();
+                }
+                else if (isReason) {
+                    nextRow.find(".reason").focus().select();
+                }
+
+                return;
+            }
+
+            // ================================================================
+            // 🔹 ARROW UP NAVIGATION
+            // ================================================================
+            if (e.key === "ArrowUp") {
+                e.preventDefault();
+                const prevRow = row.prev("tr");
+                if (!prevRow.length) return;
+
+                if (isMrp) {
+                    prevRow.find(".mrp").focus().select();
+                }
+                else if (isTabletQty) {
+                    prevRow.find(".tablet-qty").focus().select();
+                }
+                else if (isQty) {
+                    prevRow.find(".qty").focus().select();
+                }
+                else if (isDiscount) {
+                    prevRow.find(".discount").focus().select();
+                }
+                else if (isReason) {
+                    prevRow.find(".reason").focus().select();
+                }
+            }
+        });
+
+        // // Item grid fields navigation
+        // $(document).on("keydown", ".qty, .rate, .discount, .reason", function (e) {
+        //     const row = $(this).closest("tr");
+        //     const input = $(this);
+
+        //     const isQty = input.hasClass("qty");
+        //     const isRate = input.hasClass("rate");
+        //     const isDiscount = input.hasClass("discount");
+        //     const isReason = input.hasClass("reason");
+
+        //     if (e.key === "Enter") {
+        //         e.preventDefault();
+
+        //         if (isQty) {
+        //             row.find(".rate").focus().select();
+        //         }
+        //         else if (isRate) {
+        //             row.find(".discount").focus().select();
+        //         }
+        //         else if (isDiscount) {
+        //             row.find(".reason").focus().select();
+        //         }
+        //         else if (isReason) {
+        //             const itemId = row.find(".item-id").val();
+        //             const batch = row.find(".batch").val();
+
+        //             if (!itemId || !batch) {
+        //                 toastr.warning("Please select Item and Batch before adding new row.");
+
+        //                 if (!itemId) {
+        //                     row.find(".item-input").focus();
+        //                 } else if (!batch) {
+        //                     row.find(".item-input").focus();
+        //                 }
+        //                 return;
+        //             }
+
+        //             const $qtyInput = row.find(".qty");
+        //             const qty = parseFloat($qtyInput.val()) || 0;
+
+        //             if (qty < 1) {
+        //                 toastr.warning("Quantity cannot be less than 1.");
+        //                 $qtyInput.focus().select();
+        //                 return;
+        //             }
+
+        //             const isLastRow = row.is("#StockReturnItemBody tr:last");
+
+        //             if (isLastRow) {
+        //                 $("#addRow").click();
+
+        //                 setTimeout(() => {
+        //                     $("#StockReturnItemBody tr:last .item-input").focus();
+        //                 }, 150);
+        //             } else {
+        //                 const nextRow = row.next("tr");
+
+        //                 if (nextRow.length) {
+        //                     nextRow.find(".item-input").focus();
+        //                 }
+        //             }
+        //         }
+
+        //         return;
+        //     }
+
+        //     if (e.key === "ArrowRight") {
+        //         e.preventDefault();
+        //         if (isQty) row.find(".rate").focus().select();
+        //         else if (isRate) row.find(".discount").focus().select();
+        //         else if (isDiscount) row.find(".reason").focus().select();
+        //         return;
+        //     }
+
+        //     if (e.key === "ArrowLeft") {
+        //         e.preventDefault();
+        //         if (isReason) row.find(".discount").focus().select();
+        //         else if (isDiscount) row.find(".rate").focus().select();
+        //         else if (isRate) row.find(".qty").focus().select();
+        //         else if (isQty) row.find(".item-input").focus();
+        //         return;
+        //     }
+
+        //     if (e.key === "ArrowDown") {
+        //         e.preventDefault();
+        //         const nextRow = row.next("tr");
+        //         if (!nextRow.length) return;
+
+        //         if (isQty) nextRow.find(".qty").focus().select();
+        //         else if (isRate) nextRow.find(".rate").focus().select();
+        //         else if (isDiscount) nextRow.find(".discount").focus().select();
+        //         else if (isReason) nextRow.find(".reason").focus().select();
+        //         return;
+        //     }
+
+        //     if (e.key === "ArrowUp") {
+        //         e.preventDefault();
+        //         const prevRow = row.prev("tr");
+        //         if (!prevRow.length) return;
+
+        //         if (isQty) prevRow.find(".qty").focus().select();
+        //         else if (isRate) prevRow.find(".rate").focus().select();
+        //         else if (isDiscount) prevRow.find(".discount").focus().select();
+        //         else if (isReason) prevRow.find(".reason").focus().select();
+        //     }
+        // });
+
+        // TAB KEY FUNCTIONALITY
+        $(document).on("keydown", ".item-input, .qty, .rate, .discount, .reason", function (e) {
+            if (e.key !== "Tab") return;
+
+            const row = $(this).closest("tr");
+
+            const itemId = row.find(".item-id").val();
+            const batch = row.find(".batch").val()?.trim();
+
+            const isBlankRow =
+                (!itemId || itemId === "") &&
+                (!batch || batch === "");
+
+            if (!isBlankRow) return;
+
+            const totalRows = $("#StockReturnItemBody tr").length;
+
+            if (totalRows <= 1) {
+                e.preventDefault();
+                toastr.error("At least one item row is required", "Validation Error");
+                return;
+            }
+
+            e.preventDefault();
+            row.remove();
+
+            setTimeout(() => {
+                $("#discountPercent").focus().select();
+            }, 50);
+        });
+
+        // Total fields navigation
+        $(document).on("keydown", "[name='Total']", function (e) {
+            if (["Enter", "ArrowRight", "ArrowDown"].includes(e.key)) {
+                e.preventDefault();
+                $("#discountPercent").focus().select();
+            }
+        });
+
+        $(document).on("keydown", "#discountPercent", function (e) {
+            if (["Enter", "ArrowRight", "ArrowDown"].includes(e.key)) {
+                e.preventDefault();
+                $("#discountamount").focus().select();
+                return;
+            }
+
+            if (["ArrowLeft", "ArrowUp"].includes(e.key)) {
+                e.preventDefault();
+                $("[name='Total']").focus().select();
+            }
+        });
+
+        $(document).on("keydown", "#discountamount", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                return;
+            }
+
+            if (["ArrowLeft", "ArrowUp"].includes(e.key)) {
+                e.preventDefault();
+                $("#discountPercent").focus().select();
+            }
+        });
+
+        // End key save
+        $(document).on("keydown", function (e) {
+            if (e.key !== "End") return;
+
+            if ($(".modal.show").length > 0) return;
+
+            const active = document.activeElement;
+            if (active &&
+                (active.tagName === "TEXTAREA" ||
+                 active.getAttribute("contenteditable") === "true")) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const $saveBtn = $("form button[type='submit']:visible:first");
+
+            if ($saveBtn.length) {
+                console.log("End key → Save with confirmation");
+                $saveBtn.trigger("click");
+            }
+        });
+    </script>
+    <script>
+        function resetItemGrid() {
+            $("#StockReturnItemBody").empty();
+
+            $("[name='Total']").val("0.00");
+            $("#discountPercent").val("0");
+            $("#discountamount").val("0");
+            $("[name='Totaldiscount']").val("0.00");
+            $("[name='TotalGstAmt']").val("0.00");
+            $("[name='TotalPayable']").val("0.00");
+
+            rowIndex = 0;
+            groupedPurchaseData = [];
+            returnedQtyData = [];
+
+            toggleAddRowButton();
+
+            // clear item extra info
+            resetItemExtraInfo();
+        }
+        function resetItemExtraInfo() {
+            $("#itemExtraInfoBody").html(`
+                <tr>
+                    <td colspan="5" class="text-center text-muted">
+                        No item selected
+                    </td>
+                </tr>
+            `);
+        }
+    </script>
+
+    <script>
+        function confirmCustomerChange(callback) {
+            if (typeof Swal !== 'undefined') {
+                const mobileInput = document.querySelector('#mobilenumber');
+                if (mobileInput) {
+                    mobileInput.setAttribute('disabled', 'true');
+                    mobileInput.blur();
+                }
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: 'Changing mobile number will clear all items and calculations.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, proceed!',
+                    cancelButtonText: 'No, cancel',
+                    reverseButtons: true,
+                    allowEnterKey: true,
+                    allowEscapeKey: true,
+                    allowOutsideClick: false,
+                    backdrop: true,
+                    focusConfirm: false,
+                    focusCancel: false,
+
+                    didOpen: () => {
+                        const confirmBtn = document.querySelector('.swal2-confirm');
+
+                        const focusBtn = () => {
+                            if (confirmBtn) {
+                                confirmBtn.focus();
+                            }
+                        };
+
+                        focusBtn();
+                        setTimeout(focusBtn, 50);
+                        setTimeout(focusBtn, 100);
+                    },
+
+                    didClose: () => {
+                        if (mobileInput) {
+                            mobileInput.removeAttribute('disabled');
+                        }
+                    }
+                }).then((result) => {
+                    if (mobileInput) {
+                        mobileInput.removeAttribute('disabled');
+                    }
+
+                    callback(result.isConfirmed === true);
+                });
+            } else {
+                callback(confirm('Changing mobile number will clear all items and calculations. Continue?'));
+            }
+        }
+    </script>
+
+    <script>
+        // Global keyboard blocker
+        document.addEventListener('keydown', function (e) {
+            if (typeof Swal !== 'undefined' && Swal.isVisible()) {
+                const target = e.target;
+
+                if (!target.classList.contains('swal2-confirm') &&
+                    !target.classList.contains('swal2-cancel') &&
+                    !target.closest('.swal2-container')) {
+
+                    const allowedKeys = ['Enter', 'Escape', 'Tab', 'ArrowLeft', 'ArrowRight', 'Space'];
+
+                    if (!allowedKeys.includes(e.key)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                    }
+                }
+            }
+        }, true);
+    </script>
+
+    <!-- ================================================================
+         🔹 CUSTOMER F1 LIST
+         ================================================================ -->
+    <script>
+        $(document).on("click", "#btnF1CustomerList", function (e) {
+            e.preventDefault();
+
+            showLoader("Loading customers...");
+
+            $.get('/Sales/GetCustomer', function (res) {
+                hideLoader();
+
+                if (!res.found || !res.data || res.data.length === 0) {
+                    toastr.info("No customer found.");
+                    return;
+                }
+
+                let rows = "";
+
+                res.data.forEach(customer => {
+                    const customerId = customer.id || customer.Id || "";
+                    const customerName = customer.name || customer.Name || "";
+                    const mobileNo = customer.phoneNo || customer.PhoneNo || "";
+                    const address = customer.address || customer.Address || "";
+
+                    rows += `<tr class="customer-row" tabindex="0"
+                        data-customerid="${customerId}"
+                        data-name="${customerName}"
+                        data-phone="${mobileNo}"
+                        data-address="${address}">
+                        <td>${customerName}</td>
+                        <td>${mobileNo}</td>
+                    </tr>`;
+                });
+
+                $("#customerTableBody").html(rows);
+                $("#customerSearch").val("");
+                currentCustomerIndex = -1;
+                $("#customerListModal").modal("show");
+            }).fail(function () {
+                hideLoader();
+                toastr.error("Error loading customers");
+            });
+        });
+
+        $(document).on("keydown", "#mobilenumber", function (e) {
+            if (e.key !== "F1") return;
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            $("#btnF1CustomerList").trigger("click");
+        });
+
+        $(document).on("input", "#customerSearch", function () {
+            const searchText = $(this).val().toLowerCase().trim();
+
+            $("#customerTableBody tr").each(function () {
+                const customerName = ($(this).data("name") || "").toString().toLowerCase();
+                const mobileNo = ($(this).data("phone") || "").toString().toLowerCase();
+
+                $(this).toggle(customerName.includes(searchText) || mobileNo.includes(searchText));
+            });
+
+            currentCustomerIndex = -1;
+            $("#customerTableBody .customer-row").removeClass("selected");
+        });
+
+        $(document).on("keydown", function (e) {
+            if (!$("#customerListModal").is(":visible")) return;
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                customerNavMode = "keyboard";
+                isKeyboardScrollingCustomerModal = true;
+                $("#customerListModal")
+                    .addClass("keyboard-nav")
+                    .removeClass("mouse-nav");
+            }
+
+            const $rows = $(".customer-row:visible");
+            if (!$rows.length) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+
+                if (currentCustomerIndex === -1) {
+                    currentCustomerIndex = 0;
+                }
+                else if (currentCustomerIndex < $rows.length - 1) {
+                    currentCustomerIndex++;
+                }
+
+                $rows.removeClass("selected");
+                $rows.eq(currentCustomerIndex).addClass("selected");
+                $rows.eq(currentCustomerIndex)[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+
+                if (currentCustomerIndex <= 0) return;
+
+                currentCustomerIndex--;
+
+                $rows.removeClass("selected");
+                $rows.eq(currentCustomerIndex).addClass("selected");
+                $rows.eq(currentCustomerIndex)[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+            else if (e.key === "Enter") {
+                e.preventDefault();
+
+                if (currentCustomerIndex === -1) {
+                    currentCustomerIndex = 0;
+                }
+
+                $rows.eq(currentCustomerIndex).trigger("click");
+            }
+        });
+
+        $(document).on("click", ".customer-row", function (e) {
+            e.preventDefault();
+
+            const customerId = $(this).data("customerid");
+            const customerName = $(this).data("name") || "";
+            const mobileNo = $(this).data("phone") || "";
+            const address = $(this).data("address") || "";
+
+            $("#billingType").val("registered");
+            $("#mobilenumber, #customer, #customeraddress").prop("disabled", false);
+            $("#CustomerId").val(customerId);
+            $("#mobilenumber").val(mobileNo);
+            $("#customer").val(customerName);
+            $("#customeraddress").val(address);
+
+            window.selectedCustomerId = customerId;
+
+            if (typeof loadReturnedQtyData === "function") {
+                loadReturnedQtyData(customerId);
+            }
+
+            if (typeof fetchItemsByCustomerId === "function") {
+                fetchItemsByCustomerId(customerId);
+            }
+
+            hidePhoneError();
+            $("#customerListModal").modal("hide");
+
+            setTimeout(() => {
+                $("#customer").focus().select();
+            }, 150);
+        });
+
+        $(document).on("mouseenter", ".customer-row", function () {
+            if (!$("#customerListModal").is(":visible")) return;
+            if (isKeyboardScrollingCustomerModal) return;
+
+            customerNavMode = "mouse";
+
+            $("#customerListModal")
+                .addClass("mouse-nav")
+                .removeClass("keyboard-nav");
+
+            const $rows = $(".customer-row:visible");
+            $rows.removeClass("selected");
+            $(this).addClass("selected");
+
+            currentCustomerIndex = $rows.index(this);
+        });
+
+        $(document).on("mousemove", "#customerListModal", function () {
+            isKeyboardScrollingCustomerModal = false;
+        });
+
+        $('#customerListModal').on('shown.bs.modal', function () {
+            customerNavMode = "keyboard";
+
+            $("#customerListModal")
+                .addClass("keyboard-nav")
+                .removeClass("mouse-nav");
+
+            const $rows = $(".customer-row:visible");
+
+            currentCustomerIndex = -1;
+
+            if ($rows.length) {
+                currentCustomerIndex = 0;
+                $rows.removeClass("selected");
+                $rows.eq(currentCustomerIndex).addClass("selected");
+                $rows.eq(currentCustomerIndex)[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+
+            setTimeout(() => {
+                $("#customerSearch").focus().select();
+            }, 200);
+        });
+
+        $('#customerListModal').on('hidden.bs.modal', function () {
+            currentCustomerIndex = -1;
+            $("#customerTableBody .customer-row").removeClass("selected");
+        });
+    </script>
+
+    <script>
+        function proceedCustomerSearch(mobileNo) {
+            showLoader("Searching customer...");
+
+            $.ajax({
+                url: '/Sales/GetCustomerByMobile',
+                type: 'GET',
+                data: { mobileNo: mobileNo },
+                success: function (res) {
+                    hideLoader();
+
+                    if (res.found) {
+                        $('#customer').val(res.data.name);
+                        $('#CustomerId').val(res.data.id);
+                        $('#customeraddress').val(res.data.address);
+
+                        window.selectedCustomerId = res.data.id;
+
+                        loadReturnedQtyData(res.data.id);
+                        fetchItemsByCustomerId(res.data.id);
+
+                        toastr.success("Customer found and auto-filled.");
+                    } else {
+                        resetItemGrid();
+                        $("#itemExtraInfoWrapper").hide();
+
+                        window.selectedCustomerId = null;
+                        $('#CustomerId').val("");
+                        $('#customer').val("");
+                        $('#customeraddress').val("");
+
+                        toastr.error("Customer not found! Please enter a registered customer's mobile number.");
+
+                        setTimeout(() => {
+                            $("#mobilenumber").focus().select();
+                        }, 100);
+                    }
+                },
+                error: function () {
+                    hideLoader();
+                    toastr.error("An error occurred while searching for the customer.");
+
+                    setTimeout(() => {
+                        $("#mobilenumber").focus().select();
+                    }, 100);
+                }
+            });
+        }
+    </script>
+    <script>
+        // DEFINE GLOBALLY (BEFORE document.ready)
+        function applyTabletWiseMode(row) {
+            const qtyInput = row.find(".qty");
+            const tabletQtyInput = row.find(".tablet-qty");
+
+            if (@ViewBag.BusinessType === 2 && isTabletWiseMode === true) {
+                // TabletWise: Qty disable, TabletQty enable
+                qtyInput.prop("readonly", true).css("background-color", "#e9ecef");
+                tabletQtyInput.prop("readonly", false).css("background-color", "#fff");
+            } else {
+                // StripWise: Qty enable, TabletQty disable + hide
+                qtyInput.prop("readonly", false).css("background-color", "#fff");
+                tabletQtyInput.prop("readonly", true).val("0").css("background-color", "#e9ecef");
+            }
+        }
+
+        // Q.TABLET INPUT HANDLERS (GLOBAL)
+        $(document).on("input", ".tablet-qty", function () {
+            if (!isTabletWiseMode) return;
+
+            const row = $(this).closest("tr");
+            const itemId = row.find(".item-id").val();
+
+            let conversion = parseFloat(row.attr("data-conversion"));
+
+            if (!conversion || conversion <= 0) {
+                conversion = itemConversionMap[itemId] || 1;
+            }
+
+            let tabletQty = parseFloat($(this).val()) || 0;
+
+            // Calculate strips
+            let strips = Math.floor(tabletQty / conversion);
+            let remainingTablets = tabletQty % conversion;
+
+            // Update fields
+            row.find(".qty").val(strips);
+            $(this).val(remainingTablets);
+
+            // VALIDATE AFTER CALCULATION
+            validateQtyPure($(this));
+
+            // Recalculate row
+            calculateRow(row);
+        });
+
+        $(document).on("blur", ".tablet-qty", function () {
+            if (!isTabletWiseMode) return;
+
+            const row = $(this).closest("tr");
+            const itemId = row.find(".item-id").val();
+
+            let conversion = parseFloat(row.attr("data-conversion"));
+            if (!conversion || conversion <= 0) {
+                conversion = itemConversionMap[itemId] || 1;
+            }
+
+            let tabletQty = parseFloat($(this).val()) || 0;
+
+            // Show only remaining tablets
+            let remainingTablets = tabletQty % conversion;
+
+            $(this).val(remainingTablets);
+
+            // RE-CALCULATE ROW
+            calculateRow(row);
+        });
+    </script>
+    <script>
+        $(document).on("keydown", function (e) {
+            // F10 pressed
+            if (e.key === "F10") {
+
+                // ❌ Browser refresh band
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                // ❌ Agar koi modal open hai to kuch mat karo
+                if ($(".modal.show").length > 0) return;
+
+                $("#refreshBtn").trigger("click");
+            }
+
+            // F11 pressed
+            if (e.key === "F11") {
+
+                // ❌ Browser refresh band
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                // ❌ Agar koi modal open hai to kuch mat karo
+                if ($(".modal.show").length > 0) return;
+
+                $("#btnCancel").trigger("click");
+            }
+        });
+
+        function confirmCancel(callback) {
+            Swal.fire({
+                title: 'Confirm Cancel?',
+                text: 'Changes will be lost. Do you want to cancel?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '❌ Yes, Cancel',
+                cancelButtonText: '↩ No, Stay',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then((result) => {
+                callback(result.isConfirmed);
+            });
+        }
+
+        $("#btnCancel").on("click", function (e) {
+            e.preventDefault();
+
+            confirmCancel(function (isConfirmed) {
+                if (isConfirmed) {
+                    window.location.href = $("#btnCancel").attr("href");
+                }
+            });
+        });
+
+        $(document).on("click", "#refreshBtn", function () {
+            Swal.fire({
+                title: 'Refresh Page?',
+                html: `
+                    <p class="text-danger mb-2">⚠️ Any unsaved changes will be lost!</p>
+                    <p class="mb-0">All items, payments, and customer details will be cleared.</p>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '🔄 Yes, Refresh',
+                cancelButtonText: '❌ No, Stay',
+                reverseButtons: true,
+                customClass: {
+                    confirmButton: 'btn btn-primary',
+                    cancelButton: 'btn btn-secondary'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loader while refreshing
+                    showLoader("Refreshing page...");
+                    location.reload();
+                }
+            });
+        });
+    </script>
+}

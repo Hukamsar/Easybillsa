@@ -1,0 +1,68 @@
+﻿@using EasyBill.Models.ViewModels
+@model List<LedgerVM>
+
+<div class="card border-0 rounded-2 mb-4">
+    <div class="p-2 text-white" style="background:#2b6ac9;">
+        <h5 class="mb-0">Ledger Summary</h5>
+    </div>
+</div>
+<div class="row mb-2">
+    <div class="col text-end">
+<a asp-action="ExportLedgerSummaryExcel">
+    <i class="fa-solid fa-file-excel text-success fs-5"></i>
+</a>
+
+<a asp-action="ExportLedgerSummaryPdf">
+    <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+</a>
+</div>
+</div>
+
+<table class="table table-hover table-bordered mb-0" id="ledgerTable">
+            <thead class="text-white" style="background:#2b6ac9;">
+                <tr>
+                    <th>Party Name</th>
+                    <th>Type</th>
+                    <th class="text-end">Debit (Dr)</th>
+                    <th class="text-end">Credit (Cr)</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr onclick="loadDetail(@item.Id, '@item.Type')">
+                        <td class="fw-semibold">@item.PartyName</td>
+                        <td>
+                            <span class="badge @(item.Type == "Customer" ? "bg-success" : "bg-warning text-dark")">
+                                @item.Type
+                            </span>
+                        </td>
+
+                        <td class="text-end text-danger fw-semibold">
+                            @(item.Debit > 0 ? item.Debit.ToString("N2") : "-")
+                        </td>
+
+                        <td class="text-end text-success fw-semibold">
+                            @(item.Credit > 0 ? item.Credit.ToString("N2") : "-")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+<script>
+    function loadDetail(id, type) {
+        var baseUrl = '@Url.Action("LedgerDetail", "Sales")';
+        var url = baseUrl + '?id=' + id + '&type=' + encodeURIComponent(type);
+        window.location.href = url;
+    }
+</script>
+
+<style>
+    #ledgerTable tbody tr:hover {
+        background: #e6f2f2;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+</style>

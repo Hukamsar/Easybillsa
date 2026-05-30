@@ -1,0 +1,288 @@
+﻿@model IEnumerable<StockReturn>
+
+@{
+    ViewData["Title"] = "Stock Return Index";
+}
+
+<style>
+    /* Filter card styling */
+    .card-header {
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    /* DataTable styling */
+    #salesTable thead th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    #salesTable tbody tr:hover {
+        background-color: #f1f3f5;
+    }
+
+    /* Loading indicator */
+    .loading-spinner {
+        display: inline-block;
+        width: 2rem;
+        height: 2rem;
+        border: 0.25em solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spinner-border 0.75s linear infinite;
+    }
+
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        <h6 class="mb-0">
+            Sales Return
+        </h6>
+    </div>
+</div>
+
+<p>
+    <a asp-action="Create" class="btn mb-1 float-end text-light" style="background: #2b6ac9;">
+        <i class="bi bi-plus-circle"></i> Add
+    </a>
+</p>
+
+<div class="card mb-3 shadow-sm">
+    <!-- Header -->
+    <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-funnel-fill text-primary me-1"></i>
+        Stock Return Filters
+    </div>
+
+    <!-- Body -->
+    <div class="card-body">
+        <form id="salesFilterForm" method="get">
+            <div class="row g-3">
+
+                <!-- Start Date -->
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            Start Date
+                        </label>
+                        <div class="col-7">
+                            <input type="date"
+                                   name="StartBillDate"
+                                   id="filterStartDate"
+                                   value="@Context.Request.Query["StartBillDate"]"
+                                   class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- End Date -->
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            End Date
+                        </label>
+                        <div class="col-7">
+                            <input type="date"
+                                   name="EndBillDate"
+                                   id="filterEndDate"
+                                   value="@Context.Request.Query["EndBillDate"]"
+                                   class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row g-3">
+
+                <!-- Bill No -->
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            Challan No
+                        </label>
+                        <div class="col-7">
+                            <input type="text"
+                                   name="BillNo"
+                                   id="filterBillNo"
+                                   value="@Context.Request.Query["BillNo"]"
+                                   class="form-control form-control-sm"
+                                   placeholder="Enter Challan No" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer -->
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            Customer
+                        </label>
+                        <div class="col-7">
+                            <select name="CustomerId"
+                                    class="form-control form-control-sm">
+                                <option value="">-- Select Customer --</option>
+                                @foreach (var customer in ViewBag.CustomerList)
+                                {
+                                    <option value="@customer.Value">
+                                        @customer.Text
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile -->
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            Mobile No
+                        </label>
+                        <div class="col-7">
+                            <input type="tel"
+                                   name="MobileNo"
+                                   id="filterMobile"
+                                   class="form-control form-control-sm"
+                                   placeholder="Mobile Number"
+                                   maxlength="10"
+                                   inputmode="numeric" />
+
+                            <small id="mobileError" class="text-danger"></small>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="col-md-3  d-flex align-items-center justify-content-end">
+                    <button type="submit" class="btn btn-sm btn-primary me-1">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="btnClear">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="salesTableWrapper">
+    @await Html.PartialAsync("_SalesReturnTable", Model)
+</div>
+
+@section Scripts {
+    <script>
+        // Global DataTable reference
+        let salesDataTable = null;
+
+        // Initialize DataTable on page load
+        $(document).ready(function () {
+            initializeDataTable();
+        });
+
+        // Initialize/Re-initialize DataTable
+        function initializeDataTable() {
+            if (salesDataTable) {
+                salesDataTable.destroy();
+            }
+
+            salesDataTable = $("#salesTable").DataTable({
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                order: [[1, 'desc']], // Sort by date descending
+                responsive: true,
+                language: {
+                    search: "Search:",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    emptyTable: "No data available"
+                }
+            });
+        }
+
+        // Filter form submit
+        $("#salesFilterForm").on("submit", function (e) {
+            e.preventDefault();
+
+            // Show loading indicator (optional)
+            $("#salesTableWrapper").html('<div class="text-center p-5"><i class="bi bi-hourglass-split"></i> Loading...</div>');
+
+            $.ajax({
+                url: '@Url.Action("GetDataByFilter", "StockReturn")',
+                type: 'GET',
+                data: $(this).serialize(),
+                success: function (result) {
+                    $("#salesTableWrapper").html(result);
+                    initializeDataTable();
+                },
+                error: function (xhr) {
+                    console.error("Filter Error:", xhr.responseText);
+                    toastr.error("Error while filtering data", "Filter Failed");
+                    
+                    // Restore previous table on error
+                    $("#salesTableWrapper").html('<div class="alert alert-danger">Failed to load data. Please try again.</div>');
+                }
+            });
+        });
+
+        // Clear filters
+        $("#btnClear").on("click", function () {
+            // Clear all filter inputs
+            $("#salesFilterForm input[type='text']").val("");
+            $("#salesFilterForm input[type='date']").val("");
+            $("#salesFilterForm select").prop("selectedIndex", 0);
+
+            // Show loading
+            $("#salesTableWrapper").html('<div class="text-center p-5"><i class="bi bi-hourglass-split"></i> Loading...</div>');
+
+            // Reload full table (no filters)
+            $.ajax({
+                url: '@Url.Action("GetDataByFilter", "StockReturn")',
+                type: 'GET',
+                success: function (result) {
+                    $("#salesTableWrapper").html(result);
+                    initializeDataTable();
+                },
+                error: function (xhr) {
+                    console.error("Clear Error:", xhr.responseText);
+                    toastr.error("Error while clearing filters", "Clear Failed");
+                }
+            });
+        });
+    </script>
+}
+<script>
+    document.getElementById("filterMobile").addEventListener("input", function () {
+
+        // Sirf number allow
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+
+        const value = this.value;
+        const error = document.getElementById("mobileError");
+
+        if (value.length === 10) {
+            if (!/^[5-9][0-9]{9}$/.test(value)) {
+                error.innerText = "Enter 10-digit mobile starting with 5–9";
+            } else {
+                error.innerText = "";
+            }
+        } else {
+            error.innerText = "";
+        }
+    });
+</script>

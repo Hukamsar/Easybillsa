@@ -1,0 +1,71 @@
+﻿ <div id="divisionpopup" class="popup">
+	 <div class="popup-content">
+       <h2>Add Division</h2>
+	   <form id="divisionform">
+		   <label>Name :</label>
+		   <input type="text" id="divisionname" class="form-control" required />
+            <label>Select company:</label>
+            <select id="companyDropdown" class="form-control">
+                <option value="" disabled selected>Loading...</option>
+            </select>
+		   <br />
+		   <button type="button" class="btn btn-success" onclick="savedivision()">Save</button>
+		   <button type="button" class="btn btn-danger" onclick="closedivision()">Close</button>
+	   </form>
+	 </div>
+ </div>
+<style>
+    .popup {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        max-width: 500px;
+        min-width: 300px;
+        background: white;
+        padding: 20px;
+        box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+        border-radius: 5px;
+        z-index: 1000;
+    }
+
+    .popup-content {
+        text-align: center;
+    }
+
+    .popup-content label {
+        display: block;
+        text-align: center;
+        margin-bottom: 6px;
+    }
+
+    .popup-content .form-control {
+        width: 100%;
+        text-align: center;
+    }
+</style>
+<script>
+        document.addEventListener("DOMContentLoaded", function () {
+        loadCompanies();
+    });
+
+    function loadCompanies() {
+        fetch("/ItemMaster/GetCompanies") // ASP.NET Core API call
+            .then(response => response.json())
+            .then(data => {
+                let dropdown = document.getElementById("companyDropdown");
+                dropdown.innerHTML = '<option value="" disabled selected>Select company</option>';
+
+                data.forEach(category => {
+                    let option = document.createElement("option");
+                    option.value = category.value; // Ensure your API returns 'value' and 'text'
+                    option.textContent = category.text;
+                    dropdown.appendChild(option);
+                });
+            })
+            .catch(error => console.error("Error fetching companies:", error));
+    }
+
+</script>

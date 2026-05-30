@@ -1,0 +1,24 @@
+﻿ @model IEnumerable<ApplicationUsers>
+@{
+    ViewData["Title"] = "User List";
+}
+
+<table class="table table-bordered table-striped">
+    <thead class="table">
+        <tr>
+            <th>Name</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var item in Model){
+            <tr>
+                <td>@item.UserName</td>
+               <td> <a asp-controller="User" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                    <i class="bi bi-pencil-square"></i>
+                </a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

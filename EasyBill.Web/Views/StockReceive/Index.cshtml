@@ -1,0 +1,100 @@
+﻿@model IEnumerable<StockReceive>
+
+@{
+    ViewData["Title"] = "Index";
+}
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            Stock Receive
+        </div>
+    </div>
+
+</div>
+<p>
+    <a asp-action="Create" class="btn btn-primary mb-1 float-end"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table class="table" id="stockRecieveTbl">
+    <thead class="custom-header">
+        <tr>
+
+            <th>
+                @Html.DisplayNameFor(model => model.ChallanNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ChallanDate)
+            </th>
+            <th>
+                Supplier
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.MobileNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Address)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.ChallanNo)
+                </td>
+                <td>
+                    @item.ChallanDate?.ToString("dd/MM/yyyy")
+                </td>
+                <td>
+                    @(item.Supplier?.FirstName ?? item.Customers?.Name)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.MobileNo)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Address)
+                </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="StockReceive" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="StockReceive" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#stockRecieveTbl").DataTable({
+                "order": [[2, "desc"]]
+            });
+        });
+    </script>
+}

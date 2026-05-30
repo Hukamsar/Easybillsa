@@ -1,0 +1,294 @@
+﻿@model IEnumerable<EasyBill.Models.ViewModels.PurchaseItemVM>
+@using EasyBill.Models
+
+@{
+    decimal totalQty = 0M;
+    decimal totalAmount = 0M;
+
+    var reportType = ViewBag.ReportType?.ToString() ?? "Details";
+    bool isTabletWise = ViewBag.IsTabletWise != null && (bool)ViewBag.IsTabletWise;
+
+    if (Model != null && Model.Any())
+    {
+        if (reportType == "Details")
+        {
+            totalQty = Model.Sum(x => x.Qty);
+            totalAmount = Model.Sum(x => x.Amount);
+        }
+        else
+        {
+            totalQty = Model.Sum(x => x.AvailableQty ?? 0);
+            totalAmount = Model.Sum(x => x.PurchaseAmount);
+        }
+    }
+}
+<style>
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center"
+         style="background:#2b6ac9">
+
+        <span class="fw-bold">
+            Company Wise Stock
+        </span>
+
+        <span class="ms-auto">
+            @if (!isTabletWise)
+            {
+                <text>Total Qty: <span class="fw-bold">@totalQty.ToString("0.00")</span> | </text>
+            }
+            Total Amount:
+            <span class="fw-bold">₹ @totalAmount.ToString("0.00")</span>
+        </span>
+
+    </div>
+</div>
+
+
+<div class="card shadow-sm p-3 mb-4">
+    <form method="get">
+        <div class="row align-items-end">
+            <div class="col-md-2">
+                <label class="form-label fw-bold">From Date</label>
+                <input type="text"
+                       name="fromDate"
+                       value="@ViewBag.FromDate"
+                       class="form-control form-control-sm datepicker"
+                       placeholder="dd-MM-yyyy"
+                       autocomplete="off" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-bold">To Date</label>
+                <input type="text"
+                       name="toDate"
+                       value="@ViewBag.ToDate"
+                       class="form-control form-control-sm datepicker"
+                       placeholder="dd-MM-yyyy"
+                       autocomplete="off" />
+            </div>
+
+            <div class="col-md-3">
+                <label>Company</label>
+                <select name="companyId" class="form-control form-control-sm">
+                    <option value="">All Company</option>
+                    @if (ViewBag.companydata != null)
+                    {
+                        foreach (var c in (IEnumerable<Company>)ViewBag.companydata)
+                        {
+                            <option value="@c.Id"
+                                    selected="@(ViewBag.SelectedCompanyId != null && ViewBag.SelectedCompanyId == c.Id ? "selected" : null)">
+                                @c.Name
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold d-block">Report Type</label>
+                <div class="form-check form-check-inline">
+                    <input type="radio" name="reportType" value="Details"
+                           class="form-check-input"
+                           @(ViewBag.ReportType == "Details" ? "checked" : "") />
+                    <label class="form-check-label">Details</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input type="radio" name="reportType" value="Summary"
+                           class="form-check-input"
+                           @(ViewBag.ReportType == "Summary" ? "checked" : "") />
+                    <label class="form-check-label">Summary</label>
+                </div>
+            </div>
+
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-success w-100" style="background-color: #2b6ac9 !important;">Search</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="CompanyWiseStockExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-companyId="@ViewBag.SelectedCompanyId"
+           asp-route-reportType="@ViewBag.ReportType"
+          >
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+
+        <a asp-action="CompanyWiseStockPdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-companyId="@ViewBag.SelectedCompanyId"
+           asp-route-reportType="@ViewBag.ReportType"
+           >
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+
+    </div>
+</div>
+
+
+@if (Model != null && Model.Any())
+{
+    <div class="card shadow-sm p-3">
+        <table class="table table-bordered table-striped" id="companyStockTable">
+            @if (ViewBag.ReportType == "Details")
+            {
+                <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th>Date</th>
+                        <th>Bill No</th>
+                        <th>Item</th>
+                        <th>Batch</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Rate</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int sr = 1;
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@sr</td>
+                                <td>@(item.BillDate != null ? item.BillDate.Value.ToString("dd-MM-yyyy") : "-")</td>
+                                <td>@item.BillNo</td>
+                                <td>@item.ItemName</td>
+                                <td>@item.Batch</td>
+                                <td class="text-end">@item.CurrentQtyDisplay</td>
+                                <td class="text-end">@item.Rate.ToString("0.00")</td>
+                                <td class="text-end">@item.Amount.ToString("0.00")</td>
+                            </tr>
+                            sr++;
+                        }
+                    }
+                </tbody>
+                <tfoot class="table-secondary fw-bold">
+                    <tr>
+                        <td colspan="5" class="text-end">TOTAL</td>
+                        @if (!(bool)ViewBag.IsTabletWise)
+                        {
+                            <td class="text-end">@ViewBag.TotalQty.ToString("0.00")</td>
+                        }
+                        else
+                        {
+                            <td></td>
+                        }
+                        <td class="text-end">@ViewBag.TotalRate.ToString("0.00")</td>
+                        <td class="text-end">@ViewBag.TotalAmount</td>
+                    </tr>
+                </tfoot>
+            }
+
+            else if (ViewBag.ReportType == "Summary")
+            {
+                <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th>Company Name</th>
+                        <th>Item Name</th>
+                        <th>Packing</th>
+                        <th>Unit</th>
+                        <th class="text-end">Stock Qty</th>
+                        <th class="text-end">Avg Rate</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @{
+                        int sr = 1;
+
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@sr</td>
+                                <td>@(item.CompanyName ?? "-")</td>
+                                <td>@(item.ItemName ?? "-")</td>
+                                <td>@(item.Packing ?? "-")</td>
+                                <td>@(item.Unit ?? "-")</td>
+                                <td class="text-end">@((item.CurrentQtyDisplay ?? "0"))</td>
+                                <td class="text-end">@item.AvgRate.ToString("0.00")</td>
+                                <td class="text-end">@item.PurchaseAmount.ToString("0.00")</td>
+                            </tr>
+                            sr++;
+                        }
+                    }
+                </tbody>
+
+                <tfoot class="table-secondary fw-bold">
+                    <tr>
+                        <td colspan="5" class="text-end">TOTAL</td>
+
+                        @if (!isTabletWise)
+                        {
+                            <td class="text-end">@((ViewBag.TotalQty ?? 0).ToString("0.00"))</td>
+                        }
+                        else
+                        {
+                            <td></td>
+                        }
+
+                        <td class="text-end">@((ViewBag.AvgRate ?? 0).ToString("0.00"))</td>
+                        <td class="text-end">@((ViewBag.TotalAmount ?? 0).ToString("0.00"))</td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+}
+
+<script>
+    $(document).ready(function () {
+
+        if ($('#companyStockTable').length) {
+
+
+            if ($.fn.DataTable.isDataTable('#companyStockTable')) {
+                $('#companyStockTable').DataTable().destroy();
+            }
+
+            var t = $("#companyStockTable").DataTable({
+                ordering: false ,
+            });
+
+            t.on('order.dt search.dt', function () {
+                t.column(0, { search: 'applied', order: 'applied' }).nodes().each(function (cell, i) {
+                    cell.innerHTML = i + 1;
+                });
+            }).draw();
+        }
+
+        $(".datepicker").datepicker({
+            dateFormat: "dd-mm-yy",
+            changeMonth: true,
+            changeYear: true,
+               order: [[2, "desc"]]
+        });
+
+    });
+</script>
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+        table.dataTable thead th.sorting,
+        table.dataTable thead th.sorting_asc,
+        table.dataTable thead th.sorting_desc {
+            background-image: none !important;
+            cursor: default !important;
+        }
+</style>

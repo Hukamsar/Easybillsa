@@ -1,0 +1,138 @@
+﻿@using EasyBill.Models.ViewModels
+@model IEnumerable<SalesVM>
+@{
+    // Calculate totals for footer
+    decimal totalGst = Model?.Sum(x => x.TotalGstAmt) ?? 0;
+    decimal totalAmount = Model?.Sum(x => x.TotalAmount) ?? 0;
+}
+<style>
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center"
+         style="background:#2b6ac9">
+
+        <span class="fw-bold">
+            Sales Report - Cash Collection 
+        </span>
+
+        <span class="fw-bold ms-auto">
+            Total GST: ₹ @totalGst.ToString("0.00")  | Total Amount: ₹ @totalAmount.ToString("0.00")
+        </span>
+
+    </div>
+</div>
+<form method="get" class="card p-3 mb-3">
+    <div class="row">
+
+        <div class="col-md-2">
+            <label>Date From</label>
+            <input type="date"
+                   id="fromDate"
+                   name="fromDate"
+                   class="form-control"
+                   value="@ViewBag.FromDate" />
+        </div>
+
+        <div class="col-md-2">
+            <label>Date To</label>
+            <input type="date"
+                   id="toDate"
+                   name="toDate"
+                   class="form-control"
+                   value="@ViewBag.ToDate" />
+        </div>
+
+        <div class="col-md-2 text-end mt-3">
+            <button type="submit" class="btn text-light" style="background: #2b6ac9;">
+                Search
+            </button>
+        </div>
+    </div>
+
+
+</form>
+<div class="row mb-2">
+    <div class="col text-end">
+        <i class="fa-solid fa-file-excel text-success fs-5" onclick="exportExcel()"></i>
+        <i class="fa-solid fa-file-pdf text-danger fs-5" onclick="exportPdf()"></i>
+    </div>
+</div>
+
+<table id="billwiseTbl" class="table table-bordered table-striped table-sm">
+    <thead class="table-primary">
+        <tr>
+            <th>Bill No</th>
+            <th>Bill Date</th>
+            <th class="text-end">Bill Amount</th>
+            <th class="text-end">Paid</th>
+            <th class="text-end">Return</th>
+            <th class="text-end">Net Collection</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var bill in Model)
+        {
+            <tr>
+                <td>@bill.BillNo</td>
+                <td>@bill.BillDate?.ToString("dd-MM-yyyy")</td>
+
+                <!-- Bill Amount -->
+                <td class="text-end">@bill.TotalAmount</td>
+
+                <!-- Paid -->
+                <td class="text-end">@bill.PaidAmount.ToString("0.00")</td>
+
+                <!-- Return -->
+                <td class="text-end text-danger">@bill.ReturnAmount.ToString("0.00")</td>
+
+                <!-- Net Collection -->
+                <td class="text-end fw-bold">@bill.NetCollection.ToString("0.00")</td>
+            </tr>
+        }
+    </tbody>
+
+    <tfoot class="table-secondary fw-bold">
+        <tr>
+            <td colspan="2" class="text-end">TOTAL</td>
+            <td class="text-end">@ViewBag.TotalBillAmount.ToString("0.00")</td>
+            <td class="text-end">@ViewBag.TotalPaidAmount.ToString("0.00")</td>
+            <td class="text-end">@ViewBag.TotalReturnAmount.ToString("0.00")</td>
+            <td class="text-end">@ViewBag.TotalNetCollection.ToString("0.00")</td>
+        </tr>
+    </tfoot>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#billwiseTbl").DataTable({
+                "order": [[1, "desc"]],
+                "columnDefs": [
+                    { "orderable": false, "targets": "_all" }
+                ]
+                  });
+        });
+
+        function exportExcel() {
+            var fromDate = document.getElementById("fromDate")?.value || "";
+            var toDate = document.getElementById("toDate")?.value || "";
+
+            window.location.href =
+                `/Sales/ExportSalesBillReturnCollectionExcel?fromDate=${fromDate}&toDate=${toDate}`;
+        }
+
+        function exportPdf() {
+            var fromDate = document.getElementById("fromDate")?.value || "";
+            var toDate = document.getElementById("toDate")?.value || "";
+
+            window.location.href =
+                `/Sales/ExportSalesBillReturnCollectionPdf?fromDate=${fromDate}&toDate=${toDate}`;
+        }
+
+    </script>
+}

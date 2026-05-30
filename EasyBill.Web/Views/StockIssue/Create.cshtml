@@ -1,0 +1,2633 @@
+﻿@using EasyBill.Models.ViewModels
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model StockIssueVM
+@{
+    var isEdit = Model.Id > 0;
+    var title = isEdit ? "Edit Stock Issue" : "Create Stock Issue";
+    var paymentModes = ViewBag.PaymentMode as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var businessType = (int?)ViewBag.BusinessType ?? 0;
+    ViewData["Title"] = title;
+}
+<link href="~/css/page.css" rel="stylesheet" />
+
+<style>
+    #globalLoader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,.7);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .loader-content {
+        text-align: center;
+        color: #fff;
+    }
+
+    .spinner {
+        border: 4px solid rgba(255,255,255,.3);
+        border-top: 4px solid #fff;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+
+    @@keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .batch-row.selected td, .item-row.selected td, .customer-row.selected td {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        font-weight: 500;
+    }
+
+    /* StockIssue F2/F3 item links mirror css/page.css shortcut style without changing existing modal CSS. */
+    #itemModal .shortcut-link {
+        font-size: 10px;
+        cursor: pointer;
+        color: #2b6ac9;
+        font-weight: 500;
+        transition: 0.2s;
+        white-space: nowrap;
+        text-decoration: none;
+    }
+
+        #itemModal .shortcut-link:hover {
+            text-decoration: underline;
+        }
+
+        #itemModal .shortcut-link.text-danger {
+            color: #dc3545 !important;
+        }
+
+    #batchModal .modal-header, #itemModal .modal-header, #itemMasterModal .modal-header, #customerListModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+    .btn-close {
+        filter: invert(1);
+    }
+
+    .item-table-wrapper, .batch-table-wrapper, .customer-table-wrapper {
+        max-height: 350px;
+        overflow-y: auto;
+    }
+
+    #itemTable thead th, #batchTable thead th, #customerTable thead th {
+        position: sticky;
+        top: 0;
+        background-color: #2465c7f7 !important;
+        color: #fff !important;
+        font-weight: 700;
+        z-index: 2;
+    }
+
+    #customerListModal.keyboard-nav .customer-row:hover td {
+        background-color: inherit !important;
+        color: inherit !important;
+        cursor: default;
+    }
+
+    #customerListModal.mouse-nav .customer-row:hover td {
+        background-color: #f1d27a !important;
+        color: #000 !important;
+        cursor: pointer;
+    }
+
+    .customer-row {
+        scroll-margin-top: 50px;
+    }
+
+        .customer-row:focus {
+            outline: none;
+        }
+
+    .custom-header th {
+        background: linear-gradient(180deg,#eef3f8,#d8e3ef);
+        color: #16202b;
+        font-weight: 700;
+        text-align: center;
+    }
+
+    .return-amount {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #8B0000;
+    }
+</style>
+
+<div id="globalLoader">
+    <div class="loader-content">
+        <div class="spinner"></div>
+        <div class="loader-text">Loading...</div>
+    </div>
+</div>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white d-flex align-items-center" style="background:#2b6ac9">
+        <h6 class="mb-0 me-auto">@title</h6>
+    </div>
+</div>
+
+<form asp-controller="StockIssue" asp-action="@(isEdit ? "Edit" : "Create")" method="post" id="stockIssueForm">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="CustomerId" id="CustomerId" />
+    <input type="hidden" asp-for="PharmacyDoctorId" id="DoctorId" />
+    <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="container">
+        <div class="row mb-2">
+            <label for="BillNo" class="col-md-2 col-form-label text-start small">Bill No <i class="text-danger">*</i></label>
+            <div class="col-md-2">
+                <input asp-for="ChallanNo" id="BillNo" type="text" class="form-control form-control-sm" />
+                <span asp-validation-for="ChallanNo" class="text-danger"></span>
+            </div>
+            <label for="BillDate" class="col-md-2 col-form-label text-start small">Bill Date <i class="text-danger">*</i></label>
+            <div class="col-md-2">
+                <input type="date" asp-for="ChallanDate" id="BillDate" class="form-control form-control-sm" required />
+                <span asp-validation-for="ChallanDate" class="text-danger"></span>
+            </div>
+            <label class="col-md-2">Billing Type</label>
+            <div class="col-md-2">
+                <select asp-for="billingType" id="billingType" class="form-control form-control-sm">
+                    <option value="walkin">Cash</option>
+                    <option value="registered">Customer</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <label class="col-md-2 col-form-label text-start small">Mobile No</label>
+            <div class="col-md-2 d-flex align-items-center">
+                <div class="w-100">
+                    <input asp-for="MobileNo" type="text" class="form-control form-control-sm" id="mobilenumber" maxlength="10" />
+                    <small id="mobileError" class="text-danger"></small>
+                </div>
+                <div class="shortcut-box">
+                    <span id="btnF1CustomerList" class="shortcut-link">F1 - List</span>
+                </div>
+            </div>
+            <label class="col-md-2 col-form-label text-start small">Customer</label>
+            <div class="col-md-2"><input asp-for="CustomerName" class="form-control form-control-sm" id="customer" /></div>
+            <label class="col-md-2 col-form-label text-start small">Address</label>
+            <div class="col-md-2"><input asp-for="Address" id="customeraddress" class="form-control form-control-sm" /></div>
+        </div>
+
+        @if (Model.DoctorRequired)
+        {
+            <div class="row mb-2">
+                <label class="col-md-2 col-form-label small">Doctor Mobile No</label>
+                <div class="col-md-2"><input type="text" asp-for="DoctorMobileNumber" class="form-control form-control-sm" id="doctorMobile" maxlength="10" /></div>
+                <label class="col-md-2 col-form-label small">Doctor</label>
+                <div class="col-md-2"><input type="text" asp-for="DoctorName" class="form-control form-control-sm" id="doctorname" /></div>
+                <label class="col-md-2 col-form-label small">Registration Number</label>
+                <div class="col-md-2"><input type="text" asp-for="DoctorRegNumber" class="form-control form-control-sm" id="doctorregno" /></div>
+            </div>
+        }
+
+        <div class="row mb-2">
+            <label class="col-md-2 col-form-label text-start small">Payment Type</label>
+            <div class="col-md-2 d-flex align-items-center">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="paymentToggle">
+                    <label class="form-check-label fw-bold" id="paymentToggleLabel" style="color: green;">Cash</label>
+                </div>
+                <input type="hidden" asp-for="PaymentType" id="paymentTypeHidden" />
+            </div>
+            <label class="col-md-2 col-form-label text-start small">Tax Calculation</label>
+            <div class="col-md-2">
+                <select asp-for="TaxCalculation" id="taxCalculation" class="form-control form-control-sm">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+            </div>
+            <label class="col-md-2 col-form-label text-start small d-none" id="balanceLabel">Previous Balance</label>
+            <div class="col-md-2 d-none" id="balanceField"><input type="text" id="previousBalance" class="form-control text-danger" readonly /></div>
+        </div>
+
+        <div class="table-responsive" style="overflow-x:auto;">
+            <table class="table table-bordered table-striped">
+                <thead class="table custom-header">
+                    <tr>
+                        <th style="min-width:20%">Item</th>
+                        <th style="min-width:20%">Batch</th>
+                        <th class="text-center">Expiry</th>
+                        <th class="text-center">Mrp</th>
+                        <th class="text-center" id="qtyView">Qty</th>
+                        @if (businessType == 2)
+                        {
+                            <th class="text-center" id="qtyTabsView">Tabs</th>
+                        }
+                        <th class="text-center">Rate</th>
+                        <th class="text-center">GST %</th>
+                        <th class="text-center">Cess</th>
+                        <th class="text-center">Disc %</th>
+                        <th class="text-center">Amount</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="StockIssueItemBody">
+                    @{
+                        var rowIndex = 0;
+                        foreach (var item in Model.StockIssuesItemVMs)
+                        {
+                            <tr data-conversion="1">
+                                <td hidden><input name="StockIssuesItemVMs[@rowIndex].Id" value="@item.Id" class="row-id" /></td>
+                                <td hidden><input name="StockIssuesItemVMs[@rowIndex].ItemMasterId" value="@item.ItemMasterId" class="item-id" /></td>
+                                <td hidden><input name="StockIssuesItemVMs[@rowIndex].PurchaseItemId" value="@item.PurchaseItemId" class="purchase-id" /></td>
+                                <td hidden><input name="StockIssuesItemVMs[@rowIndex].HsnId" value="@item.HsnId" class="hsn-id" /></td>
+                                <td hidden><input name="StockIssuesItemVMs[@rowIndex].HsnCode" value="@item.HsnCode" class="hsn-code" /></td>
+                                <td hidden><input name="StockIssuesItemVMs[@rowIndex].Rate" value="@item.Rate" class="form-control form-control-sm rate" /></td>
+                                <td style="min-width:250px;"><input type="text" name="StockIssuesItemVMs[@rowIndex].ItemBarcodeNumber" value="@(item.ItemBarcodeNumber ?? item.ItemName)" class="form-control form-control-sm item-input" /></td>
+                                <td><input name="StockIssuesItemVMs[@rowIndex].Batch" value="@item.Batch" class="form-control form-control-sm batch" readonly /></td>
+                                <td><input name="StockIssuesItemVMs[@rowIndex].Expirydate" value="@item.Expirydate?.ToString("MM/yyyy")" class="form-control form-control-sm expirydate" readonly /></td>
+                                <td><input name="StockIssuesItemVMs[@rowIndex].Mrp" value="@item.Mrp" class="form-control form-control-sm mrp" /></td>
+                                <td><input name="StockIssuesItemVMs[@rowIndex].Qty" value="@item.Qty" class="form-control form-control-sm qty" /></td>
+                                @if (businessType == 2)
+                                {
+                                    <td><input name="StockIssuesItemVMs[@rowIndex].TabletQty" value="@item.TabletQty" class="form-control form-control-sm tablet-qty" /></td>
+                                }
+                                <td><input name="StockIssuesItemVMs[@rowIndex].StripRate" value="@item.StripRate" class="form-control form-control-sm stripe-rate" /></td>
+                                <td><input name="StockIssuesItemVMs[@rowIndex].Gst" value="@item.Gst" class="form-control form-control-sm gst" readonly /></td>
+                                <td><input name="StockIssuesItemVMs[@rowIndex].Cess" value="@item.Cess" class="form-control form-control-sm cess" readonly /></td>
+                                <td><input name="StockIssuesItemVMs[@rowIndex].Discount" value="@item.Discount" class="form-control form-control-sm discount" /></td>
+                                <td><input name="StockIssuesItemVMs[@rowIndex].Amount" value="@item.Amount" class="form-control form-control-sm Amount" readonly /></td>
+                                <td><u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u></td>
+                            </tr>
+                            rowIndex++;
+                        }
+                    }
+                </tbody>
+                <tfoot><tr><th colspan="12"><u id="addRow" style="color:green; cursor:pointer;">Add Row</u></th></tr></tfoot>
+            </table>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-7">
+                <strong>Payment Details</strong>
+                <table class="table table-bordered table-striped">
+                    <thead class="table custom-header">
+                        <tr><th style="min-width:30%">Payment Mode</th><th class="text-center">Amount</th><th class="text-center">Reference No</th><th class="text-center">Description</th><th></th></tr>
+                    </thead>
+                    <tbody id="PaymentDetailsBody">
+                        @for (int i = 0; i < (Model.SalsePaymentDetails?.Count ?? 0); i++)
+                        {
+                            <tr>
+                                <td hidden><input type="hidden" asp-for="@Model.SalsePaymentDetails[i].Id" /></td>
+                                <td style="min-width:185px;">
+                                    <select name="SalsePaymentDetails[@i].PaymentModeId" class="form-control form-control-sm paymentMode-dropdown">
+                                        <option value="">Select</option>
+                                        @foreach (var mode in paymentModes)
+                                        {
+                                            if (mode.Value == Model.SalsePaymentDetails[i].PaymentModeId.ToString())
+                                            {
+                                                <option value="@mode.Value" selected>@mode.Text</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@mode.Value">@mode.Text</option>
+                                            }
+                                        }
+                                    </select>
+                                </td>
+                                <td><input name="SalsePaymentDetails[@i].Amount" value="@Model.SalsePaymentDetails[i].Amount" class="form-control form-control-sm paymentAmount" /></td>
+                                <td><input name="SalsePaymentDetails[@i].ReferenceNo" value="@Model.SalsePaymentDetails[i].ReferenceNo" class="form-control form-control-sm paymentReferenceNO" /></td>
+                                <td><input name="SalsePaymentDetails[@i].Description" value="@Model.SalsePaymentDetails[i].Description" class="form-control form-control-sm paymentDescription" /></td>
+                                <td><u class="remove-paymentrow-btn text-danger" style="cursor:pointer;">Remove</u></td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot><tr><th><u id="addPaymentRow" style="color:green; cursor:pointer;">Add Row</u></th></tr></tfoot>
+                </table>
+
+                <div class="row mt-2">
+                    <div class="col-md-12">
+                        <span class="fw-bold text-danger" style="font-size: xx-large;">Return Amount :</span>
+                        <span id="returnAmountDisplay" class="return-amount">@(Model.ReturnAmount?.ToString("0.00") ?? "0.00")</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div class="row mb-2"><label asp-for="Total" class="col-md-3 col-form-label text-start small">Total</label><div class="col-md-4"></div><div class="col-md-4"><input asp-for="Total" class="form-control form-control-sm" readonly /></div></div>
+                <div class="row mb-2"><label class="col-md-3 col-form-label text-start small">Bill Discount</label><div class="col-md-4"></div><div class="col-md-2"><input asp-for="discountPercent" id="discountPercent" class="form-control form-control-sm" /></div><div class="col-md-2"><input asp-for="discountAmount" id="discountamount" class="form-control form-control-sm" placeholder="amount" /></div></div>
+                <div class="row mb-2"><label asp-for="Totaldiscount" class="col-md-3 col-form-label text-start small">Total Discount</label><div class="col-md-4"></div><div class="col-md-4"><input asp-for="Totaldiscount" id="Totaldiscount" class="form-control form-control-sm" readonly /></div></div>
+                <div class="row mb-2"><label asp-for="TotalGstAmt" class="col-md-3 col-form-label text-start small">GST</label><div class="col-md-4"></div><div class="col-md-4"><input asp-for="TotalGstAmt" class="form-control form-control-sm" readonly /></div></div>
+                <div class="row mb-2"><label asp-for="TotalCessAmount" class="col-md-3 col-form-label text-start small">Total Cess</label><div class="col-md-4"></div><div class="col-md-4"><input asp-for="TotalCessAmount" class="form-control form-control-sm" readonly /></div></div>
+                <div class="row mb-2"><label asp-for="RoundOffAmount" class="col-md-3 col-form-label text-start small">Round Off</label><div class="col-md-4"></div><div class="col-md-4"><input asp-for="RoundOffAmount" id="roundOffAmount" class="form-control form-control-sm" readonly /></div></div>
+                <div class="row mb-2"><label asp-for="TotalPayable" class="col-md-3 col-form-label text-start small">Total Amount</label><div class="col-md-4"></div><div class="col-md-4"><input asp-for="TotalPayable" id="totalPayable" class="form-control form-control-sm" readonly /></div></div>
+                <div class="row mb-2"><label asp-for="PaidAmount" class="col-md-3 col-form-label text-start small">Paid Amount</label><div class="col-md-4"></div><div class="col-md-4"><input asp-for="PaidAmount" id="paidAmout" class="form-control form-control-sm" readonly /></div></div>
+                <div class="row mb-2"><label asp-for="Balance" class="col-md-3 col-form-label text-start small">Balance</label><div class="col-md-4"></div><div class="col-md-4"><input asp-for="Balance" id="balance" class="form-control form-control-sm" readonly /></div></div>
+           @*      <div class="row mb-2"><label asp-for="ReturnAmount" class="col-md-3 col-form-label text-start small">Return Amount</label><div class="col-md-4"></div><div class="col-md-4"><input asp-for="ReturnAmount" id="returnAmount" class="form-control form-control-sm" readonly /></div></div> *@
+            </div>
+        </div>
+
+        <div class="mt-3 text-end">
+            <button type="button" id="saveBtn" class="btn btn-sm btn-success">@(isEdit ? "End | Update" : "End | Save")</button>
+            <a href="@(ViewBag.ReturnUrl ?? Url.Action("Index"))" class="btn btn-sm btn-secondary">Cancel</a>
+        </div>
+    </div>
+</form>
+
+<!-- StockIssue Item Master F2/F3 popup host uses Sales embedded Item Master partial. -->
+<div class="modal fade" id="itemMasterModal" tabindex="-1" data-bs-focus="false">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Item Master</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="itemMasterContainer">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="itemModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- StockIssue Item dropdown F2/F3 links use the same shortcut-link style as Sales/page.css. -->
+                <div class="row align-items-center g-2 mb-2">
+                    <div class="col-md-10">
+                        <input type="text" id="itemSearch" class="form-control" placeholder="Search by item name..." />
+                    </div>
+                    <div class="col-md-2 ps-0">
+                        <a href="javascript:void(0)" class="shortcut-link d-block small" id="btnNewItem">F2 - New</a>
+                        <a href="javascript:void(0)" class="shortcut-link text-danger d-block small" id="btnModifyItem">F3 - Mod</a>
+                    </div>
+                </div>
+                <div class="item-table-wrapper">
+                    <table id="itemTable" class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                @if (businessType == 2)
+                                {
+                                    <th style="display:none;">Qty</th>
+                                    <th>Strip:Tabs</th>
+                                }
+                                else
+                                {
+                                    <th>Qty</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody id="itemTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="batchModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Batch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="batch-table-wrapper">
+                    <table id="batchTable" class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Batch</th>
+                                <th>Expiry</th>
+                                <th>Rate</th>
+                                <th>MRP</th>
+                                @if (businessType == 2)
+                                {
+                                    <th style="display:none;">Qty</th>
+                                    <th>Strip:Tabs</th>
+                                }
+                                else
+                                {
+                                    <th>Qty</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody id="batchTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="customerListModal" tabindex="-1" aria-labelledby="customerListModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerListModalLabel">Select Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <input type="text"
+                           id="customerSearch"
+                           class="form-control form-control-sm"
+                           placeholder="Search by customer name or mobile no..." />
+                </div>
+                <div class="customer-table-wrapper">
+                    <table id="customerTable" class="table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Customer Name</th>
+                                <th>Mobile No</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="newCustomerForm">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Create New Customer</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-2"><label class="form-label">Name *</label><input type="text" name="Name" class="form-control form-control-sm" required /></div>
+                    <div class="mb-2"><label class="form-label">Mobile No *</label><input type="text" name="CustomerMobileNo" id="newCustomerMobile" class="form-control form-control-sm" readonly /></div>
+                    <div class="mb-2"><label class="form-label">Address</label><input type="text" name="Address" class="form-control form-control-sm" /></div>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-sm btn-success">Save Customer</button><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="createDoctorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="newDoctorForm">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Create New Doctor</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-2"><label class="form-label small">Mobile No</label><input type="text" name="PhoneNo" id="newDoctorPhone" class="form-control form-control-sm" readonly /></div>
+                    <div class="mb-2"><label class="form-label small">Doctor Name</label><input type="text" name="Name" class="form-control form-control-sm" placeholder="Doctor Name" required /></div>
+                    <div class="mb-2"><label class="form-label small">Address</label><input type="text" name="Address" class="form-control form-control-sm" placeholder="Address" /></div>
+                    <div class="mb-2"><label class="form-label small">Registration No</label><input type="text" name="RegistrationNo" class="form-control form-control-sm" placeholder="Registration No" /></div>
+                    <div class="mb-2"><label class="form-label small">Specialization</label><input type="text" name="Specialized" class="form-control form-control-sm" placeholder="Specialization" /></div>
+                    <div class="mb-2"><label class="form-label small">Commission %</label><input type="number" name="Commission" class="form-control form-control-sm" placeholder="0" /></div>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-sm btn-success">Save</button><button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/payment-mode-popup.js"></script>
+    <script>
+        const isEditMode = @Html.Raw((isEdit ? "true" : "false"));
+        const stockIssueId = @Model.Id;
+        const businessType = @businessType;
+        const paymentModeOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(paymentModes.Select(x => new { value = x.Value, text = x.Text })));
+        let rowIndex = $("#StockIssueItemBody tr").length;
+        let paymentRowIndex = $("#PaymentDetailsBody tr").length;
+        let currentRow = null;
+        let currentItemIndex = -1;
+        let currentBatchIndex = -1;
+        let isTabletWiseMode = false;
+        let availableItemsCache = [];
+        let isSubmittingStockIssue = false;
+        let customerLookupTimer = null;
+        let isCustomerLookupInProgress = false;
+        let lastLookedUpCustomerMobile = "";
+        let lastResolvedCustomerMobile = "";
+        let lastCustomerNotFoundPromptMobile = "";
+        let currentCustomerIndex = -1;
+        let customerNavMode = "keyboard";
+        let isKeyboardScrollingCustomerModal = false;
+        const itemConversionMap = {};
+        window.stopAutoItemOpen = false;
+        window.suppressNextBatchNotFound = false;
+
+        function showLoader(message = "Loading...") {
+            $("#globalLoader .loader-text").text(message);
+            $("#globalLoader").css("display", "flex");
+        }
+
+        function hideLoader() {
+            $("#globalLoader").hide();
+        }
+
+        function isValidIndianMobile(mobile) {
+            return /^[6-9][0-9]{9}$/.test(mobile || "");
+        }
+
+        function normalizeDateDisplay(dateValue) {
+            if (!dateValue) return "";
+            const date = new Date(dateValue);
+            if (Number.isNaN(date.getTime())) return "";
+            return ("0" + (date.getMonth() + 1)).slice(-2) + "/" + date.getFullYear();
+        }
+
+        function renderPaymentOptions(selectedValue = "") {
+            let html = '<option value="">-- Select --</option>';
+            paymentModeOptions.forEach(option => {
+                const selected = String(selectedValue) === String(option.value) ? "selected" : "";
+                html += `<option value="${option.value}" ${selected}>${option.text}</option>`;
+            });
+            return html;
+        }
+
+        function getItemsEndpoint() {
+            return isEditMode ? `/StockIssue/GetAllItemsForEdit?stockIssueId=${stockIssueId}` : '/StockIssue/GetAllItems';
+        }
+
+        function getBatchesEndpoint(itemId) {
+            return isEditMode
+                ? `/StockIssue/GetBatchesByItemIdForEdit?id=${itemId}&stockIssueId=${stockIssueId}`
+                : `/StockIssue/GetBatchesByItemId?id=${itemId}`;
+        }
+
+        function updatePaymentTypeUi(type) {
+            const isCredit = (type || "").toLowerCase() === "credit";
+            $("#paymentToggle").prop("checked", isCredit);
+            $("#paymentToggleLabel").text(isCredit ? "Credit" : "Cash");
+            $("#paymentToggleLabel").css("color", isCredit ? "#b8860b" : "green");
+            $("#paymentTypeHidden").val(isCredit ? "credit" : "cash");
+        }
+
+        function showBillingTypePicker() {
+            const select = document.getElementById("billingType");
+            if (!select) {
+                return;
+            }
+
+            setTimeout(() => {
+                if ("showPicker" in HTMLSelectElement.prototype) {
+                    select.showPicker();
+                } else {
+                    $(select).trigger("click");
+                }
+            }, 50);
+        }
+
+        function showSelectPicker(selector) {
+            const select = $(selector).get(0);
+            if (!select) {
+                return;
+            }
+
+            setTimeout(() => {
+                if ("showPicker" in HTMLSelectElement.prototype) {
+                    select.showPicker();
+                } else {
+                    $(select).trigger("click");
+                }
+            }, 50);
+        }
+
+        function isValidCustomerName(name) {
+            if (!name) return false;
+            const trimmedName = name.trim();
+            if (trimmedName.length < 3 || trimmedName.length > 150) {
+                return false;
+            }
+
+            return /^(?!\s)(?!.*\s$).+$/.test(trimmedName);
+        }
+
+        // Mirror Sales-style focus recovery while keeping StockIssue-specific bindings unchanged.
+        function focusElement(selector, shouldSelect = true, delay = 120) {
+            setTimeout(() => {
+                const $element = $(selector).filter(":visible:not([disabled])").first();
+                if (!$element.length) {
+                    return;
+                }
+
+                $element.trigger("focus");
+                if (shouldSelect && typeof $element[0]?.select === "function") {
+                    $element[0].select();
+                }
+            }, delay);
+        }
+
+        function focusFirstFieldInModal(modalSelector) {
+            setTimeout(() => {
+                const $modal = $(modalSelector);
+                if (!$modal.hasClass("show")) {
+                    return;
+                }
+
+                const $firstEditable = $modal
+                    .find("input:visible:not([type='hidden']):not([readonly]):not([disabled]), select:visible:not([disabled]), textarea:visible:not([disabled])")
+                    .first();
+
+                if ($firstEditable.length) {
+                    $firstEditable.trigger("focus");
+                    if (typeof $firstEditable[0]?.select === "function") {
+                        $firstEditable[0].select();
+                    }
+                    return;
+                }
+
+                const $firstTabStop = $modal.find("[tabindex]:visible:not([disabled])").first();
+                if ($firstTabStop.length) {
+                    $firstTabStop.trigger("focus");
+                }
+            }, 150);
+        }
+
+        function focusNextItemRowOrAdd(fromRow) {
+            const $currentRow = fromRow instanceof jQuery ? fromRow : $(fromRow);
+            const $nextRow = $currentRow.next("tr");
+
+            if ($nextRow.length) {
+                focusElement($nextRow.find(".item-input"), true, 50);
+                return;
+            }
+
+            addNewRow();
+            focusElement("#StockIssueItemBody tr:last .item-input", true, 120);
+        }
+
+        function focusItemGrid() {
+            setTimeout(() => {
+                let firstItem = $("#StockIssueItemBody tr:first .item-input");
+                if (!firstItem.length) {
+                    addNewRow();
+                    firstItem = $("#StockIssueItemBody tr:first .item-input");
+                }
+
+                firstItem.focus().select();
+            }, 150);
+        }
+
+        function getItemRowState(row) {
+            return {
+                itemName: (row.find(".item-input").val() || "").trim(),
+                batch: (row.find(".batch").val() || "").trim(),
+                qty: parseFloat(row.find(".qty").val()) || 0,
+                tabletQty: parseFloat(row.find(".tablet-qty").val()) || 0,
+                stripRate: parseFloat(row.find(".stripe-rate").val()) || 0,
+                discount: parseFloat(row.find(".discount").val()) || 0,
+                amount: parseFloat(row.find(".Amount").val()) || 0
+            };
+        }
+
+        function isBlankItemRowState(state) {
+            return !state.itemName &&
+                !state.batch &&
+                state.qty === 0 &&
+                state.tabletQty === 0 &&
+                state.stripRate === 0 &&
+                state.discount === 0 &&
+                state.amount === 0;
+        }
+
+        function isRowQuantityValid(state) {
+            if (businessType === 2 && isTabletWiseMode) {
+                return state.qty > 0 || state.tabletQty > 0;
+            }
+
+            return state.qty >= 1;
+        }
+
+        function findAnotherCompletedRow(currentRow) {
+            let hasCompletedRow = false;
+
+            $("#StockIssueItemBody tr").each(function () {
+                const $row = $(this);
+                if ($row.is(currentRow)) {
+                    return;
+                }
+
+                const state = getItemRowState($row);
+                if (state.itemName && state.batch) {
+                    hasCompletedRow = true;
+                    return false;
+                }
+            });
+
+            return hasCompletedRow;
+        }
+
+        function focusDiscountSummary() {
+            setTimeout(() => {
+                $("#discountPercent").focus().select();
+            }, 50);
+        }
+
+        function focusRowTarget(target) {
+            if (!target || !target.length) {
+                return;
+            }
+
+            target.focus();
+            if (typeof target[0]?.select === "function") {
+                target[0].select();
+            }
+        }
+
+        function removeBlankItemRow(row) {
+            row.remove();
+            reindexItemRows();
+            calculateTotal();
+        }
+
+        function validateItemRowForAdvance(row) {
+            const state = getItemRowState(row);
+
+            if (isBlankItemRowState(state)) {
+                return { status: "blank" };
+            }
+
+            if (!state.itemName || !state.batch) {
+                return {
+                    status: "incomplete",
+                    message: "Please select item and batch before moving forward.",
+                    focusTarget: row.find(".item-input")
+                };
+            }
+
+            if (businessType === 2 && isTabletWiseMode) {
+                if (state.qty === 0 && state.tabletQty === 0) {
+                    return {
+                        status: "invalidQty",
+                        message: "Please enter quantity or tablet quantity.",
+                        focusTarget: row.find(".tablet-qty")
+                    };
+                }
+
+                if (state.qty < 0 || state.tabletQty < 0) {
+                    return {
+                        status: "invalidQty",
+                        message: "Quantity cannot be negative.",
+                        focusTarget: state.qty < 0 ? row.find(".qty") : row.find(".tablet-qty")
+                    };
+                }
+            } else if (state.qty < 1) {
+                return {
+                    status: "invalidQty",
+                    message: "Quantity cannot be less than 1.",
+                    focusTarget: row.find(".qty")
+                };
+            }
+
+            return { status: "valid" };
+        }
+
+        function handleItemRowTab(row) {
+            const validation = validateItemRowForAdvance(row);
+
+            if (validation.status === "blank") {
+                if (!findAnotherCompletedRow(row)) {
+                    toastr.error("At least one item row is required. Please add item before moving forward.", "Validation Error");
+                    row.find(".item-input").focus().select();
+                    return;
+                }
+
+                removeBlankItemRow(row);
+                focusDiscountSummary();
+                return;
+            }
+
+            if (validation.status !== "valid") {
+                toastr.warning(validation.message, validation.status === "incomplete" ? "Incomplete Row" : "Invalid Quantity");
+                focusRowTarget(validation.focusTarget);
+                return;
+            }
+
+            focusDiscountSummary();
+        }
+
+        function advanceAfterDiscount(row) {
+            const validation = validateItemRowForAdvance(row);
+
+            if (validation.status !== "valid") {
+                const title = validation.status === "incomplete" ? "Incomplete Row" : "Invalid Quantity";
+                const message = validation.status === "blank"
+                    ? "Please add item details before moving forward."
+                    : validation.message;
+
+                toastr.warning(message, title);
+                const focusTarget = validation.status === "blank" ? row.find(".item-input") : validation.focusTarget;
+                focusRowTarget(focusTarget);
+                return;
+            }
+
+            const isLastRow = row.is("#StockIssueItemBody tr:last");
+
+            if (isLastRow) {
+                addNewRow();
+                focusElement("#StockIssueItemBody tr:last .item-input", true, 150);
+                return;
+            }
+
+            focusElement(row.next("tr").find(".item-input"), true, 50);
+        }
+
+        function pruneBlankItemRows() {
+            $("#StockIssueItemBody tr").each(function () {
+                const $row = $(this);
+                if (!isBlankItemRowState(getItemRowState($row))) {
+                    return;
+                }
+
+                removeBlankItemRow($row);
+            });
+        }
+
+        function pruneBlankPaymentRows() {
+            $("#PaymentDetailsBody tr").each(function () {
+                const $row = $(this);
+                const paymentMode = ($row.find(".paymentMode-dropdown").val() || "").toString().trim();
+                const amount = parseFloat($row.find(".paymentAmount").val()) || 0;
+                const referenceNo = ($row.find(".paymentReferenceNO").val() || "").trim();
+                const description = ($row.find(".paymentDescription").val() || "").trim();
+
+                if (paymentMode || amount > 0 || referenceNo || description) {
+                    return;
+                }
+
+                $row.remove();
+            });
+
+            reindexPaymentRows();
+        }
+
+        function normalizeNumericInputsForSubmit() {
+            const selectors = [
+                "#discountPercent",
+                "#discountamount",
+                "#Total",
+                "#Totaldiscount",
+                "#totalPayable",
+                "#paidAmout",
+                "#balance",
+                "#roundOffAmount",
+                "[name='Total']",
+                "[name='TotalGstAmt']",
+                "[name='TotalCessAmount']",
+                "[name='TotalPayable']",
+                "[name='Totaldiscount']",
+                "[name='PaidAmount']",
+                "[name='Balance']",
+                "[name='RoundOffAmount']",
+                ".qty",
+                ".tablet-qty",
+                ".rate",
+                ".stripe-rate",
+                ".gst",
+                ".cess",
+                ".discount",
+                ".Amount",
+                ".mrp",
+                ".paymentAmount"
+            ];
+
+            $(selectors.join(", ")).each(function () {
+                const $input = $(this);
+                if (!$input.length || $input.is(":disabled")) {
+                    return;
+                }
+
+                const value = ($input.val() || "").toString().trim();
+                if (!value) {
+                    $input.val("0");
+                }
+            });
+        }
+
+        function clearCustomerSelection(preserveMobile = true) {
+            const currentMobile = $("#mobilenumber").val();
+            $("#CustomerId").val("");
+            $("#customer, #customeraddress").val("");
+            $("#balanceLabel, #balanceField").addClass("d-none");
+            $("#previousBalance").val("");
+            lastResolvedCustomerMobile = "";
+
+            if (preserveMobile) {
+                $("#mobilenumber").val(currentMobile);
+            }
+        }
+
+        function updateItemModeUi() {
+            if (businessType !== 2) {
+                $("#qtyView").text("Qty");
+                return;
+            }
+
+            $("#qtyView").text(isTabletWiseMode ? "Strip" : "Qty");
+            $("#qtyTabsView").text("Tabs");
+        }
+
+        function applyTabletWiseMode(row) {
+            if (businessType !== 2) {
+                return;
+            }
+
+            const qtyInput = row.find(".qty");
+            const tabletQtyInput = row.find(".tablet-qty");
+
+            if (!tabletQtyInput.length) {
+                return;
+            }
+
+            if (isTabletWiseMode) {
+                qtyInput.prop("readonly", true).css("background-color", "#e9ecef");
+                tabletQtyInput.prop("readonly", false).css("background-color", "#fff");
+            } else {
+                qtyInput.prop("readonly", false).css("background-color", "#fff");
+                tabletQtyInput.prop("readonly", true).val("0").css("background-color", "#e9ecef");
+            }
+        }
+
+        function syncRateFromStripRate(row) {
+            const stripRate = parseFloat(row.find(".stripe-rate").val()) || 0;
+            const itemId = row.find(".item-id").val();
+            let conversion = parseFloat(row.attr("data-conversion")) || 0;
+
+            if (!conversion || conversion <= 0) {
+                conversion = parseFloat(itemConversionMap[itemId]) || 1;
+            }
+
+            const actualRate = (businessType === 2 && isTabletWiseMode)
+                ? stripRate / conversion
+                : stripRate;
+
+            row.find(".rate").val(actualRate.toFixed(4));
+        }
+
+        function lookupCustomerByMobile(mobile, options = {}) {
+            const settings = {
+                focusAfterSuccess: false,
+                showSuccessToast: true,
+                promptOnMissing: true,
+                force: false,
+                ...options
+            };
+
+            const trimmedMobile = (mobile || "").trim();
+
+            if ($("#billingType").val() !== "registered") {
+                return;
+            }
+
+            if (!isValidIndianMobile(trimmedMobile)) {
+                if (settings.force) {
+                    toastr.error("Enter valid 10 digit mobile number.");
+                    $("#mobilenumber").focus().select();
+                }
+                return;
+            }
+
+            if (isCustomerLookupInProgress && !settings.force) {
+                return;
+            }
+
+            if (!settings.force && trimmedMobile === lastResolvedCustomerMobile && $("#CustomerId").val()) {
+                return;
+            }
+
+            if (!settings.force && trimmedMobile === lastLookedUpCustomerMobile && !$("#CustomerId").val()) {
+                return;
+            }
+
+            isCustomerLookupInProgress = true;
+            lastLookedUpCustomerMobile = trimmedMobile;
+            showLoader("Checking customer...");
+
+            $.get('/StockIssue/GetByMobile', { mobile: trimmedMobile }, function (res) {
+                hideLoader();
+
+                if (res.success) {
+                    $("#CustomerId").val(res.customerId);
+                    $("#customer").val(res.name);
+                    $("#customeraddress").val(res.address);
+                    loadPreviousBalance(res.customerId);
+                    lastResolvedCustomerMobile = trimmedMobile;
+                    lastCustomerNotFoundPromptMobile = "";
+
+                    if (settings.showSuccessToast) {
+                        toastr.success("Customer found and auto-filled.");
+                    }
+
+                    if (settings.focusAfterSuccess) {
+                        focusElement("#customer");
+                    }
+                    return;
+                }
+
+                clearCustomerSelection();
+
+                if (!settings.promptOnMissing || lastCustomerNotFoundPromptMobile === trimmedMobile) {
+                    return;
+                }
+
+                lastCustomerNotFoundPromptMobile = trimmedMobile;
+                Swal.fire({
+                    title: 'Customer not found',
+                    text: 'Do you want to create a new customer?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('#createCustomerModal').modal('show');
+                        $('#newCustomerMobile').val(trimmedMobile);
+                    }
+                });
+            }).fail(function () {
+                hideLoader();
+                toastr.error("Unable to find customer.");
+            }).always(function () {
+                isCustomerLookupInProgress = false;
+            });
+        }
+
+        function applyBillingType(type) {
+            if (type === "registered") {
+                $("#mobilenumber, #customer, #customeraddress").prop("disabled", false).removeClass("bg-light");
+                updatePaymentTypeUi("credit");
+                if ($("#CustomerId").val()) {
+                    loadPreviousBalance($("#CustomerId").val());
+                }
+            } else {
+                $("#mobilenumber, #customer, #customeraddress").prop("disabled", true).addClass("bg-light");
+                $("#mobilenumber, #customer, #customeraddress").val("");
+                $("#CustomerId").val("");
+                $("#balanceLabel, #balanceField").addClass("d-none");
+                $("#previousBalance").val("");
+                clearTimeout(customerLookupTimer);
+                lastLookedUpCustomerMobile = "";
+                lastResolvedCustomerMobile = "";
+                lastCustomerNotFoundPromptMobile = "";
+                updatePaymentTypeUi("cash");
+            }
+        }
+
+        function loadPreviousBalance(customerId) {
+            if (!customerId) {
+                $("#balanceLabel, #balanceField").addClass("d-none");
+                $("#previousBalance").val("");
+                return;
+            }
+
+            $.get('/StockIssue/GetCustomerBalance', { customerId: customerId }, function (res) {
+                if (res.success && res.balance > 0) {
+                    $("#previousBalance").val(Number(res.balance).toFixed(2));
+                    $("#balanceLabel, #balanceField").removeClass("d-none");
+                } else {
+                    $("#balanceLabel, #balanceField").addClass("d-none");
+                    $("#previousBalance").val("");
+                }
+            });
+        }
+
+        $(document).on("click", "#btnF1CustomerList", function (e) {
+            e.preventDefault();
+
+            showLoader("Loading customers...");
+
+            $.get('/Sales/GetCustomer', function (res) {
+                hideLoader();
+
+                if (!res.found || !res.data || res.data.length === 0) {
+                    toastr.info("No customer found.");
+                    return;
+                }
+
+                let rows = "";
+
+                res.data.forEach(customer => {
+                    const customerId = customer.id || customer.Id || "";
+                    const customerName = customer.name || customer.Name || "";
+                    const mobileNo = customer.phoneNo || customer.PhoneNo || "";
+                    const address = customer.address || customer.Address || "";
+
+                    rows += `<tr class="customer-row" tabindex="0"
+                        data-customerid="${customerId}"
+                        data-name="${customerName}"
+                        data-phone="${mobileNo}"
+                        data-address="${address}">
+                        <td>${customerName}</td>
+                        <td>${mobileNo}</td>
+                    </tr>`;
+                });
+
+                $("#customerTableBody").html(rows);
+                $("#customerSearch").val("");
+                currentCustomerIndex = -1;
+                $("#customerListModal").modal("show");
+            }).fail(function () {
+                hideLoader();
+                toastr.error("Error loading customers");
+            });
+        });
+
+        $(document).on("keydown", "#mobilenumber", function (e) {
+            if (e.key !== "F1") return;
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            $("#btnF1CustomerList").trigger("click");
+        });
+
+        $(document).on("input", "#customerSearch", function () {
+            const searchText = $(this).val().toLowerCase().trim();
+
+            $("#customerTableBody tr").each(function () {
+                const customerName = ($(this).data("name") || "").toString().toLowerCase();
+                const mobileNo = ($(this).data("phone") || "").toString().toLowerCase();
+
+                $(this).toggle(customerName.includes(searchText) || mobileNo.includes(searchText));
+            });
+
+            currentCustomerIndex = -1;
+            $("#customerTableBody .customer-row").removeClass("selected");
+        });
+
+        $(document).on("keydown", function (e) {
+            if (!$("#customerListModal").is(":visible")) return;
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                customerNavMode = "keyboard";
+                isKeyboardScrollingCustomerModal = true;
+                $("#customerListModal")
+                    .addClass("keyboard-nav")
+                    .removeClass("mouse-nav");
+            }
+
+            const $rows = $(".customer-row:visible");
+            if (!$rows.length) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+
+                if (currentCustomerIndex === -1) {
+                    currentCustomerIndex = 0;
+                }
+                else if (currentCustomerIndex < $rows.length - 1) {
+                    currentCustomerIndex++;
+                }
+
+                $rows.removeClass("selected");
+                $rows.eq(currentCustomerIndex).addClass("selected");
+                $rows.eq(currentCustomerIndex)[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+
+                if (currentCustomerIndex <= 0) return;
+
+                currentCustomerIndex--;
+
+                $rows.removeClass("selected");
+                $rows.eq(currentCustomerIndex).addClass("selected");
+                $rows.eq(currentCustomerIndex)[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+            else if (e.key === "Enter") {
+                e.preventDefault();
+
+                if (currentCustomerIndex === -1) {
+                    currentCustomerIndex = 0;
+                }
+
+                $rows.eq(currentCustomerIndex).trigger("click");
+            }
+        });
+
+        $(document).on("click", ".customer-row", function (e) {
+            e.preventDefault();
+
+            const customerId = $(this).data("customerid");
+            const customerName = $(this).data("name") || "";
+            const mobileNo = $(this).data("phone") || "";
+            const address = $(this).data("address") || "";
+
+            $("#billingType").val("registered");
+            $("#mobilenumber, #customer, #customeraddress").prop("disabled", false).removeClass("bg-light");
+            $("#CustomerId").val(customerId);
+            $("#mobilenumber").val(mobileNo);
+            $("#customer").val(customerName);
+            $("#customeraddress").val(address);
+
+            lastLookedUpCustomerMobile = mobileNo;
+            lastResolvedCustomerMobile = mobileNo;
+            lastCustomerNotFoundPromptMobile = "";
+
+            loadPreviousBalance(customerId);
+            $("#mobileError").text("");
+            $("#customerListModal").modal("hide");
+
+            setTimeout(() => {
+                $("#customer").focus().select();
+            }, 150);
+        });
+
+        $(document).on("mouseenter", ".customer-row", function () {
+            if (!$("#customerListModal").is(":visible")) return;
+            if (isKeyboardScrollingCustomerModal) return;
+
+            customerNavMode = "mouse";
+
+            $("#customerListModal")
+                .addClass("mouse-nav")
+                .removeClass("keyboard-nav");
+
+            const $rows = $(".customer-row:visible");
+            $rows.removeClass("selected");
+            $(this).addClass("selected");
+
+            currentCustomerIndex = $rows.index(this);
+        });
+
+        $(document).on("mousemove", "#customerListModal", function () {
+            isKeyboardScrollingCustomerModal = false;
+        });
+
+        $('#customerListModal').on('shown.bs.modal', function () {
+            customerNavMode = "keyboard";
+
+            $("#customerListModal")
+                .addClass("keyboard-nav")
+                .removeClass("mouse-nav");
+
+            const $rows = $(".customer-row:visible");
+
+            currentCustomerIndex = -1;
+
+            if ($rows.length) {
+                currentCustomerIndex = 0;
+                $rows.removeClass("selected");
+                $rows.eq(currentCustomerIndex).addClass("selected");
+                $rows.eq(currentCustomerIndex)[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+
+            setTimeout(() => {
+                $("#customerSearch").focus().select();
+            }, 200);
+        });
+
+        $('#customerListModal').on('hidden.bs.modal', function () {
+            currentCustomerIndex = -1;
+            $("#customerTableBody .customer-row").removeClass("selected");
+        });
+
+        function loadAvailableItems(callback) {
+            $.get(getItemsEndpoint(), function (items) {
+                availableItemsCache = items || [];
+                availableItemsCache.forEach(item => {
+                    itemConversionMap[item.id] = item.conversion || 1;
+                });
+                isTabletWiseMode = availableItemsCache.length > 0 &&
+                    (availableItemsCache[0].itemConversion || availableItemsCache[0].ItemConversion) === "TabletWise";
+                updateItemModeUi();
+                $("#StockIssueItemBody tr").each(function () {
+                    const itemId = $(this).find(".item-id").val();
+                    if (itemId && itemConversionMap[itemId]) {
+                        $(this).attr("data-conversion", itemConversionMap[itemId]);
+                    }
+                    applyTabletWiseMode($(this));
+                    syncRateFromStripRate($(this));
+                    calculateRow($(this));
+                });
+                if (typeof callback === "function") {
+                    callback();
+                }
+            });
+        }
+
+        function buildItemModalRows(items) {
+            $("#itemTableBody").html(renderStockIssueItemRows(items));
+        }
+
+        function renderStockIssueItemRows(items) {
+            let rows = "";
+            items.forEach(item => {
+                const qtyColumns = businessType === 2
+                    ? `<td style="display:none;">${item.qty}</td><td>${item.availableQty}</td>`
+                    : `<td>${item.availableQty}</td>`;
+
+                rows += `<tr class="item-row" tabindex="0" data-itemid="${item.id}" data-name="${item.name}" data-gst="${item.gst}" data-cess="${item.cess || 0}" data-qty="${item.availableQty}" data-conversion="${item.conversion || 1}" data-hsnid="${item.hsnId || 0}" data-hsncode="${item.hsnCode || ''}">
+                    <td>${item.name}</td>
+                    ${qtyColumns}
+                </tr>`;
+            });
+
+            return rows;
+        }
+
+        function openItemSearchModal(searchText = "") {
+            if (window.stopAutoItemOpen === true || $("#itemMasterModal").is(":visible")) return;
+            showLoader("Loading items...");
+            loadAvailableItems(function () {
+                hideLoader();
+                buildItemModalRows(availableItemsCache);
+                $("#itemSearch").val(searchText).trigger("input");
+                currentItemIndex = -1;
+                $("#itemModal").modal("show");
+            });
+        }
+
+        $(document).on('click', '#btnNewItem', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.stopAutoItemOpen = true;
+            showLoader("Loading Item Master...");
+
+            $.get('/ItemMaster/LoadItemMasterPartial', function (data) {
+                hideLoader();
+                $('#itemMasterContainer').html(data);
+
+                var showStockIssueItemMaster = function () {
+                    window.stopAutoItemOpen = true;
+                    $('#itemMasterModal').modal("show");
+
+                    setTimeout(function () {
+                        $("#ItemMasterForm input[name='Name']").focus();
+                    }, 300);
+                };
+
+                if ($("#itemModal").hasClass("show")) {
+                    $("#itemModal").one("hidden.bs.modal.stockIssueItemMaster", showStockIssueItemMaster);
+                    $("#itemModal").modal("hide");
+                } else {
+                    showStockIssueItemMaster();
+                }
+            }).fail(function (xhr) {
+                window.stopAutoItemOpen = false;
+                hideLoader();
+                console.log(xhr.responseText);
+                toastr.error("Error loading Item Master form");
+            });
+        });
+
+        // StockIssue F3-Mod opens selected/current item in the same Sales Item Master partial.
+        $(document).on('click', '#btnModifyItem', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.stopAutoItemOpen = true;
+
+            const $selectedRow = $(".item-row.selected");
+            let selectedItemId = null;
+
+            if ($selectedRow.length) {
+                selectedItemId = $selectedRow.data("itemid");
+            }
+
+            if (!selectedItemId && currentRow && currentRow.length) {
+                selectedItemId = currentRow.find(".item-id").val();
+            }
+
+            if (!selectedItemId || selectedItemId == "0") {
+                window.stopAutoItemOpen = false;
+                toastr.warning("Please select an item first", "No Item Selected");
+                return;
+            }
+
+            showLoader("Loading Item Master...");
+
+            $.get('/ItemMaster/LoadItemMasterEditPartial?id=' + selectedItemId + '&_=' + new Date().getTime(), function (data) {
+                hideLoader();
+                $('#itemMasterContainer').html(data);
+
+                var showStockIssueItemMasterEdit = function () {
+                    window.stopAutoItemOpen = true;
+                    $('#itemMasterModal').modal("show");
+
+                    setTimeout(function () {
+                        $("#ItemMasterForm input[name='Name']").focus();
+                    }, 300);
+                };
+
+                if ($("#itemModal").hasClass("show")) {
+                    $("#itemModal").one("hidden.bs.modal.stockIssueItemMasterEdit", showStockIssueItemMasterEdit);
+                    $("#itemModal").modal("hide");
+                } else {
+                    showStockIssueItemMasterEdit();
+                }
+            }).fail(function (xhr) {
+                window.stopAutoItemOpen = false;
+                hideLoader();
+                console.log(xhr.responseText);
+                toastr.error("Error loading Item Master edit form");
+            });
+        });
+
+        // StockIssue refresh after Item Master save keeps the selected row in sync.
+        function refreshItemSearchAfterCreate(response) {
+            showLoader("Refreshing items...");
+
+            loadAvailableItems(function () {
+                hideLoader();
+                buildItemModalRows(availableItemsCache);
+
+                itemConversionMap[response.itemId] = parseFloat(response.conversion) || 1;
+
+                if (currentRow && currentRow.length) {
+                    currentRow.find(".item-input").val(response.itemName);
+                    currentRow.find(".item-id").val(response.itemId);
+                    currentRow.find(".gst").val(response.gst);
+                    currentRow.find(".cess").val(response.cess);
+                    currentRow.find(".hsn-id").val(response.hsnId || response.hsn || 0);
+                    currentRow.find(".hsn-code").val(response.hsnCode || "");
+                    currentRow.attr("data-conversion", response.conversion);
+
+                    window.suppressNextBatchNotFound = true;
+                    loadBatches(response.itemId);
+                }
+
+                $("#itemSearch").val(response.itemName);
+            });
+        }
+
+        function addNewRow() {
+            const tabsColumn = businessType === 2
+                ? `<td><input name="StockIssuesItemVMs[${rowIndex}].TabletQty" class="form-control form-control-sm tablet-qty" value="0" /></td>`
+                : "";
+
+            const row = `<tr data-conversion="1">
+                <td hidden><input name="StockIssuesItemVMs[${rowIndex}].Id" class="row-id" value="0" /></td>
+                <td hidden><input name="StockIssuesItemVMs[${rowIndex}].ItemMasterId" class="item-id" value="0" /></td>
+                <td hidden><input name="StockIssuesItemVMs[${rowIndex}].PurchaseItemId" class="purchase-id" value="" /></td>
+                <td hidden><input name="StockIssuesItemVMs[${rowIndex}].HsnId" class="hsn-id" /></td>
+                <td hidden><input name="StockIssuesItemVMs[${rowIndex}].HsnCode" class="hsn-code" /></td>
+                <td hidden><input name="StockIssuesItemVMs[${rowIndex}].Rate" class="form-control form-control-sm rate" value="0" /></td>
+                <td style="min-width:250px;"><input type="text" name="StockIssuesItemVMs[${rowIndex}].ItemBarcodeNumber" class="form-control form-control-sm item-input" placeholder="Search item..." /></td>
+                <td><input name="StockIssuesItemVMs[${rowIndex}].Batch" class="form-control form-control-sm batch" readonly /></td>
+                <td><input name="StockIssuesItemVMs[${rowIndex}].Expirydate" class="form-control form-control-sm expirydate" readonly /></td>
+                <td><input name="StockIssuesItemVMs[${rowIndex}].Mrp" class="form-control form-control-sm mrp" value="0" /></td>
+                <td><input name="StockIssuesItemVMs[${rowIndex}].Qty" class="form-control form-control-sm qty" value="0" /></td>
+                ${tabsColumn}
+                <td><input name="StockIssuesItemVMs[${rowIndex}].StripRate" class="form-control form-control-sm stripe-rate" value="0" /></td>
+                <td><input name="StockIssuesItemVMs[${rowIndex}].Gst" class="form-control form-control-sm gst" value="0" readonly /></td>
+                <td><input name="StockIssuesItemVMs[${rowIndex}].Cess" class="form-control form-control-sm cess" value="0" readonly /></td>
+                <td><input name="StockIssuesItemVMs[${rowIndex}].Discount" class="form-control form-control-sm discount" value="0" /></td>
+                <td><input name="StockIssuesItemVMs[${rowIndex}].Amount" class="form-control form-control-sm Amount" value="0" readonly /></td>
+                <td><u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u></td>
+            </tr>`;
+
+            $("#StockIssueItemBody").append(row);
+            const $newRow = $("#StockIssueItemBody tr:last");
+            applyTabletWiseMode($newRow);
+            syncRateFromStripRate($newRow);
+            rowIndex++;
+        }
+
+        function addPaymentRow(selectedValue = "", amountValue = "0", referenceNo = "", description = "") {
+            const row = `<tr>
+                <td hidden><input type="hidden" name="SalsePaymentDetails[${paymentRowIndex}].Id" value="0" /></td>
+                <td style="min-width:185px;">
+                    <select name="SalsePaymentDetails[${paymentRowIndex}].PaymentModeId" class="form-control form-control-sm paymentMode-dropdown">
+                        ${renderPaymentOptions(selectedValue)}
+                    </select>
+                </td>
+                <td><input name="SalsePaymentDetails[${paymentRowIndex}].Amount" class="form-control form-control-sm paymentAmount" value="${amountValue}" /></td>
+                <td><input name="SalsePaymentDetails[${paymentRowIndex}].ReferenceNo" class="form-control form-control-sm paymentReferenceNO" value="${referenceNo}" /></td>
+                <td><input name="SalsePaymentDetails[${paymentRowIndex}].Description" class="form-control form-control-sm paymentDescription" value="${description}" /></td>
+                <td><u class="remove-paymentrow-btn text-danger" style="cursor:pointer;">Remove</u></td>
+            </tr>`;
+
+            $("#PaymentDetailsBody").append(row);
+            paymentRowIndex++;
+        }
+
+        function reindexCollectionRows(tbodySelector, prefix) {
+            $(`${tbodySelector} tr`).each(function (index) {
+                $(this).find("[name]").each(function () {
+                    const name = $(this).attr("name");
+                    if (!name) return;
+                    $(this).attr("name", name.replace(new RegExp(`${prefix}\\[\\d+\\]`), `${prefix}[${index}]`));
+                });
+            });
+        }
+
+        function reindexItemRows() {
+            reindexCollectionRows("#StockIssueItemBody", "StockIssuesItemVMs");
+            rowIndex = $("#StockIssueItemBody tr").length;
+        }
+
+        function reindexPaymentRows() {
+            reindexCollectionRows("#PaymentDetailsBody", "SalsePaymentDetails");
+            paymentRowIndex = $("#PaymentDetailsBody tr").length;
+        }
+
+        function loadBatches(itemId) {
+            showLoader("Loading batches...");
+            $.get(getBatchesEndpoint(itemId), function (data) {
+                hideLoader();
+                if (!data.groupedResult || data.groupedResult.length === 0) {
+                    if (window.suppressNextBatchNotFound === true) {
+                        window.suppressNextBatchNotFound = false;
+                        return;
+                    }
+                    toastr.warning("No batch available.");
+                    return;
+                }
+
+                let batchRows = "";
+                data.groupedResult.forEach(batch => {
+                    const encoded = encodeURIComponent(JSON.stringify(batch));
+                    const qtyColumns = businessType === 2
+                        ? `<td style="display:none;">${Number(batch.qty || 0).toFixed(2)}</td><td>${batch.stripTabsQty || batch.qty}</td>`
+                        : `<td>${Number(batch.qty || 0).toFixed(2)}</td>`;
+
+                    batchRows += `<tr class="batch-row" tabindex="0" data-batch="${encoded}">
+                        <td>${batch.batch || ""}</td>
+                        <td>${normalizeDateDisplay(batch.expiry)}</td>
+                        <td>${Number(batch.striprate || batch.rate || 0).toFixed(2)}</td>
+                        <td>${Number(batch.mrp || 0).toFixed(2)}</td>
+                        ${qtyColumns}
+                    </tr>`;
+                });
+
+                $("#batchTableBody").html(batchRows);
+                currentBatchIndex = -1;
+                $("#batchModal").modal("show");
+            });
+        }
+
+        function getRowCalculationData(row) {
+            const qty = parseFloat(row.find(".qty").val()) || 0;
+            const tabletQty = parseFloat(row.find(".tablet-qty").val()) || 0;
+            const stripRate = parseFloat(row.find(".stripe-rate").val()) || 0;
+            const gst = parseFloat(row.find(".gst").val()) || 0;
+            const cess = parseFloat(row.find(".cess").val()) || 0;
+            const discount = parseFloat(row.find(".discount").val()) || 0;
+            const conversion = parseFloat(row.attr("data-conversion")) || 1;
+            const taxCalculation = $("#taxCalculation").val();
+
+            let grossAmount = qty * stripRate;
+            if (businessType === 2 && isTabletWiseMode === true) {
+                const totalTablets = (qty * conversion) + tabletQty;
+                grossAmount = (totalTablets / conversion) * stripRate;
+            }
+
+            const discountAmt = (grossAmount * discount) / 100;
+            const amountAfterDiscount = grossAmount - discountAmt;
+            const gstAmt = taxCalculation === "No" ? 0 : (amountAfterDiscount * gst) / 100;
+            const cessAmt = taxCalculation === "No" ? 0 : (amountAfterDiscount * cess) / 100;
+
+            return { gst, cess, discountAmt, amountAfterDiscount, gstAmt, cessAmt, total: amountAfterDiscount + gstAmt + cessAmt };
+        }
+
+        function calculateRow(row) {
+            const data = getRowCalculationData(row);
+            row.find(".Amount").val(data.total.toFixed(2));
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            let total = 0, totalGst = 0, totalCess = 0, totalDiscount = 0;
+            const gstRows = [];
+
+            $("#StockIssueItemBody tr").each(function () {
+                const row = $(this);
+                const data = getRowCalculationData(row);
+                total += data.amountAfterDiscount;
+                totalGst += data.gstAmt;
+                totalCess += data.cessAmt;
+                totalDiscount += data.discountAmt;
+                gstRows.push({ rate: data.amountAfterDiscount, gst: data.gst, cess: data.cess });
+            });
+
+            let percentInput = parseFloat($("#discountPercent").val()) || 0;
+            let amountInput = parseFloat($("#discountamount").val()) || 0;
+            let globalDiscountPercent = 0;
+            let globalDiscountAmt = 0;
+
+            if ($("#discountPercent").is(":focus") || (percentInput > 0 && amountInput === 0)) {
+                globalDiscountPercent = percentInput;
+                globalDiscountAmt = (total * globalDiscountPercent) / 100;
+                $("#discountamount").val(globalDiscountAmt.toFixed(2));
+            } else if ($("#discountamount").is(":focus") || (amountInput > 0 && percentInput === 0)) {
+                globalDiscountAmt = amountInput;
+                globalDiscountPercent = total > 0 ? (globalDiscountAmt / total) * 100 : 0;
+                $("#discountPercent").val(globalDiscountPercent.toFixed(2));
+            } else if (percentInput > 0 && amountInput > 0) {
+                globalDiscountPercent = percentInput;
+                globalDiscountAmt = amountInput;
+            }
+
+            let totalAfterGlobalDiscount = total - globalDiscountAmt;
+            if (globalDiscountAmt > 0) {
+                totalDiscount += globalDiscountAmt;
+                totalGst = 0;
+                totalCess = 0;
+                gstRows.forEach(row => {
+                    const rowDiscountAmt = (row.rate * globalDiscountPercent) / 100;
+                    const rowAfterGlobalDiscount = row.rate - rowDiscountAmt;
+                    const gstAmt = $("#taxCalculation").val() === "No" ? 0 : (rowAfterGlobalDiscount * row.gst) / 100;
+                    const cessAmt = $("#taxCalculation").val() === "No" ? 0 : (rowAfterGlobalDiscount * row.cess) / 100;
+                    totalGst += gstAmt;
+                    totalCess += cessAmt;
+                });
+            }
+
+            totalAfterGlobalDiscount = Math.max(0, totalAfterGlobalDiscount);
+            const totalPayable = totalAfterGlobalDiscount + totalGst + totalCess;
+            const roundedPayable = Math.round(totalPayable);
+            const roundOffAmount = Number((roundedPayable - totalPayable).toFixed(2));
+            let paidAmount = 0;
+            $(".paymentAmount").each(function () { paidAmount += parseFloat($(this).val()) || 0; });
+            let balance = 0, returnAmount = 0;
+            if (paidAmount > roundedPayable) { returnAmount = paidAmount - roundedPayable; } else { balance = roundedPayable - paidAmount; }
+
+            $("[name='Total']").val(totalAfterGlobalDiscount.toFixed(2));
+            $("[name='TotalGstAmt']").val(totalGst.toFixed(2));
+            $("[name='TotalCessAmount']").val(totalCess.toFixed(2));
+            $("[name='Totaldiscount']").val(totalDiscount.toFixed(2));
+            $("[name='TotalPayable']").val(roundedPayable.toFixed(2));
+            $("[name='RoundOffAmount']").val(roundOffAmount.toFixed(2));
+            $("#paidAmout").val(paidAmount.toFixed(2));
+            $("#balance").val(balance.toFixed(2));
+            $("#returnAmount").val(returnAmount.toFixed(2));
+            $("#returnAmountDisplay").text(returnAmount.toFixed(2));
+        }
+
+        function validateForm() {
+            pruneBlankItemRows();
+            pruneBlankPaymentRows();
+
+            const billingType = $("#billingType").val();
+            const mobile = ($("#mobilenumber").val() || "").trim();
+
+            if (billingType === "registered") {
+                if (!mobile) {
+                    toastr.error("Mobile number is required.");
+                    $("#mobilenumber").focus().select();
+                    return false;
+                }
+
+                if (!isValidIndianMobile(mobile)) {
+                    toastr.error("Please enter a valid 10-digit mobile number.");
+                    $("#mobilenumber").focus().select();
+                    return false;
+                }
+
+                if (!$("#CustomerId").val()) {
+                    toastr.error("Please select a valid customer.");
+                    $("#customer").focus().select();
+                    return false;
+                }
+            }
+
+            let hasValidItemRow = false;
+            let firstInvalidQtyRow = null;
+            let firstIncompleteRow = null;
+
+            $("#StockIssueItemBody tr").each(function () {
+                const row = $(this);
+                const validation = validateItemRowForAdvance(row);
+
+                if (validation.status === "blank") {
+                    return;
+                }
+
+                if (validation.status === "incomplete" && !firstIncompleteRow) {
+                    firstIncompleteRow = row;
+                    return;
+                }
+
+                if (validation.status === "invalidQty" && !firstInvalidQtyRow) {
+                    firstInvalidQtyRow = row;
+                    return;
+                }
+
+                hasValidItemRow = true;
+            });
+
+            if (firstIncompleteRow) {
+                toastr.error("Please select batch for all items or remove incomplete rows.", "Incomplete Item Row");
+                firstIncompleteRow.find(".item-input").focus().select();
+                return false;
+            }
+
+            if (firstInvalidQtyRow) {
+                const validation = validateItemRowForAdvance(firstInvalidQtyRow);
+                toastr.error(validation.message, "Invalid Quantity");
+                focusRowTarget(validation.focusTarget);
+                return false;
+            }
+
+            if (!hasValidItemRow) {
+                toastr.error("Please add at least one item with quantity before saving.", "Item Required");
+                focusItemGrid();
+                return false;
+            }
+
+            let paymentValid = true;
+            $("#PaymentDetailsBody tr").each(function () {
+                const amount = parseFloat($(this).find(".paymentAmount").val()) || 0;
+                const paymentMode = $(this).find(".paymentMode-dropdown").val();
+                if (amount > 0 && !paymentMode) {
+                    paymentValid = false;
+                    $(this).find(".paymentMode-dropdown").focus();
+                    return false;
+                }
+            });
+
+            if (!paymentValid) {
+                toastr.error("Please select payment mode for entered payment amount.");
+                return false;
+            }
+
+            return true;
+        }
+
+        $(document).ready(function () {
+            loadAvailableItems(function () {
+                if ($("#StockIssueItemBody tr").length === 0) {
+                    addNewRow();
+                }
+                calculateTotal();
+            });
+
+            $("#mobilenumber, #doctorMobile").on("input", function () {
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+            });
+
+            $("#mobilenumber").on("input", function () {
+                if ($("#billingType").val() !== "registered") {
+                    return;
+                }
+
+                const mobile = ($(this).val() || "").trim();
+                clearTimeout(customerLookupTimer);
+
+                if (!mobile || mobile !== lastResolvedCustomerMobile) {
+                    clearCustomerSelection();
+                }
+
+                if (!isValidIndianMobile(mobile)) {
+                    $("#mobileError").text(mobile.length === 10 ? "Enter valid 10 digit mobile number." : "");
+                    return;
+                }
+
+                $("#mobileError").text("");
+                customerLookupTimer = setTimeout(() => {
+                    lookupCustomerByMobile(mobile, {
+                        focusAfterSuccess: false,
+                        showSuccessToast: false,
+                        promptOnMissing: true
+                    });
+                }, 350);
+            });
+
+            updatePaymentTypeUi($("#paymentTypeHidden").val() || "cash");
+            applyBillingType($("#billingType").val());
+            calculateTotal();
+
+            if ($("#CustomerId").val() && $("#billingType").val() === "registered") {
+                loadPreviousBalance($("#CustomerId").val());
+            }
+            setTimeout(() => {
+                $("#BillDate").focus().select();
+            }, 300);
+        });
+
+        $("#addRow").on("click", function () { addNewRow(); });
+        $("#addPaymentRow").on("click", function () {
+            let defaultAmount = "0";
+            const currentBalance = parseFloat($("#balance").val()) || 0;
+            const totalPayable = parseFloat($("#totalPayable").val()) || 0;
+            if ($("#PaymentDetailsBody tr").length === 0 && totalPayable > 0) defaultAmount = totalPayable.toFixed(2);
+            else if (currentBalance > 0) defaultAmount = currentBalance.toFixed(2);
+            addPaymentRow("", defaultAmount);
+        });
+
+        $("#billingType").on("change", function () { applyBillingType(this.value); calculateTotal(); });
+        $("#paymentToggle").on("change", function () {
+            const nextBillingType = this.checked ? "registered" : "walkin";
+            $("#billingType").val(nextBillingType);
+            updatePaymentTypeUi(this.checked ? "credit" : "cash");
+            applyBillingType(nextBillingType);
+            calculateTotal();
+        });
+        $(document).on("focus", "#billingType", function () {
+            showBillingTypePicker();
+        });
+        $(document).on("focus", "#taxCalculation", function () {
+            showSelectPicker(this);
+        });
+        $("#taxCalculation, #discountPercent, #discountamount").on("input change", function () { calculateTotal(); });
+
+        $(document).on("input", ".qty, .discount, .mrp", function () {
+            calculateRow($(this).closest("tr"));
+        });
+
+        $(document).on("input", ".stripe-rate", function () {
+            const row = $(this).closest("tr");
+            syncRateFromStripRate(row);
+            calculateRow(row);
+        });
+
+        $(document).on("input", ".tablet-qty", function () {
+            const row = $(this).closest("tr");
+
+            if (!isTabletWiseMode) {
+                calculateRow(row);
+                return;
+            }
+
+            const itemId = row.find(".item-id").val();
+            let conversion = parseFloat(row.attr("data-conversion"));
+
+            if (!conversion || conversion <= 0) {
+                conversion = parseFloat(itemConversionMap[itemId]) || 1;
+            }
+
+            const tabletQty = parseFloat($(this).val()) || 0;
+            row.find(".qty").val(Math.floor(tabletQty / conversion));
+            calculateRow(row);
+        });
+
+        $(document).on("blur", ".tablet-qty", function () {
+            if (!isTabletWiseMode) {
+                return;
+            }
+
+            const row = $(this).closest("tr");
+            const itemId = row.find(".item-id").val();
+            let conversion = parseFloat(row.attr("data-conversion"));
+
+            if (!conversion || conversion <= 0) {
+                conversion = parseFloat(itemConversionMap[itemId]) || 1;
+            }
+
+            const tabletQty = parseFloat($(this).val()) || 0;
+            $(this).val(tabletQty % conversion);
+            calculateRow(row);
+        });
+
+        $(document).on("input", ".paymentAmount", function () { calculateTotal(); });
+
+        $(document).on("focus", ".paymentMode-dropdown", function () {
+            const select = this;
+
+            if (document.activeElement !== select) {
+                return;
+            }
+
+            setTimeout(() => {
+                if (typeof select.showPicker === "function") {
+                    select.showPicker();
+                } else {
+                    $(select).trigger("click");
+                }
+            }, 50);
+        });
+
+        $(document).on("click", ".remove-row-btn", function () {
+            $(this).closest("tr").remove();
+            reindexItemRows();
+            calculateTotal();
+        });
+
+        $(document).on("click", ".remove-paymentrow-btn", function () {
+            $(this).closest("tr").remove();
+            reindexPaymentRows();
+            calculateTotal();
+        });
+
+        $(document).on("keydown", ".item-input", function (e) {
+            if (e.key === "Tab") {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                handleItemRowTab($(this).closest("tr"));
+                return;
+            }
+
+            if (e.key === "Enter") {
+                e.preventDefault();
+                currentRow = $(this).closest("tr");
+                openItemSearchModal($(this).val());
+            }
+        });
+
+        $(document).on("keydown", "#BillNo", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            $("#BillDate").focus();
+        });
+
+        $(document).on("keydown", "#BillDate", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            $("#paymentToggle").focus();
+        });
+
+        $(document).on("keydown", "#Total, #discountPercent, #discountamount", function (e) {
+            if (e.key !== "Enter") return;
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            switch (this.id) {
+                case "Total":
+                    $("#discountPercent").focus().select();
+                    break;
+                case "discountPercent":
+                    $("#discountamount").focus().select();
+                    break;
+                case "discountamount":
+                    openPaymentGrid();
+                    break;
+            }
+        });
+
+        $(document).on("keydown",
+            ".paymentMode-dropdown, .paymentAmount, .paymentReferenceNO, .paymentDescription",
+            function (e) {
+                const row = $(this).closest("tr");
+                const input = $(this);
+
+                const isMode = input.hasClass("paymentMode-dropdown");
+                const isAmount = input.hasClass("paymentAmount");
+                const isRef = input.hasClass("paymentReferenceNO");
+                const isDesc = input.hasClass("paymentDescription");
+
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+
+                    const paymentMode = row.find(".paymentMode-dropdown").val();
+                    if (!paymentMode) {
+                        row.find(".paymentMode-dropdown").focus();
+                        return;
+                    }
+
+                    if (isMode) {
+                        row.find(".paymentAmount").focus().select();
+                        return;
+                    }
+
+                    if (isAmount) {
+                        if (!(input.val() || "").toString().trim()) {
+                            input.val("0");
+                        }
+
+                        row.find(".paymentReferenceNO").focus();
+                        return;
+                    }
+
+                    if (isRef) {
+                        row.find(".paymentDescription").focus();
+                        return;
+                    }
+
+                    if (isDesc) {
+                        const isLastRow = row.is("#PaymentDetailsBody tr:last");
+                        if (!isLastRow) {
+                            return;
+                        }
+
+                        const amountInput = row.find(".paymentAmount");
+                        const amountVal = parseFloat(amountInput.val()) || 0;
+                        if (amountVal <= 0) {
+                            amountInput.focus().select();
+                            return;
+                        }
+
+                        addPaymentRow("", "0");
+                        setTimeout(() => {
+                            $("#PaymentDetailsBody tr:last .paymentMode-dropdown").focus();
+                        }, 150);
+                    }
+                }
+
+                if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    if (isMode) row.find(".paymentAmount").focus();
+                    else if (isAmount) row.find(".paymentReferenceNO").focus();
+                    else if (isRef) row.find(".paymentDescription").focus();
+                }
+
+                if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    if (isDesc) row.find(".paymentReferenceNO").focus();
+                    else if (isRef) row.find(".paymentAmount").focus();
+                    else if (isAmount) row.find(".paymentMode-dropdown").focus();
+                }
+
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    const next = row.next("tr");
+                    if (!next.length) return;
+
+                    if (isMode) next.find(".paymentMode-dropdown").focus();
+                    else if (isAmount) next.find(".paymentAmount").focus();
+                    else if (isRef) next.find(".paymentReferenceNO").focus();
+                    else if (isDesc) next.find(".paymentDescription").focus();
+                }
+
+                if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const prev = row.prev("tr");
+                    if (!prev.length) return;
+
+                    if (isMode) prev.find(".paymentMode-dropdown").focus();
+                    else if (isAmount) prev.find(".paymentAmount").focus();
+                    else if (isRef) prev.find(".paymentReferenceNO").focus();
+                    else if (isDesc) prev.find(".paymentDescription").focus();
+                }
+            }
+        );
+                // ✅ Qty → TabletQty / StripeRate
+        $(document).on("keydown", ".qty", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+
+            const row = $(this).closest("tr");
+
+            if (businessType === 2 && isTabletWiseMode) {
+                row.find(".tablet-qty").focus().select();
+            } else {
+                row.find(".stripe-rate").focus().select();
+            }
+        });
+
+        // ✅ TabletQty → StripeRate
+        $(document).on("keydown", ".tablet-qty", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+
+            const row = $(this).closest("tr");
+            row.find(".stripe-rate").focus().select();
+        });
+
+        // ✅ StripeRate → Discount
+        $(document).on("keydown", ".stripe-rate", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+
+            const row = $(this).closest("tr");
+            row.find(".discount").focus().select();
+        });
+
+        // ✅ Discount → GST
+        $(document).on("keydown", ".discount", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            advanceAfterDiscount($(this).closest("tr"));
+        });
+
+        // Sales-style row progression: GST Enter should always land on the next item row.
+        $(document).on("keydown", ".gst", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            focusNextItemRowOrAdd($(this).closest("tr"));
+        });
+        $(document).on("keydown", "#paymentToggle", function (e) {
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                e.preventDefault();
+                $(this).prop("checked", !$(this).is(":checked")).trigger("change");
+                return;
+            }
+
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            $("#billingType").focus();
+            showBillingTypePicker();
+        });
+
+        $(document).on("keydown", "#taxCalculation", function (e) {
+            if (e.key === "ArrowUp" || e.key === "ArrowDown") return;
+            if (e.key !== "Enter") return;
+
+            e.preventDefault();
+            focusItemGrid();
+        });
+
+        $(document).on("keydown", "#billingType", function (e) {
+            if (e.key === "ArrowUp" || e.key === "ArrowDown") return;
+            if (e.key !== "Enter") return;
+
+            e.preventDefault();
+
+            if (this.value === "registered") {
+                $("#mobilenumber").prop("disabled", false).focus().select();
+                return;
+            }
+
+            $("#mobilenumber, #customer, #customeraddress").val("").prop("disabled", true);
+
+            if ($("#doctorMobile").length && $("#doctorMobile").is(":visible") && !$("#doctorMobile").is(":disabled")) {
+                $("#doctorMobile").focus();
+            } else {
+                $("#taxCalculation").focus();
+            }
+        });
+
+        $(document).on("keydown", "#customer", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            $("#customeraddress").focus();
+        });
+
+        $(document).on("keydown", "#customeraddress", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+
+            if ($("#doctorMobile").length && $("#doctorMobile").is(":visible") && !$("#doctorMobile").is(":disabled")) {
+                $("#doctorMobile").focus();
+            } else {
+                $("#taxCalculation").focus();
+            }
+        });
+
+        $(document).on("keydown", "#doctorname", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            $("#doctorregno").focus();
+        });
+
+        $(document).on("keydown", "#doctorregno", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            $("#taxCalculation").focus();
+        });
+
+        $(document).on("keydown", ".mrp", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+
+            const row = $(this).closest("tr");
+            if (businessType === 2 && isTabletWiseMode) {
+                row.find(".tablet-qty").focus().select();
+            } else {
+                row.find(".qty").focus().select();
+            }
+        });
+
+        $(document).on("keydown", ".mrp, .qty, .tablet-qty, .stripe-rate, .discount", function (e) {
+            if (e.key === "Tab") {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                handleItemRowTab($(this).closest("tr"));
+                return;
+            }
+
+            if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+
+            const row = $(this).closest("tr");
+            const targetRow = e.key === "ArrowDown" ? row.next("tr") : row.prev("tr");
+            if (!targetRow.length) return;
+
+            e.preventDefault();
+
+            const input = $(this);
+            const classMap = [".mrp", ".qty", ".tablet-qty", ".stripe-rate", ".discount"];
+            const selector = classMap.find(cssClass => input.hasClass(cssClass.substring(1)));
+            if (!selector) return;
+
+            const targetInput = targetRow.find(selector);
+            if (targetInput.length) {
+                targetInput.focus().select();
+            }
+        });
+
+        $(document).on("keydown", ".gst", function (e) {
+            if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+
+            const row = $(this).closest("tr");
+            const targetRow = e.key === "ArrowDown" ? row.next("tr") : row.prev("tr");
+            if (!targetRow.length) return;
+
+            e.preventDefault();
+
+            const input = $(this);
+            const classMap = [".gst"];
+            const selector = classMap.find(cssClass => input.hasClass(cssClass.substring(1)));
+            if (!selector) return;
+
+            const targetInput = targetRow.find(selector);
+            if (targetInput.length) {
+                targetInput.focus().select();
+            }
+        });
+
+        function openPaymentGrid() {
+            setTimeout(() => {
+                const firstPaymentMode = $("#PaymentDetailsBody tr:first .paymentMode-dropdown");
+
+                if (firstPaymentMode.length) {
+                    firstPaymentMode.focus();
+                    return;
+                }
+
+                addPaymentRow();
+                setTimeout(() => {
+                    $("#PaymentDetailsBody tr:first .paymentMode-dropdown").focus();
+                }, 150);
+            }, 100);
+        }
+
+        $(document).on("input", "#itemSearch", function () {
+            const searchWord = ($(this).val() || "").toLowerCase();
+            $("#itemTableBody tr").each(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(searchWord) > -1);
+            });
+            currentItemIndex = -1;
+        });
+
+        $(document).on("keydown", function (e) {
+            if ($("#itemModal").is(":visible") && !$("#itemMasterModal").is(":visible")) {
+                if (e.key === "F2") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    $("#btnNewItem").trigger("click");
+                    return;
+                }
+                if (e.key === "F3") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    $("#btnModifyItem").trigger("click");
+                    return;
+                }
+
+                const rows = $(".item-row:visible");
+                if (!rows.length) return;
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    currentItemIndex = e.key === "ArrowDown" ? (currentItemIndex + 1) % rows.length : (currentItemIndex - 1 + rows.length) % rows.length;
+                    rows.removeClass("selected");
+                    rows.eq(currentItemIndex).addClass("selected")[0]?.scrollIntoView({ block: "nearest" });
+                } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (rows.length === 1) rows.first().trigger("click");
+                    else if (currentItemIndex >= 0) rows.eq(currentItemIndex).trigger("click");
+                }
+            }
+
+            if ($("#batchModal").is(":visible")) {
+                const rows = $(".batch-row:visible");
+                if (!rows.length) return;
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    currentBatchIndex = e.key === "ArrowDown" ? (currentBatchIndex + 1) % rows.length : (currentBatchIndex - 1 + rows.length) % rows.length;
+                    rows.removeClass("selected");
+                    rows.eq(currentBatchIndex).addClass("selected")[0]?.scrollIntoView({ block: "nearest" });
+                } else if (e.key === "Enter" && currentBatchIndex >= 0) {
+                    e.preventDefault();
+                    rows.eq(currentBatchIndex).trigger("click");
+                }
+            }
+        });
+
+        $(document).on("click", ".item-row", function () {
+            const itemId = $(this).data("itemid");
+            const itemName = $(this).data("name");
+            const gst = $(this).data("gst");
+            const cess = $(this).data("cess");
+            const conversion = $(this).data("conversion") || 1;
+            const hsnId = $(this).data("hsnid") || 0;
+            const hsnCode = $(this).data("hsncode") || "";
+            currentRow.find(".item-input").val(itemName);
+            currentRow.find(".item-id").val(itemId);
+            currentRow.find(".gst").val(gst);
+            currentRow.find(".cess").val(cess);
+            currentRow.find(".hsn-id").val(hsnId);
+            currentRow.find(".hsn-code").val(hsnCode);
+            currentRow.attr("data-conversion", conversion);
+            $("#itemModal").modal("hide");
+            loadBatches(itemId);
+        });
+
+        $(document).on("click", ".batch-row", function () {
+            const batch = JSON.parse(decodeURIComponent($(this).attr("data-batch")));
+            currentRow.find(".batch").val(batch.batch || "");
+            currentRow.find(".expirydate").val(normalizeDateDisplay(batch.expiry));
+            currentRow.find(".mrp").val(Number(batch.mrp || 0).toFixed(2));
+            currentRow.find(".rate").val(Number(batch.rate || 0).toFixed(2));
+            currentRow.find(".stripe-rate").val(Number(batch.striprate || batch.rate || 0).toFixed(2));
+            currentRow.find(".purchase-id").val(batch.purchaseItemId || 0);
+            calculateRow(currentRow);
+            $("#batchModal").modal("hide");
+            setTimeout(() => {
+                if (businessType === 2 && isTabletWiseMode) {
+                    currentRow.find(".tablet-qty").val(1);
+                    calculateRow(currentRow);
+                    currentRow.find(".tablet-qty").focus().select();
+                    return;
+                }
+
+                currentRow.find(".qty").val(1);
+                calculateRow(currentRow);
+                currentRow.find(".qty").focus().select();
+            }, 150);
+        });
+
+        $(document).on("keydown", "#mobilenumber", function (e) {
+            if (e.key !== "Enter" || $("#billingType").val() !== "registered") return;
+            e.preventDefault();
+
+            const mobile = ($(this).val() || "").trim();
+            if (!isValidIndianMobile(mobile)) {
+                toastr.error("Enter valid 10 digit mobile number.");
+                return;
+            }
+
+            showLoader("Checking customer...");
+            $.get('/StockIssue/GetByMobile', { mobile: mobile }, function (res) {
+                hideLoader();
+                if (res.success) {
+                    $("#CustomerId").val(res.customerId);
+                    $("#customer").val(res.name);
+                    $("#customeraddress").val(res.address);
+                    loadPreviousBalance(res.customerId);
+                    toastr.success("Customer found.");
+                    $("#customer").focus().select();
+                } else {
+                    Swal.fire({
+                        title: 'Customer not found',
+                        text: 'Do you want to create a new customer?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $('#createCustomerModal').modal('show');
+                            $('#newCustomerMobile').val(mobile);
+                        }
+                    });
+                }
+            });
+        });
+
+        $('#createCustomerModal').on('shown.bs.modal', function () {
+            focusFirstFieldInModal('#createCustomerModal');
+        });
+
+        $(document).on("keydown", "#createCustomerModal input", function (e) {
+            if (e.key !== "Enter") return;
+            if (!$("#createCustomerModal").hasClass("show")) return;
+
+            e.preventDefault();
+
+            const $current = $(this);
+            const fieldName = $current.attr("name");
+
+            if (fieldName === "Name" && !isValidCustomerName($current.val())) {
+                toastr.error("Customer name should be at least 3 characters.");
+                $current.focus().select();
+                return;
+            }
+
+            const $inputs = $("#createCustomerModal")
+                .find("input:visible:not([type='hidden']):not([readonly]):not([disabled])");
+            const currentIndex = $inputs.index(this);
+
+            if (currentIndex === $inputs.length - 1) {
+                $("#newCustomerForm").trigger("submit");
+                return;
+            }
+
+            const $nextInput = $inputs.eq(currentIndex + 1);
+            $nextInput.trigger("focus");
+            if (typeof $nextInput[0]?.select === "function") {
+                $nextInput[0].select();
+            }
+        });
+
+        $('#newCustomerForm').on('submit', function (e) {
+            e.preventDefault();
+            const data = {
+                Name: $('#createCustomerModal input[name="Name"]').val(),
+                PhoneNo: $('#newCustomerMobile').val(),
+                Address: $('#createCustomerModal input[name="Address"]').val()
+            };
+
+            showLoader("Saving customer...");
+            $.ajax({
+                url: '/StockIssue/CreateCustomer',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    hideLoader();
+                    if (res.success) {
+                        $('#CustomerId').val(res.data.id);
+                        $('#customer').val(res.data.name);
+                        $('#customeraddress').val(res.data.address);
+                        $('#createCustomerModal').modal('hide');
+                        loadPreviousBalance(res.data.id);
+                        toastr.success("Customer created.");
+                        focusElement("#customer");
+                    } else {
+                        toastr.error(res.message || "Unable to create customer.");
+                    }
+                },
+                error: function (xhr) {
+                    hideLoader();
+                    toastr.error(xhr.responseJSON?.message || "Unable to create customer.");
+                }
+            });
+        });
+
+        $(document).on("keydown", "#doctorMobile", function (e) {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            const mobile = ($(this).val() || "").trim();
+
+            if (!mobile) {
+                $("#doctorname").focus().select();
+                return;
+            }
+
+            if (!isValidIndianMobile(mobile)) {
+                toastr.error("Enter valid 10 digit mobile number.");
+                return;
+            }
+
+            showLoader("Checking doctor...");
+            $.get('/PharmacyDoctor/GetDoctorByMobile', { phoneNo: mobile }, function (res) {
+                hideLoader();
+                if (res.found) {
+                    $("#DoctorId").val(res.data.id);
+                    $("#doctorname").val(res.data.name);
+                    $("#doctorregno").val(res.data.registrationNo);
+                    toastr.success("Doctor found.");
+                    focusElement("#doctorname");
+                } else {
+                    Swal.fire({
+                        title: 'Doctor not found',
+                        text: 'Do you want to create a new doctor?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $('#createDoctorModal').modal('show');
+                            $('#newDoctorPhone').val(mobile);
+                        }
+                    });
+                }
+            });
+        });
+
+        $('#createDoctorModal').on('shown.bs.modal', function () {
+            focusFirstFieldInModal('#createDoctorModal');
+        });
+
+        $(document).on("keydown", "#createDoctorModal input", function (e) {
+            if (e.key !== "Enter") return;
+            if (!$("#createDoctorModal").hasClass("show")) return;
+
+            e.preventDefault();
+
+            const $inputs = $("#createDoctorModal")
+                .find("input:visible:not([type='hidden']):not([readonly]):not([disabled])");
+            const currentIndex = $inputs.index(this);
+
+            if (currentIndex === $inputs.length - 1) {
+                $("#newDoctorForm").trigger("submit");
+                return;
+            }
+
+            const $nextInput = $inputs.eq(currentIndex + 1);
+            $nextInput.trigger("focus");
+            if (typeof $nextInput[0]?.select === "function") {
+                $nextInput[0].select();
+            }
+        });
+
+        $('#newDoctorForm').on('submit', function (e) {
+            e.preventDefault();
+            const data = {
+                Name: $('#createDoctorModal input[name="Name"]').val(),
+                PhoneNo: $('#newDoctorPhone').val(),
+                Address: $('#createDoctorModal input[name="Address"]').val(),
+                RegistrationNo: $('#createDoctorModal input[name="RegistrationNo"]').val(),
+                Specialized: $('#createDoctorModal input[name="Specialized"]').val(),
+                Commission: parseFloat($('#createDoctorModal input[name="Commission"]').val()) || 0
+            };
+
+            showLoader("Saving doctor...");
+            $.ajax({
+                url: '/PharmacyDoctor/CreateDoctor',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    hideLoader();
+                    if (res.success) {
+                        $("#DoctorId").val(res.data.id);
+                        $("#doctorname").val(res.data.name);
+                        $("#doctorregno").val(res.data.registrationNo);
+                        $('#createDoctorModal').modal('hide');
+                        toastr.success("Doctor created.");
+                        focusElement("#doctorname");
+                    } else {
+                        toastr.error(res.message || "Unable to create doctor.");
+                    }
+                },
+                error: function () {
+                    hideLoader();
+                    toastr.error("Unable to create doctor.");
+                }
+            });
+        });
+
+        $('#itemModal').on('shown.bs.modal', function () {
+            focusFirstFieldInModal('#itemModal');
+        });
+
+        $('#batchModal').on('shown.bs.modal', function () {
+            focusFirstFieldInModal('#batchModal');
+        });
+
+        $('#itemMasterModal').on('hidden.bs.modal', function () {
+            if (window.stopAutoItemOpen === true) {
+                setTimeout(function () {
+                    window.stopAutoItemOpen = false;
+                }, 800);
+            }
+        });
+
+        $("#saveBtn").on("click", function () {
+            if (isSubmittingStockIssue) return;
+            if (!validateForm()) return;
+            normalizeNumericInputsForSubmit();
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'Do you want to save this record?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Save'
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+
+                isSubmittingStockIssue = true;
+                showLoader("Saving stock issue...");
+                $.ajax({
+                    type: "POST",
+                    url: $("#stockIssueForm").attr("action"),
+                    data: $("#stockIssueForm").serialize(),
+                    success: function (res) {
+                        isSubmittingStockIssue = false;
+                        hideLoader();
+                        if (res.success) {
+                            toastr.success(isEditMode ? "Stock issue updated successfully." : "Stock issue saved successfully.");
+                            window.location.href = isEditMode ? '/StockIssue/Index' : '/StockIssue/Create';
+                        } else {
+                            if (Array.isArray(res.errors) && res.errors.length) {
+                                const errorHtml = res.errors
+                                    .slice(0, 6)
+                                    .map(error => `<div class="text-start">${error.message || error.Message || "Validation error"}</div>`)
+                                    .join("");
+
+                                Swal.fire({
+                                    icon: "error",
+                                    title: "Unable to save",
+                                    html: errorHtml
+                                });
+                            }
+
+                            toastr.error(res.message || "Unable to save stock issue.");
+                        }
+                    },
+                    error: function (xhr) {
+                        isSubmittingStockIssue = false;
+                        hideLoader();
+                        toastr.error(xhr.responseJSON?.message || "Unable to save stock issue.");
+                    }
+                });
+            });
+        });
+
+        $(document).on("keydown", function (e) {
+            if (e.key !== "End") return;
+            if ($(".modal.show").length > 0 || $(".swal2-container:visible").length > 0) return;
+
+            const activeElement = document.activeElement;
+            if ($(activeElement).is("textarea, [contenteditable='true']")) return;
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            $("#saveBtn").trigger("click");
+        });
+    </script>
+}

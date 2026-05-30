@@ -1,0 +1,117 @@
+﻿@model IEnumerable<ReceiveVoucher>
+
+@{
+    ViewData["Title"] = "Receive Voucher";
+}
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+<div class="row pb-2">
+            <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+                <h6>@ViewData["Title"]</h6>
+    </div>
+</div>
+<p>
+    <a asp-controller="ReceiveVoucher" asp-action="Create" class="btn btn-sm btn-primary btnBright-Sky-Blue mb-1 float-end"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<div class="table-responsive pt-3">
+    <table id="CurrentTable" class="pt-2 table table-bordered table-striped">
+        <thead class="table custom-header">
+            <tr>
+                <th>
+                    @Html.DisplayNameFor(model => model.VouncherNo)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Date)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Party)
+                </th>
+                <th>
+                     Customer
+                </th>
+                <th>
+                    Category
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Amount)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Attachments)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Description)
+                </th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.VouncherNo)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Date)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Party)
+                    </td>
+                    <td>
+                      
+                        
+                            @Html.DisplayFor(modelItem => item.Customers.Name)
+                         
+                    </td>
+                    <td>
+                        @(!string.IsNullOrEmpty(item?.PaymentCategory?.Name) ? item.PaymentCategory.Name : "")
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Amount)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Attachments)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Description)
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group" style="float:right">
+
+                            <a asp-controller="ReceiveVoucher" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a asp-controller="ReceiveVoucher" asp-action="Delete"
+                               class="btn-delete"
+                               title="Delete"
+                               asp-route-id="@item.Id"
+                               data-id="@item.Id"
+                               data-controller="@ViewContext.RouteData.Values["controller"]">
+                                <i class="bi bi-trash-fill text-danger p-1"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<script>
+    $(document).ready(function () {
+       $('#CurrentTable').DataTable({
+            pageLength: 10,
+            lengthMenu: [5, 10, 25, 50],
+            paging: true,
+            searching: true,
+            order: [[0, 'asc']],
+            columnDefs: [
+                { orderable: false, targets: -1 }
+            ]
+        });
+    });
+</script>

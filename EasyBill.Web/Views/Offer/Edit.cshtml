@@ -1,0 +1,377 @@
+﻿@model EasyBill.Models.ViewModels.OfferVM
+@{
+    ViewData["Title"] = "Create";
+}
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+                <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+                    <h5 class="mb-0">Edit Offer</h5>
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit" id="OfferForm">
+                <input type="hidden" asp-for="Id" /> 
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="row">
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
+                        <div class="col-md-5 ">
+                            <label asp-for="OfferName"></label>
+                        </div>
+                        <div class="col-md-5 ">
+                            <input asp-for="OfferName" class="form-control form-control-sm" />
+                            <span asp-validation-for="OfferName" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious">
+                        <div class="col-md-5 ">
+                            <label asp-for="OfferType"></label>
+                        </div>
+                        <div class="col-md-5 ">
+                            <select asp-for="OfferType" asp-items="@ViewBag.OfferType" id="OfferType" class="form-select form-select-sm">
+                                <option value="">select</option>
+                            </select>
+                            <span asp-validation-for="OfferType" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
+                        <div class="col-md-5 ">
+                            <label asp-for="DiscountValue"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input asp-for="DiscountValue" class="form-control form-control-sm" />
+                            <span asp-validation-for="DiscountValue" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
+                        <div class="col-md-5 ">
+                            <label asp-for="MinAmount"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input asp-for="MinAmount" class="form-control form-control-sm" />
+                            <span asp-validation-for="MinAmount" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious">
+                        <div class="col-md-5 ">
+                            <label asp-for="Applicable"></label>
+                        </div>
+                        <div class="col-md-5 ">
+                            <select asp-for="Applicable" asp-items="@ViewBag.Applicable" id="applicableSelect" class="form-select form-select-sm">
+                                <option value="">select</option>
+                            </select>
+                            <span asp-validation-for="Applicable" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div id="companySection" class="col-md-6 d-flex align-items-center mb-1 border-radious d-none">
+                        <div class="col-md-5 ">
+                            <label>Company</label>
+                        </div>
+                        <div class="col-md-5 ">
+                            <select asp-for="CompanyId" asp-items="@ViewBag.Company" class="form-select form-select-sm">
+                                <option value="">select</option>
+                            </select>
+                            <span asp-validation-for="CompanyId" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div id="categorySection" class="col-md-6 d-flex align-items-center mb-1 border-radious d-none">
+                        <div class="col-md-5 ">
+                            <label>Category</label>
+                        </div>
+                        <div class="col-md-5 ">
+                            <select asp-for="CategoryId" asp-items="@ViewBag.Category" class="form-select form-select-sm">
+                                <option value="">select</option>
+                            </select>
+                            <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div id="itemSection" class="col-md-6 d-flex align-items-center mb-1 border-radious d-none">
+                        <div class="col-md-5 ">
+                            <label>Item</label>
+                        </div>
+                        <div class="col-md-5 ">
+                            <select asp-for="ItemId" asp-items="@ViewBag.Item" class="form-select form-select-sm">
+                                <option value="">select</option>
+                            </select>
+                            <span asp-validation-for="ItemId" class="text-danger small"></span>
+                        </div>
+                    </div>
+                   
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
+                        <div class="col-md-5 ">
+                            <label asp-for="StartDate"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="date" asp-for="StartDate" class="form-control form-control-sm" />
+                            <span asp-validation-for="StartDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
+                        <div class="col-md-5 ">
+                            <label asp-for="EndDate"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="date" asp-for="EndDate" class="form-control form-control-sm" />
+                            <span asp-validation-for="EndDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
+                        <div class="col-md-5 ">
+                            <label asp-for="IsActive"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="checkbox" asp-for="IsActive" class="form-check form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto; width: 100%;">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table custom-header">
+                                <tr>
+                                    <th style="min-width:30%">Item</th>
+                                    <th class="text-center">Buy Qty</th>
+                                    <th class="text-center">Fixed Price</th>
+                                    <th class="text-center">Combo</th>
+                                    <th style="min-width:30%">Free Item</th>
+                                    <th class="text-center">Free Qty</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="OfferItemBody"> 
+                                @for (int i = 0; i < Model.OfferItems.Count; i++)
+                                {
+                                    <tr>
+                                        <td hidden><input name="OfferItems[@i].Id" value="@Model.OfferItems[i].Id" class="row-id" /></td>
+                                        <td style="min-width:185px;">
+                                            <select asp-for="OfferItems[@i].ItemId" asp-items="@ViewBag.Item" class="form-control form-control-sm item-dropdown" required>
+                                            </select>
+                                        </td>
+                                        <td> <input name="OfferItems[@i].BuyQty" value="@Model.OfferItems[i].BuyQty" class="form-control form-control-sm buyqty"  /></td>
+                                        <td> <input name="OfferItems[@i].fixedPrice" value="@Model.OfferItems[i].fixedPrice" class="form-control form-control-sm fixed-price"  /></td>
+                                        <td>
+                                            <input name="OfferItems[@i].ComboGroupId" value="@Model.OfferItems[i].ComboGroupId" />
+                                        </td>
+                                       
+                                        <td style="min-width:185px;">
+                                            <select asp-for="OfferItems[@i].FreeItemId" asp-items="@ViewBag.Item" class="form-control form-control-sm freeitem-dropdown">
+                                                <option value="">-- Select Item --</option>
+                                            </select>
+                                        </td>
+                                        <td><input name="OfferItems[@i].FreeQty" value="@Model.OfferItems[i].FreeQty" class="form-control form-control-sm freeqty" /></td>
+                                         
+                                        <td><u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u></td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th class="float-start">
+                                        <u id="addRow" style="color:green; text-align:right;   cursor:pointer;">Add Row</u>
+                                    </th>
+                                </tr>
+
+                            </tfoot>
+
+                        </table>
+
+                    </div>
+                </div>
+
+
+
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+                    <a asp-controller="Offer" asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        let currentComboGroupId = "";
+        let rowIndex = @Model.OfferItems.Count()
+        $(document).ready(function () {
+             
+                 const selectedType = $("#OfferType").val();
+                 if (selectedType === "Combo") {
+                     // If Edit mode and Combo rows exist, grab the existing ComboGroupId
+                     const firstComboRow = $("#OfferItemBody").find("input[name*='ComboGroupId']").first();
+                     currentComboGroupId = firstComboRow.length ? firstComboRow.val() : generateComboGroupId();
+                 }
+            $("#addRow").click(function () {
+                addNewRow();
+            }); 
+            initializeExistingOfferRows();
+             function initializeExistingOfferRows() {
+                 const selectedType = $("#OfferType").val();
+                 const isCombo = selectedType === "Combo";
+                 const isBuyXGetY = selectedType === "BuyXGetX";
+             
+                 // Loop through all existing rows
+                 $("#OfferItemBody tr").each(function () {
+                     const $row = $(this);
+             
+                     // Fixed Price field
+                     const $fixedPrice = $row.find(".fixed-price");
+                     if (isCombo) {
+                         $fixedPrice.removeAttr("disabled");
+                     } else {
+                         $fixedPrice.attr("disabled", "disabled");
+                     }
+             
+                     // Free Item dropdown
+                     const $freeItem = $row.find(".freeitem-dropdown");
+                     const $freeQty = $row.find(".freeqty");
+                     if (isBuyXGetY) {
+                         $freeItem.removeAttr("disabled");
+                         $freeQty.removeAttr("disabled");
+                     } else {
+                         $freeItem.attr("disabled", "disabled");
+                         $freeQty.attr("disabled", "disabled");
+                     }
+             
+                     // ComboGroupId logic
+                     if (isCombo) {
+                         const $comboInput = $row.find('input[name*=".ComboGroupId"]');
+                         const currentVal = $comboInput.val();
+                         if (!currentVal) {
+                             // Generate a group ID if not already set
+                             $comboInput.val(generateComboGroupId());
+                         }
+                     }
+                 });
+             }
+
+             $("#OfferType").change(function () {
+                $("#OfferItemBody").html(""); // Clear old rows
+                rowIndex = 0;
+                      const selectedType = $(this).val();
+                     if (selectedType === "Combo") {
+                         currentComboGroupId = generateComboGroupId();
+                     } else {
+                         currentComboGroupId = ""; // Reset if not combo
+                     }
+                     initializeExistingOfferRows();
+            });
+              function generateComboGroupId() {
+                 return 'combo-' + crypto.randomUUID();
+             }
+            // Add row
+            function addNewRow() {
+                  const selectedType = $("#OfferType").val();
+                  const isCombo = selectedType === "Combo";
+                  const isBuyXGetY = selectedType === "BuyXGetX";
+                  const comboGroupIdValue = isCombo ? currentComboGroupId : '';
+                let newRow = `
+                <tr>
+
+                     <td style="min-width:185px;">
+                        <select name="OfferItems[${rowIndex}].ItemId" class="form-control form-control-sm item-dropdown" required>
+                            <option value="">-- Select Item --</option>
+                            @foreach (var item in ViewBag.Item)
+                            {
+                                <option value="@item.Value">@item.Text</option>
+                            }
+                        </select>
+                    </td>
+                     <td><input name="OfferItems[${rowIndex}].BuyQty" class="form-control form-control-sm buyqty" min="1" required /></td>
+                      <td><input name="OfferItems[${rowIndex}].fixedPrice" class="form-control form-control-sm fixedprice" required ${isCombo ? '' : 'disabled'}/></td>
+                     <td><input name="OfferItems[${rowIndex}].ComboGroupId" value="${comboGroupIdValue}" /></td>
+                      <td style="min-width:185px;">
+                        <select name="OfferItems[${rowIndex}].FreeItemId" class="form-control form-control-sm freeitem-dropdown" required ${isBuyXGetY ? '' : 'disabled'}>
+                            <option value="">-- Select Item --</option>
+                               @foreach (var item in ViewBag.Item)
+                               {
+                                  <option value="@item.Value">@item.Text</option>
+                               }
+                        </select>
+                    </td>
+
+                     <td><input name="OfferItems[${rowIndex}].FreeQty" class="form-control form-control-sm freeqty"  ${isBuyXGetY ? '' : 'disabled'}/></td>
+
+                    <td><u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u></td>
+                </tr>`;
+
+                $("#OfferItemBody").append(newRow);
+                rowIndex++;
+            }
+            $(document).on("click", ".remove-row-btn", function () {
+                $(this).closest("tr").remove();
+            });
+
+            $('#applicableSelect').change(function () {
+                const selected = $(this).val();
+                $('#companySection, #categorySection, #itemSection').addClass('d-none');
+                if (selected === "Companies") {
+                    $('#companySection').removeClass('d-none');
+                } else if (selected === "Categories") {
+                    $('#categorySection').removeClass('d-none');
+                } else if (selected === "Selected") {
+                    $('#itemSection').removeClass('d-none');
+                }
+            });
+
+            // 🔁 Trigger on load if already selected (like during Edit mode)
+            $('#applicableSelect').trigger('change');
+        });
+    </script>
+}
+<script>
+    $(document).ready(function () {
+
+        let isSubmitting = false;
+
+        $("#OfferForm").on("submit", function (e) {
+
+            if (isSubmitting) return false;
+
+            e.preventDefault();
+
+            var form = this;
+            var offerName = $("#OfferName").val()?.trim();
+            var id = $("#Id").val();
+
+            if (!offerName) {
+                        Swal.fire("Offer already");
+                return;
+            }
+
+            $.ajax({
+                url: "/Offer/CheckDuplicate",
+                type: "GET",
+                data: {
+                    offerName: offerName,
+                    id: id
+                },
+                success: function (response) {
+
+                    if (response.exists) {
+                        Swal.fire("Offer already");
+                    } else {
+                        isSubmitting = true;
+                        form.submit();
+                    }
+                },
+                error: function () {
+                    Swal.fire("Error checking duplicate");
+                }
+            });
+        });
+    });
+</script>

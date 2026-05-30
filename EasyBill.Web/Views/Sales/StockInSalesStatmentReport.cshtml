@@ -1,0 +1,261 @@
+﻿@model IEnumerable<EasyBill.Models.ViewModels.SalesVM>
+
+@{
+    ViewData["Title"] = "Stock In Sales Statement";
+
+    // Amount totals
+    decimal totalOpeningAmount = Model?.Sum(x => (decimal)x.OpeningAmount) ?? 0;
+    decimal totalPurchaseAmount = Model?.Sum(x => (decimal)x.PurchaseAmount) ?? 0;
+    decimal totalPurchaseReturnAmount = Model?.Sum(x => (decimal)x.PurchaseReturnAmount) ?? 0;
+    decimal totalSalesAmount = Model?.Sum(x => (decimal)x.SalesAmount) ?? 0;
+    decimal totalSalesReturnAmount = Model?.Sum(x => (decimal)x.SalesReturnAmount) ?? 0;
+    decimal totalClosingAmount = Model?.Sum(x => (decimal)x.ClosingAmount) ?? 0;
+
+    // Qty totals
+    decimal totalOpeningQty = Model?.Sum(x => (decimal)x.OpeningQty) ?? 0;
+    decimal totalPurchaseQty = Model?.Sum(x => (decimal)x.PurchaseQty) ?? 0;
+    decimal totalPurchaseReturnQty = Model?.Sum(x => (decimal)x.PurchaseReturnQty) ?? 0;
+    decimal totalSalesQty = Model?.Sum(x => (decimal)x.SalesQty) ?? 0;
+    decimal totalSalesReturnQty = Model?.Sum(x => (decimal)x.SalesReturnQty) ?? 0;
+    decimal totalClosingQty = Model?.Sum(x => (decimal)x.ClosingQty) ?? 0;
+}
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        padding: 3px 4px !important;
+        font-size: 12px;
+        text-align: center;
+    }
+</style>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center"
+         style="background:#2b6ac9">
+
+        <span class="fw-bold">
+            Stock In Sales Statement
+        </span>
+
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="card shadow-sm p-3 mb-4">
+
+    <form method="get" asp-action="StockInSalesStatmentReport">
+
+        <div class="row g-3 align-items-end">
+
+            <div class="col-md-2">
+                <label class="fw-bold">From Date</label>
+                <input type="text"
+                       name="fromDate"
+                       value="@ViewBag.FromDate"
+                       class="form-control form-control-sm datepicker" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="fw-bold">To Date</label>
+                <input type="text"
+                       name="toDate"
+                       value="@ViewBag.ToDate"
+                       class="form-control form-control-sm datepicker" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="fw-bold">Company</label>
+                @Html.DropDownList("companyId",
+                new SelectList(ViewBag.CompanyList, "Value", "Text", ViewBag.SelectedCompanyId),
+                                "All",
+                                new { @class = "form-control form-control-sm" })
+            </div>
+            <div class="col-md-2">
+                <button type="submit"
+                        class="btn btn-sm w-100 text-white"
+                        style="background:#2b6ac9">
+                    Search
+                </button>
+            </div>
+
+        </div>
+
+    </form>
+
+</div>
+
+<div class="row mb-2">
+    <div class="col text-end">
+
+        <a asp-action="ExportStockInSalesStatementExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-companyId="@ViewBag.SelectedCompanyId">
+
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+
+        </a>
+
+        <a asp-action="ExportStockInSalesStatementPdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-companyId="@ViewBag.SelectedCompanyId">
+
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+
+        </a>
+
+    </div>
+</div>
+
+<div class="card shadow-sm p-3">
+
+    <div class="table-responsive">
+
+        <table id="stockTable" class="table table-bordered table-striped">
+
+            <thead>
+
+                <tr>
+
+                    <th rowspan="2">Sr</th>
+                    <th rowspan="2">Item</th>
+                    <th rowspan="2">Packing</th>
+
+                    <th colspan="2">Opening</th>
+                    <th colspan="2">Purchase</th>
+                    <th colspan="2">Purchase Return</th>
+                    <th colspan="2">Sales</th>
+                    <th colspan="2">Sales Return</th>
+                    <th colspan="2">Closing Balance</th>
+
+
+                </tr>
+
+                <tr>
+
+                    <th>Qty</th>
+                    <th>Amount</th>
+
+                    <th>Qty</th>
+                    <th>Amount</th>
+
+                    <th>Qty</th>
+                    <th>Amount</th>
+
+                    <th>Qty</th>
+                    <th>Amount</th>
+
+                    <th>Qty</th>
+                    <th>Amount</th>
+                    <th>Qty</th>
+                    <th>Amount</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @if (Model != null)
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <td></td>
+
+                            <td>@item.ItemName</td>
+                            <td>@item.Packing</td>
+
+                            <td class="text-end">@item.OpeningQty</td>
+                            <td class="text-end">@item.OpeningAmount.ToString("0.00")</td>
+
+                            <td class="text-end">@item.PurchaseQty</td>
+                            <td class="text-end">@item.PurchaseAmount.ToString("0.00")</td>
+
+                            <td class="text-end">@item.PurchaseReturnQty</td>
+                            <td class="text-end">@item.PurchaseReturnAmount.ToString("0.00")</td>
+
+                            <td class="text-end">@item.SalesQty</td>
+                            <td class="text-end">@item.SalesAmount.ToString("0.00")</td>
+
+                            <td class="text-end">@item.SalesReturnQty</td>
+                            <td class="text-end">@item.SalesReturnAmount.ToString("0.00")</td>
+                            <td class="text-end">@item.ClosingQty</td>
+                            <td class="text-end">@item.ClosingAmount.ToString("0.00")</td>
+
+
+                        </tr>
+                    }
+                }
+
+            </tbody>
+
+            <tfoot class="table-secondary fw-bold">
+
+                <tr>
+                    <td></td>
+                    <td colspan="2" class="text-end">TOTAL</td>
+
+                    <td class="text-end">@totalOpeningQty</td>
+                    <td class="text-end">@totalOpeningAmount.ToString("0.00")</td>
+
+                    <td class="text-end">@totalPurchaseQty</td>
+                    <td class="text-end">@totalPurchaseAmount.ToString("0.00")</td>
+
+                    <td class="text-end">@totalPurchaseReturnQty</td>
+                    <td class="text-end">@totalPurchaseReturnAmount.ToString("0.00")</td>
+
+                    <td class="text-end">@totalSalesQty</td>
+                    <td class="text-end">@totalSalesAmount.ToString("0.00")</td>
+
+                    <td class="text-end">@totalSalesReturnQty</td>
+                    <td class="text-end">@totalSalesReturnAmount.ToString("0.00")</td>
+
+                    <td class="text-end">@totalClosingQty</td>
+                    <td class="text-end">@totalClosingAmount.ToString("0.00")</td>
+                </tr>
+
+            </tfoot>
+
+        </table>
+
+    </div>
+</div>
+
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+           var t = $("#stockTable").DataTable({
+            ordering: false
+        });
+
+        t.on('order.dt search.dt', function () {
+
+        t.column(0, {search:'applied',order:'applied'})
+        .nodes()
+        .each(function (cell, i) {
+
+        cell.innerHTML = i + 1;
+
+        });
+
+        }).draw();
+
+        $(".datepicker").datepicker({
+        dateFormat:"dd-mm-yy",
+        changeMonth:true,
+        changeYear:true
+        });
+
+        });
+
+    </script>
+
+}

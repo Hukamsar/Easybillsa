@@ -1,0 +1,804 @@
+﻿@model EasyBill.Models.ViewModels.SupplierVM
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    /* 🚀 MNC Grade Desk (BIGGER & PREMIUM) */
+    .mnc-preview-desk {
+        background-color: #f1f5f9; /* Lighter Premium Grey */
+        /* Ek subtle dotted background pattern desk ke liye */
+        background-image: radial-gradient(#cbd5e1 1px, transparent 0);
+        background-size: 20px 20px;
+        border-radius: 8px;
+        height: 650px; /* 🚀 HEIGHT BADHA DI GAYI HAI 🚀 */
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        box-shadow: inset 0 4px 12px rgba(0,0,0,0.1);
+        border: 1px solid #e2e8f0;
+    }
+
+    /* Wrapper jo scale (Zoom Out) karega */
+    .paper-scale-wrapper {
+        transform-origin: center center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 🚀 Asli A4 Paper Size */
+    .actual-paper {
+        background-color: #ffffff;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+        border: 1px solid #cbd5e1;
+        overflow: hidden;
+        /* Default Portrait Size */
+        width: 794px;
+        height: 1123px;
+        padding: 25px;
+        transition: width 0.4s, height 0.4s;
+    }
+
+        /* Landscape Mode ke liye size palat do */
+        .actual-paper.is-landscape {
+            width: 1123px !important;
+            height: 794px !important;
+        }
+
+    /* Fieldset styling for cleaner look */
+    .pro-fieldset {
+        background-color: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+</style>
+
+<div class="container-fluid mt-4 px-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #2b6ac9 0%, #1a4a94 100%);">
+            <h5 class="mb-0"><i class="bi bi-person-plus-fill me-2"></i>Create New Supplier</h5>
+        </div>
+
+        <div class="card-body bg-light">
+            <form asp-action="Create" method="post" id="SupplierFrom">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="row">
+                    <div class="col-lg-6 mb-3">
+                        <fieldset class="p-3 border border-secondary rounded pro-fieldset h-100">
+                            <legend class="float-none w-auto px-3 small fw-bold text-primary border rounded bg-white">
+                                <i class="bi bi-info-circle me-1"></i>Basic Details
+                            </legend>
+
+                            <div class="row mb-2">
+                                <label asp-for="FirstName" class="col-md-3 col-form-label small fw-semibold">Name *</label>
+                                <div class="col-md-9">
+                                    <input asp-for="FirstName" class="form-control form-control-sm" placeholder="Enter supplier name" />
+                                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="AccountGroupId" class="col-md-3 col-form-label small fw-semibold">Acct Group *</label>
+                                <div class="col-md-9 d-flex align-items-center">
+                                    <select asp-for="AccountGroupId" asp-items="ViewBag.AccountGroupList" id="AccountGroupId" class="form-select form-select-sm me-1">
+                                        <option value="">-- Select Group --</option>
+                                    </select>
+                                    <div class="shortcut-box">
+                                        <span id="btnF2AccGrp" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3AccGrp" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                    <span asp-validation-for="AccountGroupId" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="Email" class="col-md-3 col-form-label small fw-semibold">Email *</label>
+                                <div class="col-md-9">
+                                    <input asp-for="Email" class="form-control form-control-sm" placeholder="example@domain.com" />
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="Address" class="col-md-3 col-form-label small fw-semibold">Address *</label>
+                                <div class="col-md-9">
+                                    <input asp-for="Address" class="form-control form-control-sm" />
+                                    <span asp-validation-for="Address" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="Area" class="col-md-3 col-form-label small fw-semibold">Area *</label>
+                                <div class="col-md-9">
+                                    <input asp-for="Area" class="form-control form-control-sm" />
+                                    <span asp-validation-for="Area" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label class="col-md-3 col-form-label small fw-semibold">Location *</label>
+                                <div class="col-md-3 pe-1 d-flex align-items-center">
+                                    <select asp-for="CountryId" asp-items="ViewBag.CountryList" id="countryId" class="form-select form-select-sm me-1">
+                                        <option value="">Country</option>
+                                    </select>
+                                    <div class="shortcut-box" style="margin-left:2px;">
+                                        <span id="btnF2Country" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3Country" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 px-1 d-flex align-items-center">
+                                    <select asp-for="StateId" id="stateId" class="form-select form-select-sm me-1">
+                                        <option value="">State</option>
+                                    </select>
+                                    <div class="shortcut-box" style="margin-left:2px;">
+                                        <span id="btnF2State" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3State" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 ps-1 d-flex align-items-center">
+                                    <select asp-for="CityId" id="cityId" class="form-select form-select-sm me-1">
+                                        <option value="">City</option>
+                                    </select>
+                                    <div class="shortcut-box" style="margin-left:2px;">
+                                        <span id="btnF2City" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3City" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="PinCode" class="col-md-3 col-form-label small fw-semibold">PinCode *</label>
+                                <div class="col-md-4">
+                                    <input asp-for="PinCode" id="pincode" class="form-control form-control-sm" maxlength="6" inputmode="numeric" placeholder="6-digit" />
+                                    <small id="pinError" class="text-danger"></small>
+                                </div>
+                                <label asp-for="CurrencyId" class="col-md-2 col-form-label small fw-semibold text-end">Currency</label>
+                                <div class="col-md-3">
+                                    <select asp-for="CurrencyId" asp-items="ViewBag.CurrencyList" class="form-select form-select-sm">
+                                        <option value="">Select</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <div class="col-lg-6 mb-3">
+                        <fieldset class="p-3 border border-secondary rounded pro-fieldset mb-3">
+                            <legend class="float-none w-auto px-3 small fw-bold text-success border rounded bg-white">
+                                <i class="bi bi-wallet2 me-1"></i>Balance Details
+                            </legend>
+                            <div class="row">
+                                <label asp-for="Balance" class="col-md-3 col-form-label small fw-semibold">Balance *</label>
+                                <div class="col-md-5">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">₹</span>
+                                        <input asp-for="Balance" class="form-control form-control-sm" value="0.00" />
+                                    </div>
+                                    <span asp-validation-for="Balance" class="text-danger"></span>
+                                </div>
+                                <label asp-for="PaymentDays" class="col-md-2 col-form-label small fw-semibold text-end">Pay Days</label>
+                                <div class="col-md-2">
+                                    <input asp-for="PaymentDays" class="form-control form-control-sm text-center" value="0" />
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="p-3 border border-secondary rounded pro-fieldset">
+                            <legend class="float-none w-auto px-3 small fw-bold text-danger border rounded bg-white">
+                                <i class="bi bi-bank me-1"></i>Bank & Contact Details
+                            </legend>
+
+                            <div class="row mb-2">
+                                <label asp-for="PhoneNO" class="col-md-3 col-form-label small fw-semibold">Phone *</label>
+                                <div class="col-md-9">
+                                    <input asp-for="PhoneNO" class="form-control form-control-sm border-danger" id="mobilenumber" maxlength="10" inputmode="numeric" placeholder="10-digit mobile" />
+                                    <small id="mobileError" class="text-danger"></small>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="AccountNo" class="col-md-3 col-form-label small fw-semibold">Account No *</label>
+                                <div class="col-md-9">
+                                    <input asp-for="AccountNo" class="form-control form-control-sm" placeholder="Bank Account Number" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="IFSCCode" class="col-md-3 col-form-label small fw-semibold">IFSC *</label>
+                                <div class="col-md-4">
+                                    <input asp-for="IFSCCode" class="form-control form-control-sm" placeholder="IFSC Code" />
+                                </div>
+                                <label asp-for="RTGSNo" class="col-md-2 col-form-label small fw-semibold text-end">RTGS *</label>
+                                <div class="col-md-3">
+                                    <input asp-for="RTGSNo" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="Branch" class="col-md-3 col-form-label small fw-semibold">Branch *</label>
+                                <div class="col-md-4">
+                                    <input asp-for="Branch" class="form-control form-control-sm" />
+                                </div>
+                                <label asp-for="MICRNo" class="col-md-2 col-form-label small fw-semibold text-end">MICR *</label>
+                                <div class="col-md-3">
+                                    <input asp-for="MICRNo" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <fieldset class="p-3 border border-secondary rounded pro-fieldset">
+                            <legend class="float-none w-auto px-3 small fw-bold text-info border rounded bg-white">
+                                <i class="bi bi-card-checklist me-1"></i>Licence Information
+                            </legend>
+                            <div class="row">
+                                <div class="col-md-2 mb-2">
+                                    <label class="small fw-semibold text-muted">Mfg Lic No</label>
+                                    <input asp-for="ManufacturingLicNO" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <label class="small fw-semibold text-muted">FSSAI No</label>
+                                    <input asp-for="IFSSAINo" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <label class="small fw-semibold text-muted">GST No</label>
+                                    <input asp-for="GstNO" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <label class="small fw-semibold text-muted">Drug Lic No</label>
+                                    <input asp-for="DrugLicNO" class="form-control form-control-sm" />
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <label class="small fw-semibold text-muted">GST Type</label>
+                                    <select asp-for="Type" class="form-select form-select-sm" asp-items="Html.GetEnumSelectList<GSTType>()">
+                                        <option value="">Select</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <fieldset class="p-3 border border-primary rounded" style="background-color: #f8fafc;">
+                            <legend class="float-none w-auto px-3 small fw-bold text-white bg-primary rounded shadow-sm py-1">
+                                <i class="bi bi-layout-text-window-reverse me-1"></i>Invoice Layout Preview
+                            </legend>
+
+                            <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-2 rounded shadow-sm border">
+                                <div class="d-flex align-items-center w-50">
+                                    <label class="fw-bold me-3 mb-0 text-nowrap">Select Template Layout:</label>
+                                    <select name="InvoiceTemplateCode" id="supplierTemplateSelect" class="form-select border-primary fw-bold shadow-sm">
+                                        <option value="">-- Choose a template to preview --</option>
+                                        @if (ViewBag.InvoiceTemplates != null)
+                                        {
+                                            @foreach (var name in ViewBag.InvoiceTemplates)
+                                            {
+                                                <option value="@name">@name</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div>
+                                    <span class="badge bg-info text-dark border px-3 py-2"><i class="bi bi-aspect-ratio me-1"></i> Auto-Scaling Enabled</span>
+                                </div>
+                            </div>
+
+                            <div id="previewDesk" class="mnc-preview-desk">
+                                <div class="text-muted text-center" id="previewPlaceholder">
+                                    <i class="bi bi-printer text-secondary" style="font-size: 5rem; opacity: 0.5;"></i><br>
+                                    <h5 class="mt-3 fw-bold text-secondary">No Template Selected</h5>
+                                    <span class="d-block">Choose a layout from the dropdown above to see a live preview.</span>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                </div>
+
+                <!-- F2 F3 MODALS -->
+
+                <div class="modal fade" id="accGrpModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content custom-modal">
+
+                            <div class="modal-header">
+                                <h4 class="modal-title" id="accGrpModalTitle">Add Account Group</h4>
+                            </div>
+
+                            <div class="modal-body">
+                                <input type="hidden" id="modalAccGrpId" value="0" />
+                                <label>Name</label>
+                                <input type="text" id="modalAccGrpName" class="form-control modal-input" />
+
+                                <label class="mt-2">Under</label>
+                                <select id="modalAccGrpParentId" asp-items="ViewBag.ParentAccountGroupList" class="form-select form-select-sm modal-input">
+                                    <option value="">select</option>
+                                </select>
+
+                                <div class="form-check mt-2">
+                                    <input type="checkbox" id="modalAccGrpActive" class="form-check-input" checked />
+                                    <label class="form-check-label" for="modalAccGrpActive">Active</label>
+                                </div>
+
+                                <span id="accGrpError" class="text-danger small modal-error"></span>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveAccGrp">Save</button>
+                                <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="modal fade" id="countryModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content custom-modal">
+
+                            <div class="modal-header">
+                                <h4 class="modal-title" id="countryModalTitle">Add Country</h4>
+                            </div>
+
+                            <div class="modal-body">
+                                <input type="hidden" id="modalCountryId" value="0" />
+                                <label>Name</label>
+                                <input type="text" id="modalCountryName" class="form-control modal-input" />
+                                <span id="countryError" class="text-danger small modal-error"></span>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveCountry">Save</button>
+                                <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="modal fade" id="stateModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content custom-modal">
+
+                            <div class="modal-header">
+                                <h4 class="modal-title" id="stateModalTitle">Add State</h4>
+                            </div>
+
+                            <div class="modal-body">
+                                <input type="hidden" id="modalStateId" value="0" />
+                                <label>Country</label>
+                                <div class="d-flex align-items-center mb-2">
+                                    <select id="modalStateCountryId" asp-items="ViewBag.CountryList" class="form-select form-select-sm modal-input me-1">
+                                        <option value="">select</option>
+                                    </select>
+                                    <div class="shortcut-box" style="margin-left:2px;">
+                                        <span id="btnF2StateCountry" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3StateCountry" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                </div>
+                                <label>Name</label>
+                                <input type="text" id="modalStateName" class="form-control modal-input" />
+                                <span id="stateError" class="text-danger small modal-error"></span>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveState">Save</button>
+                                <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="modal fade" id="cityModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content custom-modal">
+
+                            <div class="modal-header">
+                                <h4 class="modal-title" id="cityModalTitle">Add City</h4>
+                            </div>
+
+                            <div class="modal-body">
+                                <input type="hidden" id="modalCityId" value="0" />
+                                <label>Country</label>
+                                <div class="d-flex align-items-center mb-2">
+                                    <select id="modalCityCountryId" asp-items="ViewBag.CountryList" class="form-select form-select-sm modal-input me-1">
+                                        <option value="">select</option>
+                                    </select>
+                                    <div class="shortcut-box" style="margin-left:2px;">
+                                        <span id="btnF2CityCountry" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3CityCountry" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                </div>
+                                <label>State</label>
+                                <div class="d-flex align-items-center mb-2">
+                                    <select id="modalCityStateId" class="form-select form-select-sm modal-input me-1">
+                                        <option value="">select</option>
+                                    </select>
+                                    <div class="shortcut-box" style="margin-left:2px;">
+                                        <span id="btnF2CityState" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3CityState" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                </div>
+                                <label>Name</label>
+                                <input type="text" id="modalCityName" class="form-control modal-input" />
+                                <span id="cityError" class="text-danger small modal-error"></span>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveCity">Save</button>
+                                <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-3 mt-4 pt-3 border-top">
+                    <a asp-action="Index" class="btn btn-light border px-4 shadow-sm fw-bold">Cancel</a>
+                    <button type="submit" class="btn btn-success px-5 shadow-sm fw-bold"><i class="bi bi-save me-2"></i>Save Supplier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<link href="~/css/page.css" rel="stylesheet" />
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            // --- DROP DOWNS ---
+            $('#countryId').on('change', function () {
+                var countryId = $(this).val();
+                $('#stateId').empty().append('<option value="">Select State</option>');
+                $('#cityId').empty().append('<option value="">Select City</option>');
+                if (countryId) {
+                    $.getJSON('/Supplier/GetStatesByCountry', { countryId: countryId }, function (data) {
+                        $.each(data, function (i, item) {
+                            $('#stateId').append($('<option>', { value: item.id, text: item.name }));
+                        });
+                    });
+                }
+            });
+
+            $('#stateId').on('change', function () {
+                var stateId = $(this).val();
+                $('#cityId').empty().append('<option value="">Select City</option>');
+                if (stateId) {
+                    $.getJSON('/Supplier/GetCitiesByState', { stateId: stateId }, function (data) {
+                        $.each(data, function (i, item) {
+                            $('#cityId').append($('<option>', { value: item.id, text: item.name }));
+                        });
+                    });
+                }
+            });
+
+            // --- VALIDATIONS ---
+            $("#pincode").on("input", function () {
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+                if (this.value.length === 6) $("#pinError").text("");
+                else if (this.value.length > 0) $("#pinError").text("Enter 6-digit PinCode");
+                else $("#pinError").text("");
+            });
+
+            $("#mobilenumber").on("input", function () {
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+                if (this.value.length === 10) {
+                    if (!/^[5-9][0-9]{9}$/.test(this.value)) $("#mobileError").text("Enter 10-digit mobile starting with 5–9");
+                    else $("#mobileError").text("");
+                } else {
+                    $("#mobileError").text("");
+                }
+            });
+
+            function customClientChecks() {
+                let ok = true;
+                const pin = $("#pincode").val() || "";
+                if (pin.length > 0 && pin.length !== 6) { $("#pinError").text("Enter 6-digit PinCode"); ok = false; }
+
+                const mob = $("#mobilenumber").val() || "";
+                if (mob.length > 0) {
+                    if (mob.length !== 10 || !/^[5-9][0-9]{9}$/.test(mob)) {
+                        $("#mobileError").text("Enter valid 10-digit mobile starting with 5–9");
+                        ok = false;
+                    }
+                }
+                return ok;
+            }
+
+            $("#SupplierFrom").on("submit", function (e) {
+                e.preventDefault();
+                const form = this;
+                if ($(form).valid && !$(form).valid()) return;
+                if (!customClientChecks()) return;
+
+                Swal.fire({
+                    title: 'Save Supplier?',
+                    text: 'Are you sure you want to save these details?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="bi bi-check-circle"></i> Yes, Save',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#6c757d',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+
+            // --- F2 F3 LOGIC ---
+            $("#btnF2AccGrp").click(() => openModal("accGrp", "new", "#AccountGroupId"));
+            $("#btnF3AccGrp").click(() => openModal("accGrp", "edit", "#AccountGroupId"));
+            $("#btnSaveAccGrp").click(() => saveData("accGrp", '/Supplier/QuickSaveAccountGroup', '#AccountGroupId', null, '/Supplier/GetAccountGroups'));
+            let countryDdlSelector = "#countryId";
+            let returnModalSelector = "";
+            $("#countryModal,#stateModal").on('hidden.bs.modal', function () {
+                if (returnModalSelector && returnModalSelector !== "#" + this.id) {
+                    let modalSelector = returnModalSelector;
+                    returnModalSelector = "";
+                    setTimeout(() => { $(modalSelector).modal('show'); }, 200);
+                }
+            });
+            $("#btnF2Country").click(() => { countryDdlSelector = "#countryId"; openModal("country", "new", "#countryId"); });
+            $("#btnF3Country").click(() => { countryDdlSelector = "#countryId"; openModal("country", "edit", "#countryId"); });
+            $("#btnSaveCountry").click(() => saveData("country", '/Supplier/QuickSaveCountry', countryDdlSelector, null, '/Supplier/GetCountries'));
+            $("#btnF2StateCountry").click(() => { countryDdlSelector = "#modalStateCountryId"; $("#stateModal").modal('hide'); setTimeout(() => { returnModalSelector = "#stateModal"; openModal("country", "new", "#modalStateCountryId"); }, 350); });
+            $("#btnF3StateCountry").click(() => { if(!$("#modalStateCountryId").val()){Swal.fire("Error","Select Country first!","error");return;} countryDdlSelector = "#modalStateCountryId"; $("#stateModal").modal('hide'); setTimeout(() => { returnModalSelector = "#stateModal"; openModal("country", "edit", "#modalStateCountryId"); }, 350); });
+            $("#btnF2CityCountry").click(() => { countryDdlSelector = "#modalCityCountryId"; $("#cityModal").modal('hide'); setTimeout(() => { returnModalSelector = "#cityModal"; openModal("country", "new", "#modalCityCountryId"); }, 350); });
+            $("#btnF3CityCountry").click(() => { if(!$("#modalCityCountryId").val()){Swal.fire("Error","Select Country first!","error");return;} countryDdlSelector = "#modalCityCountryId"; $("#cityModal").modal('hide'); setTimeout(() => { returnModalSelector = "#cityModal"; openModal("country", "edit", "#modalCityCountryId"); }, 350); });
+            $("#btnF2State").click(() => openModal("state", "new", "#stateId"));
+            $("#btnF3State").click(() => openModal("state", "edit", "#stateId"));
+            $("#btnSaveState").click(function () {
+                let id = $("#modalStateId").val();
+                let name = $("#modalStateName").val().trim();
+                let countryId = $("#modalStateCountryId").val();
+                if (!countryId) { $("#stateError").text("Select country first!"); return; }
+                if (!name) { $("#stateError").text("Name required!"); return; }
+                $.post('/Supplier/QuickSaveState', { id: id, name: name, countryId: countryId }, function (res) {
+                    if (res.success) {
+                        $("#stateModal").modal('hide');
+                        $("#countryId").val(countryId);
+                        $.get('/Supplier/GetStatesByCountry?countryId=' + countryId, function (data) {
+                            let ddl = $("#stateId"); ddl.empty().append('<option value="">State</option>');
+                            let modalDdl = $("#modalCityStateId"); modalDdl.empty().append('<option value="">select</option>');
+                            $.each(data, function (i, item) {
+                                let opt = $('<option>', { value: item.id, text: item.name });
+                                let modalOpt = $('<option>', { value: item.id, text: item.name });
+                                if (item.id == res.newId) { opt.attr('selected', 'selected'); modalOpt.attr('selected', 'selected'); }
+                                ddl.append(opt);
+                                modalDdl.append(modalOpt);
+                            });
+                            $("#cityId").empty().append('<option value="">City</option>');
+                        });
+                    } else { $("#stateError").text(res.message); }
+                });
+            });
+            $("#btnF2City").click(() => openModal("city", "new", "#cityId"));
+            $("#btnF3City").click(() => openModal("city", "edit", "#cityId"));
+            $("#btnF2CityState").click(() => { $("#cityModal").modal('hide'); setTimeout(() => { returnModalSelector = "#cityModal"; openModal("state", "new", "#modalCityStateId"); $("#modalStateCountryId").val($("#modalCityCountryId").val()); }, 350); });
+            $("#btnF3CityState").click(() => { if(!$("#modalCityStateId").val()){Swal.fire("Error","Select State first!","error");return;} $("#cityModal").modal('hide'); setTimeout(() => { returnModalSelector = "#cityModal"; openModal("state", "edit", "#modalCityStateId"); $("#modalStateCountryId").val($("#modalCityCountryId").val()); }, 350); });
+            $("#btnSaveCity").click(function () {
+                let id = $("#modalCityId").val();
+                let name = $("#modalCityName").val().trim();
+                let countryId = $("#modalCityCountryId").val();
+                let stateId = $("#modalCityStateId").val();
+                if (!countryId) { $("#cityError").text("Select country first!"); return; }
+                if (!stateId) { $("#cityError").text("Select state first!"); return; }
+                if (!name) { $("#cityError").text("Name required!"); return; }
+                $.post('/Supplier/QuickSaveCity', { id: id, name: name, stateId: stateId, countryId: countryId }, function (res) {
+                    if (res.success) {
+                        $("#cityModal").modal('hide');
+                        $("#countryId").val(countryId);
+                        $.get('/Supplier/GetStatesByCountry?countryId=' + countryId, function (states) {
+                            let stateDdl = $("#stateId"); stateDdl.empty().append('<option value="">State</option>');
+                            $.each(states, function (i, item) {
+                                let opt = $('<option>', { value: item.id, text: item.name });
+                                if (item.id == stateId) opt.attr('selected', 'selected');
+                                stateDdl.append(opt);
+                            });
+                        });
+                        $.get('/Supplier/GetCitiesByState?stateId=' + stateId, function (data) {
+                            let ddl = $("#cityId"); ddl.empty().append('<option value="">City</option>');
+                            $.each(data, function (i, item) {
+                                let opt = $('<option>', { value: item.id, text: item.name });
+                                if (item.id == res.newId) opt.attr('selected', 'selected');
+                                ddl.append(opt);
+                            });
+                        });
+                    } else { $("#cityError").text(res.message); }
+                });
+            });
+
+            $("#modalCityCountryId").change(function () {
+                var countryId = $(this).val();
+                $("#modalCityStateId").empty().append('<option value="">select</option>');
+                if (countryId) {
+                    $.getJSON('/Supplier/GetStatesByCountry', { countryId: countryId }, function (data) {
+                        $.each(data, function (i, item) {
+                            $("#modalCityStateId").append($('<option>', { value: item.id, text: item.name }));
+                        });
+                    });
+                }
+            });
+
+            function openModal(type, mode, ddlSelector) {
+                $("#" + type + "Error").text("");
+                if (mode === "new") {
+                    $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Id").val(0);
+                    $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Name").val("");
+                    if (type === "accGrp") {
+                        $("#modalAccGrpParentId").val("");
+                        $("#modalAccGrpActive").prop("checked", true);
+                    }
+                    $("#" + type + "ModalTitle").text("Add " + type.charAt(0).toUpperCase() + type.slice(1));
+                } else {
+                    let id = $(ddlSelector).val(); let text = $(ddlSelector + " option:selected").text();
+                    if (!id) { Swal.fire("Error", "Select item first!", "error"); return; }
+                    $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Id").val(id);
+                    $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Name").val(text);
+                    if (type === "accGrp") {
+                        $.get('/Supplier/GetAccountGroups', function (data) {
+                            let item = data.find(x => x.value == id);
+                            if (item) {
+                                $("#modalAccGrpParentId").val(item.parentId || "");
+                                $("#modalAccGrpActive").prop("checked", item.isActive === true);
+                            }
+                        });
+                    }
+                    $("#" + type + "ModalTitle").text("Modify " + type.charAt(0).toUpperCase() + type.slice(1));
+                }
+                if (type === "state") {
+                    $("#modalStateCountryId").val($("#countryId").val());
+                }
+                if (type === "city") {
+                    let countryId = $("#countryId").val();
+                    let stateId = $("#stateId").val();
+                    $("#modalCityCountryId").val(countryId);
+                    $("#modalCityStateId").empty().append('<option value="">select</option>');
+                    if (countryId) {
+                        $.getJSON('/Supplier/GetStatesByCountry', { countryId: countryId }, function (data) {
+                            $.each(data, function (i, item) {
+                                let opt = $('<option>', { value: item.id, text: item.name });
+                                if (item.id == stateId) opt.attr('selected', 'selected');
+                                $("#modalCityStateId").append(opt);
+                            });
+                        });
+                    }
+                }
+                $("#" + type + "Modal").modal("show");
+                setTimeout(() => { $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Name").focus(); }, 200);
+            }
+
+            function saveData(type, url, ddlSelector, extraData, reloadUrl, isCustomFormat = false) {
+                let id = $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Id").val();
+                let name = $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Name").val().trim();
+                if (!name) { $("#" + type + "Error").text("Name required!"); return; }
+                let postData = { id: id, name: name };
+                if (type === "accGrp") {
+                    postData.parentId = $("#modalAccGrpParentId").val();
+                    postData.isActive = $("#modalAccGrpActive").is(":checked");
+                }
+                if (extraData) Object.assign(postData, extraData);
+                $.post(url, postData, function (res) {
+                    if (res.success) {
+                        $("#" + type + "Modal").modal('hide');
+                        $.get(reloadUrl, function (data) {
+                            let ddl = $(ddlSelector); ddl.empty();
+                            ddl.append('<option value="">' + (type==='accGrp'?'-- Select Group --': type.charAt(0).toUpperCase() + type.slice(1)) + '</option>');
+                            $.each(data, function (i, item) {
+                                let val = isCustomFormat ? item.id : item.value;
+                                let txt = isCustomFormat ? item.name : item.text;
+                                let opt = $('<option>', { value: val, text: txt });
+                                if (type === "accGrp") {
+                                    opt.attr('data-parentid', item.parentId || '');
+                                    opt.attr('data-isactive', item.isActive);
+                                }
+                                if (val == res.newId) opt.attr('selected', 'selected');
+                                ddl.append(opt);
+                            });
+                            if(type==='state') { $("#cityId").empty().append('<option value="">City</option>'); }
+                            if(type==='country') {
+                                $("#countryId,#modalStateCountryId,#modalCityCountryId").empty().append('<option value="">Country</option>');
+                                $.each(data, function (i, item) {
+                                    let opt1 = $('<option>', { value: item.value, text: item.text });
+                                    let opt2 = $('<option>', { value: item.value, text: item.text });
+                                    let opt3 = $('<option>', { value: item.value, text: item.text });
+                                    if (item.value == res.newId) { opt1.attr('selected', 'selected'); opt2.attr('selected', 'selected'); opt3.attr('selected', 'selected'); }
+                                    $("#countryId").append(opt1);
+                                    $("#modalStateCountryId").append(opt2);
+                                    $("#modalCityCountryId").append(opt3);
+                                });
+                                $("#stateId").empty().append('<option value="">State</option>');
+                                $("#cityId").empty().append('<option value="">City</option>');
+                                $("#modalCityStateId").empty().append('<option value="">select</option>');
+                            }
+                        });
+                    } else { $("#" + type + "Error").text(res.message); }
+                });
+            }
+
+            $(".modal-input").keypress(function (e) { if (e.which === 13) { e.preventDefault(); $(this).closest('.modal').find('.btn-success').click(); } });
+
+            // ==========================================
+            // 🚀 MNC-GRADE BIG PREVIEW LOGIC 🚀
+            // ==========================================
+            function scalePaper() {
+                var desk = $('#previewDesk');
+                var paperWrapper = desk.find('.paper-scale-wrapper');
+                var paper = desk.find('.actual-paper');
+
+                if(paperWrapper.length === 0 || paper.length === 0) return;
+
+                // Desk ke dimensions nikalo (Thodi aur padding chhod di taaki saaf dikhe)
+                var availableWidth = desk.width() - 60;
+                var availableHeight = desk.height() - 60;
+
+                var paperWidth = paper.outerWidth();
+                var paperHeight = paper.outerHeight();
+
+                // Smooth scaling
+                var scaleW = availableWidth / paperWidth;
+                var scaleH = availableHeight / paperHeight;
+                var scale = Math.min(scaleW, scaleH);
+
+                paperWrapper.css('transform', 'scale(' + scale + ')');
+            }
+
+            $(window).resize(function() { scalePaper(); });
+
+            $('#supplierTemplateSelect').on('change', function () {
+                var templateName = $(this).val();
+                var desk = $('#previewDesk');
+
+                if (templateName) {
+                    desk.html('<div class="w-100 h-100 d-flex flex-column justify-content-center align-items-center"><div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div><h5 class="text-primary fw-bold">Rendering Template...</h5></div>');
+
+                    $.ajax({
+                        url: '/Supplier/GetTemplatePreview',
+                        type: 'GET',
+                        data: { templateName: templateName },
+                        success: function (result) {
+                            var isLandscape = templateName.toLowerCase().indexOf('landscape') !== -1;
+                            var orientationClass = isLandscape ? 'is-landscape' : '';
+
+                            var finalHtml = `
+                                <div class="paper-scale-wrapper">
+                                    <div class="actual-paper ${orientationClass}">
+                                        ${result}
+                                    </div>
+                                </div>
+                            `;
+
+                            desk.html(finalHtml);
+                            setTimeout(scalePaper, 100);
+                        },
+                        error: function () {
+                            desk.html('<div class="text-danger text-center"><i class="bi bi-exclamation-triangle fs-1"></i><br><h5>Failed to load preview</h5></div>');
+                        }
+                    });
+                } else {
+                    desk.html('<div class="text-muted text-center" id="previewPlaceholder"><i class="bi bi-printer text-secondary" style="font-size: 5rem; opacity: 0.5;"></i><br><h5 class="mt-3 fw-bold text-secondary">No Template Selected</h5><span class="d-block">Choose a layout from the dropdown above to see a live preview.</span></div>');
+                }
+            });
+        });
+    </script>
+}

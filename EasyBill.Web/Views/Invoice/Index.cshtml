@@ -1,0 +1,55 @@
+﻿@model IEnumerable<Invoice>
+
+@{
+    ViewData["Title"] = "Index";
+}
+ 
+<p>
+    <a asp-controller="Invoice" asp-action="Create" class="btn btn-primary mb-1 float-end"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table class="table table-bordered table-striped">
+    <thead class="table">
+        <tr> 
+            <th>
+                @Html.DisplayNameFor(model => model.InvoiceNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.InvoiceDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Address)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr> 
+            <td>
+                @Html.DisplayFor(modelItem => item.InvoiceNo)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.InvoiceDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Address)
+            </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="Invoice" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="Invoice" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+        </tr>
+}
+    </tbody>
+</table>

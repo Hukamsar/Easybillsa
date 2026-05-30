@@ -1,0 +1,357 @@
+<div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form id="supplierForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addSupplierModalLabel"><i class="bi bi-person-plus-fill me-2"></i>Create New Supplier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="row">
+                        <div class="col-lg-6 mb-3">
+                            <fieldset class="p-3 border border-secondary rounded pro-fieldset h-100">
+                                <legend class="float-none w-auto px-3 small fw-bold text-primary border rounded bg-white">
+                                    <i class="bi bi-info-circle me-1"></i>Basic Details
+                                </legend>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">Name *</label>
+                                    <div class="col-md-9">
+                                        <input name="FirstName" id="firstname" class="form-control form-control-sm" placeholder="Enter supplier name" />
+                                        <span class="text-danger field-error" data-field="FirstName"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">Acct Group *</label>
+                                    <div class="col-md-9 d-flex align-items-center">
+                                        <select name="AccountGroupId" id="AccountGroupId" class="form-select form-select-sm me-1">
+                                            <option value="">-- Select Group --</option>
+                                            @if (ViewBag.AccountGroupList != null)
+                                            {
+                                                foreach (var item in (IEnumerable<SelectListItem>)ViewBag.AccountGroupList)
+                                                {
+                                                    <option value="@item.Value">@item.Text</option>
+                                                }
+                                            }
+                                        </select>
+                                        <div class="shortcut-box">
+                                            <span id="btnF2AccGrp" class="shortcut-link">F2 - New</span>
+                                            <span id="btnF3AccGrp" class="shortcut-link text-danger">F3 - Mod</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">Email *</label>
+                                    <div class="col-md-9">
+                                        <input name="Email" type="email" class="form-control form-control-sm" placeholder="example@domain.com" />
+                                        <span class="text-danger field-error" data-field="Email"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">Address *</label>
+                                    <div class="col-md-9">
+                                        <input name="Address" class="form-control form-control-sm" />
+                                        <span class="text-danger field-error" data-field="Address"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">Area *</label>
+                                    <div class="col-md-9">
+                                        <input name="Area" class="form-control form-control-sm" />
+                                        <span class="text-danger field-error" data-field="Area"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">Location *</label>
+                                    <div class="col-md-3 pe-1 d-flex align-items-center">
+                                        <select name="CountryId" id="countryId" class="form-select form-select-sm me-1">
+                                            <option value="">Country</option>
+                                            @if (ViewBag.CountryList != null)
+                                            {
+                                                foreach (var item in (IEnumerable<SelectListItem>)ViewBag.CountryList)
+                                                {
+                                                    <option value="@item.Value">@item.Text</option>
+                                                }
+                                            }
+                                        </select>
+                                        <div class="shortcut-box" style="margin-left:2px;">
+                                            <span id="btnF2Country" class="shortcut-link">F2 - New</span>
+                                            <span id="btnF3Country" class="shortcut-link text-danger">F3 - Mod</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 px-1 d-flex align-items-center">
+                                        <select name="StateId" id="stateId" class="form-select form-select-sm me-1">
+                                            <option value="">State</option>
+                                        </select>
+                                        <div class="shortcut-box" style="margin-left:2px;">
+                                            <span id="btnF2State" class="shortcut-link">F2 - New</span>
+                                            <span id="btnF3State" class="shortcut-link text-danger">F3 - Mod</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 ps-1 d-flex align-items-center">
+                                        <select name="CityId" id="cityId" class="form-select form-select-sm me-1">
+                                            <option value="">City</option>
+                                        </select>
+                                        <div class="shortcut-box" style="margin-left:2px;">
+                                            <span id="btnF2City" class="shortcut-link">F2 - New</span>
+                                            <span id="btnF3City" class="shortcut-link text-danger">F3 - Mod</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">PinCode *</label>
+                                    <div class="col-md-4">
+                                        <input name="PinCode" id="pincode" class="form-control form-control-sm" maxlength="6" inputmode="numeric" placeholder="6-digit" />
+                                        <span class="text-danger field-error" data-field="PinCode"></span>
+                                    </div>
+                                    <label class="col-md-2 col-form-label small fw-semibold text-end">Currency</label>
+                                    <div class="col-md-3">
+                                        <select name="CurrencyId" class="form-select form-select-sm">
+                                            <option value="">Select</option>
+                                            @if (ViewBag.CurrencyList != null)
+                                            {
+                                                foreach (var item in (IEnumerable<SelectListItem>)ViewBag.CurrencyList)
+                                                {
+                                                    <option value="@item.Value">@item.Text</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+
+                        <div class="col-lg-6 mb-3">
+                            <fieldset class="p-3 border border-secondary rounded pro-fieldset mb-3">
+                                <legend class="float-none w-auto px-3 small fw-bold text-success border rounded bg-white">
+                                    <i class="bi bi-wallet2 me-1"></i>Balance Details
+                                </legend>
+                                <div class="row">
+                                    <label class="col-md-3 col-form-label small fw-semibold">Balance *</label>
+                                    <div class="col-md-5">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">₹</span>
+                                            <input name="Balance" class="form-control form-control-sm" value="0.00" />
+                                        </div>
+                                    </div>
+                                    <label class="col-md-2 col-form-label small fw-semibold text-end">Pay Days</label>
+                                    <div class="col-md-2">
+                                        <input name="PaymentDays" class="form-control form-control-sm text-center" value="0" />
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <fieldset class="p-3 border border-secondary rounded pro-fieldset">
+                                <legend class="float-none w-auto px-3 small fw-bold text-danger border rounded bg-white">
+                                    <i class="bi bi-bank me-1"></i>Bank & Contact Details
+                                </legend>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">Phone *</label>
+                                    <div class="col-md-9">
+                                        <input name="PhoneNO" class="form-control form-control-sm border-danger" id="mobilenumber" maxlength="10" inputmode="numeric" placeholder="10-digit mobile" />
+                                        <span class="text-danger field-error" data-field="PhoneNO"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">Account No *</label>
+                                    <div class="col-md-9">
+                                        <input name="AccountNo" class="form-control form-control-sm" placeholder="Bank Account Number" />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">IFSC *</label>
+                                    <div class="col-md-4">
+                                        <input name="IFSCCode" class="form-control form-control-sm" placeholder="IFSC Code" />
+                                    </div>
+                                    <label class="col-md-2 col-form-label small fw-semibold text-end">RTGS *</label>
+                                    <div class="col-md-3">
+                                        <input name="RTGSNo" class="form-control form-control-sm" />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label small fw-semibold">Branch *</label>
+                                    <div class="col-md-4">
+                                        <input name="Branch" class="form-control form-control-sm" />
+                                    </div>
+                                    <label class="col-md-2 col-form-label small fw-semibold text-end">MICR *</label>
+                                    <div class="col-md-3">
+                                        <input name="MICRNo" class="form-control form-control-sm" />
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <fieldset class="p-3 border border-secondary rounded pro-fieldset">
+                                <legend class="float-none w-auto px-3 small fw-bold text-info border rounded bg-white">
+                                    <i class="bi bi-card-checklist me-1"></i>Licence Information
+                                </legend>
+                                <div class="row">
+                                    <div class="col-md-2 mb-2">
+                                        <label class="small fw-semibold text-muted">Mfg Lic No</label>
+                                        <input name="ManufacturingLicNO" class="form-control form-control-sm" />
+                                    </div>
+                                    <div class="col-md-2 mb-2">
+                                        <label class="small fw-semibold text-muted">FSSAI No</label>
+                                        <input name="IFSSAINo" class="form-control form-control-sm" />
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <label class="small fw-semibold text-muted">GST No</label>
+                                        <input name="GstNO" class="form-control form-control-sm" />
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <label class="small fw-semibold text-muted">Drug Lic No</label>
+                                        <input name="DrugLicNO" class="form-control form-control-sm" />
+                                    </div>
+                                    <div class="col-md-2 mb-2">
+                                        <label class="small fw-semibold text-muted">GST Type</label>
+                                        <select name="Type" class="form-select form-select-sm">
+                                            <option value="">Select</option>
+                                            <option value="1">Registered</option>
+                                            <option value="2">UnRegistered</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success px-5 shadow-sm fw-bold"><i class="bi bi-save me-2"></i>Save Supplier</button>
+                    <button type="button" class="btn btn-light border px-4 shadow-sm fw-bold" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="accGrpModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header">
+                <h4 class="modal-title" id="accGrpModalTitle">Add Account Group</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modalAccGrpId" value="0" />
+                <label>Name</label>
+                <input type="text" id="modalAccGrpName" class="form-control modal-input" />
+                <label class="mt-2">Under</label>
+                <select id="modalAccGrpParentId" asp-items="ViewBag.ParentAccountGroupList" class="form-select form-select-sm modal-input">
+                    <option value="">select</option>
+                </select>
+                <div class="form-check mt-2">
+                    <input type="checkbox" id="modalAccGrpActive" class="form-check-input" checked />
+                    <label class="form-check-label" for="modalAccGrpActive">Active</label>
+                </div>
+                <span id="accGrpError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveAccGrp">Save</button>
+                <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="countryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header">
+                <h4 class="modal-title" id="countryModalTitle">Add Country</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modalCountryId" value="0" />
+                <label>Name</label>
+                <input type="text" id="modalCountryName" class="form-control modal-input" />
+                <span id="countryError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveCountry">Save</button>
+                <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="stateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header">
+                <h4 class="modal-title" id="stateModalTitle">Add State</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modalStateId" value="0" />
+                <label>Country</label>
+                <div class="d-flex align-items-center mb-2">
+                    <select id="modalStateCountryId" asp-items="ViewBag.CountryList" class="form-select form-select-sm modal-input me-1">
+                        <option value="">select</option>
+                    </select>
+                    <div class="shortcut-box" style="margin-left:2px;">
+                        <span id="btnF2StateCountry" class="shortcut-link">F2 - New</span>
+                        <span id="btnF3StateCountry" class="shortcut-link text-danger">F3 - Mod</span>
+                    </div>
+                </div>
+                <label>Name</label>
+                <input type="text" id="modalStateName" class="form-control modal-input" />
+                <span id="stateError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveState">Save</button>
+                <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="cityModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header">
+                <h4 class="modal-title" id="cityModalTitle">Add City</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modalCityId" value="0" />
+                <label>Country</label>
+                <div class="d-flex align-items-center mb-2">
+                    <select id="modalCityCountryId" asp-items="ViewBag.CountryList" class="form-select form-select-sm modal-input me-1">
+                        <option value="">select</option>
+                    </select>
+                    <div class="shortcut-box" style="margin-left:2px;">
+                        <span id="btnF2CityCountry" class="shortcut-link">F2 - New</span>
+                        <span id="btnF3CityCountry" class="shortcut-link text-danger">F3 - Mod</span>
+                    </div>
+                </div>
+                <label>State</label>
+                <div class="d-flex align-items-center mb-2">
+                    <select id="modalCityStateId" class="form-select form-select-sm modal-input me-1">
+                        <option value="">select</option>
+                    </select>
+                    <div class="shortcut-box" style="margin-left:2px;">
+                        <span id="btnF2CityState" class="shortcut-link">F2 - New</span>
+                        <span id="btnF3CityState" class="shortcut-link text-danger">F3 - Mod</span>
+                    </div>
+                </div>
+                <label>Name</label>
+                <input type="text" id="modalCityName" class="form-control modal-input" />
+                <span id="cityError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveCity">Save</button>
+                <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

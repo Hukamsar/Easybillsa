@@ -1,0 +1,72 @@
+﻿@using EasyBill.Models.ViewModels
+@model IEnumerable<Offer>
+
+@{
+    ViewData["Title"] = "Offer List";
+}
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Offer List
+    </div>
+    </div>
+
+<p>
+    <a asp-action="Create" class="btn btn-primary mb-1" style="float:right"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table class="table table-bordered table-striped">
+    <thead class="table">
+        <tr>
+
+
+            <th>
+                Offer Name
+            </th>
+
+            <th>
+                @Html.DisplayNameFor(model => model.OfferType)
+            </th>
+            
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.OfferName)
+                </td>
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.OfferType)
+                </td> 
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="Offer" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="Offer" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

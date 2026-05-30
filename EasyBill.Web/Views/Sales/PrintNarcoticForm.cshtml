@@ -1,0 +1,270 @@
+﻿@model EasyBill.Models.ViewModels.SalesVM
+
+<style>
+    body {
+        font-family: 'Arial, sans-serif', Courier, monospace;
+        font-size: 12px;
+        color: #000;
+    }
+
+    .no-print {
+        text-align: right;
+        margin-bottom: 8px;
+    }
+
+        .no-print button {
+            background: #2b6ac9;
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+        }
+
+            .no-print button:hover {
+                background: #1f4fa3;
+            }
+
+    .form-box {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+        border: 2px solid #000;
+    }
+
+    /* ---- EXACT H1 HEADING STYLE ---- */
+    .header-box {
+        text-align: center;
+        background: #2b6ac9;
+        background-image: linear-gradient(#2b6ac9, #2b6ac9) !important;
+        color: white;
+        padding: 10px;
+        margin-bottom: 10px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .title {
+        font-size: 18px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .subtitle {
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    /* ---- EXACT H1 TABLE STYLE ---- */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        border: 1px solid #000;
+        padding: 6px;
+        vertical-align: top;
+        font-size: 11px;
+    }
+
+    thead th {
+        background: #2b6ac9;
+        background-image: linear-gradient(#2b6ac9, #2b6ac9) !important;
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 10px;
+        font-family: Arial, sans-serif;
+        letter-spacing: 0.5px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    tbody td {
+        font-size: 11px;
+        font-family: Arial, sans-serif;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .font-bold {
+        font-weight: bold;
+    }
+
+    /* ---- EXACT H1 FOOTER NOTE STYLE ---- */
+    .note-box {
+        margin-top: 20px;
+        font-size: 10px;
+        text-align: center;
+        font-style: italic;
+        border-top: 1px solid #000;
+        padding-top: 5px;
+    }
+
+    /* ---- Print ---- */
+    @@media print {
+        @@page {
+            margin: 5mm;
+            size: A4;
+        }
+
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            height: auto !important;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+
+        * {
+            visibility: hidden !important;
+        }
+
+        #printArea, #printArea * {
+            visibility: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        #printArea {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            z-index: 999999 !important;
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .form-box {
+            border: 2px solid #000;
+        }
+
+        .header-box {
+            background: #2b6ac9 !important;
+            background-image: linear-gradient(#2b6ac9, #2b6ac9) !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        thead th {
+            background: #2b6ac9 !important;
+            background-image: linear-gradient(#2b6ac9, #2b6ac9) !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+    }
+</style>
+
+<!-- PRINT BUTTON -->
+<div class="no-print">
+    <button onclick="window.print()">🖨️ Print</button>
+</div>
+
+<!-- PRINT AREA -->
+<div id="printArea">
+    <div class="form-box">
+
+        <!-- EXACT H1 HEADING FORMAT -->
+        <div class="header-box">
+            <div class="title">@Model.Tenantname</div>
+            <div class="subtitle">Narcotic Drugs Report for @Model.BillDate?.ToString("dd-MM-yyyy") (SALES)</div>
+            <div style="font-size: 11px;">Page : 1</div>
+        </div>
+
+        <!-- EXACT H1 TABLE FORMAT -->
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 5%">Sl.</th>
+                    <th style="width: 12%">Invoice No.</th>
+                    <th style="width: 23%">Patient Name & Address</th>
+                    <th style="width: 20%">Doctor Name</th>
+                    <th style="width: 30%">Mediciene Name</th>
+                    <th style="width: 30%">Type</th>
+                    <th style="width: 10%">Quantity</th>
+                    <th style="width: 30%">Batch no</th>
+                    <th style="width: 10%">Mfg.BY</th>
+                    <th style="width: 30%">Expiry</th>
+
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.SalesItemVMs != null && Model.SalesItemVMs.Any())
+                {
+                    int sr = 1;
+                    foreach (var item in Model.SalesItemVMs)
+                    {
+                        <tr>
+                            <td class="text-center">@sr</td>
+                            <td class="text-center" style="font-size: 10px;">
+                                <b>@Model.BillNo</b><br />
+                                @Model.BillDate?.ToString("dd-MM-yyyy")
+                            </td>
+                            <td>
+                                @if (sr == 1)
+                                {
+                                    <span class="font-bold">@Model.CustomerName</span>
+                                    <br />
+                                    <span style="font-weight: normal; font-size: 11px;">@Model.Address</span>
+                                }
+                            </td>
+                            <td>
+                                @if (sr == 1)
+                                {
+                                    @Model.DoctorName
+                                }
+                            </td>
+                            <td
+                                class="text-center"> @item.ItemName<br />
+                                
+                            </td>
+                            <td class="text-center">@item.Packing</td>
+                            <td class="text-center">@item.Qty</td>
+                            <td class="text-center">@item.Batch</td>
+
+                            <td class="text-center">@item.Mfg</td>
+
+                            <td class="text-center">@item.Expirydate?.ToString("MM/yy")</td>
+
+                        </tr>
+                        sr++;
+                    }
+
+                    <tr style="font-weight: bold; background-color: #f0f0f0;">
+                        <td colspan="5" style="text-align: right; padding-right: 10px;">TOTAL QUANTITY</td>
+                        <td></td>
+                        <td class="text-center">@Model.SalesItemVMs.Sum(x => x.Qty)</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <!-- EXACT H1 FOOTER NOTE FORMAT -->
+        <div class="note-box">
+            <b>Note:</b> All Retailers are requested to keep the record of sales for two years and ensure purchase of goods by obtaining bill only under NDPS Act.
+        </div>
+
+    </div>
+</div>

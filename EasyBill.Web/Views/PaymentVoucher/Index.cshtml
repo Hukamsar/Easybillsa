@@ -1,0 +1,100 @@
+﻿@using EasyBill.Models.Entity
+@model IEnumerable<PaymentVoucher>
+
+@{
+    ViewData["Title"] = "Payment Voucher Details";
+}
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+    }
+</style>
+
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Payment Voucher Details
+    </div>
+    </div>
+<p>
+    <a asp-action="Create" class="btn btn-sm btn-primary btnBright-Sky-Blue mb-1 float-end"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table  class="table table-bordered table-striped">
+    <thead class="custom-header">
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.VouncherNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Date)
+            </th>
+            <th>
+                Supplier
+            </th>
+            <th>
+             Payment Voucher Category
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Amount)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Attachments)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Description)
+            </th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.VouncherNo)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Date)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Suppliers.FirstName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.paymentVouchercategory.Name)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Amount)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Attachments)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Description)
+                </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+
+                        <a asp-controller="PaymentVoucher" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="PaymentVoucher" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

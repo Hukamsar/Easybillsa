@@ -1,0 +1,66 @@
+﻿@using AOne.Models.Entity
+ @model IEnumerable<Tenant>
+
+@{
+    ViewData["Title"] = "Company Registration";
+}
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Company Registration
+    </div>
+</div>
+<p>
+    <a asp-controller="Tenant" asp-action="Create" class="btn btn-primary mb-1" style="float:right"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+
+<table id="itemTable" class=" table table-bordered table-striped">
+    <thead class="table">
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Address1</th>
+            <th>Location</th>
+            <th>Phone No</th>
+            <th>Mobile No</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Name</td>
+                <td>@item.Email</td>
+                <td>@item.Address1</td>
+                <td>@item.Location</td>
+                <td>@item.Phone</td>
+                <td>@item.MobileNo</td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="Tenant" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="Tenant" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+
+    </tbody>
+</table>

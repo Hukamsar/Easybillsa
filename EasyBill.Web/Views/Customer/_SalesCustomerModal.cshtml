@@ -1,0 +1,165 @@
+<div class="modal fade" id="createCustomerModal" tabindex="-1" aria-labelledby="customerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <form id="newCustomerForm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="customerModalLabel">Create New Customer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label text-start small">
+                                        Name
+                                        <span class="text-danger"> *</span>
+                                    </label>
+                                    <div class="col-md-7">
+                                        <input name="Name" type="text" class="form-control form-control-sm" />
+                                        <span class="text-danger small field-error" data-field="Name"></span>
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label text-start small">Address</label>
+                                    <div class="col-md-7">
+                                        <input name="Address" type="text" class="form-control form-control-sm" />
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label text-start small">
+                                        Phone No
+                                        <span class="text-danger"> *</span>
+                                    </label>
+                                    <div class="col-md-7">
+                                        <input type="text"
+                                               name="CustomerMobileNo"
+                                               id="newCustomerMobile"
+                                               class="form-control form-control-sm"
+                                               maxlength="10"
+                                               inputmode="numeric" />
+                                        <span class="text-danger small field-error" data-field="PhoneNo"></span>
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <label class="col-md-3 col-form-label text-start small">Email</label>
+                                    <div class="col-md-7">
+                                        <input name="Email" class="form-control form-control-sm" />
+                                        <span class="text-danger small field-error" data-field="Email"></span>
+                                    </div>
+                                </div>
+                               
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="row mb-2">
+                                    <label class="col-md-4 col-form-label text-start small">Payment Days</label>
+                                    <div class="col-md-7">
+                                        <input name="PaymentDays" class="form-control form-control-sm" value="0" />
+                                        <span class="text-danger small field-error" data-field="PaymentDays"></span>
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <label class="col-md-4 col-form-label small">Status</label>
+                                    <div class="col-md-7">
+                                        <select name="Status" class="form-select form-select-sm">
+                                            <option value="1">Active</option>
+                                            <option value="2">Inactive</option>
+                                            <option value="3">Blocked</option>
+                                            <option value="4">Suspended</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <label class="col-md-4 col-form-label small">Account Group</label>
+                                    <div class="col-md-7 d-flex align-items-center">
+                                        <select name="AccountGroupId"
+                                                id="AccountGroupId"
+                                                class="form-select form-select-sm">
+                                            <option value="">-- Select Group --</option>
+                                            @if (ViewBag.AccountGroupList != null)
+                                            {
+                                                foreach (var item in (IEnumerable<SelectListItem>)ViewBag.AccountGroupList)
+                                                {
+                                                    <option value="@item.Value" selected="@(item.Text != null && item.Text.Trim().ToLower() == "sundry debtor" ? "selected" : null)">@item.Text</option>
+                                                }
+                                            }
+                                        </select>
+                                        <div class="shortcut-box">
+                                            <span id="btnF2AccGrp" class="shortcut-link">F2 - New</span>
+                                            <span id="btnF3AccGrp" class="shortcut-link text-danger">F3 - Mod</span>
+                                        </div>
+                                        <span class="text-danger small field-error" data-field="AccountGroupId"></span>
+                                    </div>
+                                </div>
+
+                               @*  <div class="row mb-2">
+                                    <label class="col-md-4 col-form-label small">GST No</label>
+                                    <div class="col-md-7">
+                                        <input name="GSTNo"
+                                               id="GSTNo"
+                                               class="form-control form-control-sm"
+                                               maxlength="15"
+                                               style="text-transform: uppercase;" />
+                                        <span class="text-danger small field-error" data-field="GSTNo"></span>
+                                    </div>
+                                </div> *@
+
+                                <input type="hidden"
+                                       name="StateCode"
+                                       id="StateCodeHidden" />
+                                <input type="hidden"
+                                       name="GSTType"
+                                       id="GSTTypeHidden"
+                                       value="2" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-sm btn-success">Save Customer</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="accGrpModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header">
+                <h4 class="modal-title" id="accGrpModalTitle">Add Account Group</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modalAccGrpId" value="0" />
+                <label>Name</label>
+                <input type="text" id="modalAccGrpName" class="form-control modal-input" />
+
+                <label class="mt-2">Under</label>
+                <select id="modalAccGrpParentId" class="form-select form-select-sm modal-input">
+                    <option value="">select</option>
+                    @if (ViewBag.ParentAccountGroupList != null)
+                    {
+                        foreach (var item in (IEnumerable<SelectListItem>)ViewBag.ParentAccountGroupList)
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    }
+                </select>
+
+                <div class="form-check mt-2">
+                    <input type="checkbox" id="modalAccGrpActive" class="form-check-input" checked />
+                    <label class="form-check-label" for="modalAccGrpActive">Active</label>
+                </div>
+
+                <span id="accGrpError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveAccGrp">Save</button>
+                <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+ 

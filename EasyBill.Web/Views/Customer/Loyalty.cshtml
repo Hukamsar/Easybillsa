@@ -1,0 +1,264 @@
+@{
+    ViewData["Title"] = "Customer Loyalty";
+    var customerId = (int)(ViewBag.CustomerId ?? 0);
+    var customerName = (string)(ViewBag.CustomerName ?? "Customer");
+}
+
+<style>
+    .loyalty-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    }
+
+    .loyalty-head {
+        background: #2b6ac9;
+        color: #fff;
+        border-radius: 12px 12px 0 0;
+        padding: 10px 14px;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .loyalty-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+    }
+
+    .metric-box {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #f8fafc;
+    }
+
+    .metric-label {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 4px;
+    }
+
+    .metric-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .metric-note {
+        font-size: 12px;
+        color: #475569;
+        margin-top: 6px;
+    }
+</style>
+
+<div class="container-fluid mt-3">
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Loyalty Report - @customerName</h5>
+            <a asp-controller="Customer" asp-action="Index" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <div class="card loyalty-card mb-3">
+        <div class="loyalty-head">Summary</div>
+        <div class="card-body">
+            <div class="loyalty-grid">
+                <div class="metric-box">
+                    <div class="metric-label">Cashback Earned</div>
+                    <div class="metric-value" id="cashbackEarned">Rs.0.00</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Cashback Used</div>
+                    <div class="metric-value" id="cashbackUsed">Rs.0.00</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Cashback Balance</div>
+                    <div class="metric-value" id="cashbackBalance">Rs.0.00</div>
+                    <div class="metric-note" id="cashbackStatus">-</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Cashback Expiry</div>
+                    <div class="metric-value" id="cashbackExpiry">Never Expires</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Points Earned</div>
+                    <div class="metric-value" id="pointsEarned">0</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Points Redeemed</div>
+                    <div class="metric-value" id="pointsRedeemed">0</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Points Balance</div>
+                    <div class="metric-value" id="pointsBalance">0</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Points Value</div>
+                    <div class="metric-value" id="pointsValue">Rs.0.00</div>
+                    <div class="metric-note" id="pointRule">1 point = Rs.0.00</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Points Status</div>
+                    <div class="metric-value" id="pointStatus">No points earned yet</div>
+                    <div class="metric-note" id="pointProgramStatus">Point program status unknown</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card loyalty-card mb-3">
+        <div class="loyalty-head">Cashback Ledger</div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped mb-0" id="cashbackTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Bill No</th>
+                            <th>Amount</th>
+                            <th>Expiry</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card loyalty-card">
+        <div class="loyalty-head">Points Ledger</div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped mb-0" id="pointsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Bill No</th>
+                            <th>Earned</th>
+                            <th>Redeemed</th>
+                            <th>Net</th>
+                            <th>Value/Point</th>
+                            <th>Net Value (Rs.)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const customerId = @customerId;
+
+        function money(value) {
+            return `Rs.${Number(value || 0).toFixed(2)}`;
+        }
+
+        function fmtDate(value) {
+            if (!value) return '-';
+            const dt = new Date(value);
+            if (isNaN(dt.getTime())) return '-';
+            return dt.toLocaleDateString('en-GB');
+        }
+
+        function setSummary(data) {
+            $('#cashbackEarned').text(money(data.cashbackEarned));
+            $('#cashbackUsed').text(money(data.cashbackUsed));
+            $('#cashbackBalance').text(money(data.cashbackBalance));
+            let cashbackStatus = data.cashbackUsageStatus || '-';
+            if ((data.cashbackOverUsed || 0) > 0) {
+                cashbackStatus += ` (Overused: ${money(data.cashbackOverUsed)})`;
+            }
+            $('#cashbackStatus').text(cashbackStatus);
+            $('#cashbackExpiry').text(data.cashbackNeverExpires ? 'Never Expires' : 'As per policy');
+
+            $('#pointsEarned').text(data.pointsEarned || 0);
+            $('#pointsRedeemed').text(data.pointsRedeemed || 0);
+            $('#pointsBalance').text(data.pointsBalance || 0);
+            $('#pointsValue').text(money(data.pointsBalanceValueInRs));
+            $('#pointRule').text(`1 point = ${money(data.pointValueInRs)}`);
+            $('#pointStatus').text(data.isCustomerGettingPoints ? 'Points earned for customer' : 'No points earned yet');
+            $('#pointProgramStatus').text(data.isPointProgramActive ? 'Point program is active' : 'Point program is not active');
+        }
+
+        function bindCashbackLedger(items) {
+            const tbody = $('#cashbackTable tbody');
+            tbody.empty();
+
+            if (!items || !items.length) {
+                tbody.append('<tr><td colspan="6" class="text-center">No cashback history found.</td></tr>');
+                return;
+            }
+
+            items.forEach(x => {
+                const row = `
+                    <tr>
+                        <td>${fmtDate(x.transactionDate)}</td>
+                        <td>${x.transactionType || '-'}</td>
+                        <td>${x.billNo || '-'}</td>
+                        <td>${money(x.amount)}</td>
+                        <td>${x.neverExpires ? 'Never Expires' : fmtDate(x.expiryDate)}</td>
+                        <td>${x.remarks || '-'}</td>
+                    </tr>`;
+                tbody.append(row);
+            });
+        }
+
+        function bindPointLedger(items) {
+            const tbody = $('#pointsTable tbody');
+            tbody.empty();
+
+            if (!items || !items.length) {
+                tbody.append('<tr><td colspan="7" class="text-center">No point history found.</td></tr>');
+                return;
+            }
+
+            items.forEach(x => {
+                const row = `
+                    <tr>
+                        <td>${fmtDate(x.transactionDate)}</td>
+                        <td>${x.billNo || '-'}</td>
+                        <td>${x.earnedPoints || 0}</td>
+                        <td>${x.redeemedPoints || 0}</td>
+                        <td>${x.netPoints || 0}</td>
+                        <td>${money(x.pointValueInRs)}</td>
+                        <td>${money(x.netValueInRs)}</td>
+                    </tr>`;
+                tbody.append(row);
+            });
+        }
+
+        async function loadLoyalty() {
+            try {
+                showLoader();
+                const response = await fetch(`/Customer/GetLoyaltyData?id=${customerId}`);
+                const result = await response.json();
+
+                if (!result.success) {
+                    toastr.error(result.message || 'Unable to load loyalty data');
+                    return;
+                }
+
+                const data = result.data || {};
+                setSummary(data);
+                bindCashbackLedger(data.cashbackLedger || []);
+                bindPointLedger(data.pointLedger || []);
+            } catch {
+                toastr.error('Unable to load loyalty data');
+            } finally {
+                hideLoader();
+            }
+        }
+
+        $(document).ready(function () {
+            loadLoyalty();
+        });
+    </script>
+}

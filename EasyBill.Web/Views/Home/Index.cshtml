@@ -1,0 +1,3733 @@
+﻿@using EasyBill.Models.ViewModels
+@using Newtonsoft.Json
+@model DashboardVM
+
+<style>
+    /* ── FONTS ─────────────────────────────────────────────── */
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+    body, .card, .card-body, .card-title, label, span, div {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    /* ── PAGE BACKGROUND ───────────────────────────────────── */
+    .app-content, .container-fluid {
+        background: #f1f5f9 !important;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+                               ANIMATIONS
+                            ══════════════════════════════════════════════════════════ */
+    @@keyframes fadeSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(22px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes fadeSlideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-12px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes countUp {
+        from {
+            opacity: 0;
+            transform: scale(.85);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    @@keyframes shimmer {
+        0% {
+            background-position: -400px 0;
+        }
+
+        100% {
+            background-position: 400px 0;
+        }
+    }
+
+    @@keyframes pulse-ring {
+        0% {
+            box-shadow: 0 0 0 0 rgba(255,255,255,.35);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(255,255,255,0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(255,255,255,0);
+        }
+    }
+
+    /* ── FILTER BAR ─────────────────────────────────────────── */
+    form.row {
+        background: #fff;
+        border-radius: 14px;
+        padding: 14px 20px !important;
+        box-shadow: 0 2px 12px rgba(0,0,0,.06);
+        animation: fadeSlideDown .45s ease both;
+    }
+
+    form .form-control-sm {
+        border-radius: 8px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        font-size: .82rem !important;
+        transition: border-color .2s, box-shadow .2s !important;
+    }
+
+        form .form-control-sm:focus {
+            border-color: #1d4ed8 !important;
+            box-shadow: 0 0 0 3px rgba(29,78,216,.1) !important;
+        }
+
+    form .btn-primary {
+        background: linear-gradient(135deg, #1d4ed8, #6d28d9) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        padding: 6px 18px !important;
+        transition: opacity .2s, transform .15s !important;
+    }
+
+        form .btn-primary:hover {
+            opacity: .88 !important;
+            transform: translateY(-1px) !important;
+        }
+
+    form .btn-outline-secondary {
+        border-radius: 8px !important;
+        font-weight: 500 !important;
+        transition: all .2s !important;
+    }
+
+        form .btn-outline-secondary:hover {
+            border-color: #ef4444 !important;
+            color: #ef4444 !important;
+            background: transparent !important;
+        }
+
+    /* ══════════════════════════════════════════════════════════
+                               MAIN TOP CARDS (Sales, Purchase, Profit, Discount)
+                            ══════════════════════════════════════════════════════════ */
+    .dashboard-card {
+        border-radius: 16px !important;
+        border: none !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,.12) !important;
+        transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease !important;
+        animation: fadeSlideUp .5s ease both;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Staggered animation delay for 4 cards */
+    .row.g-4.mb-4 > .col-md-3:nth-child(1) .dashboard-card {
+        animation-delay: .05s;
+    }
+
+    .row.g-4.mb-4 > .col-md-3:nth-child(2) .dashboard-card {
+        animation-delay: .12s;
+    }
+
+    .row.g-4.mb-4 > .col-md-3:nth-child(3) .dashboard-card {
+        animation-delay: .19s;
+    }
+
+    .row.g-4.mb-4 > .col-md-3:nth-child(4) .dashboard-card {
+        animation-delay: .26s;
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-6px) scale(1.01) !important;
+        box-shadow: 0 16px 40px rgba(0,0,0,.18) !important;
+    }
+
+    /* Decorative blur orb on each card */
+    .dashboard-card::before {
+        content: '';
+        position: absolute;
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.08);
+        bottom: -35px;
+        right: -35px;
+        pointer-events: none;
+    }
+
+    .dashboard-card::after {
+        content: '';
+        position: absolute;
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.06);
+        top: -20px;
+        left: 120px;
+        pointer-events: none;
+    }
+
+    /* Icon circle pulse on hover */
+    .dashboard-card:hover .rounded-circle {
+        animation: pulse-ring 1s ease-out;
+    }
+
+    /* Number count-up reveal */
+    .dashboard-card .fw-bold {
+        animation: countUp .4s ease both;
+    }
+
+    /* Month boxes */
+    .dashboard-card .flex-fill {
+        border-radius: 10px !important;
+        transition: background .2s !important;
+    }
+
+    .dashboard-card:hover .flex-fill[style*="0.15"] {
+        background: rgba(255,255,255,.22) !important;
+    }
+
+    .dashboard-card:hover .flex-fill[style*="0.10"] {
+        background: rgba(255,255,255,.16) !important;
+    }
+
+    /* Badge pill */
+    .dashboard-card .badge {
+        font-size: .7rem !important;
+        font-weight: 700 !important;
+        letter-spacing: .2px;
+        transition: transform .2s;
+    }
+
+    .dashboard-card:hover .badge {
+        transform: scale(1.08);
+    }
+
+    /* ══════════════════════════════════════════════════════════
+                               RIGHT SIDE INFO CARDS (Qty, Avg, Return)
+                            ══════════════════════════════════════════════════════════ */
+    .col-lg-3 .card {
+        border-radius: 12px !important;
+        border-left-width: 4px !important;
+        border-top: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        transition: transform .22s ease, box-shadow .22s ease !important;
+        animation: fadeSlideUp .5s ease both;
+    }
+
+        .col-lg-3 .card:nth-child(1) {
+            animation-delay: .1s;
+        }
+
+        .col-lg-3 .card:nth-child(2) {
+            animation-delay: .17s;
+        }
+
+        .col-lg-3 .card:nth-child(3) {
+            animation-delay: .24s;
+        }
+
+        .col-lg-3 .card:nth-child(4) {
+            animation-delay: .31s;
+        }
+
+        .col-lg-3 .card:hover {
+            transform: translateX(4px) !important;
+            box-shadow: 0 6px 24px rgba(0,0,0,.1) !important;
+        }
+
+        .col-lg-3 .card .rounded-2 {
+            transition: background .2s !important;
+        }
+
+        .col-lg-3 .card:hover .rounded-2 {
+            background: #eef2ff !important;
+        }
+
+        .col-lg-3 .card .fw-bold {
+            animation: countUp .45s ease both;
+        }
+
+    /* ══════════════════════════════════════════════════════════
+                               CHART CARDS
+                            ══════════════════════════════════════════════════════════ */
+    .col-lg-9 .card,
+    .col-lg-6 .card {
+        border-radius: 16px !important;
+        border: none !important;
+        box-shadow: 0 2px 16px rgba(0,0,0,.07) !important;
+        animation: fadeSlideUp .5s .2s ease both;
+        transition: box-shadow .25s !important;
+    }
+
+        .col-lg-9 .card:hover,
+        .col-lg-6 .card:hover {
+            box-shadow: 0 8px 32px rgba(0,0,0,.11) !important;
+        }
+
+    .card-header {
+        background: transparent !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        padding: 16px 20px 12px !important;
+    }
+
+    .card-title {
+        font-size: .95rem !important;
+        font-weight: 700 !important;
+        color: #1e293b !important;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+                               STOCK OVERVIEW CARDS
+                            ══════════════════════════════════════════════════════════ */
+    .row.g-3.mb-4 .card {
+        border-radius: 14px !important;
+        border-top: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        border-left-width: 4px !important;
+        transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s ease !important;
+        animation: fadeSlideUp .5s ease both;
+        cursor: default;
+    }
+
+    .row.g-3.mb-4 .col-md-2:nth-child(1) .card {
+        animation-delay: .05s;
+    }
+
+    .row.g-3.mb-4 .col-md-2:nth-child(2) .card {
+        animation-delay: .1s;
+    }
+
+    .row.g-3.mb-4 .col-md-2:nth-child(3) .card {
+        animation-delay: .15s;
+    }
+
+    .row.g-3.mb-4 .col-md-3:nth-child(4) .card {
+        animation-delay: .2s;
+    }
+
+    .row.g-3.mb-4 .col-md-3:nth-child(5) .card {
+        animation-delay: .25s;
+    }
+
+    .row.g-3.mb-4 .card:hover {
+        transform: translateY(-5px) scale(1.02) !important;
+        box-shadow: 0 12px 28px rgba(0,0,0,.12) !important;
+    }
+
+    .row.g-3.mb-4 .card i {
+        transition: transform .3s ease !important;
+    }
+
+    .row.g-3.mb-4 .card:hover i {
+        transform: scale(1.25) rotate(-5deg) !important;
+    }
+
+    .row.g-3.mb-4 .card .fw-bold {
+        animation: countUp .4s ease both;
+    }
+
+    /* Stock section heading */
+    h5.fw-semibold.text-muted {
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        color: #475569 !important;
+        letter-spacing: .3px;
+        animation: fadeSlideDown .4s ease both;
+    }
+
+</style>
+<style>
+    /* ── Intro.js Custom Styling ── */
+    .introjs-tooltip {
+        border-radius: 14px !important;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.25) !important;
+        border: none !important;
+        min-width: 280px !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .introjs-tooltip-header {
+        background: linear-gradient(135deg, #1565c0, #1e88e5) !important;
+        padding: 14px 18px !important;
+        border-radius: 14px 14px 0 0 !important;
+    }
+
+    .introjs-tooltiptext {
+        padding: 16px 18px !important;
+        font-size: 0.85rem !important;
+        color: #334155 !important;
+        line-height: 1.6 !important;
+    }
+
+    .introjs-tooltipbuttons {
+        padding: 10px 16px 14px !important;
+        border-top: 1px solid #f1f5f9 !important;
+        display: flex !important;
+        gap: 8px !important;
+        justify-content: flex-end !important;
+    }
+
+    .introjs-button {
+        border-radius: 8px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        padding: 7px 16px !important;
+        border: none !important;
+        cursor: pointer !important;
+        text-shadow: none !important;
+    }
+
+    .introjs-nextbutton {
+        background: linear-gradient(135deg, #1565c0, #1e88e5) !important;
+        color: #fff !important;
+    }
+
+        .introjs-nextbutton:hover {
+            background: linear-gradient(135deg, #0d47a1, #1565c0) !important;
+            color: #fff !important;
+        }
+
+    .introjs-prevbutton {
+        background: #f1f5f9 !important;
+        color: #475569 !important;
+    }
+
+    .introjs-skipbutton {
+        color: rgba(255,255,255,0.8) !important;
+        font-size: 1rem !important;
+        top: 10px !important;
+        right: 12px !important;
+    }
+
+        .introjs-skipbutton:hover {
+            color: #fff !important;
+        }
+
+    .introjs-title {
+        color: #fff !important;
+        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+    }
+
+    .introjs-progressbar {
+        background: linear-gradient(90deg, #1e88e5, #42a5f5) !important;
+        height: 4px !important;
+        border-radius: 2px !important;
+    }
+
+    .introjs-progress {
+        background: #e2e8f0 !important;
+        height: 4px !important;
+        border-radius: 2px !important;
+        margin: 0 18px 12px !important;
+    }
+
+    .introjs-helperLayer {
+        border-radius: 12px !important;
+        box-shadow: rgba(33,33,33,0.5) 0 0 1px 2px, rgba(33,33,33,0.5) 0 0 0 5000px !important;
+    }
+
+    .introjs-arrow {
+        display: none !important;
+    }
+
+    /* ── PREMIUM DASHBOARD CARDS CSS ── */
+    .mnc-dash-card {
+        border: none !important;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+
+    .mnc-dash-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Glassmorphism for Inner Boxes */
+    .glass-box {
+    /*     background: rgba(255, 255, 255, 0.12); */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid #f5f1f1;
+    }
+
+    .glass-icon {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
+<div class="app-content">
+    <div class="container-fluid">
+
+        <!--Filter-->
+        <div class="row g-4 mb-3">
+
+            @*             <div class="col-md-12">
+                <form method="get" asp-action="Index" class="row g-2 mb-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small">From Date</label>
+                        <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">To Date</label>
+                        <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-sm btn-primary">Apply Filter</button>
+                        <a asp-action="Index" class="btn btn-sm btn-outline-secondary ms-1">Reset</a>
+                    </div>
+                </form>
+            </div> *@
+
+            <div class="col-md-12">
+
+                <div class="filter-animated-wrapper" style="position:relative; border-radius:16px; overflow:hidden; box-shadow: 0 4px 24px rgba(30,86,189,0.18);">
+
+                    <!-- Animated Background -->
+                    <div style="
+            position:absolute; inset:0; z-index:0;
+            background: linear-gradient(120deg, #1565c0 0%, #1976d2 35%, #0d47a1 65%, #1a237e 100%);
+            border-radius:16px; overflow:hidden;">
+
+                        <!-- Floating SVG pharmacy/billing icons -->
+                        <svg width="100%" height="100%" viewBox="0 0 1100 90" preserveAspectRatio="xMidYMid slice"
+                             xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;opacity:0.15;">
+                            <defs>
+                                <style>
+                                    .fl {
+                                        animation: floatX 18s ease-in-out infinite;
+                                    }
+
+                                    .fl2 {
+                                        animation: floatX 24s ease-in-out infinite;
+                                    }
+
+                                    .fl3 {
+                                        animation: floatX 14s ease-in-out infinite;
+                                    }
+
+                                    @@keyframes floatX {
+                                        0% {
+                                            transform: translateY(0px);
+                                        }
+
+                                        25% {
+                                            transform: translateY(-8px);
+                                        }
+
+                                        50% {
+                                            transform: translateY(-14px);
+                                        }
+
+                                        75% {
+                                            transform: translateY(-6px);
+                                        }
+
+                                        100% {
+                                            transform: translateY(0px);
+                                        }
+                                    }
+                                </style>
+                            </defs>
+
+                            <!-- Rupee symbols -->
+                            <text x="40" y="55" font-size="28" fill="#ffffff" class="fl" style="animation-delay:0s">₹</text>
+                            <text x="160" y="30" font-size="18" fill="#90caf9" class="fl2" style="animation-delay:2s">₹</text>
+                            <text x="320" y="70" font-size="22" fill="#ffffff" class="fl" style="animation-delay:4s">₹</text>
+                            <text x="560" y="25" font-size="16" fill="#bbdefb" class="fl3" style="animation-delay:1s">₹</text>
+                            <text x="780" y="65" font-size="26" fill="#90caf9" class="fl2" style="animation-delay:3s">₹</text>
+                            <text x="980" y="40" font-size="20" fill="#ffffff" class="fl" style="animation-delay:5s">₹</text>
+
+                            <!-- Pill shapes -->
+                            <rect x="90" y="20" width="34" height="14" rx="7" fill="#90caf9" class="fl" style="animation-delay:1.5s" />
+                            <rect x="240" y="55" width="28" height="12" rx="6" fill="#ffffff" class="fl2" style="animation-delay:3s" />
+                            <rect x="430" y="18" width="36" height="14" rx="7" fill="#bbdefb" class="fl" style="animation-delay:2.5s" />
+                            <rect x="640" y="58" width="30" height="12" rx="6" fill="#90caf9" class="fl3" style="animation-delay:0.5s" />
+                            <rect x="860" y="22" width="32" height="13" rx="6" fill="#ffffff" class="fl2" style="animation-delay:4s" />
+                            <rect x="1050" y="50" width="26" height="11" rx="5" fill="#bbdefb" class="fl" style="animation-delay:2s" />
+
+                            <!-- Small circles -->
+                            <circle cx="200" cy="50" r="8" fill="#90caf9" class="fl2" style="animation-delay:1s" />
+                            <circle cx="500" cy="45" r="6" fill="#ffffff" class="fl" style="animation-delay:3.5s" />
+                            <circle cx="700" cy="30" r="9" fill="#bbdefb" class="fl3" style="animation-delay:0s" />
+                            <circle cx="910" cy="60" r="7" fill="#90caf9" class="fl2" style="animation-delay:2.5s" />
+
+                            <!-- Bill receipt icons -->
+                            <g class="fl" style="animation-delay:1s" transform="translate(370, 15)">
+                                <rect width="24" height="30" rx="3" fill="none" stroke="#ffffff" stroke-width="1.5" />
+                                <line x1="5" y1="10" x2="19" y2="10" stroke="#ffffff" stroke-width="1.2" />
+                                <line x1="5" y1="15" x2="19" y2="15" stroke="#ffffff" stroke-width="1.2" />
+                                <line x1="5" y1="20" x2="14" y2="20" stroke="#ffffff" stroke-width="1.2" />
+                            </g>
+                            <g class="fl2" style="animation-delay:3s" transform="translate(730, 10)">
+                                <rect width="24" height="30" rx="3" fill="none" stroke="#90caf9" stroke-width="1.5" />
+                                <line x1="5" y1="10" x2="19" y2="10" stroke="#90caf9" stroke-width="1.2" />
+                                <line x1="5" y1="15" x2="19" y2="15" stroke="#90caf9" stroke-width="1.2" />
+                                <line x1="5" y1="20" x2="14" y2="20" stroke="#90caf9" stroke-width="1.2" />
+                            </g>
+
+                            <!-- Medicine cross -->
+                            <g class="fl" style="animation-delay:2s" transform="translate(130, 38)">
+                                <rect x="7" y="0" width="6" height="20" rx="2" fill="#bbdefb" />
+                                <rect x="0" y="7" width="20" height="6" rx="2" fill="#bbdefb" />
+                            </g>
+                            <g class="fl2" style="animation-delay:4.5s" transform="translate(820, 15)">
+                                <rect x="5" y="0" width="5" height="16" rx="2" fill="#90caf9" />
+                                <rect x="0" y="5" width="16" height="5" rx="2" fill="#90caf9" />
+                            </g>
+
+                            <!-- Barcode -->
+                            <g class="fl3" style="animation-delay:1.8s" transform="translate(470, 30)" opacity="0.5">
+                                <rect x="0" y="0" width="2" height="22" fill="#ffffff" />
+                                <rect x="4" y="0" width="1" height="22" fill="#ffffff" />
+                                <rect x="7" y="0" width="3" height="22" fill="#ffffff" />
+                                <rect x="12" y="0" width="1" height="22" fill="#ffffff" />
+                                <rect x="15" y="0" width="2" height="22" fill="#ffffff" />
+                                <rect x="19" y="0" width="1" height="22" fill="#ffffff" />
+                            </g>
+
+                        </svg>
+
+                        <!-- Shimmer sweep -->
+                        <div style="
+                position:absolute; inset:0; pointer-events:none;
+                background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.05) 50%, transparent 65%);
+                background-size:200% 100%;
+                animation: shimmerSweep 5s ease-in-out infinite;
+                border-radius:16px;">
+                        </div>
+
+                        <!-- Soft glow blobs (blue tones) -->
+                        <div style="position:absolute; width:220px; height:220px; border-radius:50%;
+                background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+                top:-80px; left:5%; animation: blobFloat 9s ease-in-out infinite; pointer-events:none;">
+                        </div>
+                        <div style="position:absolute; width:180px; height:180px; border-radius:50%;
+                background: radial-gradient(circle, rgba(144,202,249,0.1) 0%, transparent 70%);
+                bottom:-60px; right:15%; animation: blobFloat 11s ease-in-out infinite reverse; pointer-events:none;">
+                        </div>
+                    </div>
+
+                    <!-- Form -->
+                    <form method="get" asp-action="Index"
+                          class="row g-2 mb-0 align-items-end"
+                          style="position:relative; z-index:1; padding:18px 24px; margin:0 !important;
+                     background:transparent !important; border-radius:16px; box-shadow:none !important;">
+
+                        <div class="col-md-3">
+                            <label class="form-label small" style="color:rgba(255,255,255,0.8) !important; font-weight:600; font-size:0.72rem; letter-spacing:.5px; text-transform:uppercase;">
+                                From Date
+                            </label>
+                            <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm filter-date-input" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label small" style="color:rgba(255,255,255,0.8) !important; font-weight:600; font-size:0.72rem; letter-spacing:.5px; text-transform:uppercase;">
+                                To Date
+                            </label>
+                            <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm filter-date-input" />
+                        </div>
+
+                        <div class="col-md-3 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-sm filter-apply-btn">
+                                <i class="bi bi-funnel-fill me-1"></i> Apply Filter
+                            </button>
+                            <a asp-action="Index" class="btn btn-sm filter-reset-btn">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                            </a>
+                        </div>
+
+                        <!-- Live Clock -->
+                        <div class="col-md-3 d-flex align-items-end justify-content-end">
+                            <div style="text-align:right;">
+                                <div style="font-size:0.65rem; color:rgba(255,255,255,0.6); letter-spacing:.6px; text-transform:uppercase;">Current Time</div>
+                                <div id="liveClock" style="font-family:'Courier New',monospace; font-size:1.15rem; font-weight:700; color:#ffffff; letter-spacing:3px; text-shadow: 0 0 12px rgba(255,255,255,0.4);">00:00:00</div>
+                                <div id="liveDate" style="font-size:0.68rem; color:rgba(255,255,255,0.65); margin-top:1px;"></div>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+                <style>
+                    @@keyframes shimmerSweep {
+                        0%, 100% {
+                            background-position: -100% 0;
+                        }
+
+                        50% {
+                            background-position: 200% 0;
+                        }
+                    }
+
+                    @@keyframes blobFloat {
+                        0%, 100% {
+                            transform: translateY(0) scale(1);
+                        }
+
+                        50% {
+                            transform: translateY(-14px) scale(1.04);
+                        }
+                    }
+
+                    /* Date inputs — glassmorphism on blue */
+                    .filter-date-input {
+                        background: rgba(255,255,255,0.15) !important;
+                        border: 1.5px solid rgba(255,255,255,0.3) !important;
+                        color: #fff !important;
+                        border-radius: 8px !important;
+                        backdrop-filter: blur(8px) !important;
+                        font-size: .82rem !important;
+                        transition: border-color .2s, box-shadow .2s !important;
+                    }
+
+                        .filter-date-input:focus {
+                            background: rgba(255,255,255,0.22) !important;
+                            border-color: rgba(255,255,255,0.7) !important;
+                            box-shadow: 0 0 0 3px rgba(255,255,255,0.15) !important;
+                            outline: none !important;
+                        }
+
+                        .filter-date-input::-webkit-calendar-picker-indicator {
+                            filter: invert(1);
+                            opacity: 0.8;
+                            cursor: pointer;
+                        }
+
+                    /* Apply button — white with blue text (matches sidebar style) */
+                    .filter-apply-btn {
+                        background: #ffffff !important;
+                        border: none !important;
+                        color: #1565c0 !important;
+                        font-weight: 700 !important;
+                        border-radius: 8px !important;
+                        padding: 7px 18px !important;
+                        font-size: 0.82rem !important;
+                        box-shadow: 0 4px 14px rgba(0,0,0,0.2) !important;
+                        transition: transform .15s, box-shadow .15s, background .2s !important;
+                    }
+
+                        .filter-apply-btn:hover {
+                            background: #e3f2fd !important;
+                            transform: translateY(-2px) !important;
+                            box-shadow: 0 6px 20px rgba(0,0,0,0.25) !important;
+                        }
+
+                    /* Reset button — transparent white border */
+                    .filter-reset-btn {
+                        background: rgba(255,255,255,0.12) !important;
+                        border: 1.5px solid rgba(255,255,255,0.4) !important;
+                        color: rgba(255,255,255,0.85) !important;
+                        font-weight: 600 !important;
+                        border-radius: 8px !important;
+                        padding: 6px 14px !important;
+                        font-size: 0.82rem !important;
+                        backdrop-filter: blur(6px) !important;
+                        transition: all .2s !important;
+                    }
+
+                        .filter-reset-btn:hover {
+                            background: rgba(255,255,255,0.22) !important;
+                            border-color: rgba(255,255,255,0.7) !important;
+                            color: #fff !important;
+                        }
+                </style>
+
+                <script>
+                    (function () {
+                        const clockEl = document.getElementById('liveClock');
+                        const dateEl  = document.getElementById('liveDate');
+                        const days    = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                        const months  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                        function tick() {
+                            const now = new Date();
+                            clockEl.textContent = [now.getHours(), now.getMinutes(), now.getSeconds()]
+                                .map(n => String(n).padStart(2,'0')).join(':');
+                            dateEl.textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+                        }
+                        tick();
+                        setInterval(tick, 1000);
+                    })();
+                </script>
+
+            </div>
+
+        </div>
+
+        <!-- ===== ROW 1: 4 Main Cards ===== -->
+        <div class="row g-4 mb-4">
+
+            <div class="col-md-3">
+                <div class="card text-white"
+                     data-intro="📊 This card compares your total sales for this month with last month."
+                     data-step="1"
+                     data-title="Total Sales"
+                     style="background:#eb4141;border-radius: 16px;">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div class="rounded-circle glass-icon p-2 d-flex align-items-center justify-content-center" style="width:42px; height:42px;">
+                                <i class="bi bi-graph-up-arrow fs-5"></i>
+                            </div>
+                            <span class="fw-semibold fs-6 opacity-90" style="letter-spacing: 0.5px;">Total Sales</span>
+
+                            @{
+                                var growthPct = Model.LastMonthSales > 0 ? Math.Round(((Model.ThisMonthSales - Model.LastMonthSales) / Model.LastMonthSales) * 100, 1) : 0;
+                                var isUp = growthPct >= 0;
+                            }
+                            <span class="ms-auto badge rounded-pill px-2 py-1 shadow-sm"
+                                  style="font-size:0.75rem; background: @(isUp ? "rgba(220,255,235,0.95)" : "rgba(255,220,220,0.95)"); color: @(isUp ? "#166534" : "#991b1b");">
+                                @(isUp ? "▲" : "▼") @(isUp ? "+" : "")@growthPct%
+                            </span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-stretch gap-2">
+                            <div class="flex-fill rounded-3 p-2 text-center glass-box" style="opacity: 0.85;">
+                                <div class="small mb-1 fw-bold"><i class="bi bi-calendar-minus me-1"></i>Last Month</div>
+                                <div class="fw-bold fs-6 mt-1">₹ @Model.LastMonthSales.ToString("N0")</div>
+                            </div>
+                            <div class="flex-fill rounded-3 p-2 text-center glass-box">
+                                <div class="small mb-1 fw-bold"><i class="bi bi-calendar-check me-1"></i>This Month</div>
+                                <div class="fw-bold fs-5">₹ @Model.ThisMonthSales.ToString("N0")</div>
+                            </div>
+                           
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card text-white"
+                     data-intro="🚚 This card compares total purchases of this month with last month."
+                     data-step="2"
+                     data-title="Total Purchases"
+                     style="background:#15b44f;border-radius: 16px;">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div class="rounded-circle glass-icon p-2 d-flex align-items-center justify-content-center" style="width:42px; height:42px;">
+                                <i class="bi bi-truck fs-5"></i>
+                            </div>
+                            <span class="fw-semibold fs-6 opacity-90" style="letter-spacing: 0.5px;">Total Purchases</span>
+
+                            @{
+                                var purchaseGrowthPct = Model.LastMonthPurchases > 0 ? Math.Round(((Model.ThisMonthPurchases - Model.LastMonthPurchases) / Model.LastMonthPurchases) * 100, 1) : 0;
+                                var isPurchaseUp = purchaseGrowthPct >= 0;
+                            }
+                            <span class="ms-auto badge rounded-pill px-2 py-1 shadow-sm"
+                                  style="font-size:0.75rem; background: @(isPurchaseUp ? "rgba(255,220,220,0.95)" : "rgba(220,255,235,0.95)"); color: @(isPurchaseUp ? "#991b1b" : "#166534");">
+                                @(isPurchaseUp ? "▲" : "▼") @(isPurchaseUp ? "+" : "")@purchaseGrowthPct%
+                            </span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-stretch gap-2">
+                            <div class="flex-fill rounded-3 p-2 text-center glass-box" style="opacity: 0.85;">
+                                <div class="small fw-bold mb-1"><i class="bi bi-calendar-minus me-1"></i>Last Month</div>
+                                <div class="fw-bold fs-6 mt-1">₹ @Model.LastMonthPurchases.ToString("N0")</div>
+                            </div>
+                            <div class="flex-fill rounded-3 p-2 text-center glass-box">
+                                <div class="small fw-bold mb-1"><i class="bi bi-calendar-check me-1"></i>This Month</div>
+                                <div class="fw-bold fs-5">₹ @Model.ThisMonthPurchases.ToString("N0")</div>
+                            </div>
+                           
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card text-white"
+                     data-intro="💰 This card compares this month’s profit with last month."
+                     data-step="3"
+                     data-title="Profits"
+                     style="background:#1792e1;border-radius: 16px;">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div class="rounded-circle glass-icon p-2 d-flex align-items-center justify-content-center" style="width:42px; height:42px;">
+                                <i class="bi bi-currency-rupee fs-5"></i>
+                            </div>
+                            <span class="fw-semibold fs-6 opacity-90" style="letter-spacing: 0.5px;">Net Profits</span>
+
+                            @{
+                                var profitGrowthPct = Model.LastMonthProfit > 0 ? Math.Round(((Model.ThisMonthProfit - Model.LastMonthProfit) / Model.LastMonthProfit) * 100, 1) : 0;
+                                var isProfitUp = profitGrowthPct >= 0;
+                            }
+                            <span class="ms-auto badge rounded-pill px-2 py-1 shadow-sm"
+                                  style="font-size:0.75rem; background: @(isProfitUp ? "rgba(220,255,235,0.95)" : "rgba(255,220,220,0.95)"); color: @(isProfitUp ? "#166534" : "#991b1b");">
+                                @(isProfitUp ? "▲" : "▼") @(isProfitUp ? "+" : "")@profitGrowthPct%
+                            </span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-stretch gap-2">
+                            <div class="flex-fill rounded-3 p-2 text-center glass-box" style="opacity: 0.85;">
+                                <div class="small fw-bold mb-1"><i class="bi bi-calendar-minus me-1"></i>Last Month</div>
+                                <div class="fw-bold fs-6 mt-1">₹ @Model.LastMonthProfit.ToString("N0")</div>
+                            </div>
+                            <div class="flex-fill rounded-3 p-2 text-center glass-box">
+                                <div class="small fw-bold mb-1"><i class="bi bi-calendar-check me-1"></i>This Month</div>
+                                <div class="fw-bold fs-5">₹ @Model.ThisMonthProfit.ToString("N0")</div>
+                            </div>
+                           
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card text-white"
+                     data-intro="🏷️ This card shows the total discounts for this month compared to last month."
+                     data-step="4"
+                     data-title="Total Discounts"
+                     style="background:#cfa11e;border-radius: 16px;">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div class="rounded-circle glass-icon p-2 d-flex align-items-center justify-content-center" style="width:42px; height:42px;">
+                                <i class="bi bi-tag fs-5"></i>
+                            </div>
+                            <span class="fw-semibold fs-6 opacity-90" style="letter-spacing: 0.5px;">Total Discounts</span>
+
+                            @{
+                                var discountGrowthPct = Model.LastMonthDiscount > 0 ? Math.Round(((Model.ThisMonthDiscount - Model.LastMonthDiscount) / Model.LastMonthDiscount) * 100, 1) : 0;
+                                var isDiscountUp = discountGrowthPct >= 0;
+                            }
+                            <span class="ms-auto badge rounded-pill px-2 py-1 shadow-sm"
+                                  style="font-size:0.75rem; background: @(isDiscountUp ? "rgba(255,220,220,0.95)" : "rgba(220,255,235,0.95)"); color: @(isDiscountUp ? "#991b1b" : "#166534");">
+                                @(isDiscountUp ? "▲" : "▼") @(isDiscountUp ? "+" : "")@discountGrowthPct%
+                            </span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-stretch gap-2">
+                            <div class="flex-fill rounded-3 p-2 text-center glass-box" style="opacity: 0.85;">
+                                <div class="small fw-bold mb-1"><i class="bi bi-calendar-minus me-1"></i>Last Month</div>
+                                <div class="fw-bold fs-6 mt-1">₹ @Model.LastMonthDiscount.ToString("N0")</div>
+                            </div>
+                            <div class="flex-fill rounded-3 p-2 text-center glass-box">
+                                <div class="small fw-bold mb-1"><i class="bi bi-calendar-check me-1"></i>This Month</div>
+                                <div class="fw-bold fs-5">₹ @Model.ThisMonthDiscount.ToString("N0")</div>
+                            </div>
+                           
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @* <div class="col-md-4">
+                <div class="card text-white bg-gradient-warning dashboard-card">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="card-title mb-1">Near Expiry in Next 6 Months</h5>
+                            <p class="card-text h4 fw-bold mb-0">₹ @Model.TotalNearExpiryAmount.ToString("N2")</p>
+                        </div>
+                        <i class="bi bi-exclamation-triangle display-4"></i>
+                    </div>
+                </div>
+            </div> *@
+
+        </div>
+
+        <!-- ===== ROW 2: Chart (left 9col) + 4 Small Cards (right 3col) ===== -->
+        <div class="row g-4 mb-4">
+
+            <!-- Left: Date Wise Chart -->
+            <div class="col-lg-9">
+                <div class="card shadow-sm rounded-3 p-3 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">Date Wise Sales/Purchase</h6>
+                    </div>
+                    @*  <canvas id="salesPurchaseAreaChart"></canvas> *@
+                    <div id="salesPurchaseAreaChart"></div>
+                </div>
+            </div>
+
+            <!-- Right: 4 Info Cards stacked -->
+            <div class="col-lg-3">
+                <div class="d-flex flex-column gap-2 h-100">
+
+                    <!-- 1.4 Total Sales Quantity -->
+                    <div class="card flex-fill shadow-sm border-0"
+                    @*                          data-intro="📦 This shows the total number of units sold this month compared with last month."
+                         data-step="5"
+                         data-title="Total Sales Quantity" *@
+                         style="border-left: 4px solid #2ecc71 !important;">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                     style="width:28px; height:28px; min-width:28px; background:#e8f8f0;">
+                                    <i class="bi bi-box-seam" style="font-size:0.75rem; color:#1a7a4a;"></i>
+                                </div>
+                                <span class="fw-semibold text-muted" style="font-size:0.75rem;">Total Sales Quantity</span>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2">
+                                <div class="flex-fill text-center rounded-2 py-1" style="background:#f8f9fa;">
+                                    <div style="font-size:0.6rem;" class="text-muted">This Month</div>
+                                    <div class="fw-bold text-dark" style="font-size:0.85rem;">@Model.ThisMonthSalesQty.ToString("N0") <small class="text-muted fw-normal">units</small></div>
+                                </div>
+                                <div class="flex-fill text-center rounded-2 py-1" style="background:#f8f9fa;">
+                                    <div style="font-size:0.6rem;" class="text-muted">Last Month</div>
+                                    <div class="fw-bold text-dark" style="font-size:0.85rem;">@Model.LastMonthSalesQty.ToString("N0") <small class="text-muted fw-normal">units</small></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 1.5 Avg Customer Sales -->
+                    <div class="card flex-fill shadow-sm border-0"
+                    @*                          data-intro="👤 This shows the average sales value per customer for this month compared with last month."
+                         data-step="6"
+                         data-title="Avg Customer Sales" *@
+                         style="border-left: 4px solid #42a5f5 !important;">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                     style="width:28px; height:28px; min-width:28px; background:#e3f2fd;">
+                                    <i class="bi bi-person-check" style="font-size:0.75rem; color:#1565c0;"></i>
+                                </div>
+                                <span class="fw-semibold text-muted" style="font-size:0.75rem;">Avg Customer Sales</span>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2">
+                                <div class="flex-fill text-center rounded-2 py-1" style="background:#f8f9fa;">
+                                    <div style="font-size:0.6rem;" class="text-muted">This Month</div>
+                                    <div class="fw-bold text-dark" style="font-size:0.85rem;">₹ @Model.ThisMonthAvgCustomerSales.ToString("N0")</div>
+                                </div>
+                                <div class="flex-fill text-center rounded-2 py-1" style="background:#f8f9fa;">
+                                    <div style="font-size:0.6rem;" class="text-muted">Last Month</div>
+                                    <div class="fw-bold text-dark" style="font-size:0.85rem;">₹ @Model.LastMonthAvgCustomerSales.ToString("N0")</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 1.6 Avg Units / Customer -->
+                    <div class="card flex-fill shadow-sm border-0"
+                    @*                          data-intro="👥 This shows the average number of units purchased per customer this month compared with last month."
+                         data-step="7"
+                         data-title="Avg Units / Customer" *@
+                         style="border-left: 4px solid #059669 !important;">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                     style="width:28px; height:28px; min-width:28px; background:#e8f8f0;">
+                                    <i class="bi bi-people" style="font-size:0.75rem; color:#065f46;"></i>
+                                </div>
+                                <span class="fw-semibold text-muted" style="font-size:0.75rem;">Avg Units / Customer</span>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2">
+                                <div class="flex-fill text-center rounded-2 py-1" style="background:#f8f9fa;">
+                                    <div style="font-size:0.6rem;" class="text-muted">This Month</div>
+                                    <div class="fw-bold text-dark" style="font-size:0.85rem;">
+                                        @Model.ThisMonthAvgUnitsPerCustomer.ToString("N1")
+                                        <small class="text-muted fw-normal">units</small>
+                                    </div>
+                                </div>
+                                <div class="flex-fill text-center rounded-2 py-1" style="background:#f8f9fa;">
+                                    <div style="font-size:0.6rem;" class="text-muted">Last Month</div>
+                                    <div class="fw-bold text-dark" style="font-size:0.85rem;">
+                                        @Model.LastMonthAvgUnitsPerCustomer.ToString("N1")
+                                        <small class="text-muted fw-normal">units</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 1.7 Sales Return Value -->
+                    <div class="card flex-fill shadow-sm border-0"
+                    @*                          data-intro="🔄 This shows the total value of sales returns for this month compared with last month."
+                         data-step="8"
+                         data-title="Sales Return Value" *@
+                         style="border-left: 4px solid #0ea5e9 !important;">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                     style="width:28px; height:28px; min-width:28px; background:#e0f2fe;">
+                                    <i class="bi bi-arrow-return-left" style="font-size:0.75rem; color:#0369a1;"></i>
+                                </div>
+                                <span class="fw-semibold text-muted" style="font-size:0.75rem;">Sales Return Value</span>
+                            </div>
+                            <div class="d-flex justify-content-between gap-2">
+                                <div class="flex-fill text-center rounded-2 py-1" style="background:#f8f9fa;">
+                                    <div style="font-size:0.6rem;" class="text-muted">This Month</div>
+                                    <div class="fw-bold text-dark" style="font-size:0.85rem;">₹ @Model.ThisMonthSalesReturn.ToString("N0")</div>
+                                </div>
+                                <div class="flex-fill text-center rounded-2 py-1" style="background:#f8f9fa;">
+                                    <div style="font-size:0.6rem;" class="text-muted">Last Month</div>
+                                    <div class="fw-bold text-dark" style="font-size:0.85rem;">₹ @Model.LastMonthSalesReturn.ToString("N0")</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+        <div class="row g-4 mb-4">
+            @*             <div class="col-lg-5">
+                <div class="card shadow-sm border-0"
+                     style="background: #ffffff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
+                    <div class="card-header border-0" style="background:transparent;">
+                        <h3 class="card-title" style="color:#1e293b !important;">
+                            💳 Mode of Payment wise Collection
+                        </h3>
+                    </div>
+                    <div class="card-body" style="min-height: 300px;">
+                        <div id="paymentModeChart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card shadow-sm border-0"
+                     style="background: #ffffff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
+                    <div class="card-header border-0" style="background:transparent;">
+                        <h3 class="card-title" style="color:#1e293b !important;">
+                            📦 Stock Value vs Sales — Category Wise
+                        </h3>
+                    </div>
+                    <div class="card-body" style="min-height: 300px;">
+                        <div id="categoryStockSalesChart"></div>
+                    </div>
+                </div>
+            </div> *@
+
+            <!-- MODE OF PAYMENT -->
+            @*  <div class="col-lg-6">
+                <div class="card shadow-sm border-0 h-100"
+                     style="background: #ffffff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
+                    <div class="card-header border-0" style="background:transparent;">
+                        <h3 class="card-title" style="color:#1e293b !important;">
+                            💳 Mode of Payment wise Collection
+                        </h3>
+                    </div>
+                    <div class="card-body d-flex align-items-center justify-content-center">
+                        <div id="paymentModeChart" style="width:100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0 h-100"
+                     style="background: #ffffff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
+                    <div class="card-header border-0" style="background:transparent;">
+                        <h3 class="card-title" style="color:#1e293b !important;">🏭 Company Wise Sales</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="companyWiseSalesChart"></div>
+                    </div>
+                </div>
+            </div> *@
+            <!-- STOCK VALUE VS SALES -->
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0 h-100" style="border-radius:16px;">
+                    <div class="card-header border-0 bg-transparent">
+                        <h3 class="card-title">💳 Mode of Payment wise Collection</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mode</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentModeTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0 h-100" style="border-radius:16px;">
+                    <div class="card-header border-0 bg-transparent">
+                        <h3 class="card-title">🏭 Company Wise Sales</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Company</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="companyTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-lg-5">
+                <div class="card shadow-sm border-0 h-100"
+                     style="background: #ffffff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
+                    <div class="card-header border-0" style="background:transparent;">
+                        <h3 class="card-title" style="color:#1e293b !important;">🏆 Top 10 Items by Sales</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="top10ItemsChart"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="card shadow-sm border-0 h-100"
+                     style="background: #ffffff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
+                    <div class="card-header border-0" style="background:transparent;">
+                        <h3 class="card-title" style="color:#1e293b !important;">
+                            📦 Stock Value vs Sales — Category Wise
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="categoryStockSalesChart"></div>
+                    </div>
+                </div>
+            </div>
+          
+        </div>
+
+        <!-- ===== SALES vs PROFIT ===== -->
+        <div class="row g-4 mb-4">
+            <div class="col-8">
+                <div class="card shadow-sm border-0"
+                     style="background: #ffffff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
+                    <div class="card-header border-0" style="background:transparent;">
+                        <h3 class="card-title" style="color:#1e293b !important;">
+                            📈 Sales vs Profit vs Profit %
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="salesProfitChart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0 h-100"
+                     style="background: #ffffff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
+                    <div class="card-header border-0" style="background:transparent;">
+                        <h3 class="card-title" style="color:#1e293b !important;">🗂️ Category Wise Sales</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="categoryWiseSalesChart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ===== MODE OF PAYMENT ===== -->
+       
+
+
+        <!-- ===== ROW 3: Monthly Charts ===== -->
+        <div class="row g-4 mb-0">
+
+            <div class="col-lg-6">
+                <div class="card mb-4">
+                    <div class="card-header border-0">
+                        <div class="d-flex justify-content-between">
+                            <h3 class="card-title">📊 Monthly Sales Overview</h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="monthlySalesChart"></div>
+                    </div>
+                </div>
+
+                @* <div class="card mb-4">
+                    <div class="card-header border-0">
+                        <h3 class="card-title">OutStanding</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2 d-flex justify-content-between">
+                            <span class="fw-semibold text-muted">Payable</span>
+                            <span class="fw-bold text-danger">₹ @Model.TotalPayable.ToString("N2")</span>
+                        </div>
+                        <div class="mb-2 d-flex justify-content-between">
+                            <span class="fw-semibold text-muted">Receiveable</span>
+                            <span class="fw-bold text-success">₹ @Model.TotalReceiveable.ToString("N2")</span>
+                        </div>
+                    </div>
+                </div> *@
+
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card mb-4">
+                    <div class="card-header border-0">
+                        <div class="d-flex justify-content-between">
+                            <h3 class="card-title">📈 Monthly Purchase Overview</h3>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="monthlyPurchaseChart"></div>
+                    </div>
+                </div>
+
+                @*  <div class="card mb-4">
+                    <div class="card-header border-0">
+                        <h3 class="card-title">Accounts</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2 d-flex justify-content-between">
+                            <span class="fw-semibold text-muted">Cash</span>
+                            <span class="fw-bold text-danger">₹ @Model.TotalCash.ToString("N2")</span>
+                        </div>
+                        <div class="mb-2 d-flex justify-content-between">
+                            <span class="fw-semibold text-muted">Bank</span>
+                            <span class="fw-bold text-success">₹ @Model.TotalBank.ToString("N2")</span>
+                        </div>
+                        <div class="mb-2 d-flex justify-content-between">
+                            <span class="fw-semibold text-muted">Weekly PDC (@Model.WeeklyPDCCount)</span>
+                            <span class="fw-bold text-success">₹ @Model.WeeklyPDCAmt.ToString("N2")</span>
+                        </div>
+                    </div>
+                </div>  *@
+
+            </div>
+
+        </div>
+
+        <!-- ===== ACCOUNTS OVERVIEW ===== -->
+        <div class="row mb-0">
+            <div class="col-12 d-flex align-items-center justify-content-between mb-2">
+                <h5 class="fw-semibold text-muted">💰 Accounts Overview</h5>
+            </div>
+        </div>
+        <div class="row g-3 mb-4">
+
+            <!-- Receivables -->
+            <div class="col-md">
+                <div class="card shadow-sm border-0 h-100"
+                     style="border-left:4px solid #2ecc71; cursor:pointer;"
+                     data-bs-toggle="modal" data-bs-target="#receivablesModal">
+                    <div class="card-body text-center">
+                        <i class="bi bi-arrow-down-circle-fill fs-4 mb-2" style="color:#2ecc71;"></i>
+                        <div class="small text-muted fw-semibold">Receivables</div>
+                        <div class="fw-bold fs-5 text-success mt-1">₹ @Model.TotalReceiveable.ToString("N0")</div>
+                        <div class="small text-muted">(Amount to be paid by the customer)</div>
+                        <span class="badge mt-2"
+                              style="background:#2ecc71; color:#fff; font-size:0.7rem; border-radius:8px;">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payables -->
+            <div class="col-md">
+                <div class="card shadow-sm border-0 h-100"
+                     style="border-left:4px solid #e74c3c; cursor:pointer;"
+                     data-bs-toggle="modal" data-bs-target="#payablesModal">
+                    <div class="card-body text-center">
+                        <i class="bi bi-arrow-up-circle-fill fs-4 mb-2" style="color:#e74c3c;"></i>
+                        <div class="small text-muted fw-semibold">Payables</div>
+                        <div class="fw-bold fs-5 text-danger mt-1">₹ @Model.TotalPayable.ToString("N0")</div>
+                        <div class="small text-muted">(Suppliers ko dena hai)</div>
+                        <span class="badge mt-2"
+                              style="background:#e74c3c; color:#fff; font-size:0.7rem; border-radius:8px;">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- This Week PDC -->
+            <div class="col-md">
+                <div class="card shadow-sm border-0 h-100"
+                     style="border-left:4px solid #f39c12; cursor:pointer;"
+                     data-bs-toggle="modal" data-bs-target="#pdcModal">
+                    <div class="card-body text-center">
+                        <i class="bi bi-calendar-week-fill fs-4 mb-2" style="color:#f39c12;"></i>
+                        <div class="small text-muted fw-semibold">This Week PDC</div>
+                        <div class="fw-bold fs-5 mt-1" style="color:#f39c12;">₹ @Model.WeeklyPDCAmt.ToString("N0")</div>
+                        <div class="small text-muted">@Model.WeeklyPDCCount Payments Due</div>
+                        <span class="badge mt-2"
+                              style="background:#f39c12; color:#fff; font-size:0.7rem; border-radius:8px;">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cash in Hand -->
+            <div class="col-md">
+                <div class="card shadow-sm border-0 h-100"
+                     style="border-left:4px solid #1abc9c; cursor:pointer;"
+                     data-bs-toggle="modal"
+                     data-bs-target="#cashInHandModal">
+                    <div class="card-body text-center">
+                        <i class="bi bi-cash-stack fs-4 mb-2" style="color:#1abc9c;"></i>
+                        <div class="small text-muted fw-semibold">Cash in Hand</div>
+                        <div class="fw-bold fs-5 mt-1" style="color:#1abc9c;">
+                            ₹ @Model.TotalCash.ToString("N0")
+                        </div>
+                        <div class="small text-muted">Today's Closing</div>
+                        <span class="badge mt-2"
+                              style="background:#1abc9c; color:#fff; font-size:0.7rem; border-radius:8px;">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bank Balance -->
+            <div class="col-md">
+                <div class="card shadow-sm border-0 h-100"
+                     style="border-left:4px solid #3498db; cursor:pointer;"
+                     data-bs-toggle="modal"
+                     data-bs-target="#bankBalanceModal">
+                    <div class="card-body text-center">
+                        <i class="bi bi-bank fs-4 mb-2" style="color:#3498db;"></i>
+                        <div class="small text-muted fw-semibold">Bank Balance</div>
+                        <div class="fw-bold fs-5 mt-1" style="color:#3498db;">
+                            ₹ @Model.TotalBank.ToString("N0")
+                        </div>
+                        <div class="small text-muted">Current Account</div>
+                        <span class="badge mt-2"
+                              style="background:#3498db; color:#fff; font-size:0.7rem; border-radius:8px;">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ===== STOCK OVERVIEW ===== -->
+        <div class="row mb-0">
+            <div class="col-12">
+                <h5 class="fw-semibold text-muted">📦 Stock Overview</h5>
+            </div>
+        </div>
+        <div class="row g-3 mb-4">
+
+            <!-- 3.1 Total Stock Value -->
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 h-100"
+                     style="border-left:4px solid #1abc9c; cursor:pointer;"
+                     data-bs-toggle="modal"
+                     data-bs-target="#stockValueModal">
+                    <div class="card-body text-center">
+                        <i class="bi bi-boxes fs-4 text-success mb-2"></i>
+                        <div class="small text-muted">Total Stock Value</div>
+                        <div class="fw-bold fs-6">₹ @Model.TotalStockValue.ToString("N0")</div>
+                        <span class="badge mt-2"
+                              style="background:#1abc9c; color:#fff; font-size:0.7rem; border-radius:8px;">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3.2 Below Minimum Stock -->
+            <div class="col-md-2">
+                <div class="card shadow-sm border-0 h-100"
+                     style="border-left:4px solid #e74c3c; cursor:pointer;"
+                     data-bs-toggle="modal"
+                     data-bs-target="#belowMinStockModal">
+                    <div class="card-body text-center">
+                        <i class="bi bi-arrow-down-circle fs-4 text-danger mb-2"></i>
+                        <div class="small text-muted">Below Minimum Stock</div>
+                        <div class="fw-bold fs-6">@Model.BelowMinimumStockCount Items</div>
+                        <span class="badge mt-2"
+                              style="background:#e74c3c; color:#fff; font-size:0.7rem; border-radius:8px;">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3.3 Above Maximum Stock -->
+            <div class="col-md-2">
+                <div class="card shadow-sm border-0 h-100"
+                     style="border-left:4px solid #f39c12; cursor:pointer;"
+                     data-bs-toggle="modal"
+                     data-bs-target="#aboveMaxStockModal">
+                    <div class="card-body text-center">
+                        <i class="bi bi-arrow-up-circle fs-4 text-warning mb-2"></i>
+                        <div class="small text-muted">Above Maximum Stock</div>
+                        <div class="fw-bold fs-6">@Model.AboveMaximumStockCount Items</div>
+                        <span class="badge mt-2"
+                              style="background:#f39c12; color:#fff; font-size:0.7rem; border-radius:8px;">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3.4 Short Expiry Stock -->
+            <div class="col-md-2">
+                <div class="card shadow-sm border-0 h-100"
+                     style="border-left:4px solid #8e44ad; cursor:pointer;"
+                     data-bs-toggle="modal"
+                     data-bs-target="#shortExpiryModal">
+                    <div class="card-body text-center">
+                        <i class="bi bi-exclamation-triangle fs-4 mb-2" style="color:#8e44ad;"></i>
+                        <div class="small text-muted">Short Expiry Stock</div>
+                        <div class="fw-bold fs-6">@Model.ShortExpiryStockCount Items</div>
+                        <div class="small text-muted">(Next 6 Months)</div>
+                        <span class="badge mt-2"
+                              style="background:#8e44ad; color:#fff; font-size:0.7rem; border-radius:8px;">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3.5 Dump / Dead Stock -->
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 h-100"
+                     style="border-left:4px solid #7f8c8d; cursor:pointer;"
+                     data-bs-toggle="modal"
+                     data-bs-target="#deadStockModal">
+                    <div class="card-body text-center">
+                        <i class="bi bi-trash fs-4 text-secondary mb-2"></i>
+                        <div class="small text-muted">Dead / Dump Stock</div>
+                        <div class="fw-bold fs-6">@Model.DeadStockCount Items</div>
+                        <div class="small text-muted">(Not sold in 90 days)</div>
+                        <span class="badge mt-2"
+                              style="background:#7f8c8d; color:#fff; font-size:0.7rem; border-radius:8px;">
+                            <i class="bi bi-eye me-1"></i> View Details
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+
+<!-- Receivables Modal -->
+<div class="modal fade" id="receivablesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0"
+                 style="background:linear-gradient(135deg,#2ecc71,#27ae60); border-radius:16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-arrow-down-circle-fill me-2"></i>Receivables
+                    </h5>
+                    <div class="text-white opacity-75" style="font-size:0.78rem;">
+                        Pending payment customers
+                    </div>
+                </div>
+                <div class="ms-auto text-end me-3">
+                    <div class="text-white opacity-75" style="font-size:0.72rem;">Total Pending</div>
+                    <div class="text-white fw-bold fs-5">₹ @Model.TotalReceiveable.ToString("N0")</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size:0.82rem;">
+                        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+                            <tr>
+                                <th class="px-3 py-2 text-muted fw-semibold">#</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Customer</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Bill No</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Bill Date</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Total</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Paid</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Balance</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-center">Pending Days</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.ReceivableDetails != null && Model.ReceivableDetails.Any())
+                            {
+                                int sr = 1;
+                                foreach (var item in Model.ReceivableDetails)
+                                {
+                                    var badgeColor = item.DaysPending <= 7 ? "#2ecc71"
+                                    : item.DaysPending <= 30 ? "#f39c12"
+                                    : "#e74c3c";
+                                    <tr>
+                                        <td class="px-3">@sr</td>
+                                        <td class="px-3">
+                                            <div class="fw-semibold">@item.Name</div>
+                                            <div class="text-muted" style="font-size:0.72rem;">
+                                                <i class="bi bi-phone me-1"></i>@item.PhoneNo
+                                            </div>
+                                        </td>
+                                        <td class="px-3">@item.BillNo</td>
+                                        <td class="px-3">@item.BillDate.ToString("dd MMM yyyy")</td>
+                                        <td class="px-3 text-end">₹ @item.TotalPayable.ToString("N0")</td>
+                                        <td class="px-3 text-end text-success">₹ @item.PaidAmount.ToString("N0")</td>
+                                        <td class="px-3 text-end fw-bold text-danger">₹ @item.Balance.ToString("N0")</td>
+                                        <td class="px-3 text-center">
+                                            <span class="badge rounded-pill px-2"
+                                                  style="background:@badgeColor; font-size:0.72rem;">
+                                                @item.DaysPending days
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    sr++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle-fill text-success fs-4 d-block mb-2"></i>
+                                        Koi pending receivable nahi hai! 🎉
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 justify-content-between"
+                 style="background:#f8fafc; border-radius:0 0 16px 16px;">
+                <div class="text-muted" style="font-size:0.78rem;">
+                    🟢 0-7 days &nbsp;
+                    🟡 8-30 days &nbsp;
+                    🔴 30+ days
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Payables Modal -->
+<div class="modal fade" id="payablesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0"
+                 style="background:linear-gradient(135deg,#e74c3c,#c0392b); border-radius:16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-arrow-up-circle-fill me-2"></i>Payables
+                    </h5>
+                    <div class="text-white opacity-75" style="font-size:0.78rem;">
+                        Suppliers jinhe abhi payment karni hai
+                    </div>
+                </div>
+                <div class="ms-auto text-end me-3">
+                    <div class="text-white opacity-75" style="font-size:0.72rem;">Total Pending</div>
+                    <div class="text-white fw-bold fs-5">₹ @Model.TotalPayable.ToString("N0")</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size:0.82rem;">
+                        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+                            <tr>
+                                <th class="px-3 py-2 text-muted fw-semibold">#</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Supplier</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Bill No</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Bill Date</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Total</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Paid</th>
+                                <th class="px-3 py-2 fw-semibold text-end" style="color:#e74c3c;">
+                                    Balance
+                                    <div style="font-size:0.68rem; color:#6c757d; font-weight:400;">
+                                        Total: ₹ @Model.TotalPayable.ToString("N0")
+                                    </div>
+                                </th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-center">Pending Days</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PayableDetails != null && Model.PayableDetails.Any())
+                            {
+                                int sr = 1;
+                                foreach (var item in Model.PayableDetails)
+                                {
+                                    var badgeColor = item.DaysPending <= 7 ? "#2ecc71"
+                                    : item.DaysPending <= 30 ? "#f39c12"
+                                    : "#e74c3c";
+                                    <tr>
+                                        <td class="px-3">@sr</td>
+                                        <td class="px-3">
+                                            <div class="fw-semibold">@item.SupplierName</div>
+                                            <div class="text-muted" style="font-size:0.72rem;">
+                                                <i class="bi bi-phone me-1"></i>@item.PhoneNo
+                                            </div>
+                                        </td>
+                                        <td class="px-3">@item.BillNo</td>
+                                        <td class="px-3">@item.BillDate.ToString("dd MMM yyyy")</td>
+                                        <td class="px-3 text-end">₹ @item.TotalPayable.ToString("N0")</td>
+                                        <td class="px-3 text-end text-success">₹ @item.PaidAmount.ToString("N0")</td>
+                                        <td class="px-3 text-end fw-bold text-danger">₹ @item.Balance.ToString("N0")</td>
+                                        <td class="px-3 text-center">
+                                            <span class="badge rounded-pill px-2"
+                                                  style="background:@badgeColor; font-size:0.72rem;">
+                                                @(item.DaysPending == 0 ? "Today" : item.DaysPending + " days")
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    sr++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle-fill text-success fs-4 d-block mb-2"></i>
+                                        Koi pending payable nahi hai! 🎉
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 justify-content-between"
+                 style="background:#f8fafc; border-radius:0 0 16px 16px;">
+                <div class="text-muted" style="font-size:0.78rem;">
+                    🟢 0-7 days &nbsp;
+                    🟡 8-30 days &nbsp;
+                    🔴 30+ days
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- PDC Modal -->
+<div class="modal fade" id="pdcModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0"
+                 style="background:linear-gradient(135deg,#f39c12,#e67e22); border-radius:16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-calendar-week-fill me-2"></i>This Week PDC
+                    </h5>
+                    <div class="text-white opacity-75" style="font-size:0.78rem;">
+                        Is hafte ke due cheque payments
+                    </div>
+                </div>
+                <div class="ms-auto text-end me-3">
+                    <div class="text-white opacity-75" style="font-size:0.72rem;">Total Amount</div>
+                    <div class="text-white fw-bold fs-5">₹ @Model.WeeklyPDCAmt.ToString("N0")</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size:0.82rem;">
+                        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+                            <tr>
+                                <th class="px-3 py-2 text-muted fw-semibold">#</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Supplier</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Cheque No</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Cheque Date</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Bank</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">
+                                    Amount
+                                    <div style="font-size:0.68rem; color:#6c757d; font-weight:400;">
+                                        Total: ₹ @Model.WeeklyPDCAmt.ToString("N0")
+                                    </div>
+                                </th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PDCDetails != null && Model.PDCDetails.Any())
+                            {
+                                int sr = 1;
+                                foreach (var item in Model.PDCDetails)
+                                {
+                                    var isToday = item.ChequeDate.Date == DateTime.Today;
+                                    var isPast = item.ChequeDate.Date < DateTime.Today;
+                                    var statusColor = isToday ? "#2ecc71" : isPast ? "#e74c3c" : "#f39c12";
+                                    var statusText = isToday ? "Today" : isPast ? "Overdue" : item.ChequeDate.ToString("dd MMM");
+                                    <tr>
+                                        <td class="px-3">@sr</td>
+                                        <td class="px-3">
+                                            <div class="fw-semibold">@item.SupplierName</div>
+                                            <div class="text-muted" style="font-size:0.72rem;">
+                                                <i class="bi bi-phone me-1"></i>@item.PhoneNo
+                                            </div>
+                                        </td>
+                                        <td class="px-3">@item.ChequeNo</td>
+                                        <td class="px-3">@item.ChequeDate.ToString("dd MMM yyyy")</td>
+                                        <td class="px-3">@item.BankName</td>
+                                        <td class="px-3 text-end fw-bold" style="color:#f39c12;">
+                                            ₹ @item.Amount.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-center">
+                                            <span class="badge rounded-pill px-2"
+                                                  style="background:@statusColor; font-size:0.72rem;">
+                                                @statusText
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    sr++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">
+                                        <i class="bi bi-calendar-check text-success fs-4 d-block mb-2"></i>
+                                        Is hafte koi PDC due nahi hai! 🎉
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 justify-content-between"
+                 style="background:#f8fafc; border-radius:0 0 16px 16px;">
+                <div class="text-muted" style="font-size:0.78rem;">
+                    🟢 Today &nbsp;
+                    🟡 Upcoming &nbsp;
+                    🔴 Overdue
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Dead Stock Modal -->
+<div class="modal fade" id="deadStockModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0"
+                 style="background:linear-gradient(135deg,#7f8c8d,#636e72); border-radius:16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-trash me-2"></i>Dead / Dump Stock
+                    </h5>
+                    <div class="text-white opacity-75" style="font-size:0.78rem;">
+                        Items not sold in last 90 days
+                    </div>
+                </div>
+                <div class="ms-auto text-end me-3">
+                    <div class="text-white opacity-75" style="font-size:0.72rem;">Total Items</div>
+                    <div class="text-white fw-bold fs-5">@Model.DeadStockCount Items</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size:0.82rem;">
+                        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+                            <tr>
+                                <th class="px-3 py-2 text-muted fw-semibold">#</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Item Name</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Category</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Stock Qty</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Stock Value</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.DeadStockDetails != null && Model.DeadStockDetails.Any())
+                            {
+                                int sr = 1;
+                                foreach (var item in Model.DeadStockDetails)
+                                {
+                                    <tr>
+                                        <td class="px-3">@sr</td>
+                                        <td class="px-3">
+                                            <div class="fw-semibold">@item.ItemName</div>
+                                        </td>
+                                        <td class="px-3 text-muted">@item.Category</td>
+                                        <td class="px-3 text-end fw-bold">@item.CurrentStock.ToString("N0")</td>
+                                        <td class="px-3 text-end fw-bold text-danger">
+                                            ₹ @item.StockValue.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-center">
+                                            <span class="badge rounded-pill px-2"
+                                                  style="background:#7f8c8d; font-size:0.72rem;">
+                                                90+ days idle
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    sr++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle-fill text-success fs-4 d-block mb-2"></i>
+                                        Koi dead stock nahi hai! 🎉
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 justify-content-between"
+                 style="background:#f8fafc; border-radius:0 0 16px 16px;">
+                <div class="text-muted" style="font-size:0.78rem;">
+                    ⚠️ Items not sold in last 90 days — consider discounting or returning to supplier
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Short Expiry Modal -->
+<div class="modal fade" id="shortExpiryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0"
+                 style="background:linear-gradient(135deg,#8e44ad,#9b59b6); border-radius:16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Short Expiry Stock
+                    </h5>
+                    <div class="text-white opacity-75" style="font-size:0.78rem;">
+                        Items expiring in next 6 months
+                    </div>
+                </div>
+                <div class="ms-auto text-end me-3">
+                    <div class="text-white opacity-75" style="font-size:0.72rem;">Total Items</div>
+                    <div class="text-white fw-bold fs-5">@Model.ShortExpiryStockCount Items</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size:0.82rem;">
+                        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+                            <tr>
+                                <th class="px-3 py-2 text-muted fw-semibold">#</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Item Name</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Category</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Batch</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-center">Expiry Date</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Stock Qty</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Stock Value</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-center">Days Left</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.ShortExpiryDetails != null && Model.ShortExpiryDetails.Any())
+                            {
+                                int sr = 1;
+                                foreach (var item in Model.ShortExpiryDetails)
+                                {
+                                    var badgeColor = item.DaysToExpiry <= 30 ? "#e74c3c"
+                                    : item.DaysToExpiry <= 90 ? "#f39c12"
+                                    : "#8e44ad";
+                                    var urgency = item.DaysToExpiry <= 30 ? "🔴 Critical"
+                                    : item.DaysToExpiry <= 90 ? "🟡 Warning"
+                                    : "🟣 Monitor";
+                                    <tr>
+                                        <td class="px-3">@sr</td>
+                                        <td class="px-3">
+                                            <div class="fw-semibold">@item.ItemName</div>
+                                        </td>
+                                        <td class="px-3 text-muted">@item.Category</td>
+                                        <td class="px-3">
+                                            <span class="badge"
+                                                  style="background:#f1f5f9; color:#475569; font-size:0.72rem;">
+                                                @item.Batch
+                                            </span>
+                                        </td>
+                                        <td class="px-3 text-center fw-semibold"
+                                            style="color:@badgeColor;">
+                                            @item.ExpiryDate.ToString("dd MMM yyyy")
+                                        </td>
+                                        <td class="px-3 text-end fw-bold">
+                                            @item.CurrentStock.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-end fw-bold text-danger">
+                                            ₹ @item.StockValue.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-center">
+                                            <span class="badge rounded-pill px-2"
+                                                  style="background:@badgeColor; font-size:0.72rem;">
+                                                @item.DaysToExpiry days
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    sr++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle-fill text-success fs-4 d-block mb-2"></i>
+                                        Koi short expiry stock nahi hai! 🎉
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 justify-content-between"
+                 style="background:#f8fafc; border-radius:0 0 16px 16px;">
+                <div class="text-muted" style="font-size:0.78rem;">
+                    🔴 0-30 days &nbsp;
+                    🟡 31-90 days &nbsp;
+                    🟣 91-180 days
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Above Max Stock Modal -->
+<div class="modal fade" id="aboveMaxStockModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0"
+                 style="background:linear-gradient(135deg,#f39c12,#e67e22); border-radius:16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-arrow-up-circle-fill me-2"></i>Above Maximum Stock
+                    </h5>
+                    <div class="text-white opacity-75" style="font-size:0.78rem;">
+                        Items jinka stock maximum limit se zyada hai
+                    </div>
+                </div>
+                <div class="ms-auto text-end me-3">
+                    <div class="text-white opacity-75" style="font-size:0.72rem;">Total Items</div>
+                    <div class="text-white fw-bold fs-5">@Model.AboveMaximumStockCount Items</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size:0.82rem;">
+                        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+                            <tr>
+                                <th class="px-3 py-2 text-muted fw-semibold">#</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Item Name</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Category</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Current Stock</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Max Limit</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end"
+                                    style="color:#e67e22;">Excess Qty</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Total Value</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end"
+                                    style="color:#e74c3c;">Excess Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.AboveMaxStockDetails != null && Model.AboveMaxStockDetails.Any())
+                            {
+                                int sr = 1;
+                                foreach (var item in Model.AboveMaxStockDetails)
+                                {
+                                    var excessPct = item.MaximumQty > 0
+                                    ? Math.Round((item.ExcessQty / item.MaximumQty) * 100, 0)
+                                    : 0;
+                                    var badgeColor = excessPct >= 100 ? "#e74c3c"
+                                    : excessPct >= 50 ? "#f39c12"
+                                    : "#f39c12";
+                                    <tr>
+                                        <td class="px-3">@sr</td>
+                                        <td class="px-3">
+                                            <div class="fw-semibold">@item.ItemName</div>
+                                        </td>
+                                        <td class="px-3 text-muted">@item.Category</td>
+                                        <td class="px-3 text-end fw-bold">
+                                            @item.CurrentStock.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-end text-muted">
+                                            @item.MaximumQty.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-end fw-bold" style="color:#e67e22;">
+                                            +@item.ExcessQty.ToString("N0")
+                                            <div style="font-size:0.68rem; color:#94a3b8;">
+                                                +@excessPct% over max
+                                            </div>
+                                        </td>
+                                        <td class="px-3 text-end">
+                                            ₹ @item.StockValue.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-end fw-bold text-danger">
+                                            ₹ @item.ExcessValue.ToString("N0")
+                                        </td>
+                                    </tr>
+                                    sr++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle-fill text-success fs-4 d-block mb-2"></i>
+                                        Koi item maximum limit se upar nahi hai! 🎉
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 justify-content-between"
+                 style="background:#f8fafc; border-radius:0 0 16px 16px;">
+                <div class="text-muted" style="font-size:0.78rem;">
+                    ⚠️ Excess stock — consider reducing orders or offering discounts
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Below Min Stock Modal -->
+<div class="modal fade" id="belowMinStockModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0"
+                 style="background:linear-gradient(135deg,#e74c3c,#c0392b); border-radius:16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-arrow-down-circle-fill me-2"></i>Below Minimum Stock
+                    </h5>
+                    <div class="text-white opacity-75" style="font-size:0.78rem;">
+                        Items jinka stock minimum limit se kam hai
+                    </div>
+                </div>
+                <div class="ms-auto text-end me-3">
+                    <div class="text-white opacity-75" style="font-size:0.72rem;">Total Items</div>
+                    <div class="text-white fw-bold fs-5">@Model.BelowMinimumStockCount Items</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size:0.82rem;">
+                        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+                            <tr>
+                                <th class="px-3 py-2 text-muted fw-semibold">#</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Item Name</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Category</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Current Stock</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Min Limit</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end"
+                                    style="color:#e74c3c;">Shortage Qty</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Stock Value</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end"
+                                    style="color:#e74c3c;">Shortage Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.BelowMinStockDetails != null && Model.BelowMinStockDetails.Any())
+                            {
+                                int sr = 1;
+                                foreach (var item in Model.BelowMinStockDetails)
+                                {
+                                    var shortPct = item.MinimumQty > 0
+                                    ? Math.Round((item.ShortageQty / item.MinimumQty) * 100, 0)
+                                    : 0;
+                                    var badgeColor = item.CurrentStock <= 0 ? "#e74c3c"
+                                    : shortPct >= 75 ? "#e74c3c"
+                                    : shortPct >= 40 ? "#f39c12"
+                                    : "#3498db";
+                                    var urgencyText = item.CurrentStock <= 0 ? "Out of Stock"
+                                    : shortPct >= 75 ? "Critical"
+                                    : shortPct >= 40 ? "Low"
+                                    : "Monitor";
+                                    <tr>
+                                        <td class="px-3">@sr</td>
+                                        <td class="px-3">
+                                            <div class="fw-semibold">@item.ItemName</div>
+                                        </td>
+                                        <td class="px-3 text-muted">@item.Category</td>
+                                        <td class="px-3 text-end fw-bold"
+                                            style="color: @(item.CurrentStock <= 0 ? "#e74c3c" : "#1e293b");">
+                                            @(item.CurrentStock <= 0 ? "0" : item.CurrentStock.ToString("N0"))
+                                        </td>
+                                        <td class="px-3 text-end text-muted">
+                                            @item.MinimumQty.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-end fw-bold" style="color:#e74c3c;">
+                                            -@item.ShortageQty.ToString("N0")
+                                            <div style="font-size:0.68rem; color:#94a3b8;">
+                                                @shortPct% below min
+                                            </div>
+                                        </td>
+                                        <td class="px-3 text-end">
+                                            ₹ @item.StockValue.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-end fw-bold text-danger">
+                                            ₹ @item.ShortageValue.ToString("N0")
+                                        </td>
+                                    </tr>
+                                    sr++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle-fill text-success fs-4 d-block mb-2"></i>
+                                        Sabhi items minimum stock se upar hain! 🎉
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 justify-content-between"
+                 style="background:#f8fafc; border-radius:0 0 16px 16px;">
+                <div class="text-muted" style="font-size:0.78rem;">
+                    🔴 Out of Stock / Critical &nbsp;
+                    🟡 Low &nbsp;
+                    🔵 Monitor
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Stock Value Modal -->
+<div class="modal fade" id="stockValueModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0"
+                 style="background:linear-gradient(135deg,#1abc9c,#16a085); border-radius:16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-boxes me-2"></i>Total Stock Value
+                    </h5>
+                    <div class="text-white opacity-75" style="font-size:0.78rem;">
+                        Item wise current stock value breakdown
+                    </div>
+                </div>
+                <div class="ms-auto text-end me-3">
+                    <div class="text-white opacity-75" style="font-size:0.72rem;">Total Value</div>
+                    <div class="text-white fw-bold fs-5">₹ @Model.TotalStockValue.ToString("N0")</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="px-3 pt-3 pb-2" style="background:#f8fafc;">
+                <input type="text"
+                       id="stockSearchInput"
+                       class="form-control form-control-sm"
+                       placeholder="🔍 Item name ya category se search karo..."
+                       style="border-radius:8px; border:1.5px solid #e2e8f0; font-size:0.82rem;" />
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0"
+                           id="stockValueTable"
+                           style="font-size:0.82rem;">
+                        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+                            <tr>
+                                <th class="px-3 py-2 text-muted fw-semibold">#</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Item Name</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Category</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Company</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Stock Qty</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Cost Rate</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end"
+                                    style="color:#1abc9c;">Stock Value</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-center">Share %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.StockValueDetails != null && Model.StockValueDetails.Any())
+                            {
+                                int sr = 1;
+                                var grandTotal = Model.StockValueDetails.Sum(x => x.StockValue);
+                                foreach (var item in Model.StockValueDetails)
+                                {
+                                    var sharePct = grandTotal > 0
+                                    ? Math.Round((item.StockValue / grandTotal) * 100, 1) : 0;
+                                    var barWidth = Math.Min((double)sharePct * 5, 100);
+                                    <tr>
+                                        <td class="px-3 text-muted">@sr</td>
+                                        <td class="px-3">
+                                            <div class="fw-semibold">@item.ItemName</div>
+                                        </td>
+                                        <td class="px-3">
+                                            <span class="badge"
+                                                  style="background:#e0f2fe; color:#0369a1;
+                                                                 font-size:0.7rem; border-radius:6px;">
+                                                @item.Category
+                                            </span>
+                                        </td>
+                                        <td class="px-3 text-muted" style="font-size:0.78rem;">
+                                            @item.Company
+                                        </td>
+                                        <td class="px-3 text-end fw-bold">
+                                            @item.CurrentStock.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-end text-muted">
+                                            ₹ @item.CostRate.ToString("N2")
+                                        </td>
+                                        <td class="px-3 text-end fw-bold" style="color:#1abc9c;">
+                                            ₹ @item.StockValue.ToString("N0")
+                                        </td>
+                                        <td class="px-3 text-center" style="min-width:100px;">
+                                            <div style="font-size:0.72rem; color:#64748b; margin-bottom:2px;">
+                                                @sharePct%
+                                            </div>
+                                            <div style="background:#e2e8f0; border-radius:4px; height:5px;">
+                                                <div style="width:@barWidth%; background:#1abc9c;
+                                                                    height:5px; border-radius:4px;">
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    sr++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-4 d-block mb-2"></i>
+                                        Koi stock data nahi mila
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 justify-content-between"
+                 style="background:#f8fafc; border-radius:0 0 16px 16px;">
+                <div class="text-muted" style="font-size:0.78rem;">
+                    Total <strong>@(Model.StockValueDetails?.Count ?? 0) items</strong>
+                    with stock value
+                    <strong style="color:#1abc9c;">₹ @Model.TotalStockValue.ToString("N0")</strong>
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Cash in Hand Modal -->
+<div class="modal fade" id="cashInHandModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0"
+                 style="background:linear-gradient(135deg,#1abc9c,#16a085); border-radius:16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-cash-stack me-2"></i>Cash in Hand — Ledger
+                    </h5>
+                    <div class="text-white opacity-75" style="font-size:0.78rem;">
+                        Sales cash receipts aur payments ka full record
+                    </div>
+                </div>
+                <!-- Summary Boxes -->
+                <div class="ms-auto d-flex gap-3 me-3">
+                    <div class="text-end">
+                        <div class="text-white opacity-75" style="font-size:0.68rem;">Cash In ↓</div>
+                        <div class="text-white fw-bold" style="font-size:0.95rem;">
+                            ₹ @Model.TotalCashIn.ToString("N0")
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-white opacity-75" style="font-size:0.68rem;">Cash Out ↑</div>
+                        <div class="fw-bold" style="font-size:0.95rem; color:#fca5a5;">
+                            ₹ @Model.TotalCashOut.ToString("N0")
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-white opacity-75" style="font-size:0.68rem;">Balance</div>
+                        <div class="fw-bold" style="font-size:0.95rem; color:#a7f3d0;">
+                            ₹ @Model.TotalCash.ToString("N0")
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-3"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Search + Filter Bar -->
+            <div class="px-3 pt-3 pb-2 d-flex gap-2" style="background:#f8fafc;">
+                <input type="text"
+                       id="cashSearchInput"
+                       class="form-control form-control-sm"
+                       placeholder="🔍 Description se search karo..."
+                       style="border-radius:8px; border:1.5px solid #e2e8f0; font-size:0.82rem;" />
+
+                <select id="cashTypeFilter"
+                        class="form-select form-select-sm"
+                        style="border-radius:8px; border:1.5px solid #e2e8f0;
+                               font-size:0.82rem; max-width:180px;">
+                    <option value="">All Transactions</option>
+                    <option value="Sales Receipt">Cash In (Sales)</option>
+                    <option value="Payment">Cash Out (Payments)</option>
+                </select>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0"
+                           id="cashLedgerTable"
+                           style="font-size:0.82rem;">
+                        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+                            <tr>
+                                <th class="px-3 py-2 text-muted fw-semibold">#</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Date</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Type</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Description</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end"
+                                    style="color:#16a34a;">Cash In ↓</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end"
+                                    style="color:#dc2626;">Cash Out ↑</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.CashInHandDetails != null && Model.CashInHandDetails.Any())
+                            {
+                                int sr = 1;
+                                foreach (var entry in Model.CashInHandDetails)
+                                {
+                                    var isCashIn = entry.CashIn > 0;
+                                    <tr data-type="@entry.Type">
+                                        <td class="px-3 text-muted">@sr</td>
+                                        <td class="px-3" style="white-space:nowrap;">
+                                            @entry.Date.ToString("dd MMM yyyy")
+                                        </td>
+                                        <td class="px-3">
+                                            <span class="badge rounded-pill"
+                                                  style="font-size:0.7rem;
+                                                                 background:@(isCashIn ? "#dcfce7" : "#fee2e2");
+                                                                 color:@(isCashIn ? "#16a34a" : "#dc2626");">
+                                                @(isCashIn ? "↓ Cash In" : "↑ Cash Out")
+                                            </span>
+                                        </td>
+                                        <td class="px-3">@entry.Description</td>
+                                        <td class="px-3 text-end fw-semibold" style="color:#16a34a;">
+                                            @(entry.CashIn > 0 ? "₹ " + entry.CashIn.ToString("N0") : "—")
+                                        </td>
+                                        <td class="px-3 text-end fw-semibold" style="color:#dc2626;">
+                                            @(entry.CashOut > 0 ? "₹ " + entry.CashOut.ToString("N0") : "—")
+                                        </td>
+                                        <td class="px-3 text-end fw-bold"
+                                            style="color:@(entry.RunningBalance >= 0 ? "#1abc9c" : "#e74c3c");">
+                                            ₹ @entry.RunningBalance.ToString("N0")
+                                        </td>
+                                    </tr>
+                                    sr++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-4 d-block mb-2"></i>
+                                        Koi cash transaction nahi mili
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 justify-content-between"
+                 style="background:#f8fafc; border-radius:0 0 16px 16px;">
+                <div class="d-flex gap-3" style="font-size:0.78rem;">
+                    <span>
+                        <span style="color:#16a34a;">↓ Total Cash In:</span>
+                        <strong>₹ @Model.TotalCashIn.ToString("N0")</strong>
+                    </span>
+                    <span>
+                        <span style="color:#dc2626;">↑ Total Cash Out:</span>
+                        <strong>₹ @Model.TotalCashOut.ToString("N0")</strong>
+                    </span>
+                    <span>
+                        <span style="color:#1abc9c;">Balance:</span>
+                        <strong>₹ @Model.TotalCash.ToString("N0")</strong>
+                    </span>
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Bank Balance Modal -->
+<div class="modal fade" id="bankBalanceModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px; border:none;">
+
+            <!-- Header -->
+            <div class="modal-header border-0 pb-0"
+                 style="background:linear-gradient(135deg,#2980b9,#3498db); border-radius:16px 16px 0 0;">
+                <div>
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-bank me-2"></i>Bank Balance — Ledger
+                    </h5>
+                    <div class="text-white opacity-75" style="font-size:0.78rem;">
+                        UPI / Cheque / NEFT / Bank transactions ka full record
+                    </div>
+                </div>
+
+                <!-- Header Summary -->
+                <div class="ms-auto d-flex gap-3 me-3">
+                    <div class="text-end">
+                        <div class="text-white opacity-75" style="font-size:0.68rem;">Bank In ↓</div>
+                        <div class="text-white fw-bold" style="font-size:0.95rem;">
+                            ₹ @Model.TotalBankIn.ToString("N0")
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-white opacity-75" style="font-size:0.68rem;">Bank Out ↑</div>
+                        <div class="fw-bold" style="font-size:0.95rem; color:#fca5a5;">
+                            ₹ @Model.TotalBankOut.ToString("N0")
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-white opacity-75" style="font-size:0.68rem;">Balance</div>
+                        <div class="fw-bold" style="font-size:0.95rem; color:#bae6fd;">
+                            ₹ @Model.TotalBank.ToString("N0")
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-3"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Search + Filter Bar -->
+            <div class="px-3 pt-3 pb-2 d-flex gap-2" style="background:#f8fafc;">
+                <input type="text"
+                       id="bankSearchInput"
+                       class="form-control form-control-sm"
+                       placeholder="🔍 Description se search karo..."
+                       style="border-radius:8px; border:1.5px solid #e2e8f0; font-size:0.82rem;" />
+
+                <select id="bankTypeFilter"
+                        class="form-select form-select-sm"
+                        style="border-radius:8px; border:1.5px solid #e2e8f0;
+                               font-size:0.82rem; max-width:180px;">
+                    <option value="">All Transactions</option>
+                    <option value="Sales Receipt">Bank In (Sales)</option>
+                    <option value="Payment">Bank Out (Payments)</option>
+                </select>
+
+                <select id="bankModeFilter"
+                        class="form-select form-select-sm"
+                        style="border-radius:8px; border:1.5px solid #e2e8f0;
+                               font-size:0.82rem; max-width:160px;">
+                    <option value="">All Modes</option>
+                    <option value="upi">UPI</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="neft">NEFT</option>
+                    <option value="rtgs">RTGS</option>
+                </select>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0"
+                           id="bankLedgerTable"
+                           style="font-size:0.82rem;">
+                        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+                            <tr>
+                                <th class="px-3 py-2 text-muted fw-semibold">#</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Date</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Type</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Mode</th>
+                                <th class="px-3 py-2 text-muted fw-semibold">Description</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end"
+                                    style="color:#16a34a;">Bank In ↓</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end"
+                                    style="color:#dc2626;">Bank Out ↑</th>
+                                <th class="px-3 py-2 text-muted fw-semibold text-end">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.BankDetails != null && Model.BankDetails.Any())
+                            {
+                                int sr = 1;
+                                foreach (var entry in Model.BankDetails)
+                                {
+                                    var isBankIn = entry.BankIn > 0;
+
+                                    // Payment mode badge color
+                                    var modeColor = entry.PaymentMode?.ToLower() switch
+                                    {
+                                        "upi" => "#8b5cf6",
+                                        "cheque" => "#f39c12",
+                                        "neft" => "#0891b2",
+                                        "rtgs" => "#0369a1",
+                                        _ => "#64748b"
+                                    };
+
+                                    <tr data-type="@entry.Type" data-mode="@entry.PaymentMode?.ToLower()">
+                                        <td class="px-3 text-muted">@sr</td>
+                                        <td class="px-3" style="white-space:nowrap;">
+                                            @entry.Date.ToString("dd MMM yyyy")
+                                        </td>
+                                        <td class="px-3">
+                                            <span class="badge rounded-pill"
+                                                  style="font-size:0.7rem;
+                                                                 background:@(isBankIn ? "#dcfce7" : "#fee2e2");
+                                                                 color:@(isBankIn ? "#16a34a" : "#dc2626");">
+                                                @(isBankIn ? "↓ Bank In" : "↑ Bank Out")
+                                            </span>
+                                        </td>
+                                        <td class="px-3">
+                                            <span class="badge"
+                                                  style="background:@modeColor; color:#fff;
+                                                                 font-size:0.68rem; border-radius:6px;">
+                                                @entry.PaymentMode
+                                            </span>
+                                        </td>
+                                        <td class="px-3">@entry.Description</td>
+                                        <td class="px-3 text-end fw-semibold" style="color:#16a34a;">
+                                            @(entry.BankIn > 0 ? "₹ " + entry.BankIn.ToString("N0") : "—")
+                                        </td>
+                                        <td class="px-3 text-end fw-semibold" style="color:#dc2626;">
+                                            @(entry.BankOut > 0 ? "₹ " + entry.BankOut.ToString("N0") : "—")
+                                        </td>
+                                        <td class="px-3 text-end fw-bold"
+                                            style="color:@(entry.RunningBalance >= 0 ? "#3498db" : "#e74c3c");">
+                                            ₹ @entry.RunningBalance.ToString("N0")
+                                        </td>
+                                    </tr>
+                                    sr++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-4 d-block mb-2"></i>
+                                        Koi bank transaction nahi mili
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer border-0 justify-content-between"
+                 style="background:#f8fafc; border-radius:0 0 16px 16px;">
+                <div class="d-flex gap-3" style="font-size:0.78rem;">
+                    <span>
+                        <span style="color:#16a34a;">↓ Total Bank In:</span>
+                        <strong>₹ @Model.TotalBankIn.ToString("N0")</strong>
+                    </span>
+                    <span>
+                        <span style="color:#dc2626;">↑ Total Bank Out:</span>
+                        <strong>₹ @Model.TotalBankOut.ToString("N0")</strong>
+                    </span>
+                    <span>
+                        <span style="color:#3498db;">Balance:</span>
+                        <strong>₹ @Model.TotalBank.ToString("N0")</strong>
+                    </span>
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        var salesChart = new ApexCharts(document.querySelector("#monthlySalesChart"), {
+            chart: { type: 'bar', height: 220 },
+            series: [{
+                name: 'Sales',
+                data: @Html.Raw(JsonConvert.SerializeObject(Model.SalesTotals))
+            }],
+            xaxis: {
+                categories: @Html.Raw(JsonConvert.SerializeObject(Model.SalesLabels))
+            },
+            title: { text: "Monthly Sales", align: 'center' },
+            colors: ['#28a745']
+        });
+        salesChart.render();
+
+        // Purchase Chart with Filled Area
+        var purchaseChart = new ApexCharts(document.querySelector("#monthlyPurchaseChart"), {
+            chart: {
+                type: 'area', // ✅ change from 'line' to 'area'
+                height: 220,
+                toolbar: { show: true }
+            },
+            dataLabels: { enabled: false },
+            stroke: { curve: 'smooth' }, // ✅ smooth line
+            series: [{
+                name: 'Purchases',
+                data: @Html.Raw(JsonConvert.SerializeObject(Model.PurchaseTotals))
+            }],
+            xaxis: {
+                categories: @Html.Raw(JsonConvert.SerializeObject(Model.PurchaseLabels))
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.4,
+                    opacityTo: 0.1,
+                    stops: [0, 90, 100],
+                    colorStops: [
+                        { offset: 0, color: "#ffc107", opacity: 0.4 },
+                        { offset: 100, color: "#ffc107", opacity: 0.1 }
+                    ]
+                }
+            },
+            colors: ['#ffc107'],
+            title: { text: "Monthly Purchases", align: 'center' },
+            tooltip: {
+                y: {
+                    formatter: function (val) {
+                        return "₹ " + val.toFixed(2);
+                    }
+                }
+            }
+        });
+        purchaseChart.render();
+
+        const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Model.MonthlysalesPurchase.Select(x => x.Label)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ));
+
+        const salesData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Model.MonthlysalesPurchase.Select(x => x.SalesTotal)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ));
+
+        const purchaseData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                Model.MonthlysalesPurchase.Select(x => x.PurchaseTotal)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ));
+
+        var options = {
+            chart: {
+                type: 'area',
+                height: 350,
+                toolbar: { show: false }
+            },
+            series: [
+                { name: 'Sales', data: salesData },
+                { name: 'Purchase', data: purchaseData }
+            ],
+            xaxis: {
+                categories: labels,
+                title: { text: 'Date' }
+            },
+            yaxis: {
+                title: { text: 'Amount' }
+            },
+            stroke: { curve: 'smooth', width: 2 },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.4,
+                    opacityTo: 0.1,
+                    stops: [0, 90, 100]
+                }
+            },
+            dataLabels: { enabled: false },
+            tooltip: { shared: true, intersect: false },
+            legend: { position: 'top' }
+        };
+
+        var chart = new ApexCharts(
+            document.querySelector("#salesPurchaseAreaChart"),
+            options
+        );
+        chart.render();
+
+            // ✅ TOP 10 ITEMS CHART — yahan add karo
+            var top10Labels  = @Html.Raw(JsonConvert.SerializeObject(Model.Top10Items.Select(x => x.ItemName)));
+            var top10Amounts = @Html.Raw(JsonConvert.SerializeObject(Model.Top10Items.Select(x => (double)x.TotalAmount)));
+            var top10Qty     = @Html.Raw(JsonConvert.SerializeObject(Model.Top10Items.Select(x => (double)x.TotalQty)));
+
+    // var top10Chart = new ApexCharts(document.querySelector("#top10ItemsChart"), {
+    //     chart: {
+    //         type: 'bar',
+    //         height: 280,
+    //         toolbar: { show: false },
+    //         background: '#ffffff',
+    //         animations: {
+    //             enabled: true,
+    //             easing: 'elastic',
+    //             speed: 800,
+    //             animateGradually: { enabled: true, delay: 100 }
+    //         }
+    //     },
+    //     plotOptions: {
+    //         bar: {
+    //             horizontal: true,
+    //             borderRadius: 8,
+    //             borderRadiusApplication: 'end',
+    //             distributed: true,
+    //             barHeight: '45%',
+    //             dataLabels: { position: 'bottom' }
+    //         }
+    //     },
+    //     fill: {
+    //         type: 'gradient',
+    //         gradient: {
+    //             shade: 'light',
+    //             type: 'horizontal',
+    //             gradientToColors: ['#90caf9','#64b5f6','#42a5f5','#1e88e5',
+    //                                '#1565c0','#0d47a1','#bbdefb','#90caf9',
+    //                                '#42a5f5','#1976d2'],
+    //             stops: [0, 100]
+    //         }
+    //     },
+    //     colors: ['#1565c0','#1976d2','#1e88e5','#2196f3','#42a5f5',
+    //              '#64b5f6','#90caf9','#0d47a1','#1565c0','#1e88e5'],
+    //     series: [{
+    //         name: 'Sales',
+    //         data: top10Amounts
+    //     }],
+    //     xaxis: {
+    //         categories: top10Labels,
+    //         labels: {
+    //             style: {
+    //                 fontSize: '0.75rem',
+    //                 fontFamily: 'Plus Jakarta Sans',
+    //                 colors: Array(10).fill('#334155')
+    //             },
+    //             formatter: val => '₹ ' + Number(val).toLocaleString('en-IN')
+    //         },
+    //         axisBorder: { show: false },
+    //         axisTicks: { show: false }
+    //     },
+    //     yaxis: {
+    //         labels: {
+    //             style: {
+    //                 fontSize: '0.78rem',
+    //                 fontFamily: 'Plus Jakarta Sans',
+    //                 fontWeight: 600,
+    //                 colors: Array(10).fill('#475569')
+    //             },
+    //             maxWidth: 160
+    //         }
+    //     },
+    //     dataLabels: {
+    //         enabled: true,
+    //         formatter: (val, opts) => {
+    //             var qty = top10Qty[opts.dataPointIndex];
+    //             return '₹ ' + Number(val).toLocaleString('en-IN') + '  •  ' + qty + ' units';
+    //         },
+    //         style: {
+    //             fontSize: '0.78rem',        // thoda bada
+    //             fontFamily: 'Plus Jakarta Sans',
+    //             fontWeight: 800,            // 🔥 zyada bold
+    //             colors: ['#020617']         // 🔥 almost black
+    //         },
+    //         offsetX: 10,
+    //         dropShadow: {
+    //             enabled: true,              // 🔥 halka shadow
+    //             top: 1,
+    //             left: 1,
+    //             blur: 2,
+    //             opacity: 0.3
+    //         }
+    //     },
+    //     tooltip: {
+    //         theme: 'light',
+    //         style: { fontSize: '0.8rem', fontFamily: 'Plus Jakarta Sans' },
+    //         y: {
+    //             formatter: (val, opts) =>
+    //                 '₹ ' + Number(val).toLocaleString('en-IN') +
+    //                 ' | ' + top10Qty[opts.dataPointIndex] + ' units'
+    //         }
+    //     },
+    //     legend: { show: false },
+    //     grid: {
+    //         borderColor: '#e2e8f0',
+    //         xaxis: { lines: { show: true } },
+    //         yaxis: { lines: { show: false } },
+    //         padding: { left: 10, right: 30 }
+    //     }
+    // });
+       var top10Chart = new ApexCharts(document.querySelector("#top10ItemsChart"), {
+        chart: {
+            type: 'bar',
+            height: 320,
+            toolbar: { show: false },
+            background: '#ffffff'
+        },
+
+        plotOptions: {
+            bar: {
+                horizontal: true,
+                borderRadius: 10,
+                barHeight: '55%',
+                distributed: true
+            }
+        },
+
+        // 🔥 YOUR SELECTED COLORS
+        colors: [
+            '#008ffb','#00e396','#00c6ff','#00d4aa','#0090ff',
+            '#00b894','#00a8ff','#00cec9','#0984e3','#00e396'
+        ],
+
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shade: 'light',
+                type: 'horizontal',
+
+                // 🔥 smooth transition blue → green
+                gradientToColors: [
+                    '#00e396','#008ffb','#00e396','#008ffb','#00e396',
+                    '#008ffb','#00e396','#008ffb','#00e396','#008ffb'
+                ],
+
+                shadeIntensity: 0.4,
+                opacityFrom: 0.9,
+                opacityTo: 1,
+                stops: [0, 100]
+            }
+        },
+
+        series: [{
+            name: 'Sales',
+            data: top10Amounts
+        }],
+
+        xaxis: {
+            categories: top10Labels,
+            labels: {
+                style: {
+                    fontSize: '0.75rem',
+                    fontFamily: 'Plus Jakarta Sans',
+                    colors: '#475569'
+                },
+                formatter: val => '₹ ' + Number(val).toLocaleString('en-IN')
+            },
+            axisBorder: { show: false },
+            axisTicks: { show: false }
+        },
+
+        yaxis: {
+            labels: {
+                style: {
+                    fontSize: '0.8rem',
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: 600,
+                    colors: '#1e293b'
+                },
+                formatter: function (val) {
+                    return val.length > 18 ? val.substring(0, 18) + '...' : val;
+                }
+            }
+        },
+
+        dataLabels: {
+            enabled: true,
+            formatter: (val) => '₹ ' + Number(val).toLocaleString('en-IN'),
+            style: {
+                fontSize: '0.75rem',
+                fontFamily: 'Plus Jakarta Sans',
+                fontWeight: 700,
+                colors: ['#022c22'] // 🔥 dark green text (perfect contrast)
+            },
+            offsetX: 8
+        },
+
+        tooltip: {
+            theme: 'light',
+            style: {
+                fontSize: '0.8rem',
+                fontFamily: 'Plus Jakarta Sans'
+            },
+            y: {
+                formatter: (val, opts) => {
+                    var qty = top10Qty[opts.dataPointIndex];
+                    return `
+                        <div>
+                            <strong>Sales:</strong> ₹ ${Number(val).toLocaleString('en-IN')}<br/>
+                            <strong>Qty:</strong> ${qty} units
+                        </div>
+                    `;
+                }
+            }
+        },
+
+        grid: {
+            borderColor: '#e2e8f0',
+            strokeDashArray: 4,
+            padding: {
+                left: 15,
+                right: 20
+            }
+        },
+
+        states: {
+            hover: {
+                filter: {
+                    type: 'darken',
+                    value: 0.12
+                }
+            }
+        },
+
+        legend: { show: false }
+    });
+
+    top10Chart.render();
+
+    var categoryLabels  = @Html.Raw(JsonConvert.SerializeObject(Model.CategoryWiseSales.Select(x => x.CategoryName)));
+    var categoryAmounts = @Html.Raw(JsonConvert.SerializeObject(Model.CategoryWiseSales.Select(x => x.TotalAmount)));
+
+    var categoryChart = new ApexCharts(document.querySelector("#categoryWiseSalesChart"), {
+        chart: {
+            type: 'donut',
+            height: 300,
+            background: '#ffffff',
+            toolbar: { show: false },
+            animations: { enabled: true, easing: 'elastic', speed: 800 }
+        },
+        series: categoryAmounts,
+        labels: categoryLabels,
+        colors: ['#1565c0','#2ecc71','#f39c12','#e74c3c','#8e44ad',
+                 '#1abc9c','#0ea5e9','#e67e22','#27ae60','#6d28d9'],
+        fill: {
+            type: 'gradient',
+            gradient: { shade: 'dark', type: 'vertical', shadeIntensity: 0.5 }
+        },
+        dataLabels: {
+            enabled: true,
+            formatter: (val, opts) => {
+                // ✅ Category name + percentage dono dikhenge
+                var name = opts.w.globals.labels[opts.seriesIndex];
+                return name + '\n' + val.toFixed(1) + '%';
+            },
+            style: {
+                fontSize: '0.72rem',
+                fontFamily: 'Plus Jakarta Sans',
+                fontWeight: 600,
+                colors: ['#fff']
+            },
+            dropShadow: { enabled: true, blur: 3, opacity: 0.4 }
+        },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '60%',
+                    labels: {
+                        show: true,
+                        name: {
+                            show: true,
+                            color: '#94a3b8',
+                            fontSize: '0.72rem',
+                            fontFamily: 'Plus Jakarta Sans'
+                        },
+                        total: {
+                            show: true,
+                            label: 'Total Sales',
+                            color: '#94a3b8',
+                            fontSize: '0.72rem',
+                            fontFamily: 'Plus Jakarta Sans',
+                            formatter: (w) => '₹ ' + Number(
+                                w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+                            ).toLocaleString('en-IN')
+                        },
+                        value: {
+                            color: '#1e293b',
+                            fontSize: '0.95rem',
+                            fontWeight: 700,
+                            fontFamily: 'Plus Jakarta Sans',
+                            formatter: (val) => '₹ ' + Number(val).toLocaleString('en-IN')
+                        }
+                    }
+                }
+            }
+        },
+        legend: {
+            position: 'bottom',
+            labels: { colors: Array(10).fill('#475569') },
+            fontSize: '0.8rem',
+            fontFamily: 'Plus Jakarta Sans',
+            fontWeight: 600,
+            markers: { width: 10, height: 10, radius: 3 },
+            itemMargin: { horizontal: 8, vertical: 4 }
+        },
+        tooltip: {
+            theme: 'light',
+            y: { formatter: (val) => '₹ ' + Number(val).toLocaleString('en-IN') }
+        }
+    });
+    categoryChart.render();
+
+    // var companyLabels  = @Html.Raw(JsonConvert.SerializeObject(Model.CompanyWiseSales.Select(x => x.CompanyName)));
+    // var companyAmounts = @Html.Raw(JsonConvert.SerializeObject(Model.CompanyWiseSales.Select(x => x.TotalAmount)));
+
+    // var companyChart = new ApexCharts(document.querySelector("#companyWiseSalesChart"), {
+    //     chart: {
+    //         type: 'bar',
+    //         height: 280,
+    //         toolbar: { show: false },
+    //         background: '#ffffff',
+    //         animations: { enabled: true, easing: 'elastic', speed: 800,
+    //                       animateGradually: { enabled: true, delay: 100 } }
+    //     },
+    //     plotOptions: {
+    //         bar: {
+    //             horizontal: false,
+    //             borderRadius: 8,
+    //             borderRadiusApplication: 'end',
+    //             distributed: true,
+    //             columnWidth: '50%',
+    //             dataLabels: { position: 'top' }
+    //         }
+    //     },
+    //     fill: {
+    //         type: 'gradient',
+    //         gradient: {
+    //             shade: 'light',
+    //             type: 'vertical',
+    //             gradientToColors: ['#90caf9','#6ee7b7','#fde68a','#fca5a5','#c4b5fd'],
+    //             stops: [0, 100]
+    //         }
+    //     },
+    //     colors: ['#1565c0','#059669','#d97706','#dc2626','#7c3aed',
+    //              '#0891b2','#ea580c','#16a34a','#db2777','#4f46e5'],
+    //     series: [{
+    //         name: 'Sales',
+    //         data: companyAmounts
+    //     }],
+    //     xaxis: {
+    //         categories: companyLabels,
+    //         labels: {
+    //             style: {
+    //                 fontSize: '0.72rem',
+    //                 fontFamily: 'Plus Jakarta Sans',
+    //                 fontWeight: 600,
+    //                 colors: Array(10).fill('#334155')
+    //             },
+    //             rotate: -30
+    //         },
+    //         axisBorder: { show: false },
+    //         axisTicks: { show: false }
+    //     },
+    //     yaxis: {
+    //         labels: {
+    //             style: {
+    //                  fontSize: '0.72rem',
+    //                  fontFamily: 'Plus Jakarta Sans',
+    //                  colors: Array(10).fill('#334155')
+    //             },
+    //             formatter: val => '₹ ' + Number(val).toLocaleString('en-IN')
+    //         }
+    //     },
+    //     dataLabels: {
+    //         enabled: true,
+    //         formatter: val => '₹ ' + Number(val).toLocaleString('en-IN'),
+    //         style: { fontSize: '0.68rem', fontFamily: 'Plus Jakarta Sans',
+    //                  fontWeight: 600, colors: ['#fff'] },
+    //         offsetY: -20
+    //     },
+    //     tooltip: {
+    //         theme: 'light',
+    //         y: { formatter: val => '₹ ' + Number(val).toLocaleString('en-IN') }
+    //     },
+    //     legend: { show: false },
+    //     grid: {
+    //         borderColor: '#e2e8f0',
+    //         xaxis: { lines: { show: false } },
+    //         yaxis: { lines: { show: true } },
+    //         padding: { left: 10, right: 10 }
+    //     }
+    // });
+    // companyChart.render();
+
+    var companyLabels  = @Html.Raw(JsonConvert.SerializeObject(Model.CompanyWiseSales.Select(x => x.CompanyName)));
+    var companyAmounts = @Html.Raw(JsonConvert.SerializeObject(Model.CompanyWiseSales.Select(x => x.TotalAmount)));
+
+    var companyHtml = "";
+
+    for (let i = 0; i < companyLabels.length; i++) {
+        companyHtml += `
+            <tr>
+                <td>${companyLabels[i]}</td>
+                <td class="text-end">₹ ${Number(companyAmounts[i]).toLocaleString('en-IN')}</td>
+            </tr>`;
+    }
+
+    const companyTable = document.getElementById("companyTable");
+    if (companyTable) {
+        companyTable.innerHTML = companyHtml;
+    }
+
+    var spLabels  = @Html.Raw(JsonConvert.SerializeObject(Model.MonthlySalesProfit.Select(x => x.MonthName)));
+    var spSales   = @Html.Raw(JsonConvert.SerializeObject(Model.MonthlySalesProfit.Select(x => x.Sales)));
+    var spProfit  = @Html.Raw(JsonConvert.SerializeObject(Model.MonthlySalesProfit.Select(x => x.Profit)));
+    var spProfPct = @Html.Raw(JsonConvert.SerializeObject(Model.MonthlySalesProfit.Select(x => x.ProfitPct)));
+
+    var salesProfitChart = new ApexCharts(document.querySelector("#salesProfitChart"), {
+        chart: {
+            type: 'bar',
+            height: 320,
+            toolbar: { show: false },
+            background: '#ffffff',
+            animations: { enabled: true, easing: 'elastic', speed: 800 }
+        },
+        plotOptions: {
+            bar: {
+                borderRadius: 6,
+                borderRadiusApplication: 'end',
+                columnWidth: '55%'
+            }
+        },
+        series: [
+            { name: 'Sales',  type: 'bar',  data: spSales  },
+            { name: 'Profit', type: 'bar',  data: spProfit },
+            { name: 'Profit %', type: 'line', data: spProfPct }
+        ],
+        colors: ['#1e88e5', '#2ecc71', '#f39c12'],
+        fill: {
+            opacity: [0.9, 0.9, 1]
+        },
+        stroke: {
+            width: [0, 0, 3],
+            curve: 'smooth'
+        },
+        markers: {
+            size: [0, 0, 5],
+            colors: ['#f39c12'],
+            strokeColors: '#0f172a',
+            strokeWidth: 2
+        },
+        xaxis: {
+            categories: spLabels,
+            labels: {
+                style: { fontSize: '0.75rem', fontFamily: 'Plus Jakarta Sans',
+                         colors: Array(12).fill('#94a3b8') }
+            },
+            axisBorder: { show: false },
+            axisTicks: { show: false }
+        },
+        yaxis: [
+            {
+                // Sales — Left axis
+                seriesName: 'Sales',
+                max: Math.max(...spSales) * 1.3,
+                labels: {
+                    style: { fontSize: '0.72rem', colors: ['#334155'] },
+                    formatter: val => '₹ ' + Number(val).toLocaleString('en-IN')
+                }
+            },
+            {
+                // Profit — Same Left axis (Sales ke saath)
+                seriesName: 'Profit',
+                show: false,  // duplicate axis hide karo
+                max: Math.max(...spSales) * 1.3  // same scale
+            },
+            {
+                // Profit % — Right axis
+                opposite: true,
+                seriesName: 'Profit %',
+                max: 100,
+                labels: {
+                    style: { fontSize: '0.72rem', colors: ['#f39c12'] },
+                    formatter: val => val.toFixed(1) + '%'
+                }
+            }
+        ],
+        dataLabels: { enabled: false },
+        tooltip: {
+            theme: 'light',
+            shared: true,
+            intersect: false,
+            y: [{
+                formatter: val => '₹ ' + Number(val).toLocaleString('en-IN')
+            },{
+                formatter: val => '₹ ' + Number(val).toLocaleString('en-IN')
+            },{
+                formatter: val => val.toFixed(1) + '%'
+            }]
+        },
+        legend: {
+            position: 'top',
+            labels: { colors: '#334155' },
+            fontFamily: 'Plus Jakarta Sans'
+        },
+        grid: {
+            borderColor: '#e2e8f0',
+            xaxis: { lines: { show: false } },
+            yaxis: { lines: { show: true } }
+        }
+    });
+    salesProfitChart.render();
+
+    // DOMContentLoaded ke andar — chart.render(); ke baad add karo
+
+    // var mopLabels  = @Html.Raw(JsonConvert.SerializeObject(Model.PaymentModeWiseCollection.Select(x => x.ModeName)));
+    // var mopAmounts = @Html.Raw(JsonConvert.SerializeObject(Model.PaymentModeWiseCollection.Select(x => x.TotalAmount)));
+
+    // console.log('MOP Labels:', mopLabels);
+    // console.log('MOP Amounts:', mopAmounts);
+
+    // if (mopAmounts.length > 0) {
+    //     var paymentModeChart = new ApexCharts(document.querySelector("#paymentModeChart"), {
+    //         chart: {
+    //             type: 'pie',
+    //             height: 300,
+    //             background: '#ffffff',
+    //             toolbar: { show: false },
+    //             animations: { enabled: true, easing: 'elastic', speed: 800 }
+    //         },
+    //         series: mopAmounts,
+    //         labels: mopLabels,
+    //         colors: ['#1e88e5','#2ecc71','#f39c12','#e74c3c','#8e44ad','#1abc9c'],
+    //         fill: {
+    //             type: 'gradient',
+    //             gradient: { shade: 'dark', type: 'vertical', shadeIntensity: 0.4 }
+    //         },
+    //         dataLabels: {
+    //             enabled: true,
+    //             formatter: (val, opts) =>
+    //                 opts.w.globals.labels[opts.seriesIndex] + '\n' + val.toFixed(1) + '%',
+    //             style: {
+    //                 fontSize: '0.78rem',
+    //                 fontFamily: 'Plus Jakarta Sans',
+    //                 fontWeight: 700,
+    //                 colors: ['#fff']
+    //             },
+    //             dropShadow: { enabled: true, blur: 3, opacity: 0.4 }
+    //         },
+    //         legend: {
+    //             position: 'bottom',
+    //             labels: { colors: Array(6).fill('#475569') },
+    //             fontSize: '0.8rem',
+    //             fontFamily: 'Plus Jakarta Sans',
+    //             fontWeight: 600,
+    //             itemMargin: { horizontal: 10, vertical: 4 }
+    //         },
+    //         tooltip: {
+    //             theme: 'light',
+    //             y: { formatter: val => '₹ ' + Number(val).toLocaleString('en-IN') }
+    //         }
+    //     });
+    //     paymentModeChart.render();
+    // }
+
+    var mopLabels  = @Html.Raw(JsonConvert.SerializeObject(Model.PaymentModeWiseCollection.Select(x => x.ModeName)));
+    var mopAmounts = @Html.Raw(JsonConvert.SerializeObject(Model.PaymentModeWiseCollection.Select(x => x.TotalAmount)));
+
+    var mopHtml = "";
+
+    for (let i = 0; i < mopLabels.length; i++) {
+        mopHtml += `
+            <tr>
+                <td>${mopLabels[i]}</td>
+                <td class="text-end">₹ ${Number(mopAmounts[i]).toLocaleString('en-IN')}</td>
+            </tr>`;
+    }
+
+    const paymentModeTable = document.getElementById("paymentModeTable");
+    if (paymentModeTable) {
+        paymentModeTable.innerHTML = mopHtml;
+    }
+
+    var csvLabels = @Html.Raw(JsonConvert.SerializeObject(Model.CategoryStockVsSales.Select(x => x.CategoryName)));
+    var csvStock  = @Html.Raw(JsonConvert.SerializeObject(Model.CategoryStockVsSales.Select(x => x.StockValue)));
+    var csvSales  = @Html.Raw(JsonConvert.SerializeObject(Model.CategoryStockVsSales.Select(x => x.SalesValue)));
+
+    var categoryStockSalesChart = new ApexCharts(document.querySelector("#categoryStockSalesChart"), {
+        chart: {
+            type: 'bar',
+            height: 300,
+            toolbar: { show: false },
+            background: '#ffffff',
+            animations: { enabled: true, easing: 'elastic', speed: 800 }
+        },
+        plotOptions: {
+            bar: {
+                borderRadius: 6,
+                borderRadiusApplication: 'end',
+                columnWidth: '55%'
+            }
+        },
+        series: [
+            { name: 'Stock Value',  data: csvStock  },
+            { name: 'Sales Value',  data: csvSales  }
+        ],
+        colors: ['#f39c12', '#1e88e5'],
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shade: 'light',
+                type: 'vertical',
+                gradientToColors: ['#fde68a', '#90caf9'],
+                stops: [0, 100]
+            }
+        },
+        xaxis: {
+            categories: csvLabels,
+            labels: {
+                style: {
+                    fontSize: '0.75rem',
+                    fontFamily: 'Plus Jakarta Sans',
+                    colors: Array(10).fill('#334155')
+                }
+            },
+            axisBorder: { show: false },
+            axisTicks: { show: false }
+        },
+        yaxis: {
+            labels: {
+                style: { fontSize: '0.72rem', colors: ['#94a3b8'] },
+                formatter: val => '₹ ' + Number(val).toLocaleString('en-IN')
+            }
+        },
+        dataLabels: { enabled: false },
+        tooltip: {
+            theme: 'light',
+            y: { formatter: val => '₹ ' + Number(val).toLocaleString('en-IN') }
+        },
+        legend: {
+            position: 'top',
+            labels: { colors: '#334155' },
+            fontFamily: 'Plus Jakarta Sans'
+        },
+        grid: {
+            borderColor: '#e2e8f0',
+            xaxis: { lines: { show: false } },
+            yaxis: { lines: { show: true } }
+        }
+    });
+    categoryStockSalesChart.render();
+
+    });
+</script>
+
+@* Dashboard Animation JS*@
+<script>
+    // ── NUMBER COUNT-UP ANIMATION ───────────────────────────
+    function animateNumber(el) {
+        const text = el.innerText.trim();
+
+        // Rupee amounts: "₹ 1,23,456"
+        const rupeMatch = text.match(/^₹\s*([\d,]+)/);
+        if (rupeMatch) {
+            const target = parseInt(rupeMatch[1].replace(/,/g, ''), 10);
+            if (isNaN(target) || target === 0) return;
+            let start = 0;
+            const duration = 900;
+            const step = timestamp => {
+                if (!step.startTime) step.startTime = timestamp;
+                const progress = Math.min((timestamp - step.startTime) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = Math.floor(eased * target);
+                el.innerText = '₹ ' + current.toLocaleString('en-IN');
+                if (progress < 1) requestAnimationFrame(step);
+                else el.innerText = '₹ ' + target.toLocaleString('en-IN');
+            };
+            requestAnimationFrame(step);
+            return;
+        }
+
+        // Plain numbers: "15 Items" or "0 units"
+        const numMatch = text.match(/^([\d,]+)/);
+        if (numMatch) {
+            const target = parseInt(numMatch[1].replace(/,/g, ''), 10);
+            const suffix = text.slice(numMatch[0].length);
+            if (isNaN(target) || target === 0) return;
+            let start = 0;
+            const duration = 700;
+            const step = timestamp => {
+                if (!step.startTime) step.startTime = timestamp;
+                const progress = Math.min((timestamp - step.startTime) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.innerText = Math.floor(eased * target) + suffix;
+                if (progress < 1) requestAnimationFrame(step);
+                else el.innerText = target + suffix;
+            };
+            requestAnimationFrame(step);
+        }
+    }
+
+    // Run count-up on all .fw-bold elements when they enter view
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                animateNumber(entry.target);
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('.fw-bold').forEach(el => observer.observe(el));
+
+
+    // ── CARD TILT EFFECT ON MOUSEMOVE ───────────────────────
+    document.querySelectorAll('.dashboard-card').forEach(card => {
+        card.addEventListener('mousemove', function (e) {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
+            const rotateX = ((y - cy) / cy) * -5;
+            const rotateY = ((x - cx) / cx) * 5;
+            card.style.transform = `perspective(700px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-6px) scale(1.01)`;
+        });
+        card.addEventListener('mouseleave', function () {
+            card.style.transform = '';
+        });
+    });
+
+
+    // ── STOCK CARD RIPPLE ON CLICK ──────────────────────────
+    document.querySelectorAll('.row.g-3.mb-4 .card').forEach(card => {
+        card.style.position = 'relative';
+        card.style.overflow = 'hidden';
+        card.addEventListener('click', function (e) {
+            const ripple = document.createElement('span');
+            const rect = card.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            ripple.style.cssText = `
+                position:absolute;
+                border-radius:50%;
+                background:rgba(0,0,0,.07);
+                width:${size}px; height:${size}px;
+                left:${e.clientX - rect.left - size/2}px;
+                top:${e.clientY - rect.top - size/2}px;
+                transform:scale(0);
+                animation:ripple-anim .5s ease-out forwards;
+                pointer-events:none;
+            `;
+            card.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // Ripple keyframe inject
+    const rippleStyle = document.createElement('style');
+    rippleStyle.textContent = `
+        @@keyframes ripple-anim {
+            to { transform: scale(2.5); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(rippleStyle);
+
+
+    // ── FILTER BAR: Apply button loading state ──────────────
+    const filterForm = document.querySelector('.filter-animated-wrapper form');
+    const applyBtn = filterForm?.querySelector('.filter-apply-btn');
+    if (applyBtn && filterForm) {
+        filterForm.addEventListener('submit', function () {
+            applyBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Loading...';
+            applyBtn.disabled = true;
+        });
+    }
+</script>
+<script>
+    // Pehli baar aane pe tour start karo
+    document.addEventListener('DOMContentLoaded', function () {
+        const tourKey = 'dashboard_tour_done';
+
+        if (!localStorage.getItem(tourKey) && typeof introJs === 'function') {
+            setTimeout(() => {
+                introJs()
+                    .setOptions({
+                        nextLabel: 'Next ➡',
+                        prevLabel: '⬅ Back',
+                        skipLabel: '✖ Skip',
+                        doneLabel: '✅ Done',
+                        showProgress: true,
+                        showBullets: false,
+                        exitOnOverlayClick: false,
+                    })
+                    .oncomplete(function () {
+                        localStorage.setItem(tourKey, 'true');
+                    })
+                    .onexit(function () {
+                        localStorage.setItem(tourKey, 'true');
+                    })
+                    .start();
+            }, 800); // Page load ke baad thoda wait karo
+        }
+    });
+</script>
+<script>
+    // Stock Search
+    document.getElementById('stockSearchInput')?.addEventListener('input', filterStockTable);
+
+    function filterStockTable() {
+        const query = (document.getElementById('stockSearchInput')?.value || '').toLowerCase();
+        const rows = document.querySelectorAll('#stockValueTable tbody tr');
+
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(query) ? '' : 'none';
+        });
+    }
+</script>
+<script>
+    // Cash Search
+    document.getElementById('cashSearchInput')?.addEventListener('input', filterCashTable);
+    document.getElementById('cashTypeFilter')?.addEventListener('change', filterCashTable);
+
+    function filterCashTable() {
+        const query  = document.getElementById('cashSearchInput').value.toLowerCase();
+        const type   = document.getElementById('cashTypeFilter').value.toLowerCase();
+        const rows   = document.querySelectorAll('#cashLedgerTable tbody tr');
+        rows.forEach(row => {
+            const text     = row.innerText.toLowerCase();
+            const rowType  = (row.dataset.type || '').toLowerCase();
+            const matchTxt = text.includes(query);
+            const matchTyp = type === '' || rowType.includes(type);
+            row.style.display = (matchTxt && matchTyp) ? '' : 'none';
+        });
+    }
+</script>
+<script>
+    // Bank Search + Filter
+    document.getElementById('bankSearchInput')?.addEventListener('input', filterBankTable);
+    document.getElementById('bankTypeFilter')?.addEventListener('change', filterBankTable);
+    document.getElementById('bankModeFilter')?.addEventListener('change', filterBankTable);
+
+    function filterBankTable() {
+        const query    = document.getElementById('bankSearchInput').value.toLowerCase();
+        const type     = document.getElementById('bankTypeFilter').value.toLowerCase();
+        const mode     = document.getElementById('bankModeFilter').value.toLowerCase();
+        const rows     = document.querySelectorAll('#bankLedgerTable tbody tr');
+
+        rows.forEach(row => {
+            const text     = row.innerText.toLowerCase();
+            const rowType  = (row.dataset.type || '').toLowerCase();
+            const rowMode  = (row.dataset.mode || '').toLowerCase();
+
+            const matchTxt  = text.includes(query);
+            const matchType = type === '' || rowType.includes(type);
+            const matchMode = mode === '' || rowMode.includes(mode);
+
+            row.style.display = (matchTxt && matchType && matchMode) ? '' : 'none';
+        });
+    }
+</script>

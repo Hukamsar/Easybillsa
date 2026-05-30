@@ -1,0 +1,1173 @@
+﻿@model EasyBill.Models.Entity.Sales
+@using System.Globalization
+@using System.Linq
+@using System.Reflection
+@using System.Text
+@using EasyBill.Models.Entity
+
+@functions {
+    private static object? GetVal(object? source, params string[] keys)
+    {
+        if (source == null) return null;
+        foreach (var key in keys)
+        {
+            var prop = source.GetType().GetProperty(key, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            if (prop == null) continue;
+            var value = prop.GetValue(source);
+            if (value != null) return value;
+        }
+        return null;
+    }
+
+    private static object? GetObj(object? source, params string[] keys) => GetVal(source, keys);
+
+    private static string S(object? source, params string[] keys)
+    {
+        var value = GetVal(source, keys);
+        return value?.ToString()?.Trim() ?? string.Empty;
+    }
+
+    private static decimal D(object? source, params string[] keys)
+    {
+        var value = GetVal(source, keys);
+        if (value == null) return 0m;
+        if (value is decimal dec) return dec;
+        if (value is int i) return i;
+        if (value is long l) return l;
+        if (value is float f) return Convert.ToDecimal(f);
+        if (value is double db) return Convert.ToDecimal(db);
+
+        var rawInvariant = Convert.ToString(value, CultureInfo.InvariantCulture);
+        if (decimal.TryParse(rawInvariant, NumberStyles.Any, CultureInfo.InvariantCulture, out var invParsed)) return invParsed;
+
+        var rawCurrent = Convert.ToString(value, CultureInfo.CurrentCulture);
+        if (decimal.TryParse(rawCurrent, NumberStyles.Any, CultureInfo.CurrentCulture, out var curParsed)) return curParsed;
+
+        return 0m;
+    }
+
+    private static DateTime? Dt(object? source, params string[] keys)
+    {
+        var value = GetVal(source, keys);
+        if (value == null) return null;
+        if (value is DateTime dt) return dt;
+        if (DateTime.TryParse(value.ToString(), out var parsed)) return parsed;
+        return null;
+    }
+
+    private static string Money(decimal amount) => $"₹ {amount:N2}";
+    private static string Qty(decimal qty) => qty % 1 == 0 ? qty.ToString("0") : qty.ToString("0.##");
+
+    private static string AmountInWords(decimal amount)
+    {
+        if (amount < 0) return "Minus " + AmountInWords(Math.Abs(amount));
+        var rupees = (long)Math.Floor(amount);
+        var paise = (int)Math.Round((amount - rupees) * 100, MidpointRounding.AwayFromZero);
+        var rupeeWords = ConvertNumberIndian(rupees);
+        if (string.IsNullOrWhiteSpace(rupeeWords)) rupeeWords = "Zero";
+        return paise > 0 ? $"{rupeeWords} Rupees and {ConvertNumberIndian(paise)} Paise Only" : $"{rupeeWords} Rupees Only";
+    }
+
+    private static string ConvertNumberIndian(long number)
+    {
+        if (number == 0) return "Zero";
+        if (number < 0) return "Minus " + ConvertNumberIndian(Math.Abs(number));
+        string[] ones = { "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen" };
+        string[] tens = { "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety" };
+
+        string TwoDigits(long n)
+        {
+            if (n < 20) return ones[(int)n];
+            var t = tens[(int)(n / 10)];
+            var o = ones[(int)(n % 10)];
+            return string.IsNullOrWhiteSpace(o) ? t : $"{t} {o}";
+        }
+
+        string ThreeDigits(long n)
+        {
+            if (n < 100) return TwoDigits(n);
+            var h = ones[(int)(n / 100)] + " Hundred";
+            var r = n % 100;
+            return r == 0 ? h : $"{h} {TwoDigits(r)}";
+        }
+
+        var sb = new StringBuilder();
+        void AppendPart(long n, string suffix)
+        {
+            if (n <= 0) return;
+            var part = n < 1000 ? ThreeDigits(n) : ConvertNumberIndian(n);
+            if (sb.Length > 0) sb.Append(' ');
+            sb.Append(part);
+            if (!string.IsNullOrWhiteSpace(suffix))
+            {
+                sb.Append(' ');
+                sb.Append(suffix);
+            }
+        }
+        AppendPart(number / 10000000, "Crore"); number %= 10000000;
+        AppendPart(number / 100000, "Lakh"); number %= 100000;
+        AppendPart(number / 1000, "Thousand"); number %= 1000;
+        AppendPart(number, "");
+        return sb.ToString().Trim();
+    }
+
+    private static string VersionedPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return string.Empty;
+        var separator = path.Contains("?") ? "&" : "?";
+        return $"{path}{separator}v={DateTime.UtcNow.Ticks}";
+    }
+}
+
+@{
+    Layout = null;
+
+    var theme = ViewBag.ThemeSettings as InvoiceThemeSetting;
+
+    var primaryColor = theme?.PrimaryColor ?? "#2b6ac9";
+    var textColor = theme?.TextColor ?? "#0f172a";
+    var fontFamily = theme?.FontFamily ?? "Arial, sans-serif";
+    var baseFontSize = theme?.BaseFontSize ?? 12;
+    var effectiveBaseFontSize = baseFontSize < 9 ? 9 : (baseFontSize > 12 ? 12 : baseFontSize);
+    var themeTitle = string.IsNullOrWhiteSpace(theme?.Title) ? "TAX INVOICE" : theme?.Title;
+    var themeMargins = string.IsNullOrWhiteSpace(theme?.Margins) ? "Normal" : theme?.Margins;
+    var showHsn = theme?.ShowHSN ?? false;
+    var showGstPercent = theme?.ShowGSTPercent ?? false;
+    var showGstAmount = theme?.ShowGSTAmount ?? true;
+    var showDiscountCol = theme?.ShowItemDiscount ?? true;
+    var showBusinessGstin = theme?.ShowBusinessGSTIN ?? true;
+    var showTaxTable = theme?.ShowTaxSummaryTable ?? true;
+    var showAmountWords = theme?.ShowAmountInWords ?? true;
+    var showPaymentQr = theme?.ShowPaymentQR ?? false;
+    var isZebra = theme?.IsZebraStriped ?? true;
+    var itemColCount = 8 + (showHsn ? 1 : 0) + (showDiscountCol ? 1 : 0) + (showGstPercent ? 1 : 0) + (showGstAmount ? 1 : 0);
+
+    var logoPath = VersionedPath(theme?.LogoPath);
+    var watermarkPath = VersionedPath(theme?.WatermarkPath);
+    var signaturePath = VersionedPath(theme?.SignaturePath);
+    var logoSize = theme?.LogoSize ?? 120;
+    var logoPosition = (theme?.LogoPosition ?? "Left").ToLowerInvariant();
+    var watermarkSize = theme?.WatermarkSize ?? 260;
+    var watermarkOpacity = ((theme?.WatermarkOpacity ?? 8) / 100.0).ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var marginPx = themeMargins switch { "Narrow" => 10, "Wide" => 18, _ => 14 };
+    var previewPaddingPx = marginPx + 8; // Extra breathing space on all sides in preview.
+
+    var businessName = ViewBag.BusinessName as string ?? "Your Business Name";
+    var businessTagline = ViewBag.BusinessTagline as string ?? "Invoice & Billing";
+    var businessAddress = ViewBag.BusinessAddress as string ?? "Business Address Line 1, City";
+    var businessPhone = ViewBag.BusinessPhone as string ?? "00000 00000";
+    var businessEmail = ViewBag.BusinessEmail as string ?? "support@business.com";
+    var businessGstin = ViewBag.BusinessGSTIN as string ?? "29ABCDE1234F1Z5";
+
+    var termsText = theme?.TermsAndConditions ?? ViewBag.TermsAndConditions as string ?? "1. Goods once sold will not be taken back.\n2. Subject to local jurisdiction.";
+    var bankText = theme?.BankDetails ?? ViewBag.BankDetails as string ?? "Bank: SBI\nA/C No: XXXXXXXX\nIFSC: SBIN000XXXX";
+    var upiText = theme?.UPIDetails ?? ViewBag.UPIDetails as string ?? "";
+    var signLabel = theme?.SignatoryLabel ?? ViewBag.SignatoryLabel as string ?? "Authorized Signatory";
+
+    var customerObj = GetObj(Model, "Customers", "Customer", "Party");
+    var customerName = S(customerObj, "Name", "CustomerName", "PartyName");
+    var customerPhone = S(customerObj, "PhoneNo", "Phone", "MobileNo");
+    var customerAddress = S(customerObj, "Address", "BillingAddress", "FullAddress");
+    var customerGstin = S(customerObj, "GSTIN", "Gstin", "TaxNo");
+
+    if (string.IsNullOrWhiteSpace(customerName)) customerName = "Walk-in Customer";
+    if (string.IsNullOrWhiteSpace(customerPhone)) customerPhone = "-";
+    if (string.IsNullOrWhiteSpace(customerAddress)) customerAddress = "-";
+
+    var invoiceNo = S(Model, "BillNo", "InvoiceNo", "SaleNo");
+    if (string.IsNullOrWhiteSpace(invoiceNo)) invoiceNo = "INV-0001";
+
+    var invoiceDate = Dt(Model, "BillDate", "InvoiceDate", "SaleDate") ?? DateTime.Now;
+    var dueDate = Dt(Model, "DueDate", "PaymentDueDate", "DueOn") ?? invoiceDate;
+    var paymentMode = S(Model, "PaymentMode", "PayMode", "ModeOfPayment");
+    if (string.IsNullOrWhiteSpace(paymentMode)) paymentMode = "Cash";
+
+    var rows = new List<(int Sr, string ItemName, string Hsn, string Batch, string Exp, decimal Qty, decimal Rate, decimal DiscAmt, decimal Taxable, decimal GstPct, decimal GstAmt, decimal LineTotal)>();
+    var rawItems = Model?.SalesItems?.Cast<object>().ToList() ?? new List<object>();
+
+    decimal taxableTotal = 0m, discountTotal = 0m, gstTotal = 0m, lineGrandFromRows = 0m;
+    var sr = 1;
+    foreach (var item in rawItems)
+    {
+        var itemMaster = GetObj(item, "ItemMaster", "Item", "Product");
+
+        var itemName = S(itemMaster, "Name", "ItemName", "Description");
+        if (string.IsNullOrWhiteSpace(itemName)) itemName = S(item, "ItemName", "Description", "Name");
+        if (string.IsNullOrWhiteSpace(itemName)) itemName = "Item";
+
+        var hsnObj = GetObj(itemMaster, "Hsn", "HSN");
+        var hsn = S(hsnObj, "HsnCode", "HSNCode");
+        if (string.IsNullOrWhiteSpace(hsn)) hsn = S(item, "HSNCode", "HSN", "Hsn", "SacCode");
+        if (string.IsNullOrWhiteSpace(hsn)) hsn = "-";
+
+        var batch = S(item, "BatchNo", "Batch", "BatchNumber"); if (string.IsNullOrWhiteSpace(batch)) batch = "-";
+        var expDate = Dt(item, "ExpiryDate", "ExpDate", "Expiry");
+        var expText = expDate.HasValue ? expDate.Value.ToString("MM/yy") : S(item, "Exp", "ExpiryText");
+        if (string.IsNullOrWhiteSpace(expText)) expText = "-";
+
+        var qty = D(item, "Qty", "Quantity");
+        // Form UI shows StripRate as Rate column; prefer that in print for consistency.
+        var rate = D(item, "StripRate", "Rate", "UnitPrice", "Price");
+        var discPct = D(item, "DiscountPercent", "DiscPer");
+
+        var discAmt = D(item, "Discount", "DiscountAmount", "DiscAmount");
+
+        var gstPct = D(item, "Gst", "GSTPercent", "GstPercent");
+        var gstAmt = D(item, "GSTAmount", "TaxAmount");
+
+        var lineTotal = D(item, "Amount", "LineTotal", "NetAmount", "Total");
+        var taxable = D(item, "TaxableAmount", "Taxable", "BaseAmount");
+
+        var gross = qty * rate;
+        if (discAmt == 0m && discPct > 0m && gross > 0m) discAmt = Math.Round((gross * discPct) / 100m, 2);
+        if (taxable == 0m) taxable = gross > 0m ? Math.Max(gross - discAmt, 0m) : lineTotal;
+        if (gstAmt == 0m && gstPct > 0m && taxable > 0m) gstAmt = Math.Round((taxable * gstPct) / 100m, 2);
+        if (lineTotal == 0m) lineTotal = taxable + gstAmt;
+
+        rows.Add((sr++, itemName, hsn, batch, expText, qty, rate, discAmt, taxable, gstPct, gstAmt, lineTotal));
+        taxableTotal += taxable; discountTotal += discAmt; gstTotal += gstAmt; lineGrandFromRows += lineTotal;
+    }
+
+    var modelSubTotal = D(Model, "SubTotal", "Subtotal", "GrossAmount");
+
+    var modelDiscount = D(Model, "Totaldiscount", "TotalDiscount", "DiscountAmount");
+    var modelTaxable = D(Model, "Total", "TaxableAmount", "TotalTaxable");
+
+    var totalTax = D(Model, "TotalGstAmt", "TotalTax");
+    if (totalTax <= 0m) totalTax = gstTotal;
+
+    if (modelSubTotal <= 0m) modelSubTotal = taxableTotal + discountTotal;
+    if (modelDiscount <= 0m) modelDiscount = discountTotal;
+    if (modelTaxable <= 0m) modelTaxable = taxableTotal;
+
+    var cgst = D(Model, "CGSTAmount", "CgstAmount");
+    var sgst = D(Model, "SGSTAmount", "SgstAmount");
+    var igst = D(Model, "IGSTAmount", "IgstAmount");
+
+    if (cgst == 0m && sgst == 0m && igst == 0m && totalTax > 0m)
+    {
+        cgst = Math.Round(totalTax / 2m, 2);
+        sgst = totalTax - cgst;
+    }
+
+    var grandTotal = D(Model, "TotalPayable", "GrandTotal", "NetAmount");
+    if (grandTotal <= 0m)
+    {
+        var freight = D(Model, "Freight", "ShippingCharge", "OtherCharge");
+        var roundOff = D(Model, "RoundOff", "RoundOffAmount");
+        grandTotal = Math.Round(modelTaxable + totalTax + freight + roundOff, 2);
+        if (grandTotal <= 0m) grandTotal = Math.Round(lineGrandFromRows, 2);
+    }
+
+    var paidAmount = D(Model, "PaidAmount", "Paid", "ReceivedAmount");
+    var balanceAmount = D(Model, "DueAmount", "BalanceAmount");
+    if (balanceAmount <= 0m && grandTotal > 0m && paidAmount > 0m) balanceAmount = grandTotal - paidAmount;
+    if (paidAmount <= 0m && grandTotal > 0m && balanceAmount > 0m) paidAmount = grandTotal - balanceAmount;
+
+    if (paidAmount < 0m) paidAmount = 0m;
+    if (balanceAmount < 0m) balanceAmount = 0m;
+
+    var amountWords = AmountInWords(grandTotal);
+    var showQr = false;
+
+    // ========================================================
+    // 🟢 BTR FINAL FIX: STRICTLY 15 ITEMS PER PAGE
+    // ========================================================
+    int itemsPerPage = 15;
+    int totalPages = (int)Math.Ceiling(rows.Count / (double)itemsPerPage);
+    if (totalPages == 0) totalPages = 1;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>A5 Landscape Invoice</title>
+    <style>
+        :root {
+            --primary: @primaryColor;
+            --primary-soft: @(primaryColor) 1F;
+            --text: @textColor;
+            --muted: #64748b;
+            --line: #dbe3ef;
+            --bg: #eef2f8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        @@media screen {
+            body {
+                margin: 0;
+                padding: 20px 10px;
+                background: var(--bg);
+                color: var(--text);
+                font-family: @Html.Raw(fontFamily);
+                font-size: @(effectiveBaseFontSize)px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .paper-container {
+                width: 210mm;
+                height: 148.5mm;
+                margin: 0 0 20px 0;
+                background: #fff;
+                border-radius: 6px;
+                border: 1px solid #d6e0ef;
+                box-shadow: 0 12px 36px rgba(15, 23, 42, 0.15);
+                padding: @(previewPaddingPx)px;
+                position: relative;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            @@media (max-width: 220mm) {
+                .paper-container {
+                    transform: scale(0.95);
+                    transform-origin: top center;
+                }
+            }
+        }
+
+        .invoice-main {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+            position: relative;
+            z-index: 2;
+        }
+
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: @(watermarkSize)px;
+            max-width: 90%;
+            max-height: 90%;
+            opacity: @(watermarkOpacity);
+            display: @(string.IsNullOrWhiteSpace(watermarkPath) ? "none" : "block");
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .header-top {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid var(--primary);
+            padding-bottom: 2px;
+        }
+
+        .business-wrap {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .brand-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 1px;
+        }
+
+        .logo-box {
+            width: 88px;
+            min-width: 88px;
+            text-align: @logoPosition;
+        }
+
+            .logo-box img {
+                max-height: 36px;
+                max-width: 82px;
+                display: none;
+                object-fit: contain;
+            }
+
+        .brand-name {
+            margin: 0;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+            line-height: 1.1;
+        }
+
+        .brand-tag {
+            margin: 1px 0 0;
+            font-size: 7.5px;
+            color: var(--muted);
+            line-height: 1.1;
+        }
+
+        .business-meta {
+            font-size: 7.5px;
+            line-height: 1.1;
+            color: var(--muted);
+        }
+
+            .business-meta > div {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+        .doc-head {
+            width: 140px;
+            min-width: 140px;
+            text-align: right;
+        }
+
+        .doc-title {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.6px;
+            color: var(--primary);
+            text-transform: uppercase;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .doc-sub {
+            margin-top: 1px;
+            font-size: 7.5px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .meta-grid {
+            position: relative;
+            z-index: 2;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .meta-card {
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 2px 4px;
+            background: #fff;
+        }
+
+        .meta-title {
+            font-size: 7.5px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 7.5px;
+            line-height: 1.1;
+            border-bottom: 1px dashed #ecf1f8;
+            padding: 0;
+        }
+
+            .meta-row:last-child {
+                border-bottom: none;
+            }
+
+            .meta-row span {
+                color: var(--muted);
+            }
+
+            .meta-row strong {
+                color: var(--text);
+            }
+
+        .customer-lines {
+            font-size: 7.5px;
+            line-height: 1.1;
+            color: var(--text);
+        }
+
+        /* 🟢 BTR ULTRA-COMPACT TABLE FOR 15 ITEMS */
+        .item-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+            font-size: 7.5px;
+            table-layout: fixed;
+        }
+
+        .table-wrap {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .item-table thead th {
+            background: var(--primary-soft);
+            color: #0b1b36;
+            border: 1px solid var(--line);
+            padding: 1px;
+            text-align: left;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .item-table tbody td {
+            border: 1px solid var(--line);
+            padding: 1px;
+            vertical-align: middle;
+            line-height: 1;
+        }
+
+        .item-table tbody tr {
+            height: 11px;
+        }
+        /* 15 item fit karne ke liye row choti rakhi hai */
+        .item-table .item-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+
+        .item-table tbody tr:nth-child(even) {
+            background: #f8fbff;
+        }
+
+        .item-table.no-zebra tbody tr:nth-child(even) {
+            background: transparent;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .footer-wrapper {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .note-card {
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 2px 4px;
+            min-height: 38px;
+        }
+
+        .note-title {
+            font-size: 7.5px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            margin-bottom: 1px;
+        }
+
+        .note-text {
+            font-size: 7px;
+            color: var(--muted);
+            white-space: pre-wrap;
+            line-height: 1.1;
+            margin-bottom: 1px;
+        }
+
+        .amount-words {
+            border-top: 1px dashed var(--line);
+            margin-top: 2px;
+            padding-top: 2px;
+            font-size: 7.5px;
+            color: #334155;
+        }
+
+        .summary-wrap {
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 7.5px;
+            margin-bottom: 0;
+        }
+
+            .summary-table td {
+                padding: 1px 0;
+                border-bottom: 1px dashed #edf2f8;
+            }
+
+            .summary-table tr:last-child td {
+                border-bottom: none;
+            }
+
+            .summary-table td:first-child {
+                color: var(--muted);
+            }
+
+            .summary-table td:last-child {
+                text-align: right;
+                font-weight: 700;
+                color: var(--text);
+            }
+
+            .summary-table .grand td {
+                border-top: 1px solid var(--line);
+                border-bottom: 1px solid var(--line);
+                padding: 1px 0;
+                font-size: 9px;
+                font-weight: 900;
+                color: var(--primary);
+            }
+
+        .qr-block {
+            border: 1px dashed var(--line);
+            border-radius: 4px;
+            padding: 4px;
+            display: none !important;
+            align-items: center;
+            gap: 6px;
+        }
+
+            .qr-block img {
+                width: 44px;
+                height: 44px;
+                object-fit: contain;
+                display: none;
+                border: 1px solid #e5ebf5;
+                border-radius: 4px;
+                background: #fff;
+            }
+
+        .qr-caption {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--muted);
+            line-height: 1.2;
+        }
+
+        .upi-line {
+            font-size: 8.5px;
+            color: #1e293b;
+            margin-top: 2px;
+            word-break: break-all;
+        }
+
+        .declaration-row {
+            display: grid;
+            grid-template-columns: 1fr 132px;
+            gap: 4px;
+            align-items: end;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        .declaration-text {
+            font-size: 7px;
+            color: var(--muted);
+            line-height: 1.1;
+            border-top: 1px dashed var(--line);
+            padding-top: 2px;
+        }
+
+        .sign-box {
+            text-align: center;
+            border-top: 1px dashed var(--line);
+            padding-top: 2px;
+        }
+
+            .sign-box img {
+                width: 72px;
+                max-height: 20px;
+                object-fit: contain;
+                display: none;
+                margin: 0 auto 2px;
+            }
+
+        .sign-label {
+            font-size: 7.5px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .for-company {
+            font-size: 7.5px;
+            color: #0f172a;
+            font-weight: 600;
+            margin-bottom: 2px;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 🟢 BTR SAFE FOOTER FIX: margin-bottom हटाकर पैरेंट कंटेनर की पैडिंग से कंट्रोल किया है */
+        .minimal-footer {
+            margin-top: auto;
+            border-top: 1px dashed var(--line);
+            padding-top: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .preview-actions {
+            position: fixed;
+            top: 16px;
+            right: 18px;
+            z-index: 2000;
+            display: flex;
+            gap: 8px;
+        }
+
+        .preview-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+            color: #fff;
+        }
+
+            .preview-btn.print {
+                background: #0f172a;
+            }
+
+            .preview-btn.close {
+                background: #475569;
+            }
+
+        @@media print {
+            @@page {
+                size: 210mm 297mm portrait !important;
+                margin: 0 !important;
+            }
+
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                display: block !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .paper-container {
+                width: 210mm !important;
+                max-width: 210mm !important;
+                /* 🟢 148.5mm (पूरी A5 हाइट) रखी है ताकि 15 आइटम न छिपें */
+                height: 148.5mm !important;
+                max-height: 148.5mm !important;
+                margin: 0 !important;
+                /* चारों तरफ equal safe spacing for clean A5 print layout. */
+                padding: 8mm !important;
+                border: none !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                box-sizing: border-box !important;
+                position: relative !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 2px !important;
+                overflow: hidden !important;
+            }
+
+                .paper-container:last-child {
+                    page-break-after: auto !important;
+                    break-after: auto !important;
+                }
+
+            .preview-actions, .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    @if (!(ViewBag.HidePrintControls as bool? ?? false))
+    {
+        <div class="preview-actions no-print">
+            <button type="button" class="preview-btn print" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print
+            </button>
+            <button type="button" class="preview-btn close" onclick="window.close()">
+                <i class="bi bi-x-lg"></i> Close
+            </button>
+        </div>
+    }
+
+    @for (int pIndex = 0; pIndex < totalPages; pIndex++)
+    {
+        var pageRows = rows.Skip(pIndex * itemsPerPage).Take(itemsPerPage).ToList();
+        bool isLastPage = (pIndex == totalPages - 1);
+
+        decimal pageTotalAmount = pageRows.Sum(r => r.LineTotal);
+
+        <div class="paper-container" id="docBody_@pIndex">
+            <img id="wmImage_@pIndex" class="watermark" src="@watermarkPath" alt="Watermark" />
+
+            <header class="header-top" id="docHeader_@pIndex">
+                <div class="business-wrap">
+                    <div class="brand-row">
+                        <div class="logo-box" id="logoBox_@pIndex">
+                            <img id="logoImage_@pIndex" class="logoImageClass" src="@logoPath" alt="Logo" style="width:@(logoSize)px; display:@(string.IsNullOrWhiteSpace(logoPath) ? "none" : "block");" />
+                        </div>
+                        <div>
+                            <h2 class="brand-name txtBusinessNameClass">@businessName</h2>
+                            <p class="brand-tag txtBusinessTaglineClass">@businessTagline</p>
+                        </div>
+                    </div>
+                    <div class="business-meta">
+                        <div class="txtBusinessAddressClass">@businessAddress</div>
+                        <div>Phone: <span class="txtBusinessPhoneClass">@businessPhone</span> | Email: <span class="txtBusinessEmailClass">@businessEmail</span></div>
+                        <div class="gstinLineClass" style="display:@(showBusinessGstin ? "block" : "none");">GSTIN: <span class="txtBusinessGSTINClass">@businessGstin</span></div>
+                    </div>
+                </div>
+
+                <div class="doc-head">
+                    <h1 class="doc-title txtTitleClass">@themeTitle</h1>
+                    <div class="doc-sub">Invoice No: <span class="txtInvoiceNoClass">@invoiceNo</span></div>
+                    @if (totalPages > 1)
+                    {
+                        <div class="doc-sub" style="margin-top:2px;">Page @(pIndex + 1) of @totalPages</div>
+                    }
+                </div>
+            </header>
+
+            <div class="invoice-main">
+                <section class="meta-grid">
+                    <div class="meta-card">
+                        <div class="meta-title">Invoice Details</div>
+                        <div class="meta-row"><span>Invoice Date</span><strong class="txtInvoiceDateClass">@invoiceDate.ToString("dd-MMM-yyyy")</strong></div>
+                        <div class="meta-row"><span>Due Date</span><strong class="txtDueDateClass">@dueDate.ToString("dd-MMM-yyyy")</strong></div>
+                        <div class="meta-row"><span>Payment Mode</span><strong class="txtPaymentModeClass">@paymentMode</strong></div>
+                        <div class="meta-row"><span>Total Items</span><strong>@rows.Count</strong></div>
+                    </div>
+
+                    <div class="meta-card">
+                        <div class="meta-title">Bill To</div>
+                        <div class="customer-lines">
+                            <div><strong class="txtCustomerNameClass">@customerName</strong></div>
+                            <div class="txtCustomerAddressClass">@customerAddress</div>
+                            <div class="txtCustomerPhoneClass">@customerPhone</div>
+                            @if (!string.IsNullOrWhiteSpace(customerGstin))
+                            {
+                                <div class="txtCustomerGstinClass">GSTIN: @customerGstin</div>
+                            }
+                        </div>
+                    </div>
+                </section>
+
+                <div class="table-wrap">
+                    <table class="item-table @(isZebra ? "" : "no-zebra") invTableClass">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width:22px;">#</th>
+                                <th>Item Description</th>
+                                @if (showHsn)
+                                {
+                                    <th class="col-hsn" style="width:48px;">HSN</th>
+                                }
+                                <th style="width:50px;">Batch</th>
+                                <th style="width:44px;">Exp</th>
+                                <th class="text-right" style="width:38px;">Qty</th>
+                                <th class="text-right" style="width:54px;">Rate</th>
+                                @if (showDiscountCol)
+                                {
+                                    <th class="col-disc text-right" style="width:56px;">Disc</th>
+                                }
+                                <th class="text-right" style="width:60px;">Taxable</th>
+                                @if (showGstPercent)
+                                {
+                                    <th class="col-gstp text-right" style="width:44px;">GST%</th>
+                                }
+                                @if (showGstAmount)
+                                {
+                                    <th class="col-gsta text-right" style="width:58px;">GST Amt</th>
+                                }
+                                <th class="text-right" style="width:64px;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (pageRows.Any())
+                            {
+                                foreach (var row in pageRows)
+                                {
+                                    <tr>
+                                        <td class="text-center">@row.Sr</td>
+                                        <td class="item-name" title="@row.ItemName">@row.ItemName</td>
+                                        @if (showHsn)
+                                        {
+                                            <td class="col-hsn">@row.Hsn</td>
+                                        }
+                                        <td>@row.Batch</td>
+                                        <td>@row.Exp</td>
+                                        <td class="text-right">@Qty(row.Qty)</td>
+                                        <td class="text-right">@Money(row.Rate)</td>
+                                        @if (showDiscountCol)
+                                        {
+                                            <td class="col-disc text-right">@Money(row.DiscAmt)</td>
+                                        }
+                                        <td class="text-right">@Money(row.Taxable)</td>
+                                        @if (showGstPercent)
+                                        {
+                                            <td class="col-gstp text-right">@row.GstPct.ToString("0.##")%</td>
+                                        }
+                                        @if (showGstAmount)
+                                        {
+                                            <td class="col-gsta text-right">@Money(row.GstAmt)</td>
+                                        }
+                                        <td class="text-right">@Money(row.LineTotal)</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="@itemColCount" class="text-center" style="padding: 12px; color: #64748b;">No items available.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @if (!isLastPage)
+            {
+                <div class="minimal-footer">
+                    <span>(Continued on next page...)</span>
+                    <span>Page @(pIndex + 1) Total: @Money(pageTotalAmount)</span>
+                </div>
+            }
+            else
+            {
+                <div class="footer-wrapper">
+                    <section class="bottom-grid">
+                        <div class="note-card">
+                            <div class="note-title">Terms & Conditions</div>
+                            <div class="note-text txtTncClass">@termsText</div>
+
+                            <div class="note-title">Bank Details</div>
+                            <div class="note-text txtBankClass">@bankText</div>
+
+                            <div class="amount-words amountWordsBlockClass" style="display:@(showAmountWords ? "block" : "none")">
+                                <strong>Amount in Words:</strong>
+                                <div class="txtAmountWordsClass">@amountWords</div>
+                            </div>
+                        </div>
+
+                        <div class="summary-wrap">
+                            <table class="summary-table">
+                                <tr><td>Sub Total</td><td>@Money(modelSubTotal)</td></tr>
+                                @if (showDiscountCol)
+                                {
+                                    <tr class="col-disc"><td>Total Discount</td><td>- @Money(modelDiscount)</td></tr>
+                                }
+                                <tr><td>Total Taxable</td><td>@Money(modelTaxable)</td></tr>
+
+                                @if (showGstAmount && showTaxTable && cgst > 0m)
+                                {
+                                    <tr class="col-gsta"><td>CGST</td><td>@Money(cgst)</td></tr>
+                                }
+                                @if (showGstAmount && showTaxTable && sgst > 0m)
+                                {
+                                    <tr class="col-gsta"><td>SGST</td><td>@Money(sgst)</td></tr>
+                                }
+                                @if (showGstAmount && showTaxTable && igst > 0m)
+                                {
+                                    <tr class="col-gsta"><td>IGST</td><td>@Money(igst)</td></tr>
+                                }
+                                @if (showGstAmount && showTaxTable && cgst <= 0m && sgst <= 0m && igst <= 0m)
+                                {
+                                    <tr class="col-gsta"><td>Total GST</td><td>@Money(totalTax)</td></tr>
+                                }
+
+                                <tr class="grand"><td>Grand Total</td><td class="txtTotalClass">@Money(grandTotal)</td></tr>
+                                <tr><td>Paid</td><td>@Money(paidAmount)</td></tr>
+                                <tr><td>Balance</td><td>@Money(balanceAmount)</td></tr>
+                            </table>
+
+                            <div class="qr-block qrBlockClass" style="display:@(showQr ? "flex" : "none")">
+                                <img class="qrImageClass" src="" alt="QR" />
+                                <div>
+                                    <div class="qr-caption">Scan to Pay</div>
+                                    <div class="upi-line txtUpiClass">@upiText</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="declaration-row">
+                        <div class="declaration-text">
+                            <strong>Declaration:</strong> We declare that this invoice shows the actual price of the goods/services described and all particulars are true and correct.
+                        </div>
+                        <div class="sign-box">
+                            <img class="signImageClass" src="@signaturePath" alt="Signature" style="display:@(string.IsNullOrWhiteSpace(signaturePath) ? "none" : "block")" />
+                            <div class="for-company txtForCompanyClass">For @businessName</div>
+                            <div class="sign-label txtSignLabelClass">@signLabel</div>
+                        </div>
+                    </section>
+                </div>
+            }
+        </div>
+    }
+
+    <script>
+        (function () {
+            function asBool(val) {
+                if (typeof val === "string") {
+                    const v = val.toLowerCase().trim();
+                    return v === "true" || v === "1" || v === "yes";
+                }
+                return !!val;
+            }
+
+            function setColumnVisibility(className, show) {
+                document.querySelectorAll(className).forEach(function (el) {
+                    el.style.display = show ? "" : "none";
+                });
+            }
+
+            function setAllText(className, value) {
+                document.querySelectorAll('.' + className).forEach(function (el) {
+                    el.innerText = value;
+                });
+            }
+
+            function setAllImages(className, value) {
+                document.querySelectorAll('.' + className).forEach(function (el) {
+                    if(value) {
+                        el.src = value;
+                        el.style.display = "block";
+                    } else {
+                        el.style.display = "none";
+                    }
+                });
+            }
+
+            function hexToRgba(hex, alpha) {
+                if (!hex || typeof hex !== "string") return "rgba(43,106,201,0.12)";
+                const clean = hex.replace("#", "");
+                const full = clean.length === 3 ? clean.split("").map(ch => ch + ch).join("") : clean;
+                const r = parseInt(full.substring(0, 2), 16);
+                const g = parseInt(full.substring(2, 4), 16);
+                const b = parseInt(full.substring(4, 6), 16);
+                if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return "rgba(43,106,201,0.12)";
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+
+            window.addEventListener("message", function (e) {
+                const data = e.data || {};
+                if (typeof data !== "object" || !data.action) return;
+
+                const action = String(data.action).toLowerCase();
+                const key = String(data.key || "").toLowerCase();
+
+                if (action === "text") {
+                    if (key === "title") setAllText("txtTitleClass", data.value || "TAX INVOICE");
+                    if (key === "tnc") setAllText("txtTncClass", data.value || "");
+                    if (key === "bank") setAllText("txtBankClass", data.value || "");
+                    if (key === "signlabel") setAllText("txtSignLabelClass", data.value || "Authorized Signatory");
+                    if (key === "businessname") {
+                        const name = data.value || "";
+                        setAllText("txtBusinessNameClass", name);
+                        setAllText("txtForCompanyClass", name ? `For ${name}` : "For Your Business Name");
+                    }
+                    if (key === "businessaddress") setAllText("txtBusinessAddressClass", data.value || "");
+                    if (key === "businessphone") setAllText("txtBusinessPhoneClass", data.value || "");
+                    if (key === "businessemail") setAllText("txtBusinessEmailClass", data.value || "");
+                    if (key === "gstin") setAllText("txtBusinessGSTINClass", data.value || "");
+                    if (key === "upi") {
+                        setAllText("txtUpiClass", data.value || "");
+                        document.querySelectorAll('.qrBlockClass').forEach(el => el.style.display = data.value ? "flex" : "none");
+                    }
+                    if (key === "amountwords") setAllText("txtAmountWordsClass", data.value || "");
+                    if (key === "invoiceno") setAllText("txtInvoiceNoClass", data.value || "");
+                    if (key === "total") setAllText("txtTotalClass", data.value || "");
+                }
+
+                if (action === "color") {
+                    if (key === "primary") {
+                        document.documentElement.style.setProperty("--primary", data.value || "#2b6ac9");
+                        document.documentElement.style.setProperty("--primary-soft", hexToRgba(data.value || "#2b6ac9", 0.12));
+                    }
+                    if (key === "text") {
+                        document.querySelectorAll(".paper-container").forEach(el => el.style.color = data.value || "#0f172a");
+                    }
+                }
+
+                if (action === "font") {
+                    if (key === "family") document.querySelectorAll(".paper-container").forEach(el => el.style.fontFamily = data.value || "Arial, sans-serif");
+                    if (key === "size") document.querySelectorAll(".paper-container").forEach(el => el.style.fontSize = (parseInt(data.value, 10) || 12) + "px");
+                }
+
+                if (action === "image") {
+                    if(key === "logo") setAllImages("logoImageClass", data.value);
+                    if(key === "wm") setAllImages("watermark", data.value);
+                    if(key === "sign") setAllImages("signImageClass", data.value);
+                    if(key === "qr") {
+                        setAllImages("qrImageClass", data.value);
+                        document.querySelectorAll('.qrBlockClass').forEach(el => el.style.display = "flex");
+                    }
+                }
+
+                if (action === "imagesize") {
+                    const size = parseInt(data.value, 10);
+                    if (!Number.isNaN(size) && size > 0) {
+                        if(key === "logo") document.querySelectorAll(".logoImageClass").forEach(el => el.style.width = size + "px");
+                    }
+                }
+
+                if (action === "imagealign" && key === "logo") {
+                    document.querySelectorAll(".logo-box").forEach(el => el.style.textAlign = data.value || "left");
+                }
+
+                if (action === "toggle") {
+                    const show = asBool(data.value);
+                    if (key === "hsn" || key === "showhsn") setColumnVisibility(".col-hsn", show);
+                    if (key === "gst" || key === "gstpercent" || key === "showgstpercent") setColumnVisibility(".col-gstp", show);
+                    if (key === "gstamount" || key === "showgstamount") setColumnVisibility(".col-gsta", show);
+                    if (key === "disc" || key === "discount" || key === "itemdiscount" || key === "showitemdiscount") setColumnVisibility(".col-disc", show);
+                    if (key === "paymentqr" || key === "showpaymentqr" || key === "qr") document.querySelectorAll('.qrBlockClass').forEach(el => el.style.display = show ? "flex" : "none");
+                    if (key === "amountwords" || key === "showamountinwords") document.querySelectorAll('.amountWordsBlockClass').forEach(el => el.style.display = show ? "block" : "none");
+                    if (key === "businessgstin" || key === "showbusinessgstin" || key === "gstin") document.querySelectorAll('.gstinLineClass').forEach(el => el.style.display = show ? "block" : "none");
+                    if (key === "zebra" || key === "iszebrastriped") document.querySelectorAll(".invTableClass").forEach(el => el.classList.toggle("no-zebra", !show));
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

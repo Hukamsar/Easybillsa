@@ -1,0 +1,125 @@
+﻿@using EasyBill.Models.ViewModels
+@model IEnumerable<StockVM>
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center" style="background: #2b6ac9;">
+        Stock Issue Report - Item Wise
+        <span class="ms-auto">
+            <!-- ✅ HEADER FIX -->
+            Total GstAmt: <span class="fw-bold">@Convert.ToDecimal(ViewBag.TotalGst).ToString("0.00")</span> |
+            Total Amt: <span class="fw-bold">@Convert.ToDecimal(ViewBag.TotalAmount).ToString("0.00")</span>
+        </span>
+    </div>
+</div>
+
+<form method="get" class="card p-3 mb-3">
+    <div class="row align-items-end">
+        <div class="col-md-2">
+            <label for="fromDate">Date From</label>
+            <input type="date"
+                   id="fromDate"
+                   name="fromDate"
+                   class="form-control"
+                   value="@ViewBag.FromDate" />
+        </div>
+
+        <div class="col-md-2">
+            <label for="toDate">Date To</label>
+            <input type="date"
+                   id="toDate"
+                   name="toDate"
+                   class="form-control"
+                   value="@ViewBag.ToDate" />
+        </div>
+
+        <div class="col-md-2">
+            <button type="submit" class="btn w-100 text-light" style="background: #2b6ac9;">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </div>
+    </div>
+</form>
+
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="ExportStockIssueItemWiseExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+        <a asp-action="ExportStockIssueItemWisePdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+    </div>
+</div>
+
+<table class="table table-bordered table-sm">
+    <thead class="table-primary">
+        <tr>
+            <th>Item Code</th>
+            <th>Item Name</th>
+            <th>Category</th>
+            <th class="text-end">Total Qty</th>
+            <th class="text-end">Gst Amount</th>
+            <th class="text-end">Total Amount</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.ItemCode</td>
+                <td>@item.ItemName</td>
+                <td>@item.CategoryName</td>
+
+                <!-- ✅ Qty optional format -->
+                <td class="text-end">@Convert.ToDecimal(item.Stocks).ToString("0.00")</td>
+
+                <!-- ✅ GST FIX -->
+                <td class="text-end">@Convert.ToDecimal(item.GstAmount ?? 0).ToString("0.00")</td>
+
+                <!-- ✅ AMOUNT FIX -->
+                <td class="text-end">@Convert.ToDecimal(item.Amount).ToString("0.00")</td>
+            </tr>
+        }
+    </tbody>
+
+    <tfoot class="table-secondary fw-bold">
+        <tr>
+            <td></td>
+            <td></td>
+            <td class="text-end">Total</td>
+
+            <!-- ✅ FOOTER FIX -->
+            <td class="text-end">@Convert.ToDecimal(ViewBag.TotalQty).ToString("0.00")</td>
+            <td class="text-end">@Convert.ToDecimal(ViewBag.TotalGst).ToString("0.00")</td>
+            <td class="text-end">@Convert.ToDecimal(ViewBag.TotalAmount).ToString("0.00")</td>
+        </tr>
+    </tfoot>
+</table>
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+
+            $("#stockIssueTable").DataTable({
+                ordering: false
+            });
+
+        });
+    </script>
+}

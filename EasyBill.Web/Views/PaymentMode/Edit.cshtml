@@ -1,0 +1,208 @@
+﻿@using EasyBill.Models.ViewModels
+@model ModeOfPaymentVM
+
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        font-weight: 500;
+        font-size: 16px;
+    }
+
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .form-label {
+        min-width: 120px;
+    }
+
+    .form-control-sm {
+        height: calc(1.5em + .5rem + 2px);
+    }
+
+    .swal2-confirm,
+    .swal2-cancel {
+        border-radius: 8px !important;
+        padding: 8px 20px !important;
+        font-weight: 500 !important;
+        transition: all 0.25s ease-in-out !important;
+        margin: 0 8px !important;
+    }
+
+        .swal2-confirm:hover {
+            background-color: #157347 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(25, 135, 84, 0.4);
+        }
+
+        .swal2-cancel:hover {
+            background-color: #bb2d3b !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(220, 53, 69, 0.4);
+        }
+
+        .swal2-confirm:focus,
+        .swal2-cancel:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.4) !important;
+        }
+</style>
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Edit ModeOfPayment
+    </div>
+
+    <div class="card-body">
+        <form method="post" asp-action="Edit" asp-controller="PaymentMode" id="ModeOfPaymentForm">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Id" />
+
+            <div class="row">
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="Name" class="me-2 mb-0" style="width: 100px;">
+                        Name<i class="text-danger">*</i>
+                    </label>
+                    <input type="text" asp-for="Name" class="form-control form-control-sm" required />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="PaymentType" class="form-label mb-0">
+                        Payment Type <span class="text-danger">*</span>
+                    </label>
+                    <select asp-for="PaymentType" class="form-control form-control-sm ms-2"
+                            asp-items="Html.GetEnumSelectList<modeofpayment>()" required>
+                        <option value="">Select Payment Type</option>
+                    </select>
+                    <span asp-validation-for="PaymentType" class="text-danger ms-2"></span>
+                </div>
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="Description" class="me-2 mb-0" style="width: 100px;">Description</label>
+                    <textarea asp-for="Description" class="form-control form-control-sm"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue mt-3">Save</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        $(document).ready(function () {
+            let isSubmitting = false;
+
+            $("#ModeOfPaymentForm").on("submit", function (e) {
+                if (isSubmitting) return false;
+
+                e.preventDefault();
+                let form = this;
+
+                if ($(this).valid && !$(this).valid()) {
+                    return;
+                }
+
+                let name = $("input[name='Name']").val()?.trim();
+                let paymentType = $("select[name='PaymentType']").val();
+                let id = $("input[name='Id']").val();
+
+                if (!name) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Please enter Name!',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#2b6ac9'
+                    });
+                    return;
+                }
+
+                if (!paymentType) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Please select Payment Type!',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#2b6ac9'
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Confirm Update?',
+                    text: 'Do you want to update this Payment Mode?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Update',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#dc3545',
+                    reverseButtons: true,
+                    focusConfirm: true,
+                    buttonsStyling: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: "/PaymentMode/CheckDuplicate",
+                            type: "GET",
+                            data: { name: name, id: id },
+                            success: function (response) {
+                                if (response.exists) {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Warning',
+                                        text: 'Mode Of Payment already exists!',
+                                        confirmButtonText: 'OK',
+                                        confirmButtonColor: '#2b6ac9'
+                                    });
+                                } else {
+                                    isSubmitting = true;
+                                    $("#ModeOfPaymentForm").off("submit");
+                                    form.submit();
+                                }
+                            },
+                            error: function () {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Error checking duplicate!',
+                                    confirmButtonText: 'OK',
+                                    confirmButtonColor: '#2b6ac9'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+}
+
+@if (TempData["success"] != null)
+{
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: '@TempData["success"]',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#2b6ac9'
+        });
+    </script>
+}

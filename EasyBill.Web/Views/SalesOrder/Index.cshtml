@@ -1,0 +1,101 @@
+﻿@model IEnumerable<SalesOrder>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<style>
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background:#2b6ac9">
+        <h6 class="mb-0">
+            Sales Order
+        </h6>
+    </div>
+</div>
+
+<p>
+    <a asp-action="Create" asp-controller="SalesOrder" class="btn mb-1 text-light float-end" style="background: #2b6ac9;"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table class="table" id="salesOrderTbl">
+    <thead class="table-primary">
+        <tr>
+
+            <th>
+                @Html.DisplayNameFor(model => model.BillNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.BillDate)
+            </th>
+            <th>
+                Customer
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.MobileNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Address)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.BillNo)
+                </td>
+                <td>
+                    @item.BillDate?.ToString("dd/MM/yyyy")
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Customers.Name)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.MobileNo)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Address)
+                </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="Report" asp-action="SalseOrderReport"
+                           class="btn-report"
+                           title="Generate Report"
+                           target="_blank"
+                           asp-route-id="@item.Id">
+                            <i class="bi bi-file-earmark-text text-success p-1"></i>
+                        </a> 
+                        <a asp-controller="SalesOrder" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="SalesOrder" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#salesOrderTbl").DataTable({
+                "order": [[2, "asc"]]
+            });
+        });
+    </script>
+}

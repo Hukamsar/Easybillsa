@@ -1,0 +1,1820 @@
+﻿@using EasyBill.Models.ViewModels
+@model ItemMasterVM
+@{
+    var embeddedBusinessType = ViewBag.BusinessType is int value ? value : 0;
+}
+
+<style>
+    /* ══════════════════════════════════════════════════════════ */
+    /*  YOUR EXACT CSS FOR SHORTCUT LINKS & MODALS              */
+    /* ══════════════════════════════════════════════════════════ */
+
+    .shortcut-box {
+        display: flex;
+        flex-direction: column;
+        line-height: 13px;
+        gap: 0px;
+        margin-left: 6px;
+        flex-shrink: 0;
+    }
+
+    .shortcut-link {
+        font-size: 10px;
+        cursor: pointer;
+        color: #2b6ac9;
+        font-weight: 500;
+        transition: 0.2s;
+        white-space: nowrap;
+    }
+
+        .shortcut-link:hover {
+            text-decoration: underline;
+        }
+
+        .shortcut-link.text-danger {
+            color: #dc3545;
+        }
+
+    /* ===== MODAL BACKDROP ===== */
+    .modal-backdrop.show {
+        opacity: 0.2;
+    }
+
+    /* ===== MODAL BOX ===== */
+    .custom-modal {
+        background: #ececec;
+        border-radius: 6px;
+        border: 1px solid #cfcfcf;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+        padding: 20px 25px;
+    }
+
+        .custom-modal .modal-header {
+            border: none;
+            justify-content: center;
+            padding: 0;
+            margin-bottom: 10px;
+        }
+
+        .custom-modal .modal-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .custom-modal .modal-body {
+            text-align: center;
+            padding: 5px 10px;
+        }
+
+            .custom-modal .modal-body label {
+                font-size: 13px;
+                color: #444;
+                margin-bottom: 6px;
+            }
+
+    .modal-input {
+        height: 36px;
+        border-radius: 5px;
+        border: 1px solid #cfcfcf;
+        background: #f5f5f5;
+        text-align: center;
+        font-size: 14px;
+    }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #999;
+            box-shadow: none;
+        }
+
+    .modal-error {
+        margin-top: 5px;
+    }
+
+    .custom-modal .modal-footer {
+        border: none;
+        justify-content: center;
+        gap: 10px;
+        padding-top: 10px;
+    }
+
+        .custom-modal .modal-footer .btn-success {
+            background: #1f8f4d;
+            border: none;
+            border-radius: 5px;
+            padding: 6px 18px;
+        }
+
+        .custom-modal .modal-footer .btn-danger {
+            background: #d63c3c;
+            border: none;
+            border-radius: 5px;
+            padding: 6px 18px;
+        }
+
+        .custom-modal .modal-footer .btn:hover {
+            opacity: 0.9;
+        }
+
+    /* ══════════════════════════════════════════════════════════ */
+    /*  NESTED MODAL CSS FIXES (CRITICAL)                       */
+    /* ══════════════════════════════════════════════════════════ */
+    .eb-card {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 18px;
+        box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 16px rgba(0,0,0,.06);
+    }
+
+    .eb-card-header {
+        padding: 10px 16px;
+        font-weight: 600;
+        font-size: 14px;
+        background: #f3f4f6;
+        border-bottom: 1px solid #e5e7eb;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .eb-card-body {
+        padding: 15px;
+    }
+
+    .drug-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #f9f9f9;
+    }
+
+    .modal {
+        pointer-events: none;
+    }
+
+        .modal.show {
+            pointer-events: auto !important;
+        }
+
+    body.modal-open {
+        overflow: hidden !important;
+        padding-right: 0 !important;
+    }
+
+    body:has(#itemMasterModal.show) .modal-backdrop {
+        z-index: 1040 !important;
+    }
+
+    body:has(#itemMasterModal.show) #itemMasterModal {
+        z-index: 1055 !important;
+        pointer-events: auto !important;
+    }
+
+    body:has(#itemMasterModal.show) #popupCompany,
+    body:has(#itemMasterModal.show) #popupDivision,
+    body:has(#itemMasterModal.show) #popupCategory,
+    body:has(#itemMasterModal.show) #popupSubCategory,
+    body:has(#itemMasterModal.show) #popupHsn {
+        z-index: 1065 !important;
+    }
+
+    #itemMasterModal #popupCompany .custom-modal,
+    #itemMasterModal #popupDivision .custom-modal,
+    #itemMasterModal #popupCategory .custom-modal,
+    #itemMasterModal #popupSubCategory .custom-modal,
+    #itemMasterModal #popupHsn .custom-modal {
+        background: #fff !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.16) !important;
+        padding: 18px 28px !important;
+    }
+
+    #itemMasterModal #popupCompany .modal-header,
+    #itemMasterModal #popupDivision .modal-header,
+    #itemMasterModal #popupCategory .modal-header,
+    #itemMasterModal #popupSubCategory .modal-header,
+    #itemMasterModal #popupHsn .modal-header {
+        background: #fff !important;
+        color: #212529 !important;
+        border: 0 !important;
+        justify-content: center !important;
+        padding: 0 !important;
+        margin-bottom: 4px !important;
+    }
+
+    #itemMasterModal #popupCompany .modal-input,
+    #itemMasterModal #popupDivision .modal-input,
+    #itemMasterModal #popupCategory .modal-input,
+    #itemMasterModal #popupSubCategory .modal-input,
+    #itemMasterModal #popupHsn .modal-input {
+        background: #fff !important;
+        text-align: left !important;
+    }
+</style>
+
+<form method="post" id="ItemMasterForm" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" id="ItemMasterId" />
+
+    <div class="container-fluid">
+        <div class="row">
+
+            <!-- LEFT COLUMN -->
+            <div class="col-md-6">
+
+                <!-- BASIC DETAILS -->
+                <div class="eb-card">
+                    <div class="eb-card-header">Basic Item Details</div>
+                    <div class="eb-card-body">
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Code *</label>
+                            <div class="col-md-7">
+                                <input asp-for="Code" id="txtCode" class="form-control form-control-sm" readonly />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Name *</label>
+                            <div class="col-md-7">
+                                <input asp-for="Name" id="txtName" class="form-control form-control-sm" />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Barcode</label>
+                            <div class="col-md-7">
+                                <input asp-for="Barcode" id="txtBarcode" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Unit</label>
+                            <div class="col-md-7">
+                                <input asp-for="Unit" id="txtUnit" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Packing</label>
+                            <div class="col-md-7">
+                                <input asp-for="Packing" id="txtPacking" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COMPANY & CATEGORY -->
+                <div class="eb-card">
+                    <div class="eb-card-header">Company & Category</div>
+                    <div class="eb-card-body">
+
+                        <!-- Company -->
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Company *</label>
+                            <div class="col-md-6">
+                                <select asp-for="CompanyId" id="ddlCompany" class="form-control form-control-sm">
+                                    <option value="">Select Company</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="shortcut-box">
+                                    <a class="shortcut-link" onclick="openCompanyPopup(event)">F2-New</a>
+                                    <a class="shortcut-link text-danger" onclick="openCompanyModifyPopup(event)">F3-Mod</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Division -->
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Division Name</label>
+                            <div class="col-md-6">
+                                <select asp-for="DivisionId" id="ddlDivision" class="form-control form-control-sm">
+                                    <option value="">Select Division</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="shortcut-box">
+                                    <a class="shortcut-link" onclick="openDivisionPopup(event)">F2-New</a>
+                                    <a class="shortcut-link text-danger" onclick="openDivisionModifyPopup(event)">F3-Mod</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Category -->
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Category *</label>
+                            <div class="col-md-6">
+                                <select asp-for="CategoryId" id="ddlCategory" class="form-control form-control-sm">
+                                    <option value="">Select Category</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="shortcut-box">
+                                    <a class="shortcut-link" onclick="openCategoryPopup(event)">F2-New</a>
+                                    <a class="shortcut-link text-danger" onclick="openCategoryModifyPopup(event)">F3-Mod</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sub Category -->
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Sub Category *</label>
+                            <div class="col-md-6">
+                                <select asp-for="SubCategoryId" id="ddlSubCategory" class="form-control form-control-sm">
+                                    <option value="">Select SubCategory</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="shortcut-box">
+                                    <a class="shortcut-link" onclick="openSubCategoryPopup(event)">F2-New</a>
+                                    <a class="shortcut-link text-danger" onclick="openSubCategoryModifyPopup(event)">F3-Mod</a>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- HSN -->
+                <div class="eb-card">
+                    <div class="eb-card-header">HSN And GST Details</div>
+                    <div class="eb-card-body">
+
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">HSN/SAC *</label>
+                            <div class="col-md-6">
+                                <select asp-for="HsnId" id="ddlHsn" class="form-control form-control-sm">
+                                    <option value="">Select HSN</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="shortcut-box">
+                                    <a class="shortcut-link" onclick="openHsnPopup(event)">F2-New</a>
+                                    <a class="shortcut-link text-danger" onclick="openHsnModifyPopup(event)">F3-Mod</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Local</label>
+                            <div class="col-md-6">
+                                <select asp-for="Local" id="ddlLocal" class="form-control form-control-sm">
+                                    <option value="0">Taxable</option>
+                                    <option value="1">Exempted</option>
+                                    <option value="2">Nil Rated</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-md-3 col-form-label">Central</label>
+                            <div class="col-md-6">
+                                <select asp-for="Central" id="ddlCentral" class="form-control form-control-sm">
+                                    <option value="0">Taxable</option>
+                                    <option value="1">Exempted</option>
+                                    <option value="2">Nil Rated</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="row mb-2">
+                                    <label class="col-md-4">SGST</label>
+                                    <div class="col-md-8">
+                                        <input id="txtSgst" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <label class="col-md-4">CGST</label>
+                                    <div class="col-md-8">
+                                        <input id="txtCgst" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="row mb-2">
+                                    <label class="col-md-4">IGST</label>
+                                    <div class="col-md-8">
+                                        <input id="txtIgst" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <label class="col-md-4">Cess</label>
+                                    <div class="col-md-8">
+                                        <input id="txtCess" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div class="col-md-6">
+
+                <div class="eb-card">
+                    <div class="eb-card-header">Pricing & Stock</div>
+                    <div class="eb-card-body">
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">M.R.P</label>
+                            <div class="col-md-6">
+                                <input asp-for="Mrp" id="txtMrp" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Sales Rate 1</label>
+                            <div class="col-md-6">
+                                <input asp-for="SalesRate1" id="txtSalesRate1" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Sales Rate 2</label>
+                            <div class="col-md-6">
+                                <input asp-for="SalesRate2" id="txtSalesRate2" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Minimum Qty</label>
+                            <div class="col-md-6">
+                                <input asp-for="MinimumQty" id="txtMinimumQty" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Maximum Qty</label>
+                            <div class="col-md-6">
+                                <input asp-for="MaximumQty" id="txtMaximumQty" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="eb-card">
+                    <div class="eb-card-header">Item Configuration</div>
+                    <div class="eb-card-body">
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Shelf Life</label>
+                            <div class="col-md-3">
+                                <input asp-for="ShelfLife" id="txtShelfLife" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-md-3">
+                                <select asp-for="ShelfLifeUnit" id="ddlShelfLifeUnit" class="form-control form-control-sm">
+                                    <option value="Days">Days</option>
+                                    <option value="Months">Months</option>
+                                    <option value="Years">Years</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Maximum Discount</label>
+                            <div class="col-md-6">
+                                <input asp-for="MaximumDiscount" id="txtMaximumDiscount" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Decimal Allowed</label>
+                            <div class="col-md-6">
+                                <div class="drug-check">
+                                    <input asp-for="DecemalAllowed" id="chkDecimalAllowed" type="checkbox" />
+                                    <label id="lblDecimalStatus">Inactive</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Conversion</label>
+                            <div class="col-md-6">
+                                <input asp-for="Conversion" id="txtConversion" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Item Status</label>
+                            <div class="col-md-6">
+                                <select asp-for="IsActive" id="ddlItemStatus" class="form-control form-control-sm">
+                                    <option value="true">Active</option>
+                                    <option value="false">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        @if (ViewBag.BusinessType == 2)
+                        {
+                            <div class="row mb-2">
+                                <label class="col-md-4 col-form-label">Drug Category</label>
+                                <div class="col-md-8">
+                                    <div class="form-check form-switch">
+                                        <input asp-for="Narcotics" id="chkNarcotics" class="form-check-input" type="checkbox" />
+                                        <label class="form-check-label">Narcotics</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input asp-for="ScheduleH" id="chkScheduleH" class="form-check-input" type="checkbox" />
+                                        <label class="form-check-label">Schedule H</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input asp-for="ScheduleH1" id="chkScheduleH1" class="form-check-input" type="checkbox" />
+                                        <label class="form-check-label">Schedule H1</label>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Images</label>
+                            <div class="col-md-6">
+                                <input type="file" asp-for="Images" id="fileImages" multiple hidden />
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="$('#fileImages').click();">
+                                    Upload Images
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label">Salt</label>
+                            <div class="col-md-6">
+                                <input asp-for="Salt" id="txtSalt" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="text-end mt-3">
+            <button type="submit" class="btn btn-primary px-4">Save</button>
+            <button type="button" class="btn btn-secondary px-4" onclick="closeItemMasterModal()">Cancel</button>
+        </div>
+    </div>
+</form>
+
+<!-- ============================================================ -->
+<!-- COMPANY MODAL -->
+<!-- ============================================================ -->
+<div class="modal fade" id="popupCompany" tabindex="-1" data-bs-focus="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header">
+                <h4 class="modal-title" id="popupCompanyTitle">Add Company</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="popupCompanyId" value="0" />
+                <label>Company Name</label>
+                <input type="text" id="popupCompanyName" class="form-control modal-input" />
+                <span id="popupCompanyError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="saveCompany()">Save</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- DIVISION MODAL -->
+<!-- ============================================================ -->
+<div class="modal fade" id="popupDivision" tabindex="-1" data-bs-focus="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header">
+                <h4 class="modal-title" id="popupDivisionTitle">Add Division</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="popupDivisionId" value="0" />
+                <label>Company *</label>
+                <div class="d-flex align-items-center mb-2">
+                    <select id="popupDivisionCompanyId" class="form-control modal-input"></select>
+                    <div class="shortcut-box ms-2">
+                        <a class="shortcut-link" onclick="openDivisionCompanyPopup(event)">F2-New</a>
+                        <a class="shortcut-link text-danger" onclick="openDivisionCompanyModifyPopup(event)">F3-Mod</a>
+                    </div>
+                </div>
+                <label>Division Name</label>
+                <input type="text" id="popupDivisionName" class="form-control modal-input" />
+                <span id="popupDivisionError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="saveDivision()">Save</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CATEGORY MODAL -->
+<!-- ============================================================ -->
+<div class="modal fade" id="popupCategory" tabindex="-1" data-bs-focus="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header">
+                <h4 class="modal-title" id="popupCategoryTitle">Add Category</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="popupCategoryId" value="0" />
+                <label>Category Name</label>
+                <input type="text" id="popupCategoryName" class="form-control modal-input" />
+                <span id="popupCategoryError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="saveCategory()">Save</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SUBCATEGORY MODAL -->
+<!-- ============================================================ -->
+<div class="modal fade" id="popupSubCategory" tabindex="-1" data-bs-focus="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header">
+                <h4 class="modal-title" id="popupSubCategoryTitle">Add SubCategory</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="popupSubCategoryId" value="0" />
+                <label>Category *</label>
+                <div class="d-flex align-items-center mb-2">
+                    <select id="popupSubCategoryCategoryId" class="form-control modal-input"></select>
+                    <div class="shortcut-box ms-2">
+                        <a class="shortcut-link" onclick="openSubCategoryCategoryPopup(event)">F2-New</a>
+                        <a class="shortcut-link text-danger" onclick="openSubCategoryCategoryModifyPopup(event)">F3-Mod</a>
+                    </div>
+                </div>
+                <label>SubCategory Name</label>
+                <input type="text" id="popupSubCategoryName" class="form-control modal-input" />
+                <span id="popupSubCategoryError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="saveSubCategory()">Save</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- HSN MODAL -->
+<!-- ============================================================ -->
+<div class="modal fade" id="popupHsn" tabindex="-1" data-bs-focus="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header">
+                <h4 class="modal-title" id="popupHsnTitle">Add HSN</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="popupHsnId" value="0" />
+                <label>HSN Code *</label>
+                <input type="text" id="popupHsnCode" class="form-control modal-input mb-2" />
+                <label>SGST %</label>
+                <input type="number" id="popupHsnSgst" step="0.01" class="form-control modal-input mb-2" value="0" />
+                <label>CGST %</label>
+                <input type="number" id="popupHsnCgst" step="0.01" class="form-control modal-input mb-2" value="0" />
+                <label>IGST %</label>
+                <input type="number" id="popupHsnIgst" step="0.01" class="form-control modal-input mb-2" value="0" />
+                <label>Cess %</label>
+                <input type="number" id="popupHsnCess" step="0.01" class="form-control modal-input mb-2" value="0" />
+                <span id="popupHsnError" class="text-danger small modal-error"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="saveHsn()">Save</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    (function () {
+        "use strict";
+
+        // ══════════════════════════════════════════════════════════
+        //  NESTED MODAL FIX
+        // ══════════════════════════════════════════════════════════
+
+        var modalStack = [];
+            // =====================================================
+    // STOP ITEM DROPDOWN AUTO OPEN
+    // =====================================================
+
+    // Preserve Sales F2/F3 guard when this partial is loaded inside the item popup.
+    window.stopAutoItemOpen = window.stopAutoItemOpen === true;
+    // Popup OPEN
+    $(document).on('show.bs.modal',
+        '#popupCompany, #popupDivision, #popupCategory, #popupSubCategory, #popupHsn',
+        function () {
+
+    window.stopAutoItemOpen = true;
+            $("#txtSearch").blur();
+
+            $(".item-row").removeClass("active selected");
+
+            if ($('.select2-hidden-accessible').length > 0) {
+                $('.select2-hidden-accessible').select2('close');
+            }
+    });
+
+    // Popup CLOSE
+    $(document).on('hidden.bs.modal',
+        '#popupCompany, #popupDivision, #popupCategory, #popupSubCategory, #popupHsn',
+        function () {
+
+            window.stopAutoItemOpen = true;
+
+            $("#txtSearch").blur();
+
+            setTimeout(function () {
+                // Keep Sales item dropdown closed while the parent Item Master form is still open.
+                if (!$("#itemMasterModal").is(":visible")) {
+                    window.stopAutoItemOpen = false;
+                }
+                restoreSalesItemMasterModal();
+            }, 1000);
+    });
+
+        $(document).on('show.bs.modal', '.modal', function () {
+            var modalId = $(this).attr('id');
+            if (!modalStack.includes(modalId)) {
+                modalStack.push(modalId);
+            }
+            var baseZ = 1040;
+            var stackIndex = modalStack.length;
+            var modalZ = baseZ + (stackIndex * 20) + 10;
+            $(this).css('z-index', modalZ);
+            setTimeout(function () {
+                var $backdrops = $('.modal-backdrop');
+                if ($backdrops.length > 0) {
+                    $backdrops.last().css('z-index', modalZ - 1);
+                }
+            }, 0);
+        });
+
+        $(document).on('hidden.bs.modal', '.modal', function () {
+            var modalId = $(this).attr('id');
+            modalStack = modalStack.filter(function (id) { return id !== modalId; });
+            $(this).css('z-index', '');
+            var remainingOpenModals = $('.modal.show');
+            if (remainingOpenModals.length > 0) {
+                $('body').addClass('modal-open');
+            }
+            setTimeout(function () {
+                var $backdrops = $('.modal-backdrop');
+                var openCount = $('.modal.show').length;
+                while ($backdrops.length > openCount) {
+                    // Remove the child popup backdrop so the Item Master form stays clickable.
+                    $backdrops.last().remove();
+                    $backdrops = $('.modal-backdrop');
+                }
+                if (openCount > 0) {
+                    $('body').addClass('modal-open');
+                }
+                restoreSalesItemMasterModal();
+            }, 150);
+        });
+
+        $(document).on('shown.bs.modal', '.modal', function () {
+            var $parentModals = $('.modal.show').not(this);
+            $parentModals.each(function () {
+                var bsModal = bootstrap.Modal.getInstance(this);
+                if (bsModal && bsModal._focustrap) {
+                    bsModal._focustrap.deactivate();
+                }
+            });
+        });
+
+        $(document).on('hidden.bs.modal', '.modal', function () {
+            var $parentModals = $('.modal.show');
+            if ($parentModals.length > 0) {
+                var $topModal = $parentModals.last();
+                var bsModal = bootstrap.Modal.getInstance($topModal[0]);
+                if (bsModal && bsModal._focustrap) {
+                    setTimeout(function () {
+                        bsModal._focustrap.activate();
+                    }, 200);
+                }
+            }
+        });
+
+        // ══════════════════════════════════════════════════════════
+        //  HELPER: Check if modal is already open (PREVENT DUPLICATE)
+        // ══════════════════════════════════════════════════════════
+
+        function isModalOpen(modalId) {
+            var modalEl = document.getElementById(modalId);
+            if (!modalEl) return false;
+            return modalEl.classList.contains('show');
+        }
+
+        function getOrCreateModal(modalId) {
+            var modalEl = document.getElementById(modalId);
+            if (!modalEl) return null;
+
+            if (isModalOpen(modalId)) {
+                setTimeout(function () {
+                    $(modalEl).find('input[type="text"]:first').focus();
+                }, 100);
+                return null;
+            }
+
+            var instance = bootstrap.Modal.getInstance(modalEl);
+            if (!instance) {
+                instance = new bootstrap.Modal(modalEl);
+            }
+            return instance;
+        }
+
+        function safeCloseModal(modalId) {
+            var modalEl = document.getElementById(modalId);
+            if (!modalEl) return;
+
+            var modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) {
+                modalInstance.hide();
+                    $("#txtSearch").val('');
+    $("#txtSearch").blur();
+            }
+
+            setTimeout(function () {
+                var openCount = $('.modal.show').length;
+                var $backdrops = $('.modal-backdrop');
+                while ($backdrops.length > openCount) {
+                    // Remove the child popup backdrop so the Item Master form stays clickable.
+                    $backdrops.last().remove();
+                    $backdrops = $('.modal-backdrop');
+                }
+                if (openCount > 0) {
+                    $('body').addClass('modal-open');
+                }
+                restoreSalesItemMasterModal();
+            }, 300);
+        }
+
+        function restoreSalesItemMasterModal() {
+            var $parentModal = $("#itemMasterModal");
+            if ($parentModal.hasClass("show")) {
+                // Keep parent Item Master modal active after closing any nested master popup.
+                $parentModal.css("pointer-events", "auto").removeAttr("aria-hidden");
+                $("body").addClass("modal-open");
+            }
+        }
+
+        // Shared Item Master Cancel closes embedded Sales/StockIssue/Purchase popup safely.
+        window.closeItemMasterModal = function () {
+            window.stopAutoItemOpen = true;
+
+            if ($("#itemMasterModal").length > 0) {
+                $("#itemMasterModal").modal("hide");
+                setTimeout(function () {
+                    window.stopAutoItemOpen = false;
+                }, 800);
+                return;
+            }
+
+            window.location.href = '/ItemMaster/Index';
+        };
+
+        // ── DECIMAL STATUS ──
+        function updateDecimalStatus() {
+            if ($("#chkDecimalAllowed").is(":checked")) {
+                $("#lblDecimalStatus").text("Active").css("color", "green");
+            } else {
+                $("#lblDecimalStatus").text("Inactive").css("color", "red");
+            }
+        }
+        updateDecimalStatus();
+        $(document).on("change", "#chkDecimalAllowed", updateDecimalStatus);
+
+        // Item Master F3-Mod edit bind: keep saved master IDs selected when an existing item is opened again.
+        function itemMasterSavedId(value) {
+            return value && value !== "0" ? value : "";
+        }
+
+        var editCompanyId = itemMasterSavedId("@Model.CompanyId.GetValueOrDefault()");
+        var editDivisionId = itemMasterSavedId("@Model.DivisionId.GetValueOrDefault()");
+        var editCategoryId = itemMasterSavedId("@Model.CategoryId.GetValueOrDefault()");
+        var editSubCategoryId = itemMasterSavedId("@Model.SubCategoryId.GetValueOrDefault()");
+        var editHsnId = itemMasterSavedId("@Model.HsnId.GetValueOrDefault()");
+
+        loadCompanyDropdown(editCompanyId);
+        loadCategoryDropdown(editCategoryId);
+        loadHsnDropdown(editHsnId);
+
+        if (editCompanyId) loadDivisionDropdown(editCompanyId, editDivisionId);
+        if (editCategoryId) loadSubCategoryDropdown(editCategoryId, editSubCategoryId);
+
+        // ── HSN CHANGE → Auto-fill GST ──
+        $(document).on("change", "#ddlHsn", function () {
+            var hsnId = $(this).val();
+            if (!hsnId) { $("#txtSgst,#txtCgst,#txtIgst,#txtCess").val(""); return; }
+
+            $.get('/ItemMaster/GetHsn').done(function (data) {
+                var found = null;
+                $.each(data, function (i, item) {
+                    if (item.value == hsnId) found = item;
+                });
+                if (!found) return;
+
+                $.get('/HSN/GetDetails', { Id: hsnId }).done(function (d) {
+                    $("#txtSgst").val(d.sgst || 0);
+                    $("#txtCgst").val(d.cgst || 0);
+                    $("#txtIgst").val(d.igst || 0);
+                    $("#txtCess").val(d.cess || 0);
+                });
+            });
+        });
+
+        $(document).on("change", "#ddlCompany", function () {
+            loadDivisionDropdown($(this).val());
+        });
+
+        $(document).on("change", "#ddlCategory", function () {
+            loadSubCategoryDropdown($(this).val());
+        });
+
+        $(document)
+            .off("keydown.itemMasterShortcuts", "#ddlCompany, #ddlDivision, #ddlCategory, #ddlSubCategory, #ddlHsn, .shortcut-box .shortcut-link")
+            .on("keydown.itemMasterShortcuts", "#ddlCompany, #ddlDivision, #ddlCategory, #ddlSubCategory, #ddlHsn, .shortcut-box .shortcut-link", function (e) {
+            if (e.key !== "F2" && e.key !== "F3") return;
+            if ($("#popupCompany, #popupDivision, #popupCategory, #popupSubCategory, #popupHsn").filter(".show").length > 0) return;
+
+            var target = this;
+            var $row = $(target).closest(".row");
+            var $select = $(target).is("select") ? $(target) : $row.find("select").first();
+            var selectId = $select.attr("id");
+
+            if (!selectId) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            var openers = {
+                ddlCompany: {
+                    F2: window.openCompanyPopup,
+                    F3: window.openCompanyModifyPopup
+                },
+                ddlDivision: {
+                    F2: window.openDivisionPopup,
+                    F3: window.openDivisionModifyPopup
+                },
+                ddlCategory: {
+                    F2: window.openCategoryPopup,
+                    F3: window.openCategoryModifyPopup
+                },
+                ddlSubCategory: {
+                    F2: window.openSubCategoryPopup,
+                    F3: window.openSubCategoryModifyPopup
+                },
+                ddlHsn: {
+                    F2: window.openHsnPopup,
+                    F3: window.openHsnModifyPopup
+                }
+            };
+
+            var opener = openers[selectId] && openers[selectId][e.key];
+            if (typeof opener === "function") {
+                opener(e);
+            }
+        });
+
+        // ══════════════════════════════════════════════════════════
+        //  DROPDOWN LOADERS (Main Form - with "Select" option)
+        // ══════════════════════════════════════════════════════════
+
+        function loadCompanyDropdown(selectedId) {
+            $.get('/ItemMaster/GetCompanies').done(function (data) {
+                var ddl = $("#ddlCompany").empty();
+                ddl.append('<option value="">Select Company</option>');
+                $.each(data, function (i, item) {
+                    if (item.value && item.value !== "0") {
+                        ddl.append('<option value="' + item.value + '">' + item.text + '</option>');
+                    }
+                });
+                if (selectedId) ddl.val(selectedId);
+            });
+        }
+
+        function loadDivisionDropdown(companyId, selectedId) {
+            var ddl = $("#ddlDivision").empty();
+            ddl.append('<option value="">Select Division</option>');
+            if (!companyId) return;
+
+            $.get('/ItemMaster/GetDivisionByCompany', { companyId: companyId }).done(function (data) {
+                $.each(data, function (i, item) {
+                    if (item.value && item.value !== "0") {
+                        ddl.append('<option value="' + item.value + '">' + item.text + '</option>');
+                    }
+                });
+                if (selectedId) ddl.val(selectedId);
+            });
+        }
+
+        function loadCategoryDropdown(selectedId) {
+            $.get('/ItemMaster/GetCategories').done(function (data) {
+                var ddl = $("#ddlCategory").empty();
+                ddl.append('<option value="">Select Category</option>');
+                $.each(data, function (i, item) {
+                    if (item.value && item.value !== "0") {
+                        ddl.append('<option value="' + item.value + '">' + item.text + '</option>');
+                    }
+                });
+                if (selectedId) ddl.val(selectedId);
+            });
+        }
+
+        function loadSubCategoryDropdown(categoryId, selectedId) {
+            var ddl = $("#ddlSubCategory").empty();
+            ddl.append('<option value="">Select SubCategory</option>');
+            if (!categoryId) return;
+
+            $.get('/ItemMaster/GetSubCategoryByCategory', { categoryId: categoryId }).done(function (data) {
+                $.each(data, function (i, item) {
+                    if (item.value && item.value !== "0") {
+                        ddl.append('<option value="' + item.value + '">' + item.text + '</option>');
+                    }
+                });
+                if (selectedId) ddl.val(selectedId);
+            });
+        }
+
+        function loadHsnDropdown(selectedId) {
+            $.get('/ItemMaster/GetHsn').done(function (data) {
+                var ddl = $("#ddlHsn").empty();
+                ddl.append('<option value="">Select HSN</option>');
+                $.each(data, function (i, item) {
+                    if (item.value && item.value !== "0") {
+                        ddl.append('<option value="' + item.value + '">' + item.text + '</option>');
+                    }
+                });
+                if (selectedId) {
+                    ddl.val(selectedId);
+                    // Item Master F3-Mod edit bind: refill GST fields when existing item HSN is restored.
+                    $.get('/HSN/GetDetails', { Id: selectedId }).done(function (d) {
+                        $("#txtSgst").val(d.sgst || 0);
+                        $("#txtCgst").val(d.cgst || 0);
+                        $("#txtIgst").val(d.igst || 0);
+                        $("#txtCess").val(d.cess || 0);
+                    });
+                }
+            });
+        }
+
+        // Item Master F3-Mod preserve: keep the modified option selected and visible until the fresh DB reload finishes.
+        function keepModifiedDropdownSelection(selectEl, selectedId, selectedText) {
+            if (!selectedId) return;
+
+            var ddl = $(selectEl);
+            var option = ddl.find("option").filter(function () {
+                return $(this).val() == String(selectedId);
+            }).first();
+
+            if (!option.length) {
+                option = $("<option />").val(selectedId).appendTo(ddl);
+            }
+
+            if (selectedText) {
+                option.text(selectedText);
+            }
+
+            ddl.val(String(selectedId));
+        }
+
+        // ══════════════════════════════════════════════════════════
+        //  POPUP DROPDOWN LOADERS (NO "Select" default options)
+        // ══════════════════════════════════════════════════════════
+
+        function loadCategoriesIntoPopupSelect(selectEl, selectedId) {
+            $.get('/ItemMaster/GetCategories').done(function (data) {
+                var ddl = $(selectEl).empty();
+                $.each(data, function (i, item) {
+                    if (item.value && item.value !== "0") {
+                        ddl.append('<option value="' + item.value + '">' + item.text + '</option>');
+                    }
+                });
+                if (selectedId) ddl.val(selectedId);
+            });
+        }
+
+        function loadCompaniesIntoPopupSelect(selectEl, selectedId) {
+            $.get('/ItemMaster/GetCompanies').done(function (data) {
+                var ddl = $(selectEl).empty();
+                $.each(data, function (i, item) {
+                    if (item.value && item.value !== "0") {
+                        ddl.append('<option value="' + item.value + '">' + item.text + '</option>');
+                    }
+                });
+                if (selectedId) ddl.val(selectedId);
+            });
+        }
+
+        // ══════════════════════════════════════════════════════════
+        //  COMPANY POPUP
+        // ══════════════════════════════════════════════════════════
+
+        window.openCompanyPopup = function (e) {
+            if (e) e.preventDefault();
+            window.itemMasterCompanyReturnSelector = "";
+            if (isModalOpen('popupCompany')) { $("#popupCompanyName").focus(); return; }
+
+            $("#popupCompanyId").val(0);
+            $("#popupCompanyName").val("");
+            $("#popupCompanyError").text("");
+            $("#popupCompanyTitle").text("Add Company");
+
+            var modal = getOrCreateModal('popupCompany');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupCompanyName").focus(); }, 300);
+        };
+
+        window.openCompanyModifyPopup = function (e) {
+            if (e) e.preventDefault();
+            window.itemMasterCompanyReturnSelector = "";
+            var ddl = $("#ddlCompany");
+            var selectedId = ddl.val();
+            if (!selectedId) { toastr.warning("Please select a company first"); return; }
+            if (isModalOpen('popupCompany')) { $("#popupCompanyName").focus().select(); return; }
+
+            var selectedName = ddl.find("option:selected").text();
+            $("#popupCompanyId").val(selectedId);
+            $("#popupCompanyName").val(selectedName);
+            $("#popupCompanyError").text("");
+            $("#popupCompanyTitle").text("Modify Company");
+
+            var modal = getOrCreateModal('popupCompany');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupCompanyName").focus().select(); }, 300);
+        };
+
+        window.openDivisionCompanyPopup = function (e) {
+            if (e) e.preventDefault();
+            window.itemMasterCompanyReturnSelector = "#popupDivisionCompanyId";
+            if (isModalOpen('popupCompany')) { $("#popupCompanyName").focus(); return; }
+
+            $("#popupCompanyId").val(0);
+            $("#popupCompanyName").val("");
+            $("#popupCompanyError").text("");
+            $("#popupCompanyTitle").text("Add Company");
+
+            var modal = getOrCreateModal('popupCompany');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupCompanyName").focus(); }, 300);
+        };
+
+        window.openDivisionCompanyModifyPopup = function (e) {
+            if (e) e.preventDefault();
+            window.itemMasterCompanyReturnSelector = "#popupDivisionCompanyId";
+            var ddl = $("#popupDivisionCompanyId");
+            var selectedId = ddl.val();
+            if (!selectedId) { toastr.warning("Please select a company first"); return; }
+            if (isModalOpen('popupCompany')) { $("#popupCompanyName").focus().select(); return; }
+
+            var selectedName = ddl.find("option:selected").text();
+            $("#popupCompanyId").val(selectedId);
+            $("#popupCompanyName").val(selectedName);
+            $("#popupCompanyError").text("");
+            $("#popupCompanyTitle").text("Modify Company");
+
+            var modal = getOrCreateModal('popupCompany');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupCompanyName").focus().select(); }, 300);
+        };
+
+        window.saveCompany = function () {
+            var id = parseInt($("#popupCompanyId").val()) || 0;
+            var name = $("#popupCompanyName").val().trim();
+            if (!name) { $("#popupCompanyError").text("Company Name is required"); return; }
+            $("#popupCompanyError").text("");
+
+            var url = id > 0 ? '/ItemMaster/UpdateCompany' : '/ItemMaster/CreateCompany';
+            var data = id > 0 ? { Id: id, Name: name } : { Name: name };
+
+            $.post(url, data).done(function (res) {
+                if (res.success) {
+                    toastr.success(res.message || "Company saved");
+                    safeCloseModal('popupCompany');
+                    var savedCompanyId = id > 0 ? id : (res.company ? res.company.id : null);
+                    // Item Master F3-Mod preserve: show modified company immediately and keep it selected after reload.
+                    loadCompanyDropdown(savedCompanyId);
+                    keepModifiedDropdownSelection("#ddlCompany", savedCompanyId, name);
+                    if (window.itemMasterCompanyReturnSelector) {
+                        loadCompaniesIntoPopupSelect(window.itemMasterCompanyReturnSelector, savedCompanyId);
+                        keepModifiedDropdownSelection(window.itemMasterCompanyReturnSelector, savedCompanyId, name);
+                        window.itemMasterCompanyReturnSelector = "";
+                    }
+                } else {
+                    $("#popupCompanyError").text(res.message || "Error saving company");
+                }
+            }).fail(function () { $("#popupCompanyError").text("Server error"); });
+        };
+
+        // ══════════════════════════════════════════════════════════
+        //  DIVISION POPUP
+        // ══════════════════════════════════════════════════════════
+
+        window.openDivisionPopup = function (e) {
+            if (e) e.preventDefault();
+            if (isModalOpen('popupDivision')) { $("#popupDivisionName").focus(); return; }
+
+            $("#popupDivisionId").val(0);
+            $("#popupDivisionName").val("");
+            $("#popupDivisionError").text("");
+            $("#popupDivisionTitle").text("Add Division");
+
+            var currentCompanyId = $("#ddlCompany").val();
+            loadCompaniesIntoPopupSelect("#popupDivisionCompanyId", currentCompanyId);
+
+            var modal = getOrCreateModal('popupDivision');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupDivisionName").focus(); }, 300);
+        };
+
+        window.openDivisionModifyPopup = function (e) {
+            if (e) e.preventDefault();
+            var ddl = $("#ddlDivision");
+            var selectedId = ddl.val();
+            if (!selectedId) { toastr.warning("Please select a division first"); return; }
+            if (isModalOpen('popupDivision')) { $("#popupDivisionName").focus().select(); return; }
+
+            var selectedName = ddl.find("option:selected").text();
+            $("#popupDivisionId").val(selectedId);
+            $("#popupDivisionName").val(selectedName);
+            $("#popupDivisionError").text("");
+            $("#popupDivisionTitle").text("Modify Division");
+
+            var currentCompanyId = $("#ddlCompany").val();
+            loadCompaniesIntoPopupSelect("#popupDivisionCompanyId", currentCompanyId);
+
+            var modal = getOrCreateModal('popupDivision');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupDivisionName").focus().select(); }, 300);
+        };
+
+        window.saveDivision = function () {
+            var id = parseInt($("#popupDivisionId").val()) || 0;
+            var name = $("#popupDivisionName").val().trim();
+            var companyId = $("#popupDivisionCompanyId").val();
+
+            if (!companyId) { $("#popupDivisionError").text("Please select a company"); return; }
+            if (!name) { $("#popupDivisionError").text("Division Name is required"); return; }
+            $("#popupDivisionError").text("");
+
+            var url = id > 0 ? '/ItemMaster/UpdateDivision' : '/ItemMaster/CreateDivision';
+            var data = id > 0 ? { Id: id, Name: name, CompanyId: companyId } : { Name: name, CompanyId: companyId };
+
+            $.post(url, data).done(function (res) {
+                if (res.success) {
+                    toastr.success(res.message || "Division saved");
+                    safeCloseModal('popupDivision');
+                    var savedDivisionId = id > 0 ? id : (res.division ? res.division.id : null);
+                    var savedCompanyId = companyId;
+                    var savedCompanyName = $("#popupDivisionCompanyId option:selected").text();
+                    // Item Master F3-Mod preserve: keep parent company and modified division selected after save.
+                    keepModifiedDropdownSelection("#ddlCompany", savedCompanyId, savedCompanyName);
+                    loadDivisionDropdown(savedCompanyId, savedDivisionId);
+                    keepModifiedDropdownSelection("#ddlDivision", savedDivisionId, name);
+                } else {
+                    $("#popupDivisionError").text(res.message || "Error saving division");
+                }
+            }).fail(function () { $("#popupDivisionError").text("Server error"); });
+        };
+
+        // ══════════════════════════════════════════════════════════
+        //  CATEGORY POPUP
+        // ══════════════════════════════════════════════════════════
+
+        window.openCategoryPopup = function (e) {
+            if (e) e.preventDefault();
+            window.itemMasterCategoryReturnSelector = "";
+            if (isModalOpen('popupCategory')) { $("#popupCategoryName").focus(); return; }
+
+            $("#popupCategoryId").val(0);
+            $("#popupCategoryName").val("");
+            $("#popupCategoryError").text("");
+            $("#popupCategoryTitle").text("Add Category");
+
+            var modal = getOrCreateModal('popupCategory');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupCategoryName").focus(); }, 300);
+        };
+
+        window.openCategoryModifyPopup = function (e) {
+            if (e) e.preventDefault();
+            window.itemMasterCategoryReturnSelector = "";
+            var ddl = $("#ddlCategory");
+            var selectedId = ddl.val();
+            if (!selectedId) { toastr.warning("Please select a category first"); return; }
+            if (isModalOpen('popupCategory')) { $("#popupCategoryName").focus().select(); return; }
+
+            var selectedName = ddl.find("option:selected").text();
+            $("#popupCategoryId").val(selectedId);
+            $("#popupCategoryName").val(selectedName);
+            $("#popupCategoryError").text("");
+            $("#popupCategoryTitle").text("Modify Category");
+
+            var modal = getOrCreateModal('popupCategory');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupCategoryName").focus().select(); }, 300);
+        };
+
+        window.openSubCategoryCategoryPopup = function (e) {
+            if (e) e.preventDefault();
+            window.itemMasterCategoryReturnSelector = "#popupSubCategoryCategoryId";
+            if (isModalOpen('popupCategory')) { $("#popupCategoryName").focus(); return; }
+
+            $("#popupCategoryId").val(0);
+            $("#popupCategoryName").val("");
+            $("#popupCategoryError").text("");
+            $("#popupCategoryTitle").text("Add Category");
+
+            var modal = getOrCreateModal('popupCategory');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupCategoryName").focus(); }, 300);
+        };
+
+        window.openSubCategoryCategoryModifyPopup = function (e) {
+            if (e) e.preventDefault();
+            window.itemMasterCategoryReturnSelector = "#popupSubCategoryCategoryId";
+            var ddl = $("#popupSubCategoryCategoryId");
+            var selectedId = ddl.val();
+            if (!selectedId) { toastr.warning("Please select a category first"); return; }
+            if (isModalOpen('popupCategory')) { $("#popupCategoryName").focus().select(); return; }
+
+            var selectedName = ddl.find("option:selected").text();
+            $("#popupCategoryId").val(selectedId);
+            $("#popupCategoryName").val(selectedName);
+            $("#popupCategoryError").text("");
+            $("#popupCategoryTitle").text("Modify Category");
+
+            var modal = getOrCreateModal('popupCategory');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupCategoryName").focus().select(); }, 300);
+        };
+
+        window.saveCategory = function () {
+            var id = parseInt($("#popupCategoryId").val()) || 0;
+            var name = $("#popupCategoryName").val().trim();
+            if (!name) { $("#popupCategoryError").text("Category Name is required"); return; }
+            $("#popupCategoryError").text("");
+
+            var url = id > 0 ? '/ItemMaster/UpdateCategory' : '/ItemMaster/CreateCategory';
+            var data = id > 0 ? { Id: id, CategoryName: name } : { CategoryName: name };
+
+            $.post(url, data).done(function (res) {
+                if (res.success) {
+                    toastr.success(res.message || "Category saved");
+                    safeCloseModal('popupCategory');
+                    var savedCategoryId = id > 0 ? id : (res.category ? res.category.id : null);
+                    // Item Master F3-Mod preserve: show modified category immediately and keep it selected after reload.
+                    loadCategoryDropdown(savedCategoryId);
+                    keepModifiedDropdownSelection("#ddlCategory", savedCategoryId, name);
+                    if (window.itemMasterCategoryReturnSelector) {
+                        loadCategoriesIntoPopupSelect(window.itemMasterCategoryReturnSelector, savedCategoryId);
+                        keepModifiedDropdownSelection(window.itemMasterCategoryReturnSelector, savedCategoryId, name);
+                        window.itemMasterCategoryReturnSelector = "";
+                    }
+                } else {
+                    $("#popupCategoryError").text(res.message || "Error saving category");
+                }
+            }).fail(function () { $("#popupCategoryError").text("Server error"); });
+        };
+
+        // ══════════════════════════════════════════════════════════
+        //  SUBCATEGORY POPUP
+        // ══════════════════════════════════════════════════════════
+
+        window.openSubCategoryPopup = function (e) {
+            if (e) e.preventDefault();
+            if (isModalOpen('popupSubCategory')) { $("#popupSubCategoryName").focus(); return; }
+
+            $("#popupSubCategoryId").val(0);
+            $("#popupSubCategoryName").val("");
+            $("#popupSubCategoryError").text("");
+            $("#popupSubCategoryTitle").text("Add SubCategory");
+
+            var currentCategoryId = $("#ddlCategory").val();
+            loadCategoriesIntoPopupSelect("#popupSubCategoryCategoryId", currentCategoryId);
+
+            var modal = getOrCreateModal('popupSubCategory');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupSubCategoryName").focus(); }, 300);
+        };
+
+        window.openSubCategoryModifyPopup = function (e) {
+            if (e) e.preventDefault();
+            var ddl = $("#ddlSubCategory");
+            var selectedId = ddl.val();
+            if (!selectedId) { toastr.warning("Please select a subcategory first"); return; }
+            if (isModalOpen('popupSubCategory')) { $("#popupSubCategoryName").focus().select(); return; }
+
+            var selectedName = ddl.find("option:selected").text();
+            $("#popupSubCategoryId").val(selectedId);
+            $("#popupSubCategoryName").val(selectedName);
+            $("#popupSubCategoryError").text("");
+            $("#popupSubCategoryTitle").text("Modify SubCategory");
+
+            var currentCategoryId = $("#ddlCategory").val();
+            loadCategoriesIntoPopupSelect("#popupSubCategoryCategoryId", currentCategoryId);
+
+            var modal = getOrCreateModal('popupSubCategory');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupSubCategoryName").focus().select(); }, 300);
+        };
+
+        window.saveSubCategory = function () {
+            var id = parseInt($("#popupSubCategoryId").val()) || 0;
+            var name = $("#popupSubCategoryName").val().trim();
+            var categoryId = $("#popupSubCategoryCategoryId").val();
+
+            if (!categoryId) { $("#popupSubCategoryError").text("Please select a category"); return; }
+            if (!name) { $("#popupSubCategoryError").text("SubCategory Name is required"); return; }
+            $("#popupSubCategoryError").text("");
+
+            var url = id > 0 ? '/ItemMaster/UpdateSubCategory' : '/ItemMaster/CreateSubCategory';
+            var data = id > 0 ? { Id: id, Name: name, CategoryId: categoryId } : { Name: name, CategoryId: categoryId };
+
+            $.post(url, data).done(function (res) {
+                if (res.success) {
+                    toastr.success(res.message || "SubCategory saved");
+                    safeCloseModal('popupSubCategory');
+                    var savedSubCategoryId = id > 0 ? id : (res.subCategory ? res.subCategory.id : null);
+                    var savedCategoryId = categoryId;
+                    var savedCategoryName = $("#popupSubCategoryCategoryId option:selected").text();
+                    // Item Master F3-Mod preserve: keep parent category and modified subcategory selected after save.
+                    keepModifiedDropdownSelection("#ddlCategory", savedCategoryId, savedCategoryName);
+                    loadSubCategoryDropdown(savedCategoryId, savedSubCategoryId);
+                    keepModifiedDropdownSelection("#ddlSubCategory", savedSubCategoryId, name);
+                } else {
+                    $("#popupSubCategoryError").text(res.message || "Error saving subcategory");
+                }
+            }).fail(function () { $("#popupSubCategoryError").text("Server error"); });
+        };
+
+        // ══════════════════════════════════════════════════════════
+        //  HSN POPUP
+        // ══════════════════════════════════════════════════════════
+
+        window.openHsnPopup = function (e) {
+            if (e) e.preventDefault();
+            if (isModalOpen('popupHsn')) { $("#popupHsnCode").focus(); return; }
+
+            $("#popupHsnId").val(0);
+            $("#popupHsnCode").val("");
+            $("#popupHsnSgst").val(0);
+            $("#popupHsnCgst").val(0);
+            $("#popupHsnIgst").val(0);
+            $("#popupHsnCess").val(0);
+            $("#popupHsnError").text("");
+            $("#popupHsnTitle").text("Add HSN");
+
+            var modal = getOrCreateModal('popupHsn');
+            if (modal) modal.show();
+            setTimeout(function () { $("#popupHsnCode").focus(); }, 300);
+        };
+
+        window.openHsnModifyPopup = function (e) {
+            if (e) e.preventDefault();
+            var ddl = $("#ddlHsn");
+            var selectedId = ddl.val();
+            if (!selectedId) { toastr.warning("Please select an HSN first"); return; }
+            if (isModalOpen('popupHsn')) { $("#popupHsnCode").focus().select(); return; }
+
+            $.get('/HSN/GetDetails', { Id: selectedId }).done(function (d) {
+                var selectedName = ddl.find("option:selected").text();
+                $("#popupHsnId").val(selectedId);
+                // Item Master F3-Mod preserve: HSN detail API may not include code in older builds, so keep selected text.
+                $("#popupHsnCode").val(d.hsnCode || selectedName || "");
+                $("#popupHsnSgst").val(d.sgst || 0);
+                $("#popupHsnCgst").val(d.cgst || 0);
+                $("#popupHsnIgst").val(d.igst || 0);
+                $("#popupHsnCess").val(d.cess || 0);
+                $("#popupHsnError").text("");
+                $("#popupHsnTitle").text("Modify HSN");
+
+                var modal = getOrCreateModal('popupHsn');
+                if (modal) modal.show();
+                setTimeout(function () { $("#popupHsnCode").focus().select(); }, 300);
+            }).fail(function () { toastr.error("Could not load HSN details"); });
+        };
+
+        window.saveHsn = function () {
+            var id = parseInt($("#popupHsnId").val()) || 0;
+            var hsnCode = $("#popupHsnCode").val().trim();
+            if (!hsnCode) { $("#popupHsnError").text("HSN Code is required"); return; }
+            $("#popupHsnError").text("");
+
+            var url = id > 0 ? '/ItemMaster/UpdateHsn' : '/ItemMaster/CreateHsn';
+            var data = {
+                Id: id,
+                HsnCode: hsnCode,
+                SGST: $("#popupHsnSgst").val(),
+                CGST: $("#popupHsnCgst").val(),
+                IGST: $("#popupHsnIgst").val(),
+                Cess: $("#popupHsnCess").val(),
+                // HSNVM requires HsnType; Sales popup creates HSN as Goods by default.
+                HsnType: 1
+            };
+
+            $.post(url, data).done(function (res) {
+                if (res.success) {
+                    toastr.success(res.message || "HSN saved");
+                    // Copy saved HSN tax values back to the Item Master form immediately.
+                    $("#txtSgst").val($("#popupHsnSgst").val() || 0);
+                    $("#txtCgst").val($("#popupHsnCgst").val() || 0);
+                    $("#txtIgst").val($("#popupHsnIgst").val() || 0);
+                    $("#txtCess").val($("#popupHsnCess").val() || 0);
+                    safeCloseModal('popupHsn');
+                    var savedHsnId = id > 0 ? id : (res.hsn ? res.hsn.id : null);
+                    // Item Master F3-Mod preserve: show modified HSN immediately and keep it selected after reload.
+                    loadHsnDropdown(savedHsnId);
+                    keepModifiedDropdownSelection("#ddlHsn", savedHsnId, hsnCode);
+                } else {
+                    $("#popupHsnError").text(res.message || "Error saving HSN");
+                }
+            }).fail(function () { $("#popupHsnError").text("Server error"); });
+        };
+
+        // ══════════════════════════════════════════════════════════
+        //  FORM SUBMIT
+        // ══════════════════════════════════════════════════════════
+
+        function validateEmbeddedItemMasterPopup() {
+            if (!$.trim($("#txtCode").val())) { toastr.warning("Item code is required."); $("#txtCode").focus(); return false; }
+            if (!$.trim($("#txtName").val())) { toastr.warning("Item name is required."); $("#txtName").focus(); return false; }
+            if (!(parseInt($("#ddlCompany").val(), 10) > 0)) { toastr.warning("Please select company."); $("#ddlCompany").focus(); return false; }
+            if (!(parseInt($("#ddlDivision").val(), 10) > 0)) { toastr.warning("Please select division."); $("#ddlDivision").focus(); return false; }
+            if (!(parseInt($("#ddlCategory").val(), 10) > 0)) { toastr.warning("Please select category."); $("#ddlCategory").focus(); return false; }
+            if (!(parseInt($("#ddlSubCategory").val(), 10) > 0)) { toastr.warning("Please select sub category."); $("#ddlSubCategory").focus(); return false; }
+            if (!(parseInt($("#ddlHsn").val(), 10) > 0)) { toastr.warning("Please select HSN."); $("#ddlHsn").focus(); return false; }
+
+            var maximumDiscount = parseFloat($("#txtMaximumDiscount").val()) || 0;
+            if (maximumDiscount < 0 || maximumDiscount > 100) { toastr.warning("Maximum discount must be between 0 and 100."); $("#txtMaximumDiscount").focus(); return false; }
+
+            return true;
+        }
+
+        function buildEmbeddedSalesItemRows(items, isEdit) {
+            var rows = "";
+            var businessType = @embeddedBusinessType;
+
+            (items || []).forEach(function (item) {
+                rows += `<tr class="item-row"${isEdit ? "" : ` tabindex="0"`}
+                    data-barcode="${item.barcode}"
+                    data-itemid="${item.id}"
+                    data-name="${item.name}"
+                    data-salt="${item.salt || ''}"
+                    data-gst="${item.gst}"
+                    data-cess="${item.cess}"
+                    ${isEdit ? "" : `data-qty="${item.qty}"`}
+                    data-maxdiscount="${item.maximumdiscount}"
+                    data-allownegative="${item.allowNegative}"
+                    data-minimumqty="${item.minimumQty}"
+                    data-conversion="${item.conversion || 1}">
+                    <td>${item.name}</td>
+                    <td class="salt-col">${item.salt || ''}</td>
+                    ${
+                        businessType === 2
+                        ? `
+                            <td style="display:none;">${item.qty}</td>
+                            <td>${item.availableQty}</td>
+                          `
+                        : `
+                            <td>${item.qty}</td>
+                          `
+                    }
+                </tr>`;
+            });
+
+            return rows;
+        }
+
+        function buildEmbeddedPurchaseItemRows(items, unitFallback) {
+            var rows = "";
+            var businessType = @embeddedBusinessType;
+
+            (items || []).forEach(function (item) {
+                rows += `
+                    <tr class="item-row" tabindex="0"
+                        data-itemid="${item.id}"
+                        data-name="${item.name}"
+                        data-gst="${item.gst}"
+                        data-cgst="${item.cgst}"
+                        data-sgst="${item.sgst}"
+                        data-qty="${item.qty}"
+                        data-cess="${item.cess}"
+                        data-hsn="${item.hsn || ''}">
+                        <td>${item.name}</td>
+                        ${
+                        businessType === 2
+                        ? `
+                            <td style="display:none;">${item.qty}</td>
+                            <td>${item.availableQty}</td>
+                          `
+                        : `
+                            <td>${item.qty}</td>
+                          `
+                        }
+                        <td>${item.unit || unitFallback}</td>
+                    </tr>`;
+            });
+
+            return rows;
+        }
+
+        function getCurrentPageId() {
+            return $("form").not("#ItemMasterForm").find("input[name='Id']").first().val() || 0;
+        }
+
+        function refreshEmbeddedItemSearchAfterSave(response) {
+            var path = window.location.pathname.toLowerCase();
+            var isPurchase = path.indexOf("/purchase/") >= 0;
+            var isEdit = path.indexOf("/edit") >= 0;
+
+            showLoader("Refreshing items...");
+
+            if (isPurchase) {
+                var purchaseType = $("#purchasetype").val();
+
+                $.get('/Purchase/GetAllItems', { purchaseType: purchaseType }, function (items) {
+                    hideLoader();
+
+                    $("#itemTableBody").html(buildEmbeddedPurchaseItemRows(items, isEdit ? "N/A" : ""));
+                    $("#itemSearch").val(response.itemName);
+
+                    if (typeof currentRowForItemModal !== "undefined" && currentRowForItemModal && currentRowForItemModal.length) {
+                        var cgst = parseFloat(response.cgst) || 0;
+                        var sgst = parseFloat(response.sgst) || 0;
+                        var gst = parseFloat(response.gst) || 0;
+                        var cess = parseFloat(response.cess) || 0;
+
+                        if (purchaseType === "Local") {
+                            currentRowForItemModal.find(".cgst").val(cgst);
+                            currentRowForItemModal.find(".sgst").val(sgst);
+                            currentRowForItemModal.find(".scgst").val(cgst + sgst);
+                            currentRowForItemModal.find(".gst").val(0);
+                        } else {
+                            currentRowForItemModal.find(".gst").val(gst);
+                            currentRowForItemModal.find(".cgst").val(0);
+                            currentRowForItemModal.find(".sgst").val(0);
+                            currentRowForItemModal.find(".scgst").val(0);
+                        }
+
+                        currentRowForItemModal.find(".cess").val(cess);
+                        currentRowForItemModal.find(".item-id").val(response.itemId);
+                        currentRowForItemModal.find(".item-input").val(response.itemName);
+                        currentRowForItemModal.find(".hsn-dropdown").val(response.hsnId || response.hsn || 0);
+
+                        if (!isEdit) {
+                            currentRowForItemModal.attr("data-itemdetail-valid", "true");
+                            currentRowForItemModal.attr("data-import-unresolved", "false");
+                            currentRowForItemModal.removeAttr("title");
+                            currentRowForItemModal.find(".item-input").removeClass("border-warning").attr("title", "");
+                        }
+
+                        if (typeof processItemSelection === "function") {
+                            processItemSelection(response.itemId, currentRowForItemModal);
+                        }
+                        if (typeof loadItemSupplierPurchaseInfo === "function") {
+                            loadItemSupplierPurchaseInfo(response.itemId);
+                        }
+                        if (!isEdit && typeof refreshImportResolutionState === "function") {
+                            refreshImportResolutionState();
+                        }
+                    }
+                }).fail(function () {
+                    hideLoader();
+                    toastr.error("Error refreshing items");
+                });
+
+                return;
+            }
+
+            var salesUrl = isEdit
+                ? '/Sales/GetAllItemsForEdit?saleId=' + getCurrentPageId()
+                : '/Sales/GetAllItems';
+
+            $.get(salesUrl, function (items) {
+                hideLoader();
+
+                if (isEdit && items.length > 0) {
+                    window.allowNegativeSetting = items[0].allowNegative === true;
+                }
+
+                $("#itemTableBody").html(buildEmbeddedSalesItemRows(items, isEdit));
+
+                if (typeof itemConversionMap !== "undefined") {
+                    itemConversionMap[response.itemId] = parseFloat(response.conversion) || 1;
+                }
+                if (typeof itemMaxDiscounts !== "undefined") {
+                    itemMaxDiscounts[response.itemId] = parseFloat(response.maximumDiscount) || 0;
+                }
+
+                if (typeof currentRow !== "undefined" && currentRow && currentRow.length) {
+                    currentRow.find(".item-barcode").val(response.itemName);
+                    currentRow.find(".item-id").val(response.itemId);
+                    currentRow.find(".gst").val(response.gst);
+                    currentRow.find(".cess").val(response.cess);
+                    currentRow.attr("data-max-discount", response.maximumDiscount);
+                    currentRow.attr("data-minimum-qty", response.minimumQty);
+                    currentRow.attr("data-conversion", response.conversion);
+
+                    if (isEdit && typeof calculateRow === "function") {
+                        calculateRow(currentRow);
+                    }
+
+                    window.suppressNextBatchNotFound = true;
+                    if (isEdit && typeof processItemId === "function") {
+                        processItemId(response.itemId);
+                    } else if (typeof loadBatches === "function") {
+                        loadBatches(response.itemId);
+                    }
+                }
+
+                $("#itemSearch").val(response.itemName);
+                $(".salt-col").toggle($("#searchBySalt").is(":checked"));
+            }).fail(function () {
+                hideLoader();
+                toastr.error("Error refreshing items");
+            });
+        }
+
+        $("#ItemMasterForm").on("submit", function (e) {
+            e.preventDefault();
+
+            var form = this;
+            var itemMasterId = parseInt($("#ItemMasterId").val(), 10) || 0;
+            // F2-New hidden Id is 0, so treat only Id > 0 as F3 edit.
+            var isEdit = itemMasterId > 0;
+            var inSales = $("#itemMasterContainer").length > 0;
+
+            var url = inSales
+                ? (isEdit ? '/ItemMaster/UpdateItemFromSales' : '/ItemMaster/CreateItemFromSales')
+                : (isEdit ? '/ItemMaster/Edit' : '/ItemMaster/Create');
+
+            if (!validateEmbeddedItemMasterPopup()) {
+                return;
+            }
+
+            var fd = new FormData(form);
+
+            $.ajax({
+        url: url,
+        method: 'POST',
+        data: fd,
+        contentType: false,
+        processData: false
+    }).done(function (res) {
+
+        if (!res) {
+            toastr.error("Empty response from server");
+            return;
+        }
+
+        if (res.success) {
+
+            toastr.success(res.message || "Saved successfully");
+
+            if (inSales) {
+
+                window.stopAutoItemOpen = true;
+                window.suppressNextBatchNotFound = true;
+
+                if (typeof refreshItemSearchAfterCreate === 'function') {
+                    refreshItemSearchAfterCreate(res);
+                } else {
+                    refreshEmbeddedItemSearchAfterSave(res);
+                }
+
+                setTimeout(function () {
+                    window.stopAutoItemOpen = false;
+                }, 1500);
+
+                $("#itemMasterModal").modal("hide");
+
+            } else {
+
+                window.location.href = '/ItemMaster/Index';
+            }
+
+        } else {
+
+            toastr.warning(res.message || "Could not save item");
+        }
+
+        }).fail(function (xhr) {
+
+        var msg = (xhr.responseJSON && xhr.responseJSON.message)
+            ? xhr.responseJSON.message
+            : "Server error while saving item.";
+
+        toastr.error(msg);
+    });
+
+        });
+
+    })();
+</script>

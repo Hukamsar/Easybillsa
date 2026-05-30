@@ -1,0 +1,234 @@
+@using EasyBill.Models.ViewModels
+@using static EasyBill.UI.Controllers.PurchaseController
+@model List<Gstr2DetailVM>
+
+@{
+    ViewData["Title"] = "GSTR2 Details Report";
+
+    var groupTemplate = new List<(string Key, string Label)>
+    {
+        (Gstr2SummaryKeys.B2B, "B2B"),
+        (Gstr2SummaryKeys.B2C_LARGE, "B2C (Large) Invoice"),
+        (Gstr2SummaryKeys.B2C_SMALL, "B2C (Small) Invoice"),
+        (Gstr2SummaryKeys.NIL, "Nil Rated/Exempted"),
+        (Gstr2SummaryKeys.EXPORT, "Export Invoices"),
+        (Gstr2SummaryKeys.ADVANCE, "Tax Liability on Advance")
+    };
+
+    var groupedData = groupTemplate.ToDictionary(
+        g => g.Label,
+        g => g.Key switch
+        {
+            Gstr2SummaryKeys.B2C_SMALL => Model.Where(x => x.Category == Gstr2SummaryKeys.B2C_SMALL || x.Category == Gstr2SummaryKeys.B2BUR).ToList(),
+            Gstr2SummaryKeys.NIL => Model.Where(x => x.Category == Gstr2SummaryKeys.NIL_RATED || x.Category == Gstr2SummaryKeys.EXEMPTED).ToList(),
+            _ => Model.Where(x => x.Category == g.Key).ToList()
+        }
+    );
+
+    int srNo = 1;
+
+    decimal grandInvoice = 0;
+    decimal grandTaxable = 0;
+    decimal grandSgst = 0;
+    decimal grandCgst = 0;
+    decimal grandIgst = 0;
+    decimal grandCess = 0;
+    decimal grandGst = 0;
+}
+
+<style>
+    .row-active td {
+        background-color: #198754 !important;
+        color: #fff !important;
+    }
+
+    .group-header {
+        background-color: #f8f9fa !important;
+        font-weight: 600;
+    }
+</style>
+
+<div class="card mb-3 shadow-sm">
+    <div class="row card-header d-flex justify-content-between">
+        <div class="col-sm-3">GSTR2 Details Report</div>
+
+        <div class="col-sm-3 text-end">
+            <a href="/Purchase/GSTR2Report?ViewType=Summary"
+               class="btn btn-sm btn-secondary">Back</a>
+
+            <button class="btn btn-sm btn-primary"
+                    onclick="exportExcelDetails()">
+                Export
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm" id="detailsTable">
+            <thead class="table-light text-center">
+                <tr>
+                    <th rowspan="2">S.No</th>
+                    <th rowspan="2">Supplier</th>
+                    <th rowspan="2">GSTIN</th>
+                    <th rowspan="2">Date</th>
+                    <th rowspan="2">Bill No</th>
+                    <th rowspan="2">Invoice Value</th>
+                    <th rowspan="2">Type</th>
+                    <th rowspan="2">HSN</th>
+                    <th rowspan="2">Qty</th>
+                    <th rowspan="2">Amount</th>
+                    <th rowspan="2">Taxable</th>
+                    <th colspan="2">SGST</th>
+                    <th colspan="2">CGST</th>
+                    <th colspan="2">IGST</th>
+                    <th rowspan="2">Cess</th>
+                    <th rowspan="2">Total GST</th>
+                </tr>
+                <tr>
+                    <th>%</th>
+                    <th>Amt</th>
+                    <th>%</th>
+                    <th>Amt</th>
+                    <th>%</th>
+                    <th>Amt</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var group in groupedData)
+                {
+                    <tr class="group-header">
+                        <td colspan="19">@group.Key</td>
+                    </tr>
+
+                    var invoiceGroups = group.Value.GroupBy(x => x.PurchaseId);
+
+                    foreach (var invoice in invoiceGroups)
+                    {
+                        bool isFirstInvoiceRow = true;
+                        grandInvoice += invoice.First().InvoiceValue;
+
+                        var hsnGroups = invoice.GroupBy(x => string.IsNullOrWhiteSpace(x.HSN) ? "-" : x.HSN);
+
+                        foreach (var hsnGroup in hsnGroups)
+                        {
+                            var first = hsnGroup.First();
+
+                            var qty = hsnGroup.Sum(x =>
+                            {
+                                if (decimal.TryParse(x.QtyDisplay, out var parsedQty))
+                                {
+                                    return parsedQty;
+                                }
+
+                                return 0m;
+                            });
+
+                            var amount = hsnGroup.Sum(x => x.Amount);
+                            var taxable = hsnGroup.Sum(x => x.Taxable);
+                            var sgst = hsnGroup.Sum(x => x.SGST);
+                            var cgst = hsnGroup.Sum(x => x.CGST);
+                            var igst = hsnGroup.Sum(x => x.IGST);
+                            var cess = hsnGroup.Sum(x => x.Cess);
+                            var totalGst = hsnGroup.Sum(x => x.TotalGST);
+
+                            grandTaxable += taxable;
+                            grandSgst += sgst;
+                            grandCgst += cgst;
+                            grandIgst += igst;
+                            grandCess += cess;
+                            grandGst += totalGst;
+
+                            <tr class="detail-row">
+                                @if (isFirstInvoiceRow)
+                                {
+                                    <td>@(srNo++)</td>
+                                    <td>@first.SupplierName</td>
+                                    <td>@(string.IsNullOrWhiteSpace(first.GSTIN) ? "-" : first.GSTIN)</td>
+                                    <td>@first.BillDate?.ToString("dd-MM-yyyy")</td>
+                                    <td>@first.BillNo</td>
+                                    <td class="text-end">@first.InvoiceValue.ToString("0.00")</td>
+                                    <td>@first.SupplyType</td>
+
+                                    isFirstInvoiceRow = false;
+                                }
+                                else
+                                {
+                                    <td colspan="7"></td>
+                                }
+
+                                <td>@first.HSN</td>
+                                <td class="text-end">@qty.ToString("0.##")</td>
+                                <td class="text-end">@amount.ToString("0.00")</td>
+                                <td class="text-end">@taxable.ToString("0.00")</td>
+                                <td class="text-end">@first.SGSTPer.ToString("0.##")</td>
+                                <td class="text-end">@sgst.ToString("0.00")</td>
+                                <td class="text-end">@first.CGSTPer.ToString("0.##")</td>
+                                <td class="text-end">@cgst.ToString("0.00")</td>
+                                <td class="text-end">@first.IGSTPer.ToString("0.##")</td>
+                                <td class="text-end">@igst.ToString("0.00")</td>
+                                <td class="text-end">@cess.ToString("0.00")</td>
+                                <td class="text-end">@totalGst.ToString("0.00")</td>
+                            </tr>
+                        }
+                    }
+                }
+            </tbody>
+
+            <tfoot>
+                <tr class="table-warning fw-bold">
+                    <td colspan="5">Total</td>
+                    <td class="text-end">@Math.Round(grandInvoice, 2)</td>
+                    <td colspan="4"></td>
+                    <td class="text-end">@Math.Round(grandTaxable, 2)</td>
+                    <td></td>
+                    <td class="text-end">@Math.Round(grandSgst, 2)</td>
+                    <td></td>
+                    <td class="text-end">@Math.Round(grandCgst, 2)</td>
+                    <td></td>
+                    <td class="text-end">@Math.Round(grandIgst, 2)</td>
+                    <td class="text-end">@Math.Round(grandCess, 2)</td>
+                    <td class="text-end">@Math.Round(grandGst, 2)</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function exportExcelDetails() {
+            const params = new URLSearchParams(window.location.search);
+            params.set('ViewType', 'Details');
+            window.location.href = '/Purchase/ExportGSTR2Excel?' + params.toString();
+        }
+
+        let detailIndex = 0;
+
+        function highlightRow() {
+            let rows = $(".detail-row");
+            rows.removeClass("row-active");
+            if (rows.length > 0) {
+                $(rows[detailIndex]).addClass("row-active");
+            }
+        }
+
+        $(document).ready(function () {
+            highlightRow();
+        });
+
+        $(document).on("keydown", function (e) {
+            let rows = $(".detail-row");
+
+            if (e.key === "ArrowDown") {
+                if (detailIndex < rows.length - 1) detailIndex++;
+                highlightRow();
+            }
+
+            if (e.key === "ArrowUp") {
+                if (detailIndex > 0) detailIndex--;
+                highlightRow();
+            }
+        });
+    </script>
+}

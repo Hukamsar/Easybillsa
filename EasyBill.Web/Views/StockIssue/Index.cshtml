@@ -1,0 +1,92 @@
+﻿@model IEnumerable<StockIssue>
+
+@{
+    ViewData["Title"] = "Index";
+}
+<style>
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background:#2b6ac9">
+        <h6 class="mb-0">
+            Stock Issue
+        </h6>
+    </div>
+</div>
+
+<p>
+    <a asp-action="Create" class="btn mb-1 text-light float-end" style="background:#2b6ac9"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table class="table" id="stockIssueTbl">
+    <thead class="table-primary">
+        <tr>
+          
+            <th>
+                @Html.DisplayNameFor(model => model.ChallanNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ChallanDate)
+            </th>
+            <th>
+                Customer
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.MobileNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Address)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+           
+            <td>
+                @Html.DisplayFor(modelItem => item.ChallanNo)
+            </td>
+            <td>
+              @item.ChallanDate?.ToString("dd/MM/yyyy")
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Customers.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.MobileNo)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Address)
+            </td>
+            <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="StockIssue" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="StockIssue" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#stockIssueTbl").DataTable({
+                "order": [[2, "asc"]]
+            });
+        });
+    </script>
+}

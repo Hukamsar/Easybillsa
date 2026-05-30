@@ -1,0 +1,156 @@
+@{
+    ViewData["Title"] = "Wallet Recharge";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .manual-recharge-box { border: 1px dashed #cbd5e1; border-radius: 10px; padding: 10px; background: #f8fafc; text-align: center; }
+    .wallet-quick-amount { min-width: 88px; }
+</style>
+
+<div class="container py-3" style="max-width:800px;">
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="mb-3">Message Charge Settings</h6>
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label">SMS Charge</label>
+                    <input type="number" min="0" step="0.01" class="form-control" readonly id="smsCharge" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Email Charge</label>
+                    <input type="number" min="0" step="0.01" class="form-control" readonly id="emailCharge" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">WhatsApp Charge</label>
+                    <input type="number" min="0" step="0.01" class="form-control" readonly id="whatsappCharge" />
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="smsChargeActive" />
+                        <label class="form-check-label" for="smsChargeActive">
+                            SMS Charge Active
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="emailChargeActive" />
+                        <label class="form-check-label" for="emailChargeActive">
+                            Email Charge Active
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="whatsappChargeActive" />
+                        <label class="form-check-label" for="whatsappChargeActive">
+                            WhatsApp Charge Active
+                        </label>
+                    </div>
+                </div>
+
+
+                <div class="col-md-6 d-flex align-items-center">
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" id="walletActive" />
+                        <label class="form-check-label" for="walletActive">Wallet Active</label>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex align-items-end justify-content-end">
+                    <button type="button" class="btn btn-outline-primary" id="btnSaveWalletSettings">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+                <h5 class="mb-0">Wallet Recharge</h5>
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        id="btnWalletOpenHistory"
+                        data-bs-toggle="modal"
+                        data-bs-target="#walletHistoryModal">
+                    History
+                </button>
+            </div>
+            <div class="text-muted small mb-3" id="walletInfo">Loading wallet...</div>
+
+            <div class="mb-2">
+                <label class="form-label">Amount</label>
+                <input type="number" min="1" step="0.01" class="form-control" id="walletRechargeAmount" placeholder="Enter amount" />
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary wallet-quick-amount" data-amount="100">Rs.100</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary wallet-quick-amount" data-amount="200">Rs.200</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary wallet-quick-amount" data-amount="500">Rs.500</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary wallet-quick-amount" data-amount="1000">Rs.1000</button>
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">Mode</label>
+                <select class="form-select" id="walletRechargeMode">
+                    <option value="gateway" selected>Gateway</option>
+                    <option value="manual">Manual</option>
+                </select>
+            </div>
+
+            <div class="mb-2 d-none" id="walletManualSection">
+                <label class="form-label">Reference No</label>
+                <input type="text" class="form-control" id="walletManualReferenceNo" placeholder="Enter payment reference no" />
+                <div class="manual-recharge-box mt-2">
+                    <div class="small text-muted mb-1">Manual Payment QR</div>
+                    <img src="~/assets/img/hukamsarbarcode.png" alt="Recharge QR Code" style="max-width:170px; width:100%; height:auto;" />
+                    <div class="small text-muted mt-1">Manual mode select karne par QR show hota hai.</div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Remarks</label>
+                <input type="text" class="form-control" id="walletRechargeRemarks" placeholder="Optional note" />
+            </div>
+
+            <button type="button" class="btn btn-primary w-100" id="btnWalletProceedRecharge">Proceed</button>
+        </div>
+    </div>
+
+</div>
+
+<div class="modal fade" id="walletHistoryModal" tabindex="-1" aria-labelledby="walletHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="walletHistoryModalLabel">Recharge History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Mode</th>
+                                <th>Reference</th>
+                                <th>Note</th>
+                            </tr>
+                        </thead>
+                        <tbody id="walletHistoryBody">
+                            <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="~/js/wallet/recharge.js" asp-append-version="true"></script>
+}

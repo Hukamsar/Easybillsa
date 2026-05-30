@@ -1,0 +1,248 @@
+@using EasyBill.Models.ViewModels
+@model Gstr3ReportVM
+
+<h3> GSTR3B Report</h3>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-funnel-fill text-primary me-1"></i>
+        GSTR3B Filters
+    </div>
+
+    <div class="card-body">
+        <form id="gstr3FilterForm" method="get">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">Start Date</label>
+                        <div class="col-7">
+                            <input type="date"
+                                   name="StartBillDate"
+                                   value="@(Context.Request.Query["StartBillDate"].Any()
+                                                   ? Context.Request.Query["StartBillDate"].ToString()
+                                                   : ViewBag.StartBillDate)"
+                                   class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">End Date</label>
+                        <div class="col-7">
+                            <input type="date"
+                                   name="EndBillDate"
+                                   value="@(Context.Request.Query["EndBillDate"].Any()
+                                                   ? Context.Request.Query["EndBillDate"].ToString()
+                                                   : ViewBag.EndBillDate)"
+                                   class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 d-flex align-items-center">
+                    <button type="submit" class="btn btn-sm btn-primary me-1">Search</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="clearFilters()">Clear</button>
+                </div>
+
+                <div class="col-md-3 d-flex align-items-center justify-content-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="exportExcel()">Excel</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportCsv()">CSV</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-3">
+        <div class="text-center fw-bold">Form GSTR-3B</div>
+
+        <div class="row mt-2 small">
+            <div class="col-md-6"><strong>GSTIN</strong> : @Model.GSTIN</div>
+            <div class="col-md-3"><strong>Year</strong> : @Model.Year</div>
+            <div class="col-md-3"><strong>Month</strong> : @Model.Month</div>
+        </div>
+        <div class="small mb-2"><strong>Legal Name of the registered person</strong> : @Model.LegalName</div>
+
+        <div class="table-responsive mb-3">
+            <div class="fw-semibold mb-1">3.1 Details of Outward Supplies and Inward supplies liable to reverse charges</div>
+            <table class="table table-bordered table-sm mb-0 align-middle">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th>Name of Supplies</th>
+                        <th>Total Taxable Value</th>
+                        <th>Integrated Tax</th>
+                        <th>Central Tax</th>
+                        <th>State/UT Tax</th>
+                        <th>Cess</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Section31Rows)
+                    {
+                        <tr>
+                            <td>@row.Code @row.Description</td>
+                            <td class="text-end">@row.TaxableValue.ToString("F2")</td>
+                            <td class="text-end">@row.IntegratedTax.ToString("F2")</td>
+                            <td class="text-end">@row.CentralTax.ToString("F2")</td>
+                            <td class="text-end">@row.StateUtTax.ToString("F2")</td>
+                            <td class="text-end">@row.Cess.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-responsive mb-3">
+            <div class="fw-semibold mb-1">3.2 Of the supplies shown in 3.1(a), details of inter-state supplies made to unregistered persons, composition taxable persons and UIN holders</div>
+            <table class="table table-bordered table-sm mb-0 align-middle">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th>Place of Supply (State/UT)</th>
+                        <th>Total Taxable Value</th>
+                        <th>Amount of Integrated Tax</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Section32Rows)
+                    {
+                        <tr>
+                            <td>@row.PlaceOfSupply</td>
+                            <td class="text-end">@row.TotalTaxableValue.ToString("F2")</td>
+                            <td class="text-end">@row.AmountOfIntegratedTax.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-responsive mb-3">
+            <div class="fw-semibold mb-1">4. Eligible ITC</div>
+            <table class="table table-bordered table-sm mb-0 align-middle">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th>Details</th>
+                        <th>Integrated Tax</th>
+                        <th>Central Tax</th>
+                        <th>State/UT Tax</th>
+                        <th>Cess</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Section4Rows)
+                    {
+                        <tr class="@(row.IsHeader ? "table-light fw-bold" : string.Empty)">
+                            <td>@row.Code @row.Details</td>
+                            <td class="text-end">@row.IntegratedTax.ToString("F2")</td>
+                            <td class="text-end">@row.CentralTax.ToString("F2")</td>
+                            <td class="text-end">@row.StateUtTax.ToString("F2")</td>
+                            <td class="text-end">@row.Cess.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-responsive mb-3">
+            <div class="fw-semibold mb-1">5. Values of Exempt, Nil-rated and Non-GST inward supplies</div>
+            <table class="table table-bordered table-sm mb-0 align-middle">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th>Nature of Supplies</th>
+                        <th>Inter-State Supplies</th>
+                        <th>Intra-State Supplies</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Section5Rows)
+                    {
+                        <tr>
+                            <td>@row.NatureOfSupplies</td>
+                            <td class="text-end">@row.InterStateSupplies.ToString("F2")</td>
+                            <td class="text-end">@row.IntraStateSupplies.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-responsive mb-3">
+            <div class="fw-semibold mb-1">6.1 Payment of Tax</div>
+            <table class="table table-bordered table-sm mb-0 align-middle">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th>Description</th>
+                        <th>Tax Payable</th>
+                        <th>Paid through ITC - Integrated Tax</th>
+                        <th>Paid through ITC - Central Tax</th>
+                        <th>Paid through ITC - State/UT Tax</th>
+                        <th>Paid through ITC - Cess</th>
+                        <th>Tax Paid TDS/TCS</th>
+                        <th>Tax Paid in Cash</th>
+                        <th>Interest</th>
+                        <th>Late Fee</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Section61Rows)
+                    {
+                        <tr>
+                            <td>@row.Description</td>
+                            <td class="text-end">@row.TaxPayable.ToString("F2")</td>
+                            <td class="text-end">@row.PaidThroughItcIntegratedTax.ToString("F2")</td>
+                            <td class="text-end">@row.PaidThroughItcCentralTax.ToString("F2")</td>
+                            <td class="text-end">@row.PaidThroughItcStateUtTax.ToString("F2")</td>
+                            <td class="text-end">@row.PaidThroughItcCess.ToString("F2")</td>
+                            <td class="text-end">@row.TaxPaidTdsTcs.ToString("F2")</td>
+                            <td class="text-end">@row.TaxPaidCash.ToString("F2")</td>
+                            <td class="text-end">@row.Interest.ToString("F2")</td>
+                            <td class="text-end">@row.LateFee.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-responsive mb-2">
+            <div class="fw-semibold mb-1">6.2 TDS/TCS Credit</div>
+            <table class="table table-bordered table-sm mb-0 align-middle">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th>Details</th>
+                        <th>Integrated Tax</th>
+                        <th>Central Tax</th>
+                        <th>State/UT Tax</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Section62Rows)
+                    {
+                        <tr>
+                            <td>@row.Details</td>
+                            <td class="text-end">@row.IntegratedTax.ToString("F2")</td>
+                            <td class="text-end">@row.CentralTax.ToString("F2")</td>
+                            <td class="text-end">@row.StateUtTax.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    function exportExcel() {
+        const params = new URLSearchParams(window.location.search);
+        window.location.href = '/Purchase/ExportGSTR3Excel?' + params.toString();
+    }
+
+    function exportCsv() {
+        const params = new URLSearchParams(window.location.search);
+        window.location.href = '/Purchase/ExportGSTR3Csv?' + params.toString();
+    }
+
+    function clearFilters() {
+        window.location.href = window.location.pathname;
+    }
+</script>

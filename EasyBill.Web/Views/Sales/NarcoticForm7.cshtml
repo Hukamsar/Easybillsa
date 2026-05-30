@@ -1,0 +1,285 @@
+﻿@model EasyBill.Models.ViewModels.SalesVM
+
+<style>
+    body {
+        font-family: Arial;
+        font-size: 12px;
+        color: #000;
+    }
+
+    .header {
+        text-align: center;
+        background: #2b6ac9;
+        color: white;
+        padding: 6px;
+        margin-bottom: 6px;
+    }
+
+        .header h2 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .header small {
+            font-size: 11px;
+        }
+
+    .box {
+        border: 1px solid #000;
+        padding: 6px;
+        margin-bottom: 6px;
+    }
+
+    .flex {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 6px;
+    }
+
+    th, td {
+        border: 1px solid #000;
+        padding: 5px;
+        font-size: 12px;
+    }
+
+    th {
+        background: #2b6ac9;
+        color: white;
+        text-align: center;
+    }
+
+    .text-end {
+        text-align: right;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .total {
+        font-weight: bold;
+        background: #f2f6ff;
+    }
+
+    .signature {
+        margin-top: 25px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .sign-box {
+        width: 45%;
+        text-align: center;
+    }
+
+    .line {
+        border-top: 1px solid #000;
+        margin-top: 25px;
+        padding-top: 3px;
+        font-size: 11px;
+    }
+
+    .note {
+        font-size: 10px;
+        margin-top: 10px;
+    }
+
+    .input-line {
+        border: none;
+        border-bottom: 1px solid black;
+        outline: none;
+        font-size: 12px;
+    }
+
+    .print-btn {
+        text-align: right;
+        margin-bottom: 8px;
+    }
+
+        .print-btn button {
+            background: #2b6ac9;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+            .print-btn button:hover {
+                background: #1f4fa3;
+            }
+
+    /* 🔥 PRINT ONLY FORM (UPDATED) */
+    @@media print {
+        /* Page margins set karein */
+        @@page {
+            margin: 5mm;
+            size: A4;
+        }
+        /* Background colors ko force karein print mein */
+        body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            margin: 0;
+        }
+
+        .header, th {
+            background-color: #2b6ac9 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+
+        .total {
+            background-color: #f2f6ff !important;
+            -webkit-print-color-adjust: exact !important;
+        }
+        /* Body aur Layout ko hide karein */
+        body * {
+            visibility: hidden;
+        }
+        /* Sirf Print Area ko visible karein */
+        #printArea, #printArea * {
+            visibility: visible;
+        }
+        /* Print Area ko proper position par set karein */
+        #printArea {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        /* Print button ko hide karein */
+        .print-btn {
+            display: none !important;
+        }
+    }
+</style>
+
+<!-- PRINT BUTTON -->
+<div class="print-btn">
+    <button onclick="window.print()">🖨️ Print</button>
+</div>
+
+<!-- PRINT AREA START -->
+<div id="printArea">
+
+    <!-- HEADER -->
+    <div class="header">
+        <h2>NARCOTIC FORM - 7</h2>
+        <small>(Rule 35, 53, 64, 67A)</small>
+    </div>
+
+    <!-- CONSIGNOR / CONSIGNEE -->
+    <div class="box">
+
+        <div>
+            <b>Name and Address of Consignor:</b><br />
+            @Model.Tenantname
+
+            @if (!string.IsNullOrEmpty(Model.TenantAddress))
+            {
+                <br />
+                @Model.TenantAddress
+            }
+        </div>
+
+        <br />
+
+        <div>
+            <b>Name and Address of Consignee:</b><br />
+            @Model.CustomerName
+
+            @if (!string.IsNullOrEmpty(Model.Address))
+            {
+                <br />
+                @Model.Address
+            }
+        </div>
+
+    </div>
+    <!-- INVOICE -->
+    <div class="box flex">
+        <div><b>Invoice No:</b> @Model.BillNo</div>
+        <div><b>Date:</b> @Model.BillDate?.ToString("dd-MM-yyyy")</div>
+    </div>
+
+    <!-- TABLE -->
+    <table>
+        <thead>
+            <tr>
+                <th style="width:5%">S.No</th>
+                <th>Item</th>
+                <th>Packing</th>
+                <th>Qty</th>
+                <th>Batch</th>
+                <th>MFD</th>
+                <th>EXP</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                int sr = 1;
+            }
+
+            @foreach (var item in Model.SalesItemVMs)
+            {
+                <tr>
+                    <td class="text-center">@sr</td>
+                    <td>@item.ItemName</td>
+                    <td class="text-center">@item.Packing</td>
+                    <td class="text-end">@item.Qty</td>
+                    <td class="text-center">@item.Batch</td>
+                    <td class="text-center">@item.Mfg</td>
+                    <td class="text-center">@item.Expirydate?.ToString("MM/yy")</td>
+                </tr>
+                sr++;
+            }
+
+            <tr class="total">
+                <td colspan="3">Total</td>
+                <td class="text-end">@Model.SalesItemVMs.Sum(x => x.Qty)</td>
+                <td colspan="3"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- RECEIPT -->
+    <div class="box">
+        <b>Receipt Details:</b><br /><br />
+
+       Time: 
+        <input type="text" value="@Model.BillDate?.ToString("hh:mm tt")" class="input-line" style="width:120px;" />
+
+        &nbsp;&nbsp;&nbsp;
+
+        Remark:
+        <input type="text" class="input-line" style="width:250px;" />
+    </div>
+
+    <!-- SIGNATURE -->
+    <div class="signature">
+        <div class="sign-box">
+            <div class="line">Consignee Signature</div>
+        </div>
+
+        <div class="sign-box">
+            <div class="line">Consignor Signature</div>
+        </div>
+    </div>
+
+    <!-- NOTE -->
+    <div class="note">
+        <b>Note:</b><br />
+        1. This form shall be kept for two years from the last date of consumption.<br />
+        2. This shall be produced for verification under NDPS Act.
+    </div>
+
+</div>

@@ -1,0 +1,59 @@
+﻿<div id="SubCategoryPopup" class="popup">
+	<div class="popup-content">
+		<h2>Add New SubCategory</h2>
+		<form id="Subcategoryforms">
+			<label>Sub Category Name:</label>
+			<input type="text" id="subcategory" class="form-control" required/>
+            <label>Select Category:</label>
+            <select  id="categoryDropdown" class="form-control">
+                <option value="" disabled selected>Loading...</option>
+            </select>
+			<br/>
+			<button type="button" class="btn btn-success" onclick="saveSubCategory()">Save</button>
+			<button type="button" class="btn btn-danger" onclick="closesubcategory()">Close</button>
+		</form>
+	</div>
+</div>
+<style>
+    .popup {
+        display: none;
+        position: fixed;
+        top: 20%;/* 
+        left: 35%;
+        width: 30%; */
+        background: white;
+        padding: 20px;
+        box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+        border-radius: 5px;
+        z-index: 1000;
+    }
+
+    .popup-content {
+        text-align: center;
+    }
+</style>
+<script>
+        document.addEventListener("DOMContentLoaded", function () {
+            debugger;
+        loadCategories();
+    });
+
+    function loadCategories() {
+        debugger;
+        fetch("/ItemMaster/GetCategories") // ASP.NET Core API call
+            .then(response => response.json())
+            .then(data => {
+                let dropdown = document.getElementById("categoryDropdown");
+                dropdown.innerHTML = '<option value="" disabled selected>Select Category</option>';
+
+                data.forEach(category => {
+                    let option = document.createElement("option");
+                    option.value = category.value; // Ensure your API returns 'value' and 'text'
+                    option.textContent = category.text;
+                    dropdown.appendChild(option);
+                });
+            })
+            .catch(error => console.error("Error fetching categories:", error));
+    }
+
+</script>

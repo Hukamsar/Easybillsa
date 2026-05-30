@@ -1,0 +1,145 @@
+﻿@model List<EasyBill.Models.ViewModels.ItemBatchwiseSalesVM>
+@{
+    decimal totalQty = ViewBag.TotalQty ?? 0;
+    decimal totalMrp = ViewBag.TotalMrp ?? 0;
+    decimal totalRate = ViewBag.TotalRate ?? 0;
+    decimal totalAmount = ViewBag.TotalAmount ?? 0;
+}
+
+<style>
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+<div class="card-header text-white py-2 d-flex align-items-center"
+     style="background:#2b6ac9">
+
+    <span class="fw-bold">
+        Item Wise Batch Wise Sales Report
+    </span>
+    <span class="ms-auto">
+        Total Qty:
+        <span class="fw-bold">
+            @((Model != null && Model.Any())
+                        ? Model.Sum(x => x.Qty).ToString("0.0")
+                        : "0.0")
+        </span> |
+
+        Total Amount: ₹
+        <span class="fw-bold">
+            @((Model != null && Model.Any())
+                        ? Model.Sum(x => x.Amount).ToString("N2")
+                        : "0.00")
+        </span>
+    </span>
+</div>
+<form method="get" class="card mb-3">
+    <div class="row p-3">
+
+        <div class="col-md-2">
+            <label>From Date</label>
+            <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control" />
+        </div>
+
+        <div class="col-md-2">
+            <label>To Date</label>
+            <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control" />
+        </div>
+
+        <div class="col-md-2">
+            <label>Company</label>
+            <select name="companyId" class="form-control"
+                    asp-items="@(ViewBag.CompanyList as SelectList)">
+                <option value="">All</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label>Division</label>
+            <select name="divisionId" class="form-control"
+                    asp-items="@(ViewBag.DivisionList as SelectList)">
+                <option value="">All</option>
+            </select>
+        </div>
+
+        <div class="col-md-2 text-end mt-3">
+            <button class="btn text-light" style="background:#2b6ac9">Search</button>
+        </div>
+       
+    </div>
+</form>
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="ExportItemWiseBatchWiseSales"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-companyId="@Context.Request.Query["companyId"]"
+           asp-route-divisionId="@Context.Request.Query["divisionId"]">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+        <a asp-action="ExportItemWiseBatchWiseSalesPdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-companyId="@Context.Request.Query["companyId"]"
+           asp-route-divisionId="@Context.Request.Query["divisionId"]">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+    </div>
+</div>
+<table id="itemWiseBatchTbl" class="table table-bordered table-striped">
+    <thead class="table-primary">
+        <tr>
+            <th>Bill No</th>
+            <th>Bill Date</th>
+            <th>Item Name</th>
+            <th>Batch No</th>
+            <th class="text-end">Qty</th>
+        @*     <th class="text-end">MRP</th>
+            <th class="text-end">Rate</th> *@
+            <th class="text-end">Amount</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.BillNo</td>
+                <td>@item.BillDate</td>
+                <td>@item.ItemName</td>
+                <td>@item.BatchNo</td>
+               @*  <td class="text-end">@item.Qty.ToString("0.0").Replace("."," : ")</td> *@
+                <td class="text-end">@item.StockDisplay</td>
+               @*  <td class="text-end">@item.Mrp.ToString("0.00")</td>
+                <td class="text-end">@item.Rate.ToString("0.00")</td> *@
+                <td class="text-end">@item.Amount.ToString("0.00")</td>
+            </tr>
+        }
+    </tbody>
+    <tfoot class="table-secondary fw-bold">
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="text-end">TOTAL</td>
+            <td class="text-end">@totalQty.ToString("0.00")</td>
+           @*  <td class="text-end">@totalMrp.ToString("0.00")</td>
+            <td class="text-end">@totalRate.ToString("0.00")</td> *@
+            <td class="text-end">@totalAmount.ToString("0.00")</td>
+        </tr>
+    </tfoot>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#itemWiseBatchTbl").DataTable({
+                "order": [[1, "desc"]],
+                "columnDefs": [
+                    { "orderable": false, "targets": "_all" } 
+                ]
+            });
+        });
+     </script>
+        }

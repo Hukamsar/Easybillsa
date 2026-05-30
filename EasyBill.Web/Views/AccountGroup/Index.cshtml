@@ -1,0 +1,205 @@
+﻿@using EasyBill.Models.ViewModels
+@model AccountGroupVM
+<style>
+    table.table thead th {
+        background-color: #2b6ac9 !important;
+        color: #fff !important;
+    }
+
+    table.table thead tr {
+        background-color: #2b6ac9 !important;
+    }
+    .swal2-confirm,
+    .swal2-cancel {
+        border-radius: 8px !important;
+        padding: 8px 20px !important;
+        font-weight: 500 !important;
+        transition: all 0.25s ease-in-out !important;
+        margin: 0 8px !important;
+    }
+
+        .swal2-confirm:hover {
+            background-color: #157347 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(25, 135, 84, 0.4);
+        }
+
+        .swal2-cancel:hover {
+            background-color: #bb2d3b !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(220, 53, 69, 0.4);
+        }
+
+        .swal2-confirm:focus,
+        .swal2-cancel:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.4) !important;
+        }
+</style>
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        <h5 class="mb-0">Add AccountGroup</h5>
+    </div>
+
+    <div class="card-body">
+        <form method="post" asp-controller="AccountGroup" asp-action="Create" id="AccountGroupForm">
+            <div class="row">
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="Name" class="me-2 mb-0" style="width: 100px;">
+                        Name <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" asp-for="Name" class="form-control form-control-sm" />
+                </div>
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="ParentId" class="me-2 mb-0" style="width: 100px;">
+                        Under <span class="text-danger">*</span>
+                    </label>
+                    <select asp-for="ParentId" asp-items="@ViewBag.ParentList" class="form-control form-control-sm">
+                        <option>select</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="IsActive" class="me-2 mb-0" style="width:100px;">
+                        Status
+                    </label>
+                    <div class="form-check">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label class="form-check-label">Active</label>
+                    </div>
+                </div>
+
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue mt-3">
+                Save
+            </button>
+        </form>
+    </div>
+</div>
+
+<table class="table">
+    <thead class="custom-header">
+        <tr>
+            <th>Name</th>
+            <th>Under</th>
+            <th>IsActive</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.AccountGroups)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                <td>@Html.DisplayFor(modelItem => item.ParentGroup.Name)</td>
+                <td>
+                    @if (item.IsActive)
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger">Inactive</span>
+                    }
+                </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+
+                        <a asp-controller="AccountGroup"
+                           asp-action="Edit"
+                           asp-route-id="@item.Id"
+                           title="Edit">
+                            <span class="badge bg-warning">
+                                <i class="bi bi-pencil-square text-dark"></i>
+                            </span>
+                        </a>
+
+                        <a asp-controller="AccountGroup"
+                           asp-action="Delete"
+                           asp-route-id="@item.Id"
+                           class="btn-delete"
+                           title="Delete"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <span class="badge bg-danger">
+                                <i class="bi bi-trash-fill text-white"></i>
+                            </span>
+                        </a>
+
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<script>
+    $(document).ready(function () {
+
+        let isSubmitting = false;
+
+        $("#AccountGroupForm").on("submit", function (e) {
+
+            if (isSubmitting) return false;
+
+            e.preventDefault();
+
+            let form = this;
+            let name = $("#Name").val().trim();
+            let parentId = $("#ParentId").val();
+
+            // Name validation
+            if (name === "") {
+                Swal.fire("Error", "Please enter Name!", "error");
+                return;
+            } 
+            // Confirm Save
+            Swal.fire({
+                title: 'Confirm Save?',
+                text: 'Do you want to save this company?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Save',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#dc3545',
+                reverseButtons: true,
+                focusConfirm: true,
+                buttonsStyling: true
+            }).then((result) => {
+
+                if (!result.isConfirmed) return;
+
+                // Duplicate Check
+                $.ajax({
+                    url: "/AccountGroup/CheckDuplicate",
+                    type: "GET",
+                    data: { name: name },
+                    success: function (response) {
+
+                        if (response.exists) {
+                            Swal.fire("Duplicate!", "Account Group already exists!", "warning");
+                        }
+                        else {
+                            isSubmitting = true;
+
+                            // Prevent re-trigger
+                            $("#AccountGroupForm").off("submit");
+                            form.submit();
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Error checking duplicate!", "error");
+                    }
+                });
+
+            });
+
+        });
+
+    });
+</script>

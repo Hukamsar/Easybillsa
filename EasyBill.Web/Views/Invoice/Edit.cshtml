@@ -1,0 +1,423 @@
+﻿@model EasyBill.Models.ViewModels.InvoiceVM
+@{
+	ViewData["Title"] = "Edit";
+}
+
+<div class="container mt-4">
+	<div class="card shadow-sm">
+		<div class="card-header ">
+			<h5 class="mb-0">Edit</h5>
+		</div>
+		<div class="card-body">
+			<form asp-action="Edit">
+				<input type="hidden" asp-for="Id" />
+				<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+				<div class="row">
+					<div class="col-md-6">
+						<div class="row mb-2">
+							<label asp-for="CustomerName" class="col-md-4 col-form-label text-start small">CustomerName *</label>
+							<div class="col-md-4">
+								<select asp-for="CustomerName" asp-items="@ViewBag.Customer" class="form-control form-control-sm"></select>
+								<span asp-validation-for="CustomerId" class="text-danger small"></span>
+							</div>
+						</div>
+
+						<div class="row mb-2">
+							<label asp-for="PhoneNo" class="col-md-4 col-form-label text-start small">Phone No</label>
+							<div class="col-md-4">
+								<input asp-for="PhoneNo" type="text" class="form-control form-control-sm" />
+								<span asp-validation-for="PhoneNo" class="text-danger small"></span>
+							</div>
+						</div>
+						<div class="row mb-2">
+							<label asp-for="Address" class="col-md-4 col-form-label text-start small">Address</label>
+							<div class="col-md-4">
+								<input asp-for="Address" type="text" class="form-control form-control-sm" />
+								<span asp-validation-for="Address" class="text-danger small"></span>
+							</div>
+						</div>
+
+					</div>
+					<div class="col-md-6">
+						<div class="row mb-2">
+							<label asp-for="InvoiceNo" class="col-md-4 col-form-label text-start small">Invoice No *</label>
+							<div class="col-md-4">
+								<input asp-for="InvoiceNo" type="text" class="form-control form-control-sm" />
+								<span asp-validation-for="InvoiceNo" class="text-danger small"></span>
+							</div>
+						</div>
+						<div class="row mb-2">
+							<label asp-for="InvoiceDate" class="col-md-4 col-form-label text-start small">Invoice Date </label>
+							<div class="col-md-4">
+								<input type="date" Edit asp-for="InvoiceDate" class="form-control form-control-sm" />
+								<span asp-validation-for="InvoiceDate" class="text-danger small"></span>
+							</div>
+						</div>
+					</div>
+					<hr class="mt-2" />
+					<div style="overflow-x: auto; width: 100%;">
+						<table class="table table-bordered table-striped" style="min-width: 1300px;">
+						<thead class="table">
+							<tr>
+								<th hidden>Id</th>
+								<th style="width: 20%;">Item</th>
+								<th style="width: 7%;">Qty</th>
+								<th style="width: 7%;">Unit</th>
+								<th style="width: 10%;">Rate</th>
+								<th style="width: 7%;">Discount</th>
+								<th style="width: 10%;">HsnCode</th>
+								<th style="width: 7%;">Gst</th>
+								<th style="width: 10%;">GstAmount</th>
+								<th style="width: 10%;">Amount</th>
+								<th style="width: 18%;">Total Amount</th>
+								<th style="width: 10%;">Actions</th>
+							</tr>
+						</thead>
+						<tbody id="invoicetablebody">
+							@if (Model.invoiceItemVms != null)
+							{
+								for (int i = 0; i < Model.invoiceItemVms.Count; i++)
+								{
+									<tr>
+										<td hidden><input type="hidden" asp-for="@Model.invoiceItemVms[@i].Id" /></td>
+
+									    <td style="width: 20%;">
+											<select asp-for="@Model.invoiceItemVms[@i].ItemId" class="form-control item-name-dropdown">
+												<option selected disabled>Select Item</option>
+												@foreach (var item in ViewBag.Itemdata)
+												{
+													<option value="@item.Value">
+														@item.Text
+													</option>
+												}
+											</select>
+										</td>
+										<td style="width: 7%;"><input type="number" asp-for="@Model.invoiceItemVms[i].Quantity" class="form-control quantity-input" /></td>
+											<td style="width: 7%;"><input type="text" asp-for="@Model.invoiceItemVms[i].Unit" class="form-control unit-input" /></td>
+											<td style="width: 10%;"><input type="number" asp-for="@Model.invoiceItemVms[i].UnitPrice" class="form-control rate-input" /></td>
+											<td style="width: 7%;"><input type="number" asp-for="@Model.invoiceItemVms[i].Discount" class="form-control discount-input" /></td>
+											<td style="width: 10%;"><input type="text" asp-for="@Model.invoiceItemVms[i].HsnCode" class="form-control hsn-input" /></td>
+											<td style="width: 7%;"><input type="number" asp-for="@Model.invoiceItemVms[i].Gst" class="form-control gst-input" /></td>
+											<td style="width: 10%;"><input type="number" asp-for="@Model.invoiceItemVms[i].TaxAmount" class="form-control taxAmount-input" /></td>
+											<td style="width: 10%;"><input type="number" asp-for="@Model.invoiceItemVms[i].Amount" class="form-control amount-input" /></td>
+											<td style="width: 18%;"><input type="number" asp-for="@Model.invoiceItemVms[i].TotalAmount" class="form-control totalamount-input" /></td>
+											<td style="width: 10%;">
+											<u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u>
+										    </td>
+									</tr>
+								}
+							}
+						</tbody>
+						<tfoot>
+							<tr>
+								<th colspan="10"></th>
+								<th>
+									<u id="addRowBtn" style="color:green; text-align:right; cursor:pointer;">Add Row</u>
+								</th>
+							</tr>
+							<tr>
+								<th colspan="7"></th>
+								<th colspan="5">
+
+									<div>Amount       : &nbsp; &nbsp; &nbsp; &nbsp; <input asp-for="TotalAmount" id="totalamount" readonly /></div>     <br>
+									<div>Discount     : &nbsp; &nbsp; &nbsp; &nbsp; <input asp-for="discountper" style="width:40px;" id="discountper" placeholder="%" /> &nbsp; <input asp-for="discountper" style="width:94px;" id="discountvalue" placeholder="Value" /></div><br>
+									<div>Gst Amount   : &nbsp; <input asp-for="TotalTaxAmount" id="totalgstamount" readonly /></div><br>
+									<div>Total Amount : <input asp-for="Total" id="total" readonly /></div>
+								</th>
+							</tr>
+
+						</tfoot>
+
+					</table>
+					</div>
+				</div>
+				<div class="d-flex justify-content-end gap-2 mt-3">
+					<button type="submit" class="btn btn-sm btn-primary">Submit</button>
+					<a asp-controller="Invoice" asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+<script>
+	 
+	  let rowIndex = document.querySelectorAll('#invoicetablebody tr').length;
+	  
+	 $(document).ready(function () {
+
+		$("#discountper, #discountvalue").on("input", function () {
+		  applyDiscount();
+		});
+		// Add Row Button Click
+		$("#addRowBtn").click(function () {
+			addNewRow();
+		});
+
+		// Global Keydown Handler (For Enter Key Navigation)
+		$(document).on("keydown", "input, select", function (e) {
+			debugger
+			if (e.key === "Enter") {
+				e.preventDefault();
+				const $current = $(this);
+
+				if ($current.hasClass("discount-input")) {
+					addNewRow();
+				}
+				focusNextField(this);
+			}
+		});
+
+		// Select2 Dropdown Change Event
+		$(document).on("select2:select", ".my-select2", function () {
+			setTimeout(() => {
+				focusNextField(this);
+			}, 100);
+		});
+
+		// Remove Row Handler
+		$(document).on("click", ".remove-row-btn", function () {
+			$(this).closest("tr").remove();
+			updateRowIndices();
+			updateTotalGSTAmount();
+		    updateTotalAmount();
+		});
+
+		// Input Change Event (Live Calculation)
+		document.addEventListener('input', function (e) {
+			debugger;
+			if (e.target.classList.contains('discount-input') || e.target.classList.contains('quantity-input')) {
+				const row = e.target.closest('tr');
+				if (row) calculateRowValues(row);
+			}
+		});
+
+		// Item Dropdown Change Event
+		$(document).on("change", ".item-name-dropdown", function () {
+			let itemId = $(this).val();
+			let row = $(this).closest("tr");
+
+			if (itemId && row.length) {
+				fetch(`/Invoice/GetItemDetail?Id=${itemId}`)
+					.then(response => response.json())
+					.then(data => {
+						debugger;
+						row.find(".quantity-input").val(1);
+						row.find(".unit-input").val(data.unit || "");
+						row.find(".rate-input").val(data.mrp || 0);
+						row.find(".hsncode-input").val(data.hsncode || 0);
+						row.find(".gst-input").val(data.gst || 0);
+						row.find(".amount-input").val(data.amount || 0);
+						calculateRowValues(row[0]);
+					})
+					.catch(error => console.error("Error fetching item details:", error));
+			}
+		});
+
+		// Add Default Two Rows
+		// addNewRow();
+		// addNewRow();
+	});
+
+	// Function to Add New Row
+	function addNewRow() {
+		let newRow = `
+			<tr>
+				<td style="width: 20%;">
+					<select name="invoiceItemVms[${rowIndex}].ItemId" class="form-control item-name-dropdown my-select2">
+						<option></option>
+                       	@foreach (var item in ViewBag.Itemdata)
+                       	{
+                       	 <option value="@item.Value">@item.Text</option>
+                       	}
+					</select>
+				</td>
+				<td style="width: 7%;"><input type="number" name="invoiceItemVms[${rowIndex}].Quantity" min="1" class="form-control quantity-input" /></td>
+				<td style="width: 7%;"><input type="text" name="invoiceItemVms[${rowIndex}].Unit" class="form-control unit-input" /></td>
+				<td style="width: 10%;"><input type="number" name="invoiceItemVms[${rowIndex}].UnitPrice" class="form-control rate-input" /></td>
+				<td style="width: 7%;"><input type="number" name="invoiceItemVms[${rowIndex}].Discount" class="form-control discount-input" /></td>
+				<td style="width: 10%;"><input type="text" name="invoiceItemVms[${rowIndex}].HsnCode" class="form-control hsncode-input" readonly/></td>
+				<td style="width: 7%;"><input type="number" name="invoiceItemVms[${rowIndex}].Gst" class="form-control gst-input" readonly/></td>
+				<td style="width: 10%;"><input type="number" name="invoiceItemVms[${rowIndex}].TaxAmount" class="form-control taxAmount-input" readonly/></td>
+				<td style="width: 10%;"><input type="number" name="invoiceItemVms[${rowIndex}].Amount" class="form-control amount-input" readonly/></td>
+				 <td style="width: 18%;"><input type="number" name="invoiceItemVms[${rowIndex}].TotalAmount" class="form-control totalamount-input" readonly/></td>
+				<td style="width: 10%;"><u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u></td>
+			</tr>`;
+
+		$("#invoicetablebody").append(newRow);
+		rowIndex++;
+
+		// Initialize Select2
+		$("#invoicetablebody tr:last .my-select2").select2({
+			placeholder: "Select Item",
+			allowClear: true,
+			width: '100%'
+		});
+
+		// Focus on New Row's Dropdown
+		$("#invoicetablebody tr:last select").focus().click();
+	}
+
+	// Function to Update Row Indices
+	function updateRowIndices() {
+		const rows = document.querySelectorAll('#invoicetablebody tr');
+		rowIndex = 0;
+		rows.forEach(row => {
+			row.querySelectorAll('input, select').forEach(input => {
+				const name = input.name;
+				if (name) input.name = name.replace(/\[\d+\]/, `[${rowIndex}]`);
+			});
+			rowIndex++;
+		});
+	}
+
+	// Function to Calculate Row Values
+	function calculateRowValues(row) {
+		debugger;
+		const qtyValue = parseInt(row.querySelector('.quantity-input')?.value) || 1;
+		const rateValue = parseFloat(row.querySelector('.rate-input')?.value) || 0;
+		const discountValue = parseFloat(row.querySelector('.discount-input')?.value) || 0;
+		const gstValue = parseFloat(row.querySelector('.gst-input')?.value) || 0;
+
+		const grossAmount = qtyValue * rateValue;
+		const discountAmount = (grossAmount * discountValue) / 100;
+		const netAmount = grossAmount - discountAmount;
+		const gstAmount = (grossAmount * gstValue) / 100;
+		const finalAmount = netAmount + gstAmount;
+
+		row.querySelector('.amount-input').value = grossAmount.toFixed(2);
+		row.querySelector('.totalamount-input').value = finalAmount.toFixed(2);
+		row.querySelector('.taxAmount-input').value = gstAmount.toFixed(2);
+
+		updateTotalGSTAmount();
+		updateTotalAmount();
+	}
+
+	// Function to Update Total GST Amount
+	function updateTotalGSTAmount() {
+		debugger;
+		let totalGSTAmount = 0;
+		document.querySelectorAll('#invoicetablebody tr').forEach(row => {
+			totalGSTAmount += parseFloat(row.querySelector('.taxAmount-input').value) || 0;
+		});
+		document.getElementById('totalgstamount').value = totalGSTAmount.toFixed(2);
+		updateGrandTotalAmount();
+	}
+
+	// Function to Update Total Amount
+	function updateTotalAmount() {
+		debugger;
+		let totalAmount = 0;
+		document.querySelectorAll('#invoicetablebody tr').forEach(row => {
+			totalAmount += parseFloat(row.querySelector('.amount-input')?.value) || 0;
+		});
+		document.getElementById('totalamount').value = totalAmount.toFixed(2);
+		updateGrandTotalAmount();
+	}
+
+	// Function to Update Grand Total Amount
+	function updateGrandTotalAmount() {
+		debugger;
+		const totalGSTAmt = parseFloat(document.getElementById('totalgstamount')?.value) || 0;
+		const totalAmt = parseFloat(document.getElementById('totalamount')?.value) || 0;
+		document.getElementById('total').value = (totalGSTAmt + totalAmt).toFixed(2);
+	}
+
+	// Function to Move Focus to Next Field
+	function focusNextField(currentElem) {
+		debugger
+		let fields = $("input, select");
+		let currentIndex = fields.index(currentElem);
+		let nextField = fields[currentIndex + 1];
+		if (nextField){
+			$(nextField).focus();
+		}
+	}
+	 
+	function applyDiscount() {
+        let totalAmount = parseFloat($("#totalamount").val()) || 0;
+         let totalgstAmount = parseFloat($("#totalgstamount").val()) || 0;
+        let discountPer = parseFloat($("#discountper").val()) || 0;
+        let discountValue = parseFloat($("#discountvalue").val()) || 0;
+        let gstamt =0;
+        if ($(event.target).attr("id") === "discountper") {
+            discountValue = (totalAmount * discountPer) / 100;
+            gstamt =  (totalgstAmount * discountPer) / 100;
+            $("#discountvalue").val(discountValue.toFixed(2));
+        } else if ($(event.target).attr("id") === "discountvalue") {
+            discountPer = (discountValue / totalAmount) * 100;
+             gstamt = (gstamt / totalgstAmount) * 100;
+            $("#discountper").val(discountPer.toFixed(2));
+        }
+          let discountedTotalAmount = totalAmount - discountValue;
+		let discountedGSTAmount = totalgstAmount - gstamt;
+        let finalTotal = discountedTotalAmount + discountedGSTAmount;
+       // let finalTotal = totalAmount - discountValue;
+        $("#total").val(finalTotal.toFixed(2));
+    }
+</script>
+
+@* <script>
+   // let rowIndex = @Model.invoiceItemVms.Count();
+    let rowIndex = document.querySelectorAll('#invoicetablebody tr').length;
+    $(document).ready(function () {
+        $("#addRowBtn").click(function () {
+            debugger;
+             const newRow = document.createElement('tr');
+             newRow.innerHTML = `
+
+               <td hidden><input type="hidden" name="invoiceItemVms[${rowIndex}].Id" /></td>
+                <td colspan="3" style="width:30%">
+                    <select name="invoiceItemVms[${rowIndex}].ItemId" class="form-control item-name-dropdown">
+                        <option selected disabled>Select Item</option>
+                          @foreach (var item in ViewBag.Itemdata)
+                          {
+                            <option value="@item.Value">@item.Text</option>
+                          }
+                    </select>
+                </td>
+                <td><input type="number" name="invoiceItemVms[${rowIndex}].Quantity" min="1" class="form-control quantity-input" /></td>
+                <td><input type="number" name="invoiceItemVms[${rowIndex}].Unit" class="form-control unit-input"  /></td>
+                <td><input type="number" name="invoiceItemVms[${rowIndex}].UnitPrice" class="form-control rate-input"  /></td>
+                <td><input type="number" name="invoiceItemVms[${rowIndex}].Discount" class="form-control discount-input"  /></td>
+                  <td>
+                     <input type="number" name="invoiceItemVms[${rowIndex}].HsnCode" class="form-control hsncode-input" readonly/>
+                 </td>
+                  <td>
+                     <input type="number" name="invoiceItemVms[${rowIndex}].Gst" class="form-control Gst-input" readonly/>
+                 </td>
+                <td><input type="number" name="invoiceItemVms[${rowIndex}].TaxAmount" class="form-control taxAmount-input"  /></td>
+                <td><input type="number" name="invoiceItemVms[${rowIndex}].Amount" class="form-control amount-input"  /></td>
+                <td>
+                    <u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u>
+                </td>
+             `;
+
+            $("#invoicetablebody").append(newRow);
+            rowIndex++;
+             updateRowIndices();
+        });
+
+        // Remove row functionality
+        document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('remove-row-btn')) {
+            const row = e.target.closest('tr');
+            row.remove();
+            updateRowIndices();
+            calculateTotal();
+        }
+    });
+     function updateRowIndices() {
+         const rows = document.querySelectorAll('#invoicetablebody tr');
+        rowIndex = 0;
+        rows.forEach(row => {
+            row.querySelectorAll('input, select').forEach(input => {
+                const name = input.name;
+                if (name) {
+                    input.name = name.replace(/\[\d+\]/, `[${rowIndex}]`);
+                }
+            });
+            rowIndex++;
+        });
+    }
+    });
+</script> *@

@@ -1,0 +1,210 @@
+@model List<PermissionModel>
+
+@{
+    ViewData["Title"] = "Assign Permissions";
+}
+
+<style>
+    .perm-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 14px;
+        background: #fff;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .perm-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+        font-weight: 600;
+        border-bottom: 1px dashed #e5e7eb;
+        padding-bottom: 4px;
+        margin-bottom: 6px;
+    }
+
+    /* 🔴 MAIN FIX */
+    .perm-card .form-check {
+        display: flex;
+        align-items: center;
+        padding-left: 0; /* bootstrap default remove */
+        margin-bottom: 4px;
+    }
+
+    .perm-card .form-check-input {
+        margin-left: 0 !important; /* checkbox bahar nahi jayega */
+        margin-right: 6px;
+        position: static; /* bootstrap absolute remove */
+        transform: scale(0.9);
+    }
+
+    .perm-card .form-check-label {
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .select-all {
+        transform: scale(0.9);
+    }
+</style>
+
+
+
+<div class="container mt-3">
+    <h5 class="mb-3">Assign Permissions</h5>
+
+    @if (ViewBag.IsReadOnly == true)
+    {
+        <div class="alert alert-warning mb-3">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Notice:</strong> System/global roles are read-only. To customize permissions, please create a custom role.
+        </div>
+    }
+
+    <div class="row">
+        @foreach (var group in Model.GroupBy(m => m.Group))
+        {
+            <div class="col-lg-6 col-md-6 col-sm-12">
+                <div class="perm-card">
+
+                    <div class="perm-header">
+                        <span>@group.Key</span>
+
+                        <label class="mb-0 small">
+                            <input type="checkbox"
+                                   class="select-all"
+                                   data-group="@group.Key"
+                                   @(ViewBag.IsReadOnly == true ? "disabled" : "") />
+                            All
+                        </label>
+                    </div>
+
+                    @foreach (var permission in group)
+                    {
+                        <div class="form-check">
+                            <input type="checkbox"
+                                   class="form-check-input permission-checkbox"
+                                   data-group="@group.Key"
+                                   data-claim="@permission.ClaimValue"
+                                   data-role="@permission.RoleId"
+                                   @(permission.Assigned ? "checked" : "")
+                                   @(ViewBag.IsReadOnly == true ? "disabled" : "") />
+
+                            <label class="form-check-label">
+                                @permission.ClaimValue.Split('.').Last()
+                            </label>
+                        </div>
+
+                    }
+
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // document.querySelectorAll(".permission-checkbox").forEach(cb => {
+        //     cb.addEventListener("change", function () {
+        //         savePermission(this.dataset.role, this.dataset.claim, this.checked);
+        //     });
+        // });
+
+        // document.querySelectorAll(".select-all").forEach(selectAll => {
+        //     selectAll.addEventListener("change", function () {
+        //         const group = this.dataset.group;
+        //         const checked = this.checked;
+
+        //         document.querySelectorAll(
+        //             `.permission-checkbox[data-group="${group}"]`
+        //         ).forEach(cb => {
+        //             cb.checked = checked;
+        //             savePermission(cb.dataset.role, cb.dataset.claim, checked);
+        //         });
+        //     });
+        // }); 
+
+         document.querySelectorAll(".permission-checkbox").forEach(cb => {
+            cb.addEventListener("change", function () {
+
+                savePermission(this.dataset.role, this.dataset.claim, this.checked);
+
+                const group = this.dataset.group;
+
+                const groupCheckboxes = document.querySelectorAll(
+                    `.permission-checkbox[data-group="${group}"]`
+                );
+
+                const selectAll = document.querySelector(
+                    `.select-all[data-group="${group}"]`
+                );
+
+                const allChecked = Array.from(groupCheckboxes).every(c => c.checked);
+
+                selectAll.checked = allChecked;
+            });
+        });
+
+        
+        document.querySelectorAll(".select-all").forEach(selectAll => {
+            selectAll.addEventListener("change", function () {
+        
+                const group = this.dataset.group;
+                const checked = this.checked;
+        
+                const checkboxes = document.querySelectorAll(
+                    `.permission-checkbox[data-group="${group}"]`
+                );
+        
+                let updatedPermissions = [];
+        
+                checkboxes.forEach(cb => {
+                    cb.checked = checked;
+        
+                    updatedPermissions.push({
+                        ClaimValue: cb.dataset.claim,
+                        Assigned: checked
+                    });
+                });
+        
+                saveBulkPermission(checkboxes[0].dataset.role, updatedPermissions);
+            });
+        });
+       
+    });
+
+    function savePermission(roleId, claimValue, assigned) {
+        fetch("/Permission/SavePermissions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                roleId: roleId,
+                updatedPermissions: [{
+                    ClaimValue: claimValue,
+                    Assigned: assigned
+                }]
+            })
+        });
+    }
+
+    function saveBulkPermission(roleId, updatedPermissions) {
+        fetch("/Permission/SavePermissions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                roleId: roleId,
+                updatedPermissions: updatedPermissions
+            })
+        });
+    }
+</script>
+
+
+

@@ -1,0 +1,699 @@
+@model EasyBill.Models.Entity.Sales
+@using System
+@using System.Collections.Generic
+@using System.Globalization
+@using System.Linq
+@using EasyBill.Models.Entity
+@using EasyBill.UI.Service
+
+@functions {
+    private static string VersionedPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return string.Empty;
+        var separator = path.Contains("?") ? "&" : "?";
+        return $"{path}{separator}v={DateTime.UtcNow.Ticks}";
+    }
+
+    private static string Money(decimal value) => value.ToString("0.00", CultureInfo.InvariantCulture);
+    private static string Qty(decimal value) => value % 1 == 0 ? value.ToString("0", CultureInfo.InvariantCulture) : value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string EnsureDarkHex(string? value, string fallback = "#000000")
+    {
+        if (string.IsNullOrWhiteSpace(value)) return fallback;
+        var hex = value.Trim().TrimStart('#');
+        if (hex.Length == 3)
+        {
+            hex = string.Concat(hex[0], hex[0], hex[1], hex[1], hex[2], hex[2]);
+        }
+
+        if (hex.Length != 6) return fallback;
+        if (!int.TryParse(hex.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var r)) return fallback;
+        if (!int.TryParse(hex.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var g)) return fallback;
+        if (!int.TryParse(hex.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var b)) return fallback;
+
+        var luminance = (0.299 * r) + (0.587 * g) + (0.114 * b);
+        if (luminance > 130) return fallback;
+        return $"#{hex}";
+    }
+
+    private static string AmountToWords(long amount)
+    {
+        if (amount <= 0) return "Zero only";
+        string[] ones = { "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+            "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen" };
+        string[] tens = { "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety" };
+
+        string TwoDigits(int n) => n < 20 ? ones[n] : $"{tens[n / 10]}{(n % 10 != 0 ? " " + ones[n % 10] : "")}".Trim();
+        string ThreeDigits(int n)
+        {
+            if (n == 0) return "";
+            if (n < 100) return TwoDigits(n);
+            return $"{ones[n / 100]} Hundred{(n % 100 != 0 ? " " + TwoDigits(n % 100) : "")}";
+        }
+
+        var crore = (int)(amount / 10000000);
+        amount %= 10000000;
+        var lakh = (int)(amount / 100000);
+        amount %= 100000;
+        var thousand = (int)(amount / 1000);
+        amount %= 1000;
+        var last = (int)amount;
+
+        var parts = new List<string>();
+        if (crore > 0) parts.Add($"{ThreeDigits(crore)} Crore");
+        if (lakh > 0) parts.Add($"{ThreeDigits(lakh)} Lakh");
+        if (thousand > 0) parts.Add($"{ThreeDigits(thousand)} Thousand");
+        if (last > 0) parts.Add(ThreeDigits(last));
+
+        return $"{string.Join(" ", parts).Trim()} only";
+    }
+}
+
+@{
+    Layout = null;
+
+    var theme = ViewBag.ThemeSettings as InvoiceThemeSetting;
+    var title = string.IsNullOrWhiteSpace(theme?.Title) ? "TAX INVOICE" : theme?.Title;
+    var fontFamily = theme?.FontFamily ?? "'Courier New', monospace";
+    var baseFontSize = theme?.BaseFontSize ?? 11;
+    var primaryColor = EnsureDarkHex(theme?.PrimaryColor, "#000000");
+    var textColor = EnsureDarkHex(theme?.TextColor, "#000000");
+
+    var logoPath = VersionedPath(theme?.LogoPath);
+    var logoSize = theme?.LogoSize ?? 74;
+    var signPath = VersionedPath(theme?.SignaturePath);
+    var signLabel = string.IsNullOrWhiteSpace(theme?.SignatoryLabel) ? "Auth. Signatory" : theme?.SignatoryLabel;
+
+    var showHSN = theme?.ShowHSN ?? false;
+    var showGSTPercent = theme?.ShowGSTPercent ?? false;
+    var showGstAmount = theme?.ShowGSTAmount ?? true;
+    var showTaxSummary = theme?.ShowTaxSummaryTable ?? false;
+    var showItemDiscount = theme?.ShowItemDiscount ?? true;
+    var showAmountInWords = theme?.ShowAmountInWords ?? false;
+    var showPaymentQr = theme?.ShowPaymentQR ?? false;
+    var showBusinessGstin = theme?.ShowBusinessGSTIN ?? true;
+
+    var terms = theme?.TermsAndConditions ?? "Thank You! Visit Again.";
+    var bank = theme?.BankDetails ?? "";
+    var upi = theme?.UPIDetails ?? "";
+    var businessName = (ViewBag.BusinessName as string) ?? "Your Business Name";
+    var businessAddress = (ViewBag.BusinessAddress as string) ?? "";
+    var businessPhone = (ViewBag.BusinessPhone as string) ?? "";
+    var businessEmail = (ViewBag.BusinessEmail as string) ?? "";
+    var businessGstin = (ViewBag.BusinessGSTIN as string) ?? "";
+    var customerName = Model?.Customers?.Name ?? "Walk-in Customer";
+    var customerPhone = Model?.Customers?.PhoneNo ?? "";
+    var customerAddress = Model?.Customers?.Address ?? "";
+
+    var userWidth = ViewBag.PaperSize as string;
+    var thermalSize = theme?.ThermalPaperSize ?? (userWidth == "58mm" ? 58 : 80);
+    var is58 = thermalSize == 58;
+    var pageWidthMm = thermalSize == 58 ? "58mm" : "80mm";
+    var bodyWidthPx = thermalSize == 58 ? 219 : 302;
+    var effectiveBaseFontSize = is58 ? Math.Min(baseFontSize, 10) : baseFontSize;
+    var effectiveLogoSize = is58 ? Math.Min(logoSize, 56) : logoSize;
+
+    var items = Model?.SalesItems?.ToList() ?? new List<SalesItem>();
+    var billNo = string.IsNullOrWhiteSpace(Model?.BillNo) ? $"INV-{Model?.Id ?? 0}" : Model?.BillNo!.Trim();
+    var safeBarcodeValue = (billNo ?? string.Empty).Replace("\r", "").Replace("\n", "").Trim();
+    if (safeBarcodeValue.Length > 42) safeBarcodeValue = safeBarcodeValue.Substring(0, 42);
+    var barcodeDataUri = string.Empty;
+    if (!string.IsNullOrWhiteSpace(safeBarcodeValue))
+    {
+        try
+        {
+            var barcodeService = new BarcodeService();
+            var barcodeBytes = barcodeService.GenerateBarcode(safeBarcodeValue);
+            barcodeDataUri = $"data:image/png;base64,{Convert.ToBase64String(barcodeBytes)}";
+        }
+        catch
+        {
+            barcodeDataUri = Url.Action("Generate", "Barcode", new { code = safeBarcodeValue }) ?? string.Empty;
+        }
+    }
+
+    decimal subTotal = 0m;
+    decimal computedDiscount = 0m;
+    decimal computedTax = 0m;
+    foreach (var it in items)
+    {
+        var gross = it.Qty * it.Rate;
+        var discount = it.Discount > 0 ? it.Discount : 0m;
+        var taxable = gross - discount;
+        if (taxable < 0) taxable = 0;
+        var gstAmt = (it.Gst > 0 && taxable > 0) ? (taxable * it.Gst / 100m) : 0m;
+
+        subTotal += gross;
+        computedDiscount += discount;
+        computedTax += gstAmt;
+    }
+
+    var totalDiscount = (Model?.Totaldiscount ?? 0m) > 0 ? (Model?.Totaldiscount ?? 0m) : computedDiscount;
+    var totalTax = (Model?.TotalGstAmt ?? 0m) > 0 ? (Model?.TotalGstAmt ?? 0m) : computedTax;
+    var grandTotal = Model?.TotalPayable ?? 0m;
+    if (grandTotal <= 0)
+    {
+        grandTotal = subTotal - totalDiscount + totalTax;
+    }
+    var cgst = totalTax > 0 ? Math.Round(totalTax / 2, 2) : 0m;
+    var sgst = cgst;
+    var totalWords = AmountToWords((long)Math.Round(grandTotal, MidpointRounding.AwayFromZero));
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Thermal Receipt</title>
+    <style>
+        @@page {
+            size: @(pageWidthMm) auto;
+            margin: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0 auto;
+            padding: @(is58 ? "6px 4px" : "8px 6px");
+            width: 100%;
+            max-width: @(bodyWidthPx)px;
+            background: #fff;
+            color: @textColor;
+            font-family: @Html.Raw(fontFamily);
+            font-size: @(effectiveBaseFontSize)px;
+            line-height: 1.25;
+            font-weight: 700;
+            text-rendering: geometricPrecision;
+        }
+
+        .receipt {
+            width: 100%;
+        }
+
+        .line {
+            border-top: 1px dashed #000;
+            margin: 6px 0;
+        }
+
+        .t-center {
+            text-align: center;
+        }
+
+        .t-right {
+            text-align: right;
+        }
+
+        .head-title {
+            margin: 4px 0 1px;
+            font-size: 15px;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: @primaryColor;
+            line-height: 1.15;
+        }
+
+        .meta {
+            font-size: 10px;
+            color: #111827;
+            white-space: pre-wrap;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+
+        .biz-meta {
+            font-size: 10px;
+            color: #111827;
+            line-height: 1.25;
+            margin-top: 1px;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .bill-info {
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+            .bill-info div {
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            padding: 3px 1px;
+            border-bottom: 1px dashed #000;
+            vertical-align: top;
+            font-size: 10.5px;
+        }
+
+        th {
+            font-weight: 800;
+            color: #111827;
+        }
+
+        .col-item {
+            width: auto;
+        }
+
+        .col-qty {
+            width: 28px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .col-amt {
+            width: 62px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .item-name {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.18;
+        }
+
+        .item-main {
+            display: block;
+            white-space: normal;
+            font-weight: 800;
+        }
+
+        .item-sub {
+            display: block;
+            margin-top: 2px;
+            font-size: 8.8px;
+            color: #111827;
+            opacity: 1;
+            font-weight: 700;
+            line-height: 1.15;
+        }
+
+        .item-sub-detail {
+            letter-spacing: 0.05px;
+        }
+
+        .summary {
+            margin-top: 4px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+            font-size: 11px;
+            gap: 6px;
+        }
+
+            .summary-row span:last-child {
+                white-space: nowrap;
+            }
+
+        .summary-row.total {
+            margin-top: 3px;
+            padding-top: 3px;
+            border-top: 1px dashed #000;
+            font-size: 12px;
+            font-weight: 800;
+            color: @primaryColor;
+        }
+
+        .tax-breakup {
+            margin-top: 4px;
+            border-top: 1px dashed #000;
+            padding-top: 3px;
+        }
+
+        .tax-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+            font-size: 9px;
+            margin-bottom: 2px;
+        }
+
+        .amount-words {
+            margin-top: 5px;
+            border-top: 1px dashed #000;
+            padding-top: 3px;
+            font-size: 9px;
+            color: #111827;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+
+        .barcode-wrap {
+            margin-top: 8px;
+            text-align: center;
+            padding: 0 1px;
+        }
+
+        .barcode-img {
+            width: 100%;
+            max-width: 100%;
+            min-height: @(is58 ? "52px" : "64px");
+            height: auto;
+            object-fit: fill;
+            display: block;
+            margin: 0 auto;
+            image-rendering: crisp-edges;
+        }
+
+        .barcode-text {
+            margin-top: 4px;
+            font-size: @(is58 ? "9px" : "10px");
+            letter-spacing: 0.55px;
+            color: #111827;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            font-weight: 800;
+        }
+
+        .note {
+            margin-top: 8px;
+            font-size: 9px;
+            color: #111827;
+            white-space: pre-wrap;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .sign {
+            margin-top: 8px;
+            text-align: center;
+            font-size: 9px;
+            color: #111827;
+        }
+
+            .sign img {
+                max-width: 88px;
+                max-height: 36px;
+                margin: 0 auto 4px;
+                object-fit: contain;
+                display: none;
+            }
+
+        .thermal-58 .head-title {
+            font-size: 13px;
+        }
+
+        .thermal-58 .meta,
+        .thermal-58 .bill-info,
+        .thermal-58 th,
+        .thermal-58 td,
+        .thermal-58 .summary-row,
+        .thermal-58 .note,
+        .thermal-58 .sign {
+            font-size: 9.8px;
+        }
+
+        .thermal-58 .col-qty {
+            width: 24px;
+        }
+
+        .thermal-58 .col-amt {
+            width: 54px;
+        }
+
+        .thermal-58 .item-sub {
+            font-size: 8.2px;
+        }
+
+        .thermal-58 .item-main {
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .thermal-58 .barcode-img {
+            min-height: 50px;
+        }
+
+        .preview-actions {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 1500;
+            display: flex;
+            gap: 6px;
+        }
+
+        .preview-btn {
+            border: none;
+            border-radius: 6px;
+            padding: 7px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            color: #fff;
+            background: #111827;
+            box-shadow: 0 4px 12px rgba(17, 24, 39, 0.25);
+        }
+
+            .preview-btn.close {
+                background: #4b5563;
+            }
+
+        @@media print {
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: @(pageWidthMm) !important;
+                max-width: @(pageWidthMm) !important;
+                height: auto !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            body {
+                padding: 2mm 1.6mm !important;
+            }
+
+            * {
+                color: #000 !important;
+                border-color: #000 !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+            }
+
+            body,
+            .bill-info,
+            .meta,
+            th,
+            td,
+            .summary-row,
+            .tax-line,
+            .note,
+            .sign,
+            .barcode-text {
+                font-weight: 700 !important;
+            }
+
+            .head-title,
+            .summary-row.total {
+                color: #000 !important;
+                font-weight: 900 !important;
+            }
+
+            .barcode-img {
+                image-rendering: pixelated;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    @if (!(ViewBag.HidePrintControls as bool? ?? false))
+    {
+        <div class="preview-actions no-print">
+            <button type="button" class="preview-btn" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print
+            </button>
+            <button type="button" class="preview-btn close" onclick="window.close()">
+                <i class="bi bi-x-lg"></i> Close
+            </button>
+        </div>
+    }
+
+    <div class="receipt @(is58 ? "thermal-58" : "thermal-80")">
+        <div class="t-center">
+            <img id="logoImage" src="@logoPath" style="width:@(effectiveLogoSize)px; display:@(string.IsNullOrWhiteSpace(logoPath) ? "none" : "block"); margin:0 auto 4px;" alt="Logo" />
+            <div class="head-title">@title</div>
+            @if (!string.IsNullOrWhiteSpace(businessName) && !string.Equals(businessName, title, StringComparison.OrdinalIgnoreCase))
+            {
+                <div class="biz-meta"><b>@businessName</b></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(businessAddress))
+            {
+                <div class="biz-meta">@businessAddress</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(businessPhone) || !string.IsNullOrWhiteSpace(businessEmail))
+            {
+                <div class="biz-meta">
+                    @if (!string.IsNullOrWhiteSpace(businessPhone))
+                    {
+                        <span>Phone: @businessPhone</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(businessPhone) && !string.IsNullOrWhiteSpace(businessEmail))
+                    {
+                        <span> | </span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(businessEmail))
+                    {
+                        <span>Email: @businessEmail</span>
+                    }
+                </div>
+            }
+            @if (showBusinessGstin)
+            {
+                <div class="biz-meta"><b>GSTIN:</b> @(string.IsNullOrWhiteSpace(businessGstin) ? "-" : businessGstin)</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(bank))
+            {
+                <div class="meta">@bank</div>
+            }
+        </div>
+
+        <div class="line"></div>
+
+        <div class="bill-info">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                <span><b>Bill No:</b> @(Model?.BillNo ?? "INV-XXXX")</span>
+                <span><b>Date:</b> @(Model?.BillDate?.ToString("dd-MM-yyyy HH:mm") ?? DateTime.Now.ToString("dd-MM-yyyy HH:mm"))</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                <span><b>Cashier:</b> @(ViewBag.CashierName ?? "Admin")</span>
+                <span><b>Time:</b> @DateTime.Now.ToString("hh:mm tt")</span>
+            </div>
+
+            <div class="line" style="margin: 5px 0;"></div>
+
+            <div style="margin-bottom: 2px;"><b>Customer:</b> @(Model?.Customers?.Name ?? "Walk-in")</div>
+            @if (!string.IsNullOrWhiteSpace(Model?.Customers?.PhoneNo))
+            {
+                <div style="margin-bottom: 2px;"><b>Phone:</b> @Model.Customers.PhoneNo</div>
+            }
+        </div>
+        <div class="line" style="margin: 5px 0;"></div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-item">Item</th>
+                    <th class="col-qty t-right">Qty</th>
+                    <th class="col-amt t-right">Amt</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (items.Any())
+                {
+                    foreach (var item in items)
+                    {
+                        var gross = item.Qty * item.Rate;
+                        var discount = item.Discount > 0 ? item.Discount : 0m;
+                        var taxable = gross - discount;
+                        if (taxable < 0) taxable = 0m;
+                        var gstAmt = (item.Gst > 0 && taxable > 0) ? (taxable * item.Gst / 100m) : 0m;
+                        var rowAmount = item.Amount > 0 ? item.Amount : (taxable + gstAmt);
+                        var itemRateLine = $"{Qty(item.Qty)} x {Money(item.Rate)}";
+                        var subParts = new List<string>();
+                        if (showHSN)
+                        {
+                            var hsnCode = item.ItemMaster?.Hsn?.HsnCode;
+                            if (!string.IsNullOrWhiteSpace(hsnCode)) subParts.Add($"HSN:{hsnCode}");
+                        }
+                        if (showGSTPercent && item.Gst > 0) subParts.Add($"GST:{Qty(item.Gst)}%");
+                        if (showGstAmount && gstAmt > 0) subParts.Add($"GSTAmt:{Money(gstAmt)}");
+                        if (showItemDiscount && item.Discount > 0) subParts.Add($"Disc:{Money(item.Discount)}");
+                        var itemSubText = string.Join(" | ", subParts);
+                        <tr>
+                            <td class="item-name">
+                                <span class="item-main">@(item.ItemMaster?.Name ?? "Item")</span>
+                                <span class="item-sub">@itemRateLine</span>
+                                @if (!string.IsNullOrWhiteSpace(itemSubText))
+                                {
+                                    <span class="item-sub item-sub-detail">@itemSubText</span>
+                                }
+                            </td>
+                            <td class="col-qty t-right">@Qty(item.Qty)</td>
+                            <td class="col-amt t-right">@Money(rowAmount)</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="3" class="t-center">No items</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="summary">
+            <div class="summary-row"><span>Sub Total</span><span>Rs @Money(subTotal)</span></div>
+            @if (showItemDiscount && totalDiscount > 0)
+            {
+                <div class="summary-row"><span>Discount</span><span>- Rs @Money(totalDiscount)</span></div>
+            }
+            @if (showGstAmount)
+            {
+                <div class="summary-row"><span>GST</span><span>Rs @Money(totalTax)</span></div>
+            }
+            <div class="summary-row total"><span>TOTAL</span><span>Rs @Money(grandTotal)</span></div>
+
+            @if (showTaxSummary && totalTax > 0)
+            {
+                <div class="tax-breakup">
+                    <div class="tax-line"><span>CGST</span><span>Rs @Money(cgst)</span></div>
+                    <div class="tax-line"><span>SGST</span><span>Rs @Money(sgst)</span></div>
+                </div>
+            }
+
+            @if (showAmountInWords)
+            {
+                <div class="amount-words"><b>In Words:</b> @totalWords</div>
+            }
+        </div>
+
+        @if (showPaymentQr && !string.IsNullOrWhiteSpace(upi))
+        {
+            <div class="line"></div>
+            <div class="meta t-center"><b>UPI:</b> @upi</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(barcodeDataUri))
+        {
+            <div class="line"></div>
+            <div class="barcode-wrap">
+                <img class="barcode-img" src="@barcodeDataUri" alt="Bill Barcode" />
+                <div class="barcode-text">@safeBarcodeValue</div>
+            </div>
+        }
+
+        <div class="line"></div>
+        <div class="note">@terms</div>
+
+        <div class="sign">
+            <img src="@signPath" style="display:@(string.IsNullOrWhiteSpace(signPath) ? "none" : "block");" alt="Sign" />
+            <div>@signLabel</div>
+        </div>
+    </div>
+</body>
+</html>

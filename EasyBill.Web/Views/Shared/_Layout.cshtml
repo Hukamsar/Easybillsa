@@ -1,0 +1,1109 @@
+@using EasyBill.DataAccess.Repository.IRepository
+@inject UserManager<ApplicationUsers> UserManager
+@inject ITenantRepository _companyService
+@{
+    var user = await UserManager.GetUserAsync(User);
+}
+<!DOCTYPE Html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>@ViewData["Title"] - Easy Bill</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="title" content="AdminLTE | Dashboard v3" />
+    <meta name="author" content="ColorlibHQ" />
+    <meta name="description" content="AdminLTE is a Free Bootstrap 5 Admin Dashboard, 30 example pages using Vanilla JS." />
+    <meta name="keywords" content="bootstrap 5, bootstrap, bootstrap 5 admin dashboard, bootstrap 5 dashboard, bootstrap 5 charts, bootstrap 5 calendar, bootstrap 5 datepicker, bootstrap 5 tables, bootstrap 5 datatable, vanilla js datatable, colorlibhq, colorlibhq dashboard, colorlibhq admin dashboard" />
+
+    <!-- ================================================================
+    VENDOR CSS (Local)
+    ================================================================ -->
+    <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="~/lib/bootstrap/dist/css/bootstrap-icons.min.css" rel="stylesheet" />
+    <link href="~/lib/bootstrap/dist/css/overlayscrollbars.min.css" rel="stylesheet" />
+    <link href="~/lib/bootstrap/dist/css/apexcharts.css" rel="stylesheet" />
+    <link href="~/lib/bootstrap/dist/css/jquery.datatables.min.css" rel="stylesheet" />
+    <link href="~/lib/bootstrap/dist/css/select2.min.css" rel="stylesheet" />
+
+    <!-- ================================================================
+    LOCAL CSS
+    ================================================================ -->
+    <link href="~/bootstrap-select/css/bootstrap-select.css" rel="stylesheet" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/adminlte.css" asp-append-version="true" />
+    <link href="~/css/site.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/lib/bootstrap/dist/css/toastr.min.css" rel="stylesheet" />
+
+
+    <!-- ================================================================
+    CDN CSS
+    ================================================================ -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/intro.js/minified/introjs.min.css" />
+    <!-- ================================================================
+    GLOBAL STYLES
+    ================================================================ -->
+    <style>
+        /* ── Base Font Size ── */
+        :root,
+        [data-bs-theme=light] {
+        --bs-body-font-size: 0.875rem;
+        }
+
+        html, body {
+        font-size: 0.875rem !important;
+        padding: 0 !important;
+        overflow-y: auto !important;
+        }
+
+        /* ── Sticky Header ── */
+        .app-header {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 1030 !important;
+        background: #fff !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        }
+
+        .app-header .navbar {
+        background: #fff !important;
+        }
+
+        /* ── Sticky Footer ── */
+        .app-footer {
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 1020 !important;
+        background: #fff !important;
+        border-top: 1px solid #e2e8f0 !important;
+        }
+
+        /* ── Global Loader ── */
+        #globalLoader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+        backdrop-filter: blur(3px);
+        }
+
+        #globalLoader.show {
+        display: flex;
+        }
+
+        .loader-content {
+        text-align: center;
+        background: transparent;
+        padding: 0;
+        }
+
+        .loader-gif {
+        width: 100px;
+        height: 100px;
+        margin: 0;
+        filter: drop-shadow(0 4px 12px rgba(138, 43, 226, 0.6));
+        }
+
+        .loader-text {
+        display: none;
+        }
+
+        /* ── Sidebar Arrow Icon ── */
+        .arrow-icon {
+        cursor: pointer;
+        color: #2b6ac9;
+        }
+
+        .company-name {
+        min-width: 190px;
+        max-width: 320px; /* keep header compact but do not truncate */
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        flex-shrink: 0;
+        line-height: 1.15;
+        }
+
+        .company-name > span,
+        .company-name > small {
+        display: block;
+        max-width: 100%;
+        white-space: normal;
+        word-break: normal;
+        overflow-wrap: break-word;
+        }
+
+        .wallet-nav-btn {
+        border-radius: 0.375rem !important;
+        padding: 0.35rem 0.8rem !important;
+        font-weight: 600;
+        white-space: nowrap;
+        }
+
+        /* ── Upgrade Button & Modal Premium Styles ── */
+        .btn-gradient-orange {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            border: none;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-gradient-orange:hover {
+            background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+            transform: translateY(-1.5px);
+            box-shadow: 0 4px 10px rgba(234, 88, 12, 0.35) !important;
+            color: white !important;
+        }
+        .btn-gradient-orange:active {
+            transform: translateY(0.5px);
+        }
+        
+        .transition-hover {
+            transition: all 0.25s ease;
+        }
+        .transition-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        .card-plan {
+            border: 1px solid rgba(0, 0, 0, 0.05) !important;
+        }
+        .card-plan:hover {
+            border: 1px solid rgba(43, 106, 201, 0.2) !important;
+        }
+        
+        .form-switch-lg .form-check-input {
+            width: 2.8em;
+            height: 1.5em;
+        }
+        
+        /* Pulse Animation for Upgrade Button Icon */
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @@keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        
+        /* Bounce animation for Modal Header Rocket */
+        .animate-bounce {
+            animation: bounce 2s infinite;
+        }
+        @@keyframes bounce {
+            0%, 100% {
+                transform: translateY(-5%);
+                animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+            }
+            50% {
+                transform: translateY(0);
+                animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+            }
+        }
+
+        /* ── Checkout Premium Styles ── */
+        .payment-option-card {
+            border: 1.5px solid #e2e8f0;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            background: #ffffff;
+            border-radius: 10px;
+        }
+        .payment-option-card:hover {
+            border-color: #cbd5e1;
+            background-color: #f8fafc;
+        }
+        .payment-option-card.active {
+            border-color: #1d4ed8 !important;
+            background-color: #eff6ff !important;
+            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.08) !important;
+        }
+        .payment-option-card.disabled-card {
+            opacity: 0.55;
+            cursor: not-allowed !important;
+            background-color: #f1f5f9 !important;
+            border-color: #e2e8f0 !important;
+            pointer-events: none;
+        }
+        .payment-option-card input[type="radio"] {
+            cursor: pointer;
+        }
+        .payment-sub-tab {
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .payment-sub-tab .nav-link {
+            color: #64748b;
+            font-weight: 500;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+        .payment-sub-tab .nav-link.active {
+            background-color: #1d4ed8 !important;
+            color: #ffffff !important;
+        }
+    </style>
+</head>
+
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+
+    <!-- ================================================================
+    GLOBAL LOADER
+    ================================================================ -->
+    <div id="globalLoader">
+        <div class="loader-content">
+            <img src="~/assets1/images/loader/loaderGIF.gif" alt="Loading..." class="loader-gif" />
+        </div>
+    </div>
+
+    <!-- ================================================================
+    APP WRAPPER
+    ================================================================ -->
+    <div class="app-wrapper">
+
+        <!-- ── Header ── -->
+        <nav class="app-header navbar navbar-expand bg-body">
+            <div class="container-fluid">
+
+                <!-- Sidebar Toggle -->
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button">
+                            <i id="toggleArrow" class="bi bi-arrow-left-circle-fill fs-3 arrow-icon"></i>
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Right Nav -->
+                <ul class="navbar-nav ms-auto align-items-center">
+                    @if (user != null && user.TenantId != null)
+                    {
+                        var companyData = await _companyService.GetById(user.TenantId);
+                        if (companyData != null)
+                        {
+                            var yearFrom = companyData.YearFrom;
+                            var yearTo = companyData.YearTo;
+                            if (!yearFrom.HasValue || !yearTo.HasValue)
+                            {
+                                var today = DateTime.Today;
+                                if (today.Month <= 3)
+                                {
+                                    yearFrom = new DateTime(today.Year - 1, 4, 1);
+                                    yearTo = new DateTime(today.Year, 3, 31);
+                                }
+                                else
+                                {
+                                    yearFrom = new DateTime(today.Year, 4, 1);
+                                    yearTo = new DateTime(today.Year + 1, 3, 31);
+                                }
+                            }
+                            var fyDisplay = $"F.Y. {yearFrom.Value:yyyy}-{yearTo.Value:yy}";
+                            var planName = companyData.SubscriptionPlan?.PlanName ?? "Free Trial";
+
+                            <!-- Workspace Details -->
+                             <li class="nav-item d-flex align-items-center me-3">
+                                 <div class="d-flex flex-column align-items-end me-1">
+                                     <div class="fw-bold text-dark text-truncate text-nowrap" style="max-width: 220px; font-size: 0.9rem; letter-spacing: 0.1px;" title="@companyData.Name">
+                                         <i class="bi bi-buildings text-primary me-1.5" style="font-size: 0.95rem;"></i>@companyData.Name
+                                     </div>
+                                     <div class="d-flex align-items-center gap-2 mt-1 text-nowrap" style="font-size: 0.75rem; line-height: 1.2;">
+                                         @if (!string.IsNullOrEmpty(companyData.BranchCode))
+                                         {
+                                             <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-weight: 500;">Br: @companyData.BranchCode</span>
+                                         }
+                                         <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-weight: 500;" title="Financial Year: @yearFrom.Value.ToString("dd/MM/yyyy") - @yearTo.Value.ToString("dd/MM/yyyy")">
+                                             F.Y. @yearFrom.Value.ToString("yyyy")-@yearTo.Value.ToString("yy")
+                                         </span>
+                                     </div>
+                                 </div>
+                             </li>
+
+                            <!-- Plan Info & Upgrade Console -->
+                            <li class="nav-item d-flex align-items-center me-3 border-start ps-3 border-secondary-subtle">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 px-2.5 py-1.5" style="font-size: 0.7rem; font-weight: 600; border-radius: 20px;">
+                                        <i class="bi bi-patch-check-fill text-warning"></i> @planName
+                                    </span>
+                                    <button type="button" class="btn btn-xs btn-gradient-orange text-white fw-bold d-flex align-items-center gap-1 shadow-sm" id="btnUpgradePlanHeader" style="font-size: 0.7rem; border-radius: 20px; padding: 0.35rem 0.8rem; border: none; letter-spacing: 0.3px;" title="Upgrade your subscription plan">
+                                        <i class="bi bi-lightning-fill animate-pulse"></i> Upgrade
+                                    </button>
+                                </div>
+                            </li>
+                        }
+                    }
+                    <li class="nav-item d-flex align-items-center me-3 border-start ps-3 border-secondary-subtle">
+                        <a asp-controller="Wallet"
+                           asp-action="Recharge"
+                           class="btn btn-sm btn-outline-primary wallet-nav-btn"
+                           style="border-radius: 20px; font-size: 0.7rem; padding: 0.35rem 0.8rem; border: 1px solid #1d4ed8; font-weight: 600;"
+                           title="Open wallet recharge page">
+                            <i class="bi bi-wallet2 me-1"></i> Wallet
+                        </a>
+                    </li>
+                    <!-- Fullscreen Toggle -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-lte-toggle="fullscreen">
+                            <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                            <i data-lte-icon="minimize" class="bi bi-fullscreen-exit" style="display: none"></i>
+                        </a>
+                    </li>
+                 
+                    <!-- User Menu -->
+                    <li class="nav-item dropdown user-menu">
+                        <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                            <img src="~/assets/img/easybill-profile.jpg"
+                                 class="user-image rounded-circle shadow"
+                                 alt="User Image" />
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                            <li class="user-header text-bg-primary">
+                                <img src="~/assets/img/easybill-Sidebar.jpg"
+                                     class="rounded-circle shadow"
+                                     alt="User Image" />
+                                @* <p>
+                                    EasyBill
+                                    <small>Digitising Businesses</small>
+                                </p> *@
+                                <h6 class="mt-2 mb-0">
+                                    @if (user != null && user.TenantId != null)
+                                    {
+                                        var companyData = await _companyService.GetById(user.TenantId); 
+                                        @user?.UserName
+                                    }
+                                </h6>
+                            </li>
+                            <li class="user-footer">
+                                <button type="button" class="btn btn-default btn-flat" id="btnProfile">
+                                    Profile
+                                </button>
+                                <form asp-controller="Account" asp-action="Logout" method="post"
+                                      class="btn btn-default btn-flat float-end">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="dropdown-item">Log out</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+
+                </ul>
+            </div>
+        </nav>
+
+        <!-- ── Sidebar ── -->
+        <partial name="_Sidebar" />
+
+        <!-- ── Main Content ── -->
+        <main class="app-main m-2">
+            <partial name="_Notification" />
+            @RenderBody()
+        </main>
+
+        <!-- ── Footer ── -->
+        <footer class="app-footer">
+            <div class="float-end d-none d-sm-inline">Anything you want</div>
+            <strong>
+                Copyright &copy; 2014-2024&nbsp;
+                <a href="https://adminlte.io" class="text-decoration-none">EasyBill</a>
+            </strong>
+            All rights reserved.
+        </footer>
+
+    </div>
+
+    <!-- Profile Modal Container -->
+    <div id="profileModalContainer"></div>
+
+    <!-- ================================================================
+         VENDOR SCRIPTS (Local)
+         ================================================================ -->
+    <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/jquery.datatables.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/toastr.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/apexcharts.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/overlayscrollbars.browser.es6.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/sweetalert2@11.js"></script>
+    <script src="~/bootstrap-select/js/bootstrap-select.min.js" asp-append-version="true"></script>
+
+    <!-- ================================================================
+         CDN SCRIPTS
+         ================================================================ -->
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <!-- ================================================================
+         ADMINLTE & CUSTOM SCRIPTS
+         ================================================================ -->
+    <script src="~/js/adminlte.min.js" asp-append-version="true"></script>
+    <script src="~/custom/global.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://unpkg.com/intro.js/minified/intro.min.js"></script>
+
+
+    <!-- ================================================================
+         GLOBAL FUNCTIONS
+         ================================================================ -->
+    <script>
+        // ── Profile Modal ──
+        document.getElementById("btnProfile").addEventListener("click", function () {
+            fetch('/Account/UserProfile')
+                .then(res => res.text())
+                .then(html => {
+                    document.getElementById('profileModalContainer').innerHTML = html;
+                    var modal = new bootstrap.Modal(document.getElementById('profileModal'));
+                    modal.show();
+                });
+        });
+
+        // ── Sidebar Arrow Toggle ──
+        const arrow = document.getElementById('toggleArrow');
+        arrow.addEventListener('click', () => {
+            if (arrow.classList.contains('bi-arrow-left-circle-fill')) {
+                arrow.classList.remove('bi-arrow-left-circle-fill');
+                arrow.classList.add('bi-arrow-right-circle-fill');
+            } else {
+                arrow.classList.remove('bi-arrow-right-circle-fill');
+                arrow.classList.add('bi-arrow-left-circle-fill');
+            }
+
+            // ── Update Sales Button Bar Position ──
+            setTimeout(() => {
+                const isCollapsed = document.body.classList.contains('sidebar-collapse');
+                const btnBar = document.querySelector('.sales-btn-bar');
+                if (btnBar) {
+                    btnBar.style.left = isCollapsed ? '75px' : '250px';
+                }
+            }, 350);
+        });
+
+        // ── Global Loader Functions ──
+        function showLoader(message = "") {
+            $("#globalLoader").addClass("show");
+        }
+
+        function hideLoader() {
+            $("#globalLoader").removeClass("show");
+        }
+
+        // ── Auto-hide Loader on Page Load ──
+        $(document).ready(function () {
+            hideLoader();
+
+            // Set initial sales button bar position
+            setTimeout(() => {
+                const isCollapsed = document.body.classList.contains('sidebar-collapse');
+                const btnBar = document.querySelector('.sales-btn-bar');
+                if (btnBar) {
+                    btnBar.style.left = isCollapsed ? '75px' : '250px';
+                }
+            }, 400);
+        });
+    </script>
+
+    <!-- ================================================================
+    UPGRADE PLAN MODAL
+    ================================================================ -->
+    <!-- ================================================================
+    UPGRADE PLAN MODAL
+    ================================================================ -->
+    <div class="modal fade" id="upgradePlanModal" tabindex="-1" aria-labelledby="upgradePlanModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #f8f9fa;">
+                <div class="modal-header border-0 text-white py-3" style="background: linear-gradient(135deg, #1d4ed8 0%, #2b6ac9 100%);">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-white bg-opacity-20 p-2 rounded-circle me-3">
+                            <i class="bi bi-rocket-takeoff-fill fs-4 text-warning animate-bounce"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold" id="upgradePlanModalLabel">Upgrade Subscription Plan</h5>
+                            <span class="small text-white-50">Boost your business with premium modules and higher limits</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- SECTION 1: PLANS LIST -->
+                    <div id="plansListSection">
+                        <!-- Current Plan & Balance Alert -->
+                        <div class="card border-0 shadow-sm p-3 mb-4 d-flex flex-row align-items-center justify-content-between" style="border-radius: 12px; background: white;">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 p-2.5 rounded-3 me-3 text-primary">
+                                    <i class="bi bi-wallet2 fs-4"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small fw-semibold">Wallet Account Balance</div>
+                                    <div class="fw-bold text-dark fs-5" id="lblWalletBalance">₹0.00</div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-muted small fw-semibold">Current Active Plan</div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 fw-bold" id="lblCurrentPlanName" style="font-size: 0.85rem;">Free Trial</span>
+                            </div>
+                        </div>
+
+                        <!-- Billing Cycle Toggle -->
+                        <div class="d-flex justify-content-center align-items-center gap-3 mb-4">
+                            <span class="fw-semibold text-muted" id="billingCycleLabelMonthly">Monthly Billing</span>
+                            <div class="form-check form-switch form-switch-lg m-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="switchBillingCycle" style="cursor: pointer;">
+                            </div>
+                            <span class="fw-semibold text-primary d-flex align-items-center" id="billingCycleLabelYearly">
+                                Yearly Billing <span class="badge bg-success text-white ms-2" style="font-size: 0.65rem;">Save ~16%</span>
+                            </span>
+                        </div>
+
+                        <!-- Upgrade Cards Container -->
+                        <div class="row row-cols-1 row-cols-md-3 g-4" id="plansContainer">
+                            <!-- Plans will be rendered here dynamically -->
+                            <div class="col-12 text-center py-5" id="plansLoader">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2 text-muted fw-semibold">Fetching available upgrade plans...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: CHECKOUT & PAYMENT OPTIONS -->
+                    <div id="checkoutSection" style="display: none;">
+                        <button type="button" class="btn btn-link text-secondary fw-bold p-0 mb-3 text-decoration-none d-flex align-items-center gap-1" id="btnBackToPlans">
+                            <i class="bi bi-arrow-left"></i> Back to Plans
+                        </button>
+
+                        <div class="row g-4">
+                            <!-- Left: Order Summary -->
+                            <div class="col-md-5">
+                                <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 12px; background: white;">
+                                    <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Order Summary</h6>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted small">Selected Plan:</span>
+                                        <span class="fw-bold text-dark" id="summaryPlanName">-</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted small">Billing Cycle:</span>
+                                        <span class="fw-semibold text-muted text-capitalize" id="summaryBillingCycle">-</span>
+                                    </div>
+                                    <hr class="my-3 border-secondary-subtle">
+                                    <div class="d-flex justify-content-between mb-2 align-items-baseline">
+                                        <span class="fw-bold text-dark">Price:</span>
+                                        <span class="fw-extrabold text-primary fs-4" id="summaryTotalPrice">₹0.00</span>
+                                    </div>
+                                    <div class="bg-primary bg-opacity-5 p-3 rounded-3 mt-4 text-primary d-flex align-items-center gap-2">
+                                        <i class="bi bi-shield-lock-fill fs-4 text-success"></i>
+                                        <div class="text-start">
+                                            <div class="fw-bold small text-dark" style="line-height:1.2;">Secure Checkout</div>
+                                            <div class="text-muted" style="font-size:0.72rem; line-height:1.2;">Upgrades take effect instantly upon successful payment.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Payment Methods Selection -->
+                            <div class="col-md-7">
+                                <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 12px; background: white;">
+                                    <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Select Payment Method</h6>
+                                    <div class="d-flex flex-column gap-3">
+                                        
+                                        <!-- Option 1: Wallet -->
+                                        <div class="payment-option-card p-3 rounded-3 border active" id="payCardWallet">
+                                            <div class="form-check w-100 m-0">
+                                                <input class="form-check-input" type="radio" name="paymentOption" id="payOptWallet" checked>
+                                                <label class="form-check-label w-100 cursor-pointer ms-2" for="payOptWallet">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <span class="fw-bold text-dark d-block">Company Wallet Balance</span>
+                                                            <span class="small text-muted" id="payWalletBalanceLabel">Available Balance: ₹0.00</span>
+                                                        </div>
+                                                        <i class="bi bi-wallet2 text-primary fs-4"></i>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Option 2: Direct Gateway (Simulated) -->
+                                        <div class="payment-option-card p-3 rounded-3 border" id="payCardGateway">
+                                            <div class="form-check w-100 m-0">
+                                                <input class="form-check-input" type="radio" name="paymentOption" id="payOptGateway">
+                                                <label class="form-check-label w-100 cursor-pointer ms-2" for="payOptGateway">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <span class="fw-bold text-dark d-block">Direct Payment (UPI / Card)</span>
+                                                            <span class="small text-muted">Pay instantly using Credit Card or UPI app</span>
+                                                        </div>
+                                                        <div class="text-primary fs-4">
+                                                            <i class="bi bi-credit-card-2-back-fill me-1"></i>
+                                                            <i class="bi bi-phone-fill"></i>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Nested Direct Payment Details -->
+                                        <div id="gatewayPaymentDetails" class="payment-sub-tab mt-0 ms-2 p-3 rounded-3 border bg-light" style="display: none;">
+                                            <ul class="nav nav-pills nav-fill mb-3" id="directPayTabs" role="tablist">
+                                                <li class="nav-item" role="presentation">
+                                                    <button class="nav-link active" id="upi-tab" data-bs-toggle="tab" data-bs-target="#tab-upi" type="button" role="tab" aria-selected="true"><i class="bi bi-phone me-1"></i> UPI Payment</button>
+                                                </li>
+                                                <li class="nav-item" role="presentation">
+                                                    <button class="nav-link" id="card-tab" data-bs-toggle="tab" data-bs-target="#tab-card" type="button" role="tab" aria-selected="false"><i class="bi bi-credit-card me-1"></i> Card Payment</button>
+                                                </li>
+                                            </ul>
+                                            <div class="tab-content" id="directPayTabsContent">
+                                                <!-- UPI Tab -->
+                                                <div class="tab-pane fade show active" id="tab-upi" role="tabpanel">
+                                                    <div class="mb-2 text-start">
+                                                        <label class="form-label small fw-bold text-muted mb-1">Enter UPI ID</label>
+                                                        <input type="text" class="form-control form-control-sm" id="txtDirectUPI" placeholder="e.g. name@@upi" value="demo@@ybl">
+                                                        <span class="text-muted" style="font-size: 0.65rem;">A payment request will be simulated to this UPI ID.</span>
+                                                    </div>
+                                                </div>
+                                                <!-- Card Tab -->
+                                                <div class="tab-pane fade" id="tab-card" role="tabpanel">
+                                                    <div class="row g-2 text-start">
+                                                        <div class="col-12">
+                                                            <label class="form-label small fw-bold text-muted mb-0.5">Card Number</label>
+                                                            <input type="text" class="form-control form-control-sm" id="txtDirectCardNo" placeholder="1234 5678 1234 5678" value="4111 1111 1111 1111">
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <label class="form-label small fw-bold text-muted mb-0.5">Expiry Date</label>
+                                                            <input type="text" class="form-control form-control-sm" id="txtDirectCardExpiry" placeholder="MM/YY" value="12/29">
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <label class="form-label small fw-bold text-muted mb-0.5">CVV</label>
+                                                            <input type="password" class="form-control form-control-sm" id="txtDirectCardCVV" placeholder="123" value="123">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Option 3: Manual QR Scan -->
+                                        <div class="payment-option-card p-3 rounded-3 border" id="payCardManual">
+                                            <div class="form-check w-100 m-0">
+                                                <input class="form-check-input" type="radio" name="paymentOption" id="payOptManual">
+                                                <label class="form-check-label w-100 cursor-pointer ms-2" for="payOptManual">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <span class="fw-bold text-dark d-block">Manual Payment (QR Scan)</span>
+                                                            <span class="small text-muted">Scan scanner QR and enter Reference No</span>
+                                                        </div>
+                                                        <i class="bi bi-qr-code-scan text-primary fs-4"></i>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Manual QR Details -->
+                                        <div id="manualPaymentDetails" class="payment-sub-tab mt-0 ms-2 p-3 rounded-3 border bg-light text-center" style="display: none;">
+                                            <div class="fw-bold small text-muted mb-2">Scan QR and Pay Exactly <span class="text-primary fw-bold" id="lblManualPayAmount">₹0.00</span></div>
+                                            <img src="/assets/img/hukamsarbarcode.png" alt="Payment QR Code" style="max-width:140px; border-radius: 8px; border: 1px solid #dee2e6;" onerror="this.src='/assets1/images/loader/loaderGIF.gif'"/>
+                                            <div class="mt-2 text-start">
+                                                <label class="form-label small fw-bold text-muted mb-1">Transaction/UPI Reference Number <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control form-control-sm" id="txtManualRefNo" placeholder="Enter 12-digit transaction ID or Ref No">
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- Pay Button -->
+                                    <div class="mt-4">
+                                        <button type="button" class="btn btn-primary w-100 fw-bold py-2.5 shadow-sm" id="btnSubmitPayment" style="border-radius: 8px;">
+                                            Complete Payment & Upgrade
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Subscription Plan Upgrade Flow ──
+        $(document).ready(function () {
+            let activePlans = [];
+            let currentBillingCycle = 'monthly';
+            let walletBalance = 0;
+            let selectedPlanId = 0;
+            let selectedPlanName = '';
+            let selectedPlanPrice = 0;
+
+            $('#btnUpgradePlanHeader').on('click', function () {
+                openUpgradeModal();
+            });
+
+            $('#switchBillingCycle').on('change', function () {
+                currentBillingCycle = $(this).is(':checked') ? 'yearly' : 'monthly';
+                renderUpgradePlans();
+            });
+
+            // Back to Plans Button click
+            $('#btnBackToPlans').on('click', function () {
+                $('#checkoutSection').slideUp(200, function () {
+                    $('#plansListSection').slideDown(200);
+                });
+            });
+
+            // Handle payment option change
+            $('input[name="paymentOption"]').on('change', function () {
+                $('.payment-option-card').removeClass('active border-primary bg-primary-subtle bg-opacity-10 shadow-sm');
+                $(this).closest('.payment-option-card').addClass('active border-primary bg-primary-subtle bg-opacity-10 shadow-sm');
+
+                if ($(this).attr('id') === 'payOptGateway') {
+                    $('#gatewayPaymentDetails').slideDown(200);
+                } else {
+                    $('#gatewayPaymentDetails').slideUp(200);
+                }
+
+                if ($(this).attr('id') === 'payOptManual') {
+                    $('#manualPaymentDetails').slideDown(200);
+                } else {
+                    $('#manualPaymentDetails').slideUp(200);
+                }
+            });
+
+            function openUpgradeModal() {
+                // Reset views
+                $('#checkoutSection').hide();
+                $('#plansListSection').show();
+
+                $('#plansContainer').html(`
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+                        <p class="mt-2 text-muted fw-semibold">Loading available plans...</p>
+                    </div>
+                `);
+                $('#upgradePlanModal').modal('show');
+
+                $.ajax({
+                    url: '/Subscription/GetUpgradePlans',
+                    type: 'GET',
+                    success: function (res) {
+                        if (res.success) {
+                            activePlans = res.plans;
+                            walletBalance = res.walletBalance;
+                            $('#lblWalletBalance').text('₹' + walletBalance.toFixed(2));
+                            $('#lblCurrentPlanName').text(res.currentPlan ? res.currentPlan.planName : 'Free Trial');
+                            renderUpgradePlans();
+                        } else {
+                            Swal.fire("Error", res.message, "error");
+                            $('#upgradePlanModal').modal('hide');
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Could not fetch subscription plans. Please try again.", "error");
+                        $('#upgradePlanModal').modal('hide');
+                    }
+                });
+            }
+
+            function renderUpgradePlans() {
+                let container = $('#plansContainer');
+                container.empty();
+
+                if (activePlans.length === 0) {
+                    container.html(`
+                        <div class="col-12 text-center py-5">
+                            <div class="bg-light p-4 rounded-3 d-inline-block border border-secondary-subtle">
+                                <i class="bi bi-info-circle text-muted fs-3"></i>
+                                <h6 class="mt-2 fw-bold text-dark">No Upgrades Available</h6>
+                                <p class="text-muted small mb-0">You are already on our highest tier plan!</p>
+                            </div>
+                        </div>
+                    `);
+                    return;
+                }
+
+                activePlans.forEach(plan => {
+                    let price = currentBillingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+                    let periodLabel = currentBillingCycle === 'yearly' ? '/ year' : '/ month';
+                    let yearlySavings = '';
+                    if (currentBillingCycle === 'yearly') {
+                        let monthlyCostSum = plan.monthlyPrice * 12;
+                        let savings = monthlyCostSum - plan.yearlyPrice;
+                        if (savings > 0) {
+                            yearlySavings = `<span class="badge bg-success-subtle text-success border border-success-subtle ms-2" style="font-size: 0.65rem;">Save ₹${savings.toFixed(0)}</span>`;
+                        }
+                    }
+
+                    // Render features checklist
+                    let featuresListHtml = '';
+                    plan.features.forEach(feat => {
+                        featuresListHtml += `
+                            <li class="d-flex align-items-center mb-2 text-dark" style="font-size: 0.85rem;">
+                                <i class="bi bi-check-circle-fill text-success me-2" style="font-size: 0.95rem;"></i>
+                                <span>${feat}</span>
+                            </li>
+                        `;
+                    });
+
+                    let cardHtml = `
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm transition-hover card-plan" style="border-radius: 14px; background: white;">
+                                <div class="card-body p-4 d-flex flex-column">
+                                     <!-- Plan Title & Price -->
+                                    <div class="mb-3">
+                                        <h5 class="fw-bold text-dark mb-1">${plan.planName}</h5>
+                                        <div class="d-flex align-items-baseline mt-2">
+                                            <span class="fs-3 fw-extrabold text-primary">₹${price.toFixed(2)}</span>
+                                            <span class="text-muted small ms-1">${periodLabel}</span>
+                                            ${yearlySavings}
+                                        </div>
+                                    </div>
+
+                                    <!-- Plan Limits / Details -->
+                                    <div class="bg-light p-3 rounded-3 mb-3 border border-secondary-subtle">
+                                        <div class="d-flex justify-content-between mb-1.5" style="font-size: 0.78rem;">
+                                            <span class="text-muted">Desktop Logins</span>
+                                            <span class="fw-semibold text-dark">${plan.maxDesktopLogins} Max</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-1.5" style="font-size: 0.78rem;">
+                                            <span class="text-muted">Mobile Logins</span>
+                                            <span class="fw-semibold text-dark">${plan.maxMobileLogins} Max</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between" style="font-size: 0.78rem;">
+                                            <span class="text-muted">Daily Customer Limit</span>
+                                            <span class="fw-semibold text-dark">${plan.dailyCustomerLimit} Daily</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Features Toggle -->
+                                    <div class="mt-2 mb-3">
+                                        <button class="btn btn-link text-primary fw-bold p-0 text-decoration-none d-flex align-items-center gap-1 btn-toggle-features" type="button" style="font-size: 0.8rem;">
+                                            <span>View Features</span> <i class="bi bi-chevron-down fs-xs"></i>
+                                        </button>
+                                        <div class="features-list-wrapper mt-3" style="display: none;">
+                                            <ul class="list-unstyled mb-0">
+                                                ${featuresListHtml}
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <!-- Upgrade Button -->
+                                    <div class="mt-auto pt-3">
+                                        <button type="button" class="btn btn-primary w-100 fw-bold py-2 shadow-sm btn-upgrade-submit" data-plan-id="${plan.id}" data-plan-name="${plan.planName}" data-price="${price}" style="border-radius: 8px;">
+                                            Upgrade Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.append(cardHtml);
+                });
+
+                // Bind features toggle
+                $('.btn-toggle-features').on('click', function () {
+                    let wrapper = $(this).next('.features-list-wrapper');
+                    let icon = $(this).find('i');
+                    wrapper.slideToggle(200);
+                    if (icon.hasClass('bi-chevron-down')) {
+                        icon.removeClass('bi-chevron-down').addClass('bi-chevron-up');
+                    } else {
+                        icon.removeClass('bi-chevron-up').addClass('bi-chevron-down');
+                    }
+                });
+
+                // Bind upgrade submit -> Opens Checkout View
+                $('.btn-upgrade-submit').on('click', function () {
+                    selectedPlanId = $(this).data('plan-id');
+                    selectedPlanName = $(this).data('plan-name');
+                    selectedPlanPrice = parseFloat($(this).data('price'));
+
+                    // Setup Checkout Summary
+                    $('#summaryPlanName').text(selectedPlanName);
+                    $('#summaryBillingCycle').text(currentBillingCycle);
+                    $('#summaryTotalPrice').text('₹' + selectedPlanPrice.toFixed(2));
+                    $('#lblManualPayAmount').text('₹' + selectedPlanPrice.toFixed(2));
+
+                    // Reset manual ref
+                    $('#txtManualRefNo').val('');
+
+                    // Evaluate Wallet Option Availability
+                    if (walletBalance < selectedPlanPrice) {
+                        // Disable Wallet
+                        $('#payOptWallet').prop('disabled', true);
+                        $('#payCardWallet').addClass('disabled-card').removeClass('active border-primary bg-primary-subtle bg-opacity-10 shadow-sm');
+                        $('#payWalletBalanceLabel').text('Available Balance: ₹' + walletBalance.toFixed(2) + ' (Insufficient)');
+                        
+                        // Select and trigger Gateway
+                        $('#payOptGateway').prop('checked', true).trigger('change');
+                    } else {
+                        // Enable Wallet
+                        $('#payOptWallet').prop('disabled', false);
+                        $('#payCardWallet').removeClass('disabled-card');
+                        $('#payWalletBalanceLabel').text('Available Balance: ₹' + walletBalance.toFixed(2));
+                        
+                        // Select Wallet
+                        $('#payOptWallet').prop('checked', true).trigger('change');
+                    }
+
+                    // Toggle Section Views
+                    $('#plansListSection').slideUp(200, function () {
+                        $('#checkoutSection').slideDown(200);
+                    });
+                });
+            }
+
+            // Handle Complete Payment Button
+            $('#btnSubmitPayment').on('click', function () {
+                let selectedMethod = $('input[name="paymentOption"]:checked').attr('id');
+
+                if (selectedMethod === 'payOptWallet') {
+                    // Pay via Wallet
+                    Swal.fire({
+                        title: 'Confirm Wallet Payment',
+                        text: `Upgrade to ${selectedPlanName} (${currentBillingCycle})? An amount of ₹${selectedPlanPrice.toFixed(2)} will be deducted from your wallet balance.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Pay Now',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#1d4ed8',
+                        cancelButtonColor: '#dc3545',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            performUpgrade(selectedPlanId, currentBillingCycle, 'Wallet');
+                        }
+                    });
+                }
+                else if (selectedMethod === 'payOptManual') {
+                    // Pay via Manual QR code
+                    let refNo = $('#txtManualRefNo').val().trim();
+                    if (!refNo) {
+                        Swal.fire("Reference Number Required", "Please enter the Transaction/UPI Reference Number to verify your manual payment.", "warning");
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: 'Confirm Manual Payment',
+                        html: `Upgrade to <b>${selectedPlanName}</b> (${currentBillingCycle})?<br>Your payment reference <b>${refNo}</b> will be submitted for validation.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Submit & Upgrade',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#1d4ed8',
+                        cancelButtonColor: '#dc3545',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            performUpgrade(selectedPlanId, currentBillingCycle, 'Manual', refNo);
+                        }
+                    });
+                }
+                else if (selectedMethod === 'payOptGateway') {
+                    // Simulate Online Gateway Checkout
+                    let isUpi = $('#upi-tab').hasClass('active');
+                    let upiId = $('#txtDirectUPI').val().trim();
+                    let cardNo = $('#txtDirectCardNo').val().trim();
+
+                    if (isUpi && !upiId) {
+                        Swal.fire("UPI ID Required", "Please enter your UPI ID.", "warning");
+                        return;
+                    }
+                    if (!isUpi && !cardNo) {
+                        Swal.fire("Card Details Required", "Please enter your card number.", "warning");
+                        return;
+                    }
+
+                    // Display secure gateway simulation
+                    $('#upgradePlanModal').modal('hide');
+                    
+                    Swal.fire({
+                        title: 'Securing Connection...',
+                        html: '<div class="mt-2"><div class="spinner-border text-primary mb-3"></div><p class="small text-muted">Establishing a secure connection with payment gateway...</p></div>',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        Swal.fire({
+                            title: 'Authorizing Transaction...',
+                            html: `<div class="mt-2"><div class="spinner-border text-info mb-3"></div><p class="small text-muted">Requesting authorization for ₹${selectedPlanPrice.toFixed(2)} from bank...</p></div>`,
+                            allowOutsideClick: false,
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(() => {
+                            Swal.fire({
+                                title: 'Verifying Signature...',
+                                html: '<div class="mt-2"><div class="spinner-border text-success mb-3"></div><p class="small text-muted">Completing cryptographic transaction handshake...</p></div>',
+                                allowOutsideClick: false,
+                                showConfirmButton: false,
+                                timer: 1200
+                            }).then(() => {
+                                // Trigger actual controller upgrade request
+                                let simulatedRef = 'SIM-GW-' + Date.now();
+                                performUpgrade(selectedPlanId, currentBillingCycle, 'Gateway', simulatedRef);
+                            });
+                        });
+                    });
+                }
+            });
+
+            function performUpgrade(planId, cycle, paymentMode, referenceNo) {
+                $('#upgradePlanModal').modal('hide');
+                showLoader("Upgrading subscription plan...");
+
+                $.ajax({
+                    url: '/Subscription/Upgrade',
+                    type: 'POST',
+                    data: { 
+                        planId: planId, 
+                        billingCycle: cycle,
+                        paymentMode: paymentMode,
+                        referenceNo: referenceNo
+                    },
+                    success: function (res) {
+                        hideLoader();
+                        if (res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Upgrade Successful!',
+                                text: 'Your plan has been upgraded. Logging out to apply new features...',
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                // Submit logout form to refresh security cookies/claims
+                                let form = document.querySelector('form[action*="/Account/Logout"]');
+                                if (form) {
+                                    form.submit();
+                                } else {
+                                    window.location.reload();
+                                }
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Upgrade Failed',
+                                text: res.message
+                            });
+                        }
+                    },
+                    error: function () {
+                        hideLoader();
+                        Swal.fire("Error", "Could not complete the upgrade request. Please try again.", "error");
+                    }
+                });
+            }
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

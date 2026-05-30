@@ -1,0 +1,449 @@
+@using EasyBill.Models.ViewModels
+@using EasyBill.UI.Controllers
+@using static EasyBill.UI.Controllers.PurchaseController
+@model object
+
+<h3> GSTR2 Report</h3>
+<style>
+    .row-active td {
+        background-color: #198754 !important;
+        color: #fff !important;
+    }
+</style>
+<div class="card mb-3 shadow-sm">
+    <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-funnel-fill text-primary me-1"></i>
+        Purchase Filters
+    </div>
+
+    <div class="card-body">
+        <form id="purchaseFilterForm" method="get">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            Start Date
+                        </label>
+                        <div class="col-7">
+                            <input type="date"
+                                   name="StartBillDate"
+                                   value="@(Context.Request.Query["StartBillDate"].Any()
+                                                   ? Context.Request.Query["StartBillDate"].ToString()
+                                                   : ViewBag.StartBillDate)"
+                                   class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            End Date
+                        </label>
+                        <div class="col-7">
+                            <input type="date"
+                                   name="EndBillDate"
+                                   value="@(Context.Request.Query["EndBillDate"].Any()
+                                                   ? Context.Request.Query["EndBillDate"].ToString()
+                                                   : ViewBag.EndBillDate)"
+                                   class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 d-flex align-items-center justify-content-left">
+                    <button type="submit" class="btn btn-sm btn-primary me-1">
+                        Search
+                    </button>
+                    <button type="button"
+                            class="btn btn-sm btn-secondary"
+                            onclick="clearFilters()">
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@{
+    var summaryTemplate = new List<(string Key, string Text)>
+    {
+        (PurchaseController.Gstr2SummaryKeys.B2B, "B2B"),
+        (PurchaseController.Gstr2SummaryKeys.B2C_LARGE, "B2C (Large) Invoice"),
+        (PurchaseController.Gstr2SummaryKeys.B2C_SMALL, "B2C (Small) Invoice"),
+        (PurchaseController.Gstr2SummaryKeys.NIL, "Nil Rated/Exempted"),
+        (PurchaseController.Gstr2SummaryKeys.NIL_RATED, " - Nil Rated"),
+        (PurchaseController.Gstr2SummaryKeys.EXEMPTED, " - Exempted"),
+        (PurchaseController.Gstr2SummaryKeys.EXPORT, "Export Invoices"),
+        (PurchaseController.Gstr2SummaryKeys.ADVANCE, "Tax Liability on Advance"),
+        (PurchaseController.Gstr2SummaryKeys.TOTAL, "Total")
+    };
+
+    var data = Model != null
+        ? ((IEnumerable<Gstr2SummaryVM>)Model)
+            .ToDictionary(x => x.Key)
+        : new Dictionary<string, Gstr2SummaryVM>();
+}
+
+@if ((string)ViewBag.ViewType == "Summary")
+{
+    <table class="table table-bordered table-sm">
+        <thead class="table-light text-center">
+            <tr>
+                <th>Description</th>
+                <th>Count</th>
+                <th>Taxable</th>
+                <th>SGST</th>
+                <th>CGST</th>
+                <th>IGST</th>
+                <th>Cess</th>
+                <th>Total GST</th>
+                <th>Invoice Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in summaryTemplate)
+            {
+                var d = data.ContainsKey(row.Key) ? data[row.Key] : null;
+
+                <tr class="summary-row @(row.Key == Gstr2SummaryKeys.TOTAL ? "fw-bold table-warning" : "")"
+                    data-key="@row.Key"
+                    style="cursor:pointer">
+                    <td>@row.Text</td>
+                    <td class="text-end">@((d?.Count) ?? 0)</td>
+                    <td class="text-end">@((d?.Taxable ?? 0).ToString("F2"))</td>
+                    <td class="text-end">@((d?.SGST ?? 0).ToString("F2"))</td>
+                    <td class="text-end">@((d?.CGST ?? 0).ToString("F2"))</td>
+                    <td class="text-end">@((d?.IGST ?? 0).ToString("F2"))</td>
+                    <td class="text-end">@((d?.Cess ?? 0).ToString("F2"))</td>
+                    <td class="text-end">@((d?.TotalGST ?? 0).ToString("F2"))</td>
+                    <td class="text-end">@((d?.InvoiceAmount ?? 0).ToString("F2"))</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+     <div class="d-flex gap-2 mt-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openViewTypeModal('view')"> View </button>
+
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary"
+                onclick="openViewTypeModal('print')">
+            Print
+        </button>
+
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary"
+                onclick="openViewTypeModal('excel')">
+            Excel
+        </button>
+    </div> 
+}
+<div class="modal fade" id="billDetailModal">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Bill Details</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <h6>Bills</h6>
+                <table class="table table-bordered table-sm" id="billTable">
+                    <thead>
+                        <tr>
+                            <th>Supplier</th>
+                            <th>Invoice Category</th>
+                            <th>Bill Date</th>
+                            <th>Bill No</th>
+                            <th>Bill Amount</th>
+                            <th>Taxable Amount</th>
+                            <th>Tax Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <hr />
+
+                <h6>Items</h6>
+                <table class="table table-bordered table-sm" id="itemTable">
+                    <thead>
+                        <tr>
+                            <th>HSN/SAC Code</th>
+                            <th>Amount</th>
+                            <th>Taxable Amt</th>
+                            <th>SGST %</th>
+                            <th>SGST Tax</th>
+                            <th>CGST %</th>
+                            <th>CGST Tax</th>
+                            <th>IGST %</th>
+                            <th>IGST Tax</th>
+                            <th>Cess %</th>
+                            <th>Cess</th>
+                            <th>Total Tax</th>
+                            <th>Tax Type</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="viewTypeModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title">Select View Type</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body text-center">
+                <button class="btn btn-sm btn-outline-primary w-100 mb-2"
+                        onclick="applyViewType('Summary')">
+                    Summary
+                </button>
+
+                <button class="btn btn-sm btn-outline-primary w-100"
+                        onclick="applyViewType('Details')">
+                    Details
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function clearFilters() {
+        window.location.href = window.location.pathname;
+    }
+</script>
+
+<script>
+    let selectedAction = '';
+
+    function openViewTypeModal(action) {
+        selectedAction = action;
+        var modal = new bootstrap.Modal(document.getElementById('viewTypeModal'));
+        modal.show();
+    }
+
+    function applyViewType(viewType) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('ViewType', viewType);
+
+        if (selectedAction === 'excel') {
+            window.location.href = '/Purchase/ExportGSTR2Excel?' + params.toString();
+        }
+        else if (selectedAction === 'print') {
+            window.location.search = params.toString();
+            setTimeout(() => window.print(), 300);
+        }
+        else {
+            window.location.search = params.toString();
+        }
+    }
+
+    $(document).on("click", ".summary-row", function () {
+
+        var key = $(this).data("key");
+
+        const params = new URLSearchParams(window.location.search);
+        params.set("type", key);
+
+        fetch("/Purchase/GetGstr2Bills?" + params.toString())
+            .then(res => res.json())
+            .then(data => {
+
+                let rows = "";
+
+                data.forEach(b => {
+
+                    rows += `<tr class="bill-row" data-id="${b.id}">
+                                <td>${b.supplier}</td>
+                                <td>${b.invoicecategory}</td>
+                                <td>${b.billDate}</td>
+                                <td>${b.billNo}</td>
+                                <td>${b.invoiceAmount}</td>
+                                <td>${b.taxable}</td>
+                                <td>${b.gst}</td>
+                             </tr>`;
+                });
+
+                $("#billTable tbody").html(rows);
+                $("#itemTable tbody").html("");
+
+                billIndex = 0;
+                highlightBillRow();
+
+                var modal = new bootstrap.Modal(document.getElementById("billDetailModal"));
+                modal.show();
+            });
+
+    });
+
+    $(document).on("click", ".bill-row", function () {
+        $(".bill-row").removeClass("row-active");
+
+        $(this).addClass("row-active");
+
+        billIndex = $(this).index();
+
+        var id = $(this).data("id");
+        loadBillItems(id);
+    });
+
+    function loadBillItems(id) {
+
+        fetch("/Purchase/GetPurchaseBillItems?id=" + id)
+            .then(res => res.json())
+            .then(items => {
+
+                let rows = "";
+
+                items.forEach(i => {
+
+                    rows += `<tr>
+                                <td>${i.hsn || "-"}</td>
+                                <td>${i.amount.toFixed(2)}</td>
+                                <td>${i.taxable.toFixed(2)}</td>
+
+                                <td>${i.sgstPer}</td>
+                                <td>${i.sgstTax.toFixed(2)}</td>
+
+                                <td>${i.cgstPer}</td>
+                                <td>${i.cgstTax.toFixed(2)}</td>
+
+                                <td>${i.igstPer}</td>
+                                <td>${i.igstTax.toFixed(2)}</td>
+                                <td>${i.cessPer}</td>
+                                <td>${i.cess}</td>
+
+                                <td>${i.totalTax.toFixed(2)}</td>
+
+                                <td>${i.taxType}</td>
+                             </tr>`;
+                });
+
+                $("#itemTable tbody").html(rows);
+            });
+    }
+
+    let summaryIndex = 0;
+
+    function highlightSummaryRow() {
+
+        let rows = $(".summary-row");
+
+        rows.removeClass("row-active");
+
+        if (rows.length > 0) {
+            $(rows[summaryIndex]).addClass("row-active");
+        }
+    }
+
+    $(document).ready(function () {
+        summaryIndex = 0;
+        highlightSummaryRow();
+    });
+
+    $(document).on("keydown", function (e) {
+
+        let rows = $(".summary-row");
+
+        if (rows.length === 0) return;
+
+        if ($("#billDetailModal").hasClass("show"))
+            return;
+
+        if (e.key === "ArrowDown") {
+
+            if (summaryIndex < rows.length - 1)
+                summaryIndex++;
+
+            highlightSummaryRow();
+            e.preventDefault();
+        }
+
+        if (e.key === "ArrowUp") {
+
+            if (summaryIndex > 0)
+                summaryIndex--;
+
+            highlightSummaryRow();
+            e.preventDefault();
+        }
+
+        if (e.key === "Enter") {
+            $(rows[summaryIndex]).trigger("click");
+        }
+
+    });
+
+
+    let billIndex = 0;
+
+    function highlightBillRow() {
+
+        let rows = $("#billTable tbody tr");
+
+        rows.removeClass("row-active");
+
+        if (rows.length > 0) {
+
+            let row = $(rows[billIndex]);
+
+            row.addClass("row-active");
+
+            let id = row.data("id");
+            loadBillItems(id);
+        }
+    }
+
+    $(document).keydown(function (e) {
+
+        if (!$("#billDetailModal").hasClass("show"))
+            return;
+
+        let rows = $("#billTable tbody tr");
+
+        if (rows.length == 0) return;
+
+        if (e.key === "ArrowDown") {
+
+            if (billIndex < rows.length - 1)
+                billIndex++;
+
+            highlightBillRow();
+            e.preventDefault();
+        }
+
+        if (e.key === "ArrowUp") {
+
+            if (billIndex > 0)
+                billIndex--;
+
+            highlightBillRow();
+            e.preventDefault();
+        }
+
+        if (e.key === "Enter") {
+
+            $(rows[billIndex]).click();
+        }
+
+    });
+
+    $('#billDetailModal').on('hidden.bs.modal', function () {
+
+        billIndex = 0;
+        highlightSummaryRow();
+
+    });
+</script>

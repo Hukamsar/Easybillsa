@@ -1,0 +1,116 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Views\Login\**" />
+    <Content Remove="Views\Login\**" />
+    <EmbeddedResource Remove="Views\Login\**" />
+    <None Remove="Views\Login\**" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="DotNetCore.NPOI" Version="1.2.3" />
+		<PackageReference Include="itext7" Version="7.2.5" />
+		<PackageReference Include="itext7.pdfhtml" Version="5.0.5" />
+		<PackageReference Include="itext.bouncy-castle-adapter" Version="8.0.5" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.4" />
+		<PackageReference Include="AspNetCore.Reporting" Version="2.1.0" /> <!--Dg-->
+		<PackageReference Include="ClosedXML" Version="0.104.2" />
+		<PackageReference Include="EPPlus" Version="7.5.3" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.4" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.4">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.4" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="8.0.4" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.4">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.TeamFoundationServer.ExtendedClient" Version="20.256.2" />
+		<PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.7" />
+		<PackageReference Include="ReportViewerCore.NETCore" Version="15.1.26" />
+		<PackageReference Include="PdfPig" Version="0.1.14" />
+		<PackageReference Include="SkiaSharp" Version="3.119.0" />
+		<PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="7.3.1" />
+		<PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="7.3.1" />
+		<PackageReference Include="Tesseract" Version="5.2.0" />
+		<PackageReference Include="Twilio" Version="7.8.5" /> 
+		<PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.21" /><!--Dg-->
+
+	</ItemGroup>
+	
+  <ItemGroup>
+    <ProjectReference Include="..\EasyBill.DataAccess\EasyBill.DataAccess.csproj" />
+    <ProjectReference Include="..\EasyBill.Models\EasyBill.Models.csproj" />
+    <ProjectReference Include="..\EasyBill.Utilites\EasyBill.Utility.csproj" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <Folder Include="wwwroot\docs\Payment Voucher\" />
+    <Folder Include="wwwroot\docs\PurchaseOrder\" />
+    <Folder Include="wwwroot\docs\Tenant\" />
+    <Folder Include="wwwroot\Invoices\" />
+    <Folder Include="wwwroot\ItemImages\" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <Compile Update="Reports\DataSet\dsSalesOrderDetails.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>dsSalesOrderDetails.xsd</DependentUpon>
+    </Compile>
+    <Compile Update="Reports\DataSet\dsSalesOrderItemDetails.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>dsSalesOrderItemDetails.xsd</DependentUpon>
+    </Compile>
+    <Compile Update="Reports\DataSet\SalseDetails.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>SalseDetails.xsd</DependentUpon>
+    </Compile>
+    <Compile Update="Reports\DataSet\SalseItemDetails.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>SalseItemDetails.xsd</DependentUpon>
+    </Compile>
+  </ItemGroup>
+	
+  <ItemGroup>
+    <None Update="Reports\DataSet\dsSalesOrderDetails.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>dsSalesOrderDetails.Designer.cs</LastGenOutput>
+    </None>
+    <None Update="Reports\DataSet\dsSalesOrderItemDetails.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>dsSalesOrderItemDetails.Designer.cs</LastGenOutput>
+    </None>
+    <None Update="Reports\DataSet\SalseDetails.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>SalseDetails.Designer.cs</LastGenOutput>
+    </None>
+    <None Update="Reports\DataSet\SalseItemDetails.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>SalseItemDetails.Designer.cs</LastGenOutput>
+    </None>
+    <None Update="Reports\SalesOrderDetailsReport.rdlc">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Reports\SalseDetailsReport.rdlc">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Reports\SalseReport.rdlc">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

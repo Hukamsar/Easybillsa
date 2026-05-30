@@ -1,0 +1,2419 @@
+﻿@{
+    ViewData["Title"] = "Global Settings";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    :root {
+        --primary: #2b6ac9;
+        --primary-light: #e8f0fc;
+        --border: #e2e8f0;
+        --text: #1e293b;
+        --text-muted: #64748b;
+        --text-light: #94a3b8;
+        --success: #10b981;
+        --danger: #ef4444;
+        --radius: 12px;
+        --radius-sm: 8px;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .gs-wrapper {
+        display: flex;
+        gap: 0;
+        min-height: calc(100vh - 120px);
+        background: #f0f4f8;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 1px solid var(--border);
+    }
+
+    .gs-sidebar {
+        width: 210px;
+        min-width: 210px;
+        background: #fff;
+        border-right: 1px solid var(--border);
+        padding: 16px 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+
+        .gs-sidebar.collapsed {
+            width: 0;
+            min-width: 0;
+            padding: 16px 0;
+            border-right: none;
+        }
+
+    .gs-sidebar-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: var(--text-light);
+        padding: 0 16px 10px;
+    }
+
+    .gs-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 16px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-muted);
+        border-left: 3px solid transparent;
+        transition: all 0.18s;
+        white-space: nowrap;
+    }
+
+        .gs-nav-item:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .gs-nav-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .gs-nav-item i {
+            font-size: 15px;
+            width: 18px;
+            text-align: center;
+        }
+
+    .gs-nav-badge {
+        margin-left: auto;
+        background: var(--primary);
+        color: #fff;
+        font-size: 10px;
+        padding: 1px 6px;
+        border-radius: 10px;
+    }
+
+    .gs-main {
+        flex: 1;
+        padding: 24px 28px;
+        overflow-y: auto;
+        background: #f0f4f8;
+        transition: all 0.3s ease;
+    }
+
+    .gs-page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    .gs-page-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .gs-page-title i {
+            width: 34px;
+            height: 34px;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+    .gs-page-desc {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 3px;
+        margin-left: 44px;
+    }
+
+    .btn-back-menu {
+        background: transparent;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        gap: 5px;
+        margin-right: 15px;
+        transition: all 0.2s;
+    }
+
+        .btn-back-menu:hover {
+            background: var(--primary-light);
+        }
+
+        .btn-back-menu.show {
+            display: inline-flex;
+        }
+
+    .btn-gs-save {
+        background: rgba(255, 255, 255, 0.18);
+        color: #fff;
+        border: 1.5px solid rgba(255, 255, 255, 0.55);
+        padding: 5px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+        .btn-gs-save:hover {
+            background: rgba(255, 255, 255, 0.32);
+            transform: translateY(-1px);
+        }
+
+    .gs-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11.5px;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+    }
+
+        .gs-breadcrumb span:last-child {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+    .settings-card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        opacity: 0;
+        transform: translateY(10px);
+        animation: fadeUp 0.35s ease forwards;
+    }
+
+        .settings-card:nth-child(2) {
+            animation-delay: 0.07s;
+        }
+
+        .settings-card:nth-child(3) {
+            animation-delay: 0.14s;
+        }
+
+        .settings-card:nth-child(4) {
+            animation-delay: 0.21s;
+        }
+
+    .card-header-strip {
+        padding: 10px 18px;
+        background: linear-gradient(to right, #f8faff, #f1f5fd);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+        .card-header-strip i {
+            color: var(--primary);
+            font-size: 14px;
+        }
+
+        .card-header-strip span {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+    .setting-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 13px 18px;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.15s;
+    }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-row:hover {
+            background: #fafbff;
+        }
+
+    .setting-info {
+        flex: 1;
+    }
+
+    .setting-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+    }
+
+    .setting-hint {
+        font-size: 11px;
+        color: var(--text-light);
+        margin-top: 2px;
+    }
+
+    .setting-control {
+        margin-left: 16px;
+    }
+
+    .setting-inline-note {
+        font-size: 11px;
+        color: var(--text-light);
+        margin-top: 4px;
+    }
+
+    .toggle {
+        position: relative;
+        width: 40px;
+        height: 21px;
+    }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+    .toggle-slider {
+        position: absolute;
+        inset: 0;
+        background: #cbd5e1;
+        border-radius: 21px;
+        cursor: pointer;
+        transition: 0.25s;
+    }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            left: 3px;
+            top: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: 0.25s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+    .toggle input:checked + .toggle-slider {
+        background: var(--primary);
+    }
+
+        .toggle input:checked + .toggle-slider::before {
+            transform: translateX(19px);
+        }
+
+    .radio-group {
+        display: flex;
+        gap: 7px;
+    }
+
+    .radio-pill {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 11px;
+        border: 1.5px solid var(--border);
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-muted);
+        transition: all 0.18s;
+        user-select: none;
+    }
+
+        .radio-pill input {
+            display: none;
+        }
+
+        .radio-pill:has(input:checked) {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+    .radio-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        display: inline-block;
+    }
+
+    .radio-pill:has(input:checked) .radio-dot {
+        background: var(--primary);
+    }
+
+    .num-input {
+        width: 85px;
+        height: 30px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 0 9px;
+        font-size: 13px;
+        color: var(--text);
+        transition: border 0.2s;
+        background: #fff;
+    }
+
+        .num-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(43,106,201,0.1);
+        }
+
+    .settings-panel {
+        display: none;
+    }
+
+        .settings-panel.active {
+            display: block;
+        }
+
+    @@keyframes fadeUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .gs-toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--success);
+        color: #fff;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        transform: translateY(60px);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        z-index: 9999;
+    }
+
+        .gs-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+    .theme-sub-nav {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 10px;
+    }
+
+    .theme-sub-tab {
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--text-muted);
+        background: #fff;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+    }
+
+        .theme-sub-tab.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+    .color-picker-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .color-picker {
+        -webkit-appearance: none;
+        border: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        padding: 0;
+        overflow: hidden;
+    }
+
+        .color-picker::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .color-picker::-webkit-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+
+    .btn-set-default {
+        background-color: #f8faff;
+        color: var(--primary);
+        border: 1px solid var(--primary);
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .btn-set-default:hover {
+            background-color: var(--primary);
+            color: #fff;
+        }
+
+        .btn-set-default.is-active {
+            background-color: var(--success);
+            color: #fff;
+            border-color: var(--success);
+            pointer-events: none;
+        }
+
+    .theme-split-layout {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+    }
+
+    .theme-form-col {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .theme-preview-col {
+        width: 520px;
+        position: sticky;
+        top: 24px;
+        transition: width 0.3s ease;
+    }
+
+    .paper-desk-wrapper {
+        background: #cbd5e1;
+        padding: 20px 0;
+        border-radius: 12px;
+        display: flex;
+        justify-content: center;
+        overflow: hidden;
+        border: 1px solid #94a3b8;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .true-paper-sheet {
+        background: #ffffff;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.05);
+        transform-origin: top center;
+        position: relative;
+        color: #1e293b;
+        font-family: Arial, sans-serif;
+        box-sizing: border-box;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .prev-header {
+        padding-bottom: 14px;
+        border-bottom: 3px solid var(--primary);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 14px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .prev-logo {
+        display: none;
+        object-fit: contain;
+        max-width: 100%;
+    }
+
+    .prev-title {
+        font-size: 24px;
+        font-weight: 900;
+        color: var(--primary);
+        text-transform: uppercase;
+        text-align: right;
+        line-height: 1;
+    }
+
+    .prev-business-line {
+        margin-top: 6px;
+        text-align: right;
+        font-size: 11px;
+        color: #475569;
+        line-height: 1.35;
+    }
+
+    .prev-watermark {
+        position: absolute;
+        top: 53%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        opacity: 0.1;
+        display: none;
+        pointer-events: none;
+        z-index: 0;
+        object-fit: contain;
+        max-width: 90%;
+    }
+
+    .prev-meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 12px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .prev-meta-card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 11px;
+        background: #fff;
+    }
+
+    .prev-meta-title {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--primary);
+        margin-bottom: 4px;
+    }
+
+    .prev-meta-card b {
+        color: var(--text);
+    }
+
+    .prev-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 12px;
+        position: relative;
+        z-index: 1;
+        font-size: 12px;
+    }
+
+        .prev-table th {
+            background: var(--primary-light);
+            color: var(--text);
+            padding: 8px 6px;
+            text-align: left;
+            border: 1px solid #dde6f2;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .prev-table td {
+            padding: 7px 6px;
+            border: 1px solid #ecf2f9;
+            vertical-align: top;
+        }
+
+        .prev-table tbody tr:nth-child(even) {
+            background: #f8fbff;
+        }
+
+        .prev-table.table-zebra-off tbody tr:nth-child(even) {
+            background: transparent;
+        }
+
+    .t-right {
+        text-align: right;
+    }
+
+    .t-center {
+        text-align: center;
+    }
+
+    .prev-bottom-layout {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 12px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .prev-notes-box {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 9px 10px;
+        background: #fff;
+    }
+
+    .prev-box-label {
+        font-weight: 700;
+        margin-bottom: 4px;
+        color: var(--text);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .prev-note-text {
+        font-size: 11px;
+        color: #64748b;
+        white-space: pre-wrap;
+        line-height: 1.35;
+        margin-bottom: 8px;
+    }
+
+    .prev-summary-box {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 9px 10px;
+        background: #fff;
+    }
+
+    .prev-summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+        .prev-summary-table td {
+            padding: 4px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+
+        .prev-summary-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .prev-summary-table td:last-child {
+            text-align: right;
+            font-weight: 700;
+        }
+
+        .prev-summary-table tr.payable td {
+            padding-top: 6px;
+            border-top: 1px solid #d1dce9;
+            border-bottom: 1px solid #d1dce9;
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: 900;
+        }
+
+    .prev-qr-wrap {
+        margin-top: 8px;
+        border: 1px dashed #d8e1ee;
+        border-radius: 8px;
+        padding: 6px;
+        display: none;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .prev-qr {
+        width: 52px;
+        height: 52px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        background: #fff;
+        display: none;
+        object-fit: contain;
+    }
+
+    .prev-qr-text {
+        font-size: 10px;
+        color: #475569;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
+    .prev-tax-table {
+        margin-top: 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        display: none;
+        position: relative;
+        z-index: 1;
+    }
+
+        .prev-tax-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .prev-tax-table th,
+        .prev-tax-table td {
+            border: 1px solid #edf2f9;
+            padding: 6px 8px;
+            text-align: right;
+        }
+
+            .prev-tax-table th:first-child,
+            .prev-tax-table td:first-child {
+                text-align: left;
+            }
+
+    .prev-signature-row {
+        margin-top: 10px;
+        display: flex;
+        justify-content: flex-end;
+        align-items: end;
+        position: relative;
+        z-index: 1;
+    }
+
+    .prev-sign-wrap {
+        width: 180px;
+        text-align: center;
+        border-top: 1px dashed #d1dce9;
+        padding-top: 6px;
+    }
+
+    .prev-sign {
+        max-width: 130px;
+        max-height: 60px;
+        display: none;
+        margin: 0 auto 6px;
+        object-fit: contain;
+    }
+
+    .prev-sign-label {
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .theme-input-error {
+        border-color: var(--danger) !important;
+        box-shadow: 0 0 0 3px rgba(239,68,68,0.12) !important;
+    }
+
+    .theme-thermal-row {
+        display: none;
+    }
+
+    .thermal-head {
+        text-align: center;
+        border-bottom: 1px dashed #222;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+    }
+
+    .thermal-title {
+        font-weight: 800;
+        font-size: 17px;
+        margin-bottom: 4px;
+    }
+
+    .thermal-sub {
+        font-size: 10px;
+        color: #334155;
+        line-height: 1.35;
+    }
+
+    .thermal-meta {
+        font-size: 11px;
+        margin-bottom: 8px;
+        border-bottom: 1px dashed #222;
+        padding-bottom: 8px;
+    }
+
+    .thermal-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 11px;
+        margin-bottom: 8px;
+    }
+
+        .thermal-table th,
+        .thermal-table td {
+            border-bottom: 1px dashed #222;
+            padding: 4px 2px;
+        }
+
+        .thermal-table th {
+            text-align: left;
+            font-weight: 700;
+        }
+
+    .thermal-col-item {
+        width: auto;
+    }
+
+    .thermal-col-qty {
+        width: 40px;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .thermal-col-amt {
+        width: 68px;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .thermal-item-name {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.16;
+    }
+
+    .thermal-item-main {
+        display: block;
+        font-weight: 700;
+    }
+
+    .thermal-item-sub {
+        display: block;
+        margin-top: 2px;
+        font-size: 9.2px;
+        color: #334155;
+        font-weight: 600;
+        line-height: 1.14;
+    }
+
+    .thermal-item-sub-2 {
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    .thermal-summary {
+        border-top: 1px dashed #222;
+        border-bottom: 1px dashed #222;
+        padding: 6px 0;
+        margin-bottom: 8px;
+        font-size: 11px;
+    }
+
+    .thermal-summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 3px;
+    }
+
+        .thermal-summary-row.total {
+            font-weight: 800;
+            font-size: 14px;
+        }
+
+    .thermal-barcode-wrap {
+        margin: 8px 0;
+        text-align: center;
+    }
+
+    .thermal-barcode-image {
+        width: 100%;
+        max-width: 100%;
+        min-height: 58px;
+        height: auto;
+        object-fit: fill;
+        border: 1px solid #e2e8f0;
+        border-radius: 3px;
+        image-rendering: crisp-edges;
+    }
+
+    .thermal-barcode-text {
+        margin-top: 5px;
+        font-size: 10px;
+        color: #1e293b;
+        letter-spacing: 0.6px;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        font-weight: 700;
+    }
+
+    .thermal-sign-wrap {
+        text-align: center;
+        margin-top: 8px;
+        font-size: 10px;
+        color: #475569;
+    }
+
+        .thermal-sign-wrap img {
+            max-width: 90px;
+            max-height: 40px;
+            display: none;
+            object-fit: contain;
+            margin: 0 auto 5px;
+        }
+
+    #prevThermalContainer.is-58 {
+        font-size: 9px !important;
+    }
+
+        #prevThermalContainer.is-58 .thermal-title {
+            font-size: 15px;
+        }
+
+        #prevThermalContainer.is-58 .thermal-sub,
+        #prevThermalContainer.is-58 .thermal-meta,
+        #prevThermalContainer.is-58 .thermal-summary,
+        #prevThermalContainer.is-58 .thermal-sign-wrap {
+            font-size: 9px;
+        }
+
+        #prevThermalContainer.is-58 .thermal-table {
+            font-size: 9.5px;
+        }
+
+            #prevThermalContainer.is-58 .thermal-table th,
+            #prevThermalContainer.is-58 .thermal-table td {
+                padding: 3px 1px;
+            }
+
+        #prevThermalContainer.is-58 .thermal-col-qty {
+            width: 30px;
+        }
+
+        #prevThermalContainer.is-58 .thermal-col-amt {
+            width: 58px;
+        }
+
+        #prevThermalContainer.is-58 .thermal-item-sub {
+            font-size: 8.6px;
+        }
+
+        #prevThermalContainer.is-58 .thermal-item-main {
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        #prevThermalContainer.is-58 .thermal-barcode-image {
+            min-height: 50px;
+        }
+
+    .theme-range-hint {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 4px;
+    }
+</style>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center justify-content-between" style="background:#2b6ac9">
+        <span><i class="bi bi-gear-wide-connected me-2"></i>Global Settings</span>
+        <button class="btn-gs-save" onclick="saveCurrentTab()">
+            <i class="bi bi-check2"></i> Save Changes
+        </button>
+    </div>
+</div>
+
+<div class="gs-wrapper">
+    <aside class="gs-sidebar" id="gsSidebar">
+        <div class="gs-sidebar-label">Modules</div>
+        <div class="gs-nav-item active" onclick="switchTab('sales', this)">
+            <i class="bi bi-receipt"></i> Sales <span class="gs-nav-badge">4</span>
+        </div>
+        <div class="gs-nav-item" onclick="switchTab('purchase', this)">
+            <i class="bi bi-cart3"></i> Purchase <span class="gs-nav-badge">1</span>
+        </div>
+        <div class="gs-nav-item" onclick="switchTab('invoicethemes', this)">
+            <i class="bi bi-palette"></i> Invoice Design
+        </div>
+        <div class="gs-nav-item" onclick="switchTab('general', this)">
+            <i class="bi bi-sliders"></i> General
+        </div>
+        <div class="gs-nav-item" onclick="switchTab('inventory', this)">
+            <i class="bi bi-box-seam"></i> Inventory
+        </div>
+    </aside>
+
+    <main class="gs-main" id="gsMainContent">
+        <div class="settings-panel active" id="panel-sales">
+            <div class="gs-breadcrumb"><i class="bi bi-house"></i> <span>Settings</span> <i class="bi bi-chevron-right"></i> <span>Sales</span></div>
+            <div class="gs-page-header">
+                <div>
+                    <div class="gs-page-title"><i class="bi bi-receipt"></i> Sales Settings</div>
+                    <div class="gs-page-desc">Configure billing behaviour, item lookup and more.</div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-layout-text-window"></i><span>Display Options</span></div>
+                <div class="setting-row">
+                    <div class="setting-info"><div class="setting-name">Show Doctor Info</div><div class="setting-hint">Display prescribing doctor field on sales bill</div></div>
+                    <div class="setting-control"><label class="toggle"><input type="checkbox" id="showDoctorInfo"><span class="toggle-slider"></span></label></div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><div class="setting-name">Qty Round-Up</div><div class="setting-hint">Automatically round up quantities</div></div>
+                    <div class="setting-control"><label class="toggle"><input type="checkbox" id="qtyRoundUp"><span class="toggle-slider"></span></label></div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-upc-scan"></i><span>Item Lookup</span></div>
+                <div class="setting-row">
+                    <div class="setting-info"><div class="setting-name">Enable Barcode Based Items</div><div class="setting-hint">Search items using barcode scanner</div></div>
+                    <div class="setting-control">
+                        <div class="radio-group">
+                            <label class="radio-pill"><input type="radio" name="barcode" value="yes"><span class="radio-dot"></span> Yes</label>
+                            <label class="radio-pill"><input type="radio" name="barcode" value="no" checked><span class="radio-dot"></span> No</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-currency-rupee"></i><span>Rate & Pricing</span></div>
+                <div class="setting-row">
+                    <div class="setting-info"><div class="setting-name">Rate Type</div><div class="setting-hint">How item rate is calculated on bill</div></div>
+                    <div class="setting-control">
+                        <div class="radio-group">
+                            <label class="radio-pill"><input type="radio" name="rateType" value="tablet"><span class="radio-dot"></span> Tablet Wise</label>
+                            <label class="radio-pill"><input type="radio" name="rateType" value="strip" checked><span class="radio-dot"></span> Strip Wise</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info"><div class="setting-name">Allow Negative Stock</div><div class="setting-hint">Bill even when stock goes below zero</div></div>
+                    <div class="setting-control">
+                        <div class="radio-group">
+                            <label class="radio-pill"><input type="radio" name="allowNeg" value="yes"><span class="radio-dot"></span> Yes</label>
+                            <label class="radio-pill"><input type="radio" name="allowNeg" value="no" checked><span class="radio-dot"></span> No</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-card">
+                <div class="card-header-strip">
+                    <i class="bi bi-percent"></i><span>Tax Settings</span>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-name">Sales Tax Type</div>
+                        <div class="setting-hint">Select how tax is applied on sales</div>
+                    </div>
+
+                    <div class="setting-control">
+                        <select id="salesTax" class="form-select" asp-items="@Html.GetEnumSelectList<SalesTax>()"> </select>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-calendar-x"></i><span>Expiry Control</span></div>
+                <div class="setting-row">
+                    <div class="setting-info"><div class="setting-name">Expiry Allowed (Days)</div><div class="setting-hint">Days before expiry items can still be billed</div></div>
+                    <div class="setting-control"><input type="number" class="num-input" placeholder="e.g. 90" min="0" id="salesExpiryDays"></div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-printer"></i><span>Invoice Printing</span></div>
+                <div class="setting-row">
+                    <div class="setting-info"><div class="setting-name">Print Type</div><div class="setting-hint">Select invoice printing method</div></div>
+                    <div class="setting-control">
+                        <div class="radio-group">
+                            <label class="radio-pill"><input type="radio" name="printType" value="normal" checked><span class="radio-dot"></span> Laser Print</label>
+                            <label class="radio-pill"><input type="radio" name="printType" value="thermal"><span class="radio-dot"></span> Thermal Print</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-row" id="thermalOptions" style="display:none">
+                    <div class="setting-info"><div class="setting-name">Thermal Paper Size</div><div class="setting-hint">Select thermal printer paper size</div></div>
+                    <div class="setting-control">
+                        <div class="radio-group">
+                            <label class="radio-pill"><input type="radio" name="thermalSize" value="58"><span class="radio-dot"></span> 58mm</label>
+                            <label class="radio-pill"><input type="radio" name="thermalSize" value="80" checked><span class="radio-dot"></span> 80mm</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-card">
+                <div class="card-header-strip">
+                    <i class="bi bi-calendar-x"></i>
+                    <span>Show Discount</span>
+                </div>
+
+                <!-- Show Discount Switch -->
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-name">Enable Discount</div>
+                        <div class="setting-hint">Show discount option while billing</div>
+                    </div>
+
+                    <div class="setting-control">
+                        <label class="switch"> <input type="checkbox" id="showDiscount">  <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div> 
+            </div>
+        </div>
+
+        <div class="settings-panel" id="panel-purchase">
+            <div class="gs-breadcrumb"><i class="bi bi-house"></i> <span>Settings</span> <i class="bi bi-chevron-right"></i> <span>Purchase</span></div>
+            <div class="gs-page-header">
+                <div>
+                    <div class="gs-page-title"><i class="bi bi-cart3"></i> Purchase Settings</div>
+                    <div class="gs-page-desc">Control expiry validation and purchase behaviour.</div>
+                </div>
+            </div>
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-calendar-check"></i><span>Expiry Control</span></div>
+                <div class="setting-row">
+                    <div class="setting-info"><div class="setting-name">Min. Purchase Expiry (Days)</div><div class="setting-hint">Minimum days remaining on expiry at time of purchase</div></div>
+                    <div class="setting-control"><input type="number" class="num-input" placeholder="e.g. 90" min="0" id="purchaseExpiryDays"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-panel" id="panel-invoicethemes">
+            <div class="gs-breadcrumb"><i class="bi bi-house"></i> <span>Settings</span> <i class="bi bi-chevron-right"></i> <span>Invoice Design</span></div>
+            <div class="gs-page-header">
+                <div style="display:flex;align-items:center;">
+                    <button type="button" class="btn-back-menu" id="btnRestoreSidebar" onclick="restoreSidebar()"><i class="bi bi-arrow-left"></i> Menu</button>
+                    <div>
+                        <div class="gs-page-title"><i class="bi bi-palette"></i> Invoice Design Studio</div>
+                        <div class="gs-page-desc">Professional design with real invoice totals, strict sizing rules and safe defaults.</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-set-default" id="btnMakeDefault" onclick="makeCurrentThemeDefault()">
+                    <i class="bi bi-star"></i> Set as Default Print Size
+                </button>
+            </div>
+
+            <div class="theme-sub-nav">
+                <div class="theme-sub-tab active" onclick="switchPaperSize('A4', this)">A4 (Full Page)</div>
+                <div class="theme-sub-tab" onclick="switchPaperSize('A5', this)">A5 (Half Page)</div>
+                <div class="theme-sub-tab" onclick="switchPaperSize('Thermal', this)">Thermal POS</div>
+            </div>
+
+            <form id="frmInvoiceTheme" enctype="multipart/form-data">
+                <input type="hidden" id="themeId" name="Id" value="0" />
+                <input type="hidden" id="themePaperSize" name="PaperSize" />
+                <input type="hidden" id="themeIsDefault" name="IsDefault" value="false" />
+
+                <div class="theme-split-layout">
+                    <div class="theme-form-col">
+                        <div class="settings-card">
+                            <div class="card-header-strip"><i class="bi bi-columns-gap"></i><span>1. Layout & Styling</span></div>
+                            <div class="setting-row">
+                                <div class="setting-info"><div class="setting-name">Template Style & Title</div></div>
+                                <div class="setting-control d-flex gap-2">
+                                    <select class="form-select form-select-sm" name="TemplateName" id="themeTemplateName" style="width:130px;">
+                                        <option value="Classic">Classic</option>
+                                        <option value="Modern">Modern (Bliss)</option>
+                                        <option value="Minimal">Minimal</option>
+                                    </select>
+                                    <input type="text" class="form-control form-control-sm" name="Title" id="themeTitle" placeholder="e.g. TAX INVOICE" style="width:170px;" maxlength="40">
+                                </div>
+                            </div>
+
+                            <div class="setting-row">
+                                <div class="setting-info"><div class="setting-name">Page Orientation & Margins</div></div>
+                                <div class="setting-control d-flex gap-2">
+                                    <select class="form-select form-select-sm" name="Orientation" id="themeOrientation" style="width:130px;">
+                                        <option value="Portrait">Portrait</option>
+                                        <option value="Landscape">Landscape</option>
+                                    </select>
+                                    <select class="form-select form-select-sm" name="Margins" id="themeMargins" style="width:150px;">
+                                        <option value="Normal">Normal Margins</option>
+                                        <option value="Narrow">Narrow Margins</option>
+                                        <option value="Wide">Wide Margins</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="setting-row theme-thermal-row" id="themeThermalPaperSizeRow">
+                                <div class="setting-info">
+                                    <div class="setting-name">Thermal Paper Width</div>
+                                    <div class="setting-hint">Saved into `ThermalPaperSize` for thermal template.</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="form-select form-select-sm" name="ThermalPaperSize" id="themeThermalPaperSize" style="width:120px;">
+                                        <option value="58">58 mm</option>
+                                        <option value="80">80 mm</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="card-header-strip"><i class="bi bi-fonts"></i><span>2. Typography & Colors</span></div>
+                            <div class="setting-row">
+                                <div class="setting-info"><div class="setting-name">Font Family & Base Size (px)</div></div>
+                                <div class="setting-control d-flex gap-2">
+                                    <select class="form-select form-select-sm" name="FontFamily" id="themeFontFamily" style="width:170px;">
+                                        <option value="Arial, sans-serif">Arial</option>
+                                        <option value="'Segoe UI', sans-serif">Segoe UI</option>
+                                        <option value="'Courier New', monospace">Courier New</option>
+                                    </select>
+                                    <input type="number" class="num-input" name="BaseFontSize" id="themeBaseFontSize" placeholder="12" min="8" max="24">
+                                </div>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-info"><div class="setting-name">Theme Colors</div></div>
+                                <div class="setting-control color-picker-wrapper">
+                                    <input type="color" class="color-picker" id="themePrimaryColor" name="PrimaryColor" value="#2b6ac9">
+                                    <input type="color" class="color-picker" id="themeTextColor" name="TextColor" value="#1e293b">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="card-header-strip"><i class="bi bi-image"></i><span>3. Branding Assets</span></div>
+                            <div class="setting-row bg-light"><div class="setting-name text-primary fw-bold" style="font-size:12px;">Company Logo</div></div>
+                            <div class="setting-row">
+                                <div class="setting-control d-flex gap-2 w-100">
+                                    <input type="file" class="form-control form-control-sm" id="themeLogo" name="logoFile" accept="image/png,image/jpeg,image/webp" style="width:220px;">
+                                    <input type="number" class="num-input" name="LogoSize" id="themeLogoSize" placeholder="Size (px)">
+                                    <select class="form-select form-select-sm" name="LogoPosition" id="themeLogoPosition" style="width:120px;">
+                                        <option value="Left">Left</option>
+                                        <option value="Center">Center</option>
+                                        <option value="Right">Right</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-row pt-0">
+                                <div class="setting-info">
+                                    <div class="theme-range-hint" id="themeLogoRangeHint">Safe range will auto-apply by paper size.</div>
+                                </div>
+                            </div>
+
+                            <div class="setting-row bg-light"><div class="setting-name text-primary fw-bold" style="font-size:12px;">Background Watermark</div></div>
+                            <div class="setting-row">
+                                <div class="setting-control d-flex gap-2 w-100">
+                                    <input type="file" class="form-control form-control-sm" id="themeWatermark" name="watermarkFile" accept="image/png,image/jpeg,image/webp" style="width:220px;">
+                                    <input type="number" class="num-input" name="WatermarkSize" id="themeWatermarkSize" placeholder="Size (px)">
+                                    <input type="number" class="num-input" name="WatermarkOpacity" id="themeWatermarkOpacity" placeholder="Opacity %" min="5" max="40">
+                                </div>
+                            </div>
+                            <div class="setting-row pt-0">
+                                <div class="setting-info">
+                                    <div class="theme-range-hint" id="themeWatermarkRangeHint">Safe range will auto-apply by paper size.</div>
+                                </div>
+                            </div>
+
+                            <div class="setting-row bg-light"><div class="setting-name text-primary fw-bold" style="font-size:12px;">Authorized Signature</div></div>
+                            <div class="setting-row">
+                                <div class="setting-control d-flex gap-2 w-100">
+                                    <input type="file" class="form-control form-control-sm" id="themeSignature" name="signatureFile" accept="image/png,image/jpeg,image/webp" style="width:220px;">
+                                    <input type="text" class="form-control form-control-sm" name="SignatoryLabel" id="themeSignatoryLabel" placeholder="e.g. Auth. Signatory" style="flex:1;" maxlength="30">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="card-header-strip"><i class="bi bi-toggle-on"></i><span>4. Data Toggles (Show/Hide)</span></div>
+                            <div class="d-flex flex-wrap" style="padding:10px 18px;gap:15px;">
+                                <div class="d-flex align-items-center gap-2" style="width: calc(50% - 15px);"><label class="toggle"><input type="checkbox" id="themeShowHSN"><span class="toggle-slider"></span></label><span class="setting-name">Show HSN Code</span></div>
+                                <div class="d-flex align-items-center gap-2" style="width: calc(50% - 15px);"><label class="toggle"><input type="checkbox" id="themeShowGSTPercent"><span class="toggle-slider"></span></label><span class="setting-name">Show GST Percent (%)</span></div>
+                                <div class="d-flex align-items-center gap-2" style="width: calc(50% - 15px);"><label class="toggle"><input type="checkbox" id="themeShowGSTAmount"><span class="toggle-slider"></span></label><span class="setting-name">Show GST Amount</span></div>
+                                <div class="d-flex align-items-center gap-2" style="width: calc(50% - 15px);"><label class="toggle"><input type="checkbox" id="themeShowTaxTable"><span class="toggle-slider"></span></label><span class="setting-name">Tax Summary Table</span></div>
+                                <div class="d-flex align-items-center gap-2" style="width: calc(50% - 15px);"><label class="toggle"><input type="checkbox" id="themeShowBusinessGSTIN"><span class="toggle-slider"></span></label><span class="setting-name">Business GSTIN</span></div>
+                                <div class="d-flex align-items-center gap-2" style="width: calc(50% - 15px);"><label class="toggle"><input type="checkbox" id="themeShowItemDiscount"><span class="toggle-slider"></span></label><span class="setting-name">Item Discount Column</span></div>
+                                <div class="d-flex align-items-center gap-2" style="width: calc(50% - 15px);"><label class="toggle"><input type="checkbox" id="themeIsZebraStriped"><span class="toggle-slider"></span></label><span class="setting-name">Zebra Striped Rows</span></div>
+                                <div class="d-flex align-items-center gap-2" style="width: calc(50% - 15px);"><label class="toggle"><input type="checkbox" id="themeShowAmountInWords"><span class="toggle-slider"></span></label><span class="setting-name">Amount in Words</span></div>
+                                <div class="d-flex align-items-center gap-2" style="width: calc(50% - 15px);"><label class="toggle"><input type="checkbox" id="themeShowPaymentQR"><span class="toggle-slider"></span></label><span class="setting-name">Show Payment QR Code</span></div>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <div class="card-header-strip"><i class="bi bi-wallet2"></i><span>5. Payment & Footer Notes</span></div>
+                            <div class="setting-row d-block">
+                                <div class="setting-name mb-2">Terms and Conditions</div>
+                                <textarea class="form-control form-control-sm" id="themeTNC" name="TermsAndConditions" rows="2" placeholder="1. Goods once sold will not be taken back..."></textarea>
+                            </div>
+                            <div class="setting-row d-block">
+                                <div class="setting-name mb-2">Bank Details (NEFT/RTGS)</div>
+                                <textarea class="form-control form-control-sm" id="themeBank" name="BankDetails" rows="2" placeholder="Bank: SBI | A/C: XXXXX | IFSC: SBIN000XXXX"></textarea>
+                            </div>
+                            <div class="setting-row d-block">
+                                <div class="setting-name mb-2">UPI Details (For QR Code)</div>
+                                <input type="text" class="form-control form-control-sm" id="themeUPI" name="UPIDetails" placeholder="e.g. 9876543210@ybl or yourbusiness@sbi" maxlength="60">
+                                <div class="setting-inline-note">UPI + QR toggle ON होने पर ही QR box preview में दिखेगा.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="theme-preview-col">
+                        <div class="setting-name mb-2 text-center text-muted fw-bold"><i class="bi bi-eye"></i> True Print Preview</div>
+                        <div class="paper-desk-wrapper" id="paperDesk">
+
+                            <div class="true-paper-sheet" id="prevA4Container" style="padding:40px;display:block;">
+                                <img id="prevWatermark" class="prev-watermark" src="" alt="Watermark">
+
+                                <div class="prev-header" id="prevHeaderBorder">
+                                    <div id="prevLogoContainer" style="width:45%;">
+                                        <img id="prevLogo" class="prev-logo" src="" alt="Logo">
+                                    </div>
+                                    <div style="width:55%;">
+                                        <div class="prev-title" id="prevTitle">TAX INVOICE</div>
+                                        <div class="prev-business-line">
+                                            GSTIN: <span id="prevBusinessGSTIN">29ABCDE1234F1Z5</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="prev-meta-grid">
+                                    <div class="prev-meta-card">
+                                        <div class="prev-meta-title">Bill To</div>
+                                        <b>John Doe</b><br>
+                                        +91 9876543210<br>
+                                        Delhi, India
+                                    </div>
+                                    <div class="prev-meta-card">
+                                        <div class="prev-meta-title">Invoice Info</div>
+                                        <b>Date:</b> 13-Mar-2026<br>
+                                        <b>Inv No:</b> INV-001<br>
+                                        <b>Payment:</b> Cash
+                                    </div>
+                                </div>
+
+                                <table class="prev-table" id="prevTable">
+                                    <thead>
+                                        <tr id="prevTableHeader">
+                                            <th style="width:26px;" class="t-center">#</th>
+                                            <th>Item Description</th>
+                                            <th class="col-hsn" style="width:64px;">HSN</th>
+                                            <th style="width:48px;" class="t-right">Qty</th>
+                                            <th style="width:68px;" class="t-right">Rate</th>
+                                            <th class="col-disc t-right" style="width:68px;">Disc</th>
+                                            <th class="col-gstp t-right" style="width:58px;">GST%</th>
+                                            <th class="col-gsta t-right" style="width:72px;">GST Amt</th>
+                                            <th style="width:78px;" class="t-right">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="prevItemsBody"></tbody>
+                                </table>
+
+                                <div class="prev-bottom-layout">
+                                    <div class="prev-notes-box">
+                                        <div class="prev-box-label">Terms & Conditions</div>
+                                        <div id="prevTNC" class="prev-note-text">1. Goods once sold will not be taken back.</div>
+
+                                        <div class="prev-box-label">Bank Details</div>
+                                        <div id="prevBank" class="prev-note-text">Bank: SBI | A/C: XXXXX | IFSC: SBINXXXX</div>
+
+                                        <div id="prevAmountWordsWrap">
+                                            <div class="prev-box-label">Amount in Words</div>
+                                            <div id="prevAmountWords" class="prev-note-text" style="margin-bottom:0;">Rupees Zero Only</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="prev-summary-box">
+                                        <table class="prev-summary-table">
+                                            <tr>
+                                                <td>Sub Total</td>
+                                                <td id="prevSubTotal">Rs 0.00</td>
+                                            </tr>
+                                            <tr id="prevDiscountRow">
+                                                <td>Total Discount</td>
+                                                <td id="prevDiscountTotal">Rs 0.00</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Taxable Amount</td>
+                                                <td id="prevTaxableTotal">Rs 0.00</td>
+                                            </tr>
+                                            <tr id="prevGstRow">
+                                                <td>Total GST</td>
+                                                <td id="prevGstTotal">Rs 0.00</td>
+                                            </tr>
+                                            <tr class="payable">
+                                                <td>Total Payable</td>
+                                                <td id="prevGrandTotal">Rs 0.00</td>
+                                            </tr>
+                                        </table>
+
+                                        <div class="prev-qr-wrap" id="prevQrWrap">
+                                            <img id="prevQrImage" class="prev-qr" src="" alt="QR">
+                                            <div class="prev-qr-text">
+                                                <b>Scan to Pay</b><br>
+                                                <span id="prevUpiText">upi@bank</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="prev-tax-table" id="prevTaxTable">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Tax Type</th>
+                                                <th>Taxable</th>
+                                                <th>Tax</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>CGST</td>
+                                                <td id="prevTaxableForCGST">Rs 0.00</td>
+                                                <td id="prevCGST">Rs 0.00</td>
+                                            </tr>
+                                            <tr>
+                                                <td>SGST</td>
+                                                <td id="prevTaxableForSGST">Rs 0.00</td>
+                                                <td id="prevSGST">Rs 0.00</td>
+                                            </tr>
+                                            <tr>
+                                                <td>IGST</td>
+                                                <td id="prevTaxableForIGST">Rs 0.00</td>
+                                                <td id="prevIGST">Rs 0.00</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="prev-signature-row">
+                                    <div class="prev-sign-wrap">
+                                        <img id="prevSign" class="prev-sign" src="" alt="Sign">
+                                        <div class="prev-sign-label" id="prevSignLabel">Auth. Signatory</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="true-paper-sheet" id="prevThermalContainer" style="padding:15px;display:none;background:#fff;color:#000;font-family:'Courier New', monospace;">
+                                <div class="thermal-head">
+                                    <img id="prevThermalLogo" src="" style="max-width:80px;display:none;margin:0 auto 5px auto;object-fit:contain;">
+                                    <div class="thermal-title" id="prevThermalTitle">TAX INVOICE</div>
+                                    <div class="thermal-sub">
+                                        GSTIN: <span id="prevThermalGstin">29ABCDE1234F1Z5</span><br>
+                                        Address: Railway Road, Gurugram, Haryana<br>
+                                        Phone: +91 9876543210<br>
+                                        INV-001 | 13-Mar-2026
+                                    </div>
+                                </div>
+
+                                <div class="thermal-meta">
+                                    Customer: Walk-in Customer<br>
+                                    Phone: +91 9876543210<br>
+                                    Address: Delhi, India
+                                </div>
+
+                                <table class="thermal-table" id="prevThermalTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="thermal-col-item">Item</th>
+                                            <th class="thermal-col-qty">Qty</th>
+                                            <th class="thermal-col-amt">Amt</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="prevThermalItemsBody"></tbody>
+                                </table>
+
+                                <div class="thermal-summary">
+                                    <div class="thermal-summary-row"><span>Sub Total</span><span id="prevThermalSubTotal">Rs 0.00</span></div>
+                                    <div class="thermal-summary-row" id="prevThermalDiscountRow"><span>Discount</span><span id="prevThermalDiscountTotal">Rs 0.00</span></div>
+                                    <div class="thermal-summary-row" id="prevThermalGstRow"><span>GST</span><span id="prevThermalGstTotal">Rs 0.00</span></div>
+                                    <div class="thermal-summary-row total"><span>Total Payable</span><span id="prevThermalGrandTotal">Rs 0.00</span></div>
+                                </div>
+
+                                <div class="thermal-barcode-wrap">
+                                    <img id="prevThermalBarcodeImg" class="thermal-barcode-image" src="/Barcode/Generate?code=INV-001" alt="Barcode">
+                                    <div class="thermal-barcode-text" id="prevThermalBarcodeText">INV-001</div>
+                                </div>
+
+                                <div id="prevThermalTaxTable" style="font-size:10px;display:none;margin-bottom:8px;">
+                                    CGST: <span id="prevThermalCGST">Rs 0.00</span> |
+                                    SGST: <span id="prevThermalSGST">Rs 0.00</span> |
+                                    IGST: <span id="prevThermalIGST">Rs 0.00</span>
+                                </div>
+
+                                <div id="prevThermalTNC" style="text-align:center;font-size:10px;white-space:pre-wrap;color:#374151;">
+                                    Thank You! Visit Again.
+                                </div>
+
+                                <div class="thermal-sign-wrap">
+                                    <img id="prevThermalSign" src="" alt="Sign">
+                                    <div id="prevThermalSignLabel">Auth. Signatory</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="settings-panel" id="panel-general">
+            <div class="gs-page-title"><i class="bi bi-sliders"></i> General Settings</div>
+            <div class="settings-card" style="margin-top:16px"><div class="setting-row"><div class="setting-name" style="color:var(--text-muted)">Coming soon...</div></div></div>
+        </div>
+
+        <div class="settings-panel" id="panel-inventory">
+            <div class="gs-page-title"><i class="bi bi-box-seam"></i> Inventory Settings</div>
+            <div class="settings-card" style="margin-top:16px"><div class="setting-row"><div class="setting-name" style="color:var(--text-muted)">Coming soon...</div></div></div>
+        </div>
+    </main>
+</div>
+
+<div class="gs-toast" id="gsToast">
+    <i class="bi bi-check-circle-fill"></i> Settings saved successfully!
+</div>
+
+@section Scripts {
+    <script>
+        const userId = '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value';
+
+        const PREVIEW_ITEMS = [
+            { name: 'Paracetamol 500mg Strip', hsn: '3004', qty: 2, rate: 50, discount: 5, gstPercent: 12 },
+            { name: 'Vitamin C Complete', hsn: '2936', qty: 1, rate: 150, discount: 0, gstPercent: 18 },
+            { name: 'Cough Syrup 100ml', hsn: '3003', qty: 1, rate: 95, discount: 5, gstPercent: 12 }
+        ];
+
+        const PAPER_RULES = {
+            A4: {
+                logo: { min: 70, max: 220, def: 140 },
+                watermark: { min: 180, max: 520, def: 320 },
+                watermarkOpacity: { min: 5, max: 35, def: 10 },
+                font: { min: 9, max: 16, def: 12 },
+                portrait: { w: 794, h: 1123 },
+                landscape: { w: 1123, h: 794 },
+                margin: { Narrow: 26, Normal: 40, Wide: 56 }
+            },
+            A5: {
+                logo: { min: 60, max: 180, def: 115 },
+                watermark: { min: 150, max: 420, def: 250 },
+                watermarkOpacity: { min: 5, max: 35, def: 10 },
+                font: { min: 9, max: 15, def: 11 },
+                portrait: { w: 559, h: 794 },
+                landscape: { w: 794, h: 559 },
+                margin: { Narrow: 18, Normal: 30, Wide: 42 }
+            },
+            Thermal: {
+                logo: { min: 40, max: 120, def: 70 },
+                watermark: { min: 70, max: 220, def: 120 },
+                watermarkOpacity: { min: 5, max: 30, def: 8 },
+                font: { min: 9, max: 14, def: 10 },
+                w58: { w: 219, h: 720 },
+                w80: { w: 302, h: 720 },
+                margin: { Narrow: 10, Normal: 14, Wide: 18 }
+            }
+        };
+
+        const FILE_RULES = {
+            logo: { maxMb: 2 },
+            watermark: { maxMb: 3 },
+            signature: { maxMb: 2 }
+        };
+
+        function setRadio(name, value) {
+            document.querySelectorAll(`input[name="${name}"]`).forEach(r => r.checked = (r.value === value));
+        }
+
+        function getRadio(name) {
+            const checked = document.querySelector(`input[name="${name}"]:checked`);
+            return checked ? checked.value : null;
+        }
+
+        function boolVal(v) {
+            return v === true || v === "true" || v === 1 || v === "1";
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('gsToast');
+            toast.style.background = isError ? '#ef4444' : '#10b981';
+            toast.innerHTML = `<i class="bi bi-${isError ? 'x-circle' : 'check-circle'}-fill"></i> ${message}`;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2600);
+        }
+
+        function clamp(value, min, max, fallback) {
+            let n = Number(value);
+            if (!Number.isFinite(n)) n = fallback;
+            if (n < min) n = min;
+            if (n > max) n = max;
+            return Math.round(n);
+        }
+
+        function fmt(num) {
+            const n = Number(num || 0);
+            return `Rs ${n.toFixed(2)}`;
+        }
+
+        function switchTab(tab, el) {
+            document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.gs-nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('panel-' + tab).classList.add('active');
+            el.classList.add('active');
+
+            const sidebar = document.getElementById('gsSidebar');
+            const backBtn = document.getElementById('btnRestoreSidebar');
+
+            if (tab === 'invoicethemes') {
+                sidebar.classList.add('collapsed');
+                backBtn.classList.add('show');
+                setTimeout(updatePreviewSize, 350);
+            } else {
+                sidebar.classList.remove('collapsed');
+                backBtn.classList.remove('show');
+            }
+
+            document.querySelectorAll('#panel-' + tab + ' .settings-card').forEach((c, i) => {
+                c.style.animation = 'none';
+                c.offsetHeight;
+                c.style.animation = '';
+                c.style.animationDelay = (i * 0.07) + 's';
+            });
+        }
+
+        function restoreSidebar() {
+            document.getElementById('gsSidebar').classList.remove('collapsed');
+            document.getElementById('btnRestoreSidebar').classList.remove('show');
+            setTimeout(updatePreviewSize, 350);
+        }
+
+        function loadSalesSettings() {
+            fetch('/SalseSetting/GetSidebarSettings')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('showDoctorInfo').checked = !!data.doctorRequired;
+                    document.getElementById('qtyRoundUp').checked = !!data.rateRoundUp;
+                    setRadio('barcode', data.itemBarCodeBase ? 'yes' : 'no');
+                    setRadio('rateType', data.itemConversion === 'TabletWise' ? 'tablet' : 'strip');
+                    setRadio('allowNeg', data.allowNegative ? 'yes' : 'no');
+                    document.getElementById('salesExpiryDays').value = data.expiryAllowedDays || '';
+                    setRadio('printType', data.printType || 'normal');
+                    if (data.printType === 'thermal') setRadio('thermalSize', (data.thermalPaperSize || 80).toString());
+                    document.getElementById('salesTax').value = data.salesTax || 1;
+                      document.getElementById('showDiscount').checked =
+                !!data.showdiscount;
+                    toggleThermalOptions();
+                })
+                .catch(() => showToast('Sales settings load error', true));
+        }
+
+        function loadPurchaseSettings() {
+            fetch('/PurchaseSetting/GetSidebarSettings')
+                .then(res => res.json())
+                .then(data => document.getElementById('purchaseExpiryDays').value = data.minPurchaseExpiryDays || '')
+                .catch(() => showToast('Purchase settings load error', true));
+        }
+
+        function saveCurrentTab() {
+            const activePanel = document.querySelector('.settings-panel.active')?.id;
+            if (activePanel === 'panel-sales') saveSalesSettings();
+            else if (activePanel === 'panel-purchase') savePurchaseSettings();
+            else if (activePanel === 'panel-invoicethemes') saveInvoiceTheme();
+            else showToast('Nothing to save here.');
+        }
+
+        function saveSalesSettings() {
+            const payload = {
+                applicationUserId: userId,
+                doctorRequired: document.getElementById('showDoctorInfo').checked,
+                rateRoundUp: document.getElementById('qtyRoundUp').checked,
+                itemBarCodeBase: getRadio('barcode') === 'yes',
+                itemConversion: getRadio('rateType') === 'tablet' ? 'TabletWise' : 'StripWise',
+                allowNegative: getRadio('allowNeg') === 'yes',
+                expiryAllowedDays: parseInt(document.getElementById('salesExpiryDays').value) || 0,
+                printType: getRadio('printType'),
+                thermalPaperSize: getRadio('printType') === 'thermal' ? parseInt(getRadio('thermalSize') || '80') : null,
+                salesTax: parseInt(document.getElementById('salesTax').value), 
+                showdiscount: document.getElementById('showDiscount').checked
+            };
+
+            fetch('/SalseSetting/SaveSidebarSettings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.ok ? showToast('Sales settings saved!') : showToast('Error saving sales settings!', true))
+            .catch(() => showToast('Something went wrong!', true));
+        }
+
+        function savePurchaseSettings() {
+            const payload = {
+                applicationUserId: userId,
+                minPurchaseExpiryDays: parseInt(document.getElementById('purchaseExpiryDays').value) || 0
+            };
+
+            fetch('/PurchaseSetting/SaveSidebarSettings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.ok ? showToast('Purchase settings saved!') : showToast('Error saving purchase settings!', true))
+            .catch(() => showToast('Something went wrong!', true));
+        }
+
+        function getCurrentPaperSize() {
+            return document.getElementById('themePaperSize').value || 'A4';
+        }
+
+        function getCurrentRules() {
+            const size = getCurrentPaperSize();
+            return PAPER_RULES[size] || PAPER_RULES.A4;
+        }
+
+        function getAssetUrl(path) {
+            if (!path) return '';
+            if (path.startsWith('http')) return path;
+            return '/' + path.replace(/^\/+/, '');
+        }
+
+        function withVersion(path) {
+            if (!path) return '';
+            const sep = path.includes('?') ? '&' : '?';
+            return `${path}${sep}v=${Date.now()}`;
+        }
+
+        function updateRangeHints() {
+            const size = getCurrentPaperSize();
+            const rules = getCurrentRules();
+
+            document.getElementById('themeLogoRangeHint').innerText =
+                `Safe logo size (${size}): ${rules.logo.min}px - ${rules.logo.max}px`;
+
+            document.getElementById('themeWatermarkRangeHint').innerText =
+                `Safe watermark size (${size}): ${rules.watermark.min}px - ${rules.watermark.max}px | Opacity ${rules.watermarkOpacity.min}% - ${rules.watermarkOpacity.max}%`;
+        }
+
+        function applyPaperDefaults(force = false) {
+            const size = getCurrentPaperSize();
+            const rules = getCurrentRules();
+
+            const logoInput = document.getElementById('themeLogoSize');
+            const wmInput = document.getElementById('themeWatermarkSize');
+            const wmOpInput = document.getElementById('themeWatermarkOpacity');
+            const fontInput = document.getElementById('themeBaseFontSize');
+            const orientation = document.getElementById('themeOrientation');
+            const margin = document.getElementById('themeMargins');
+            const fontFamily = document.getElementById('themeFontFamily');
+            const thermalRow = document.getElementById('themeThermalPaperSizeRow');
+
+            thermalRow.style.display = size === 'Thermal' ? 'flex' : 'none';
+
+            orientation.disabled = size === 'Thermal';
+            if (size === 'Thermal') {
+                orientation.value = 'Portrait';
+                if (force || !fontFamily.value) fontFamily.value = "'Courier New', monospace";
+            }
+
+            if (!margin.value) margin.value = 'Normal';
+
+            logoInput.min = rules.logo.min;
+            logoInput.max = rules.logo.max;
+            wmInput.min = rules.watermark.min;
+            wmInput.max = rules.watermark.max;
+            wmOpInput.min = rules.watermarkOpacity.min;
+            wmOpInput.max = rules.watermarkOpacity.max;
+            fontInput.min = rules.font.min;
+            fontInput.max = rules.font.max;
+
+            if (force || !logoInput.value) logoInput.value = rules.logo.def;
+            if (force || !wmInput.value) wmInput.value = rules.watermark.def;
+            if (force || !wmOpInput.value) wmOpInput.value = rules.watermarkOpacity.def;
+            if (force || !fontInput.value) fontInput.value = rules.font.def;
+
+            updateRangeHints();
+        }
+
+        function normalizeThemeInputs(showMessage = false) {
+            const rules = getCurrentRules();
+
+            const logoSize = clamp(document.getElementById('themeLogoSize').value, rules.logo.min, rules.logo.max, rules.logo.def);
+            const wmSize = clamp(document.getElementById('themeWatermarkSize').value, rules.watermark.min, rules.watermark.max, rules.watermark.def);
+            const wmOpacity = clamp(document.getElementById('themeWatermarkOpacity').value, rules.watermarkOpacity.min, rules.watermarkOpacity.max, rules.watermarkOpacity.def);
+            const fontSize = clamp(document.getElementById('themeBaseFontSize').value, rules.font.min, rules.font.max, rules.font.def);
+
+            document.getElementById('themeLogoSize').value = logoSize;
+            document.getElementById('themeWatermarkSize').value = wmSize;
+            document.getElementById('themeWatermarkOpacity').value = wmOpacity;
+            document.getElementById('themeBaseFontSize').value = fontSize;
+
+            const title = document.getElementById('themeTitle');
+            const signLabel = document.getElementById('themeSignatoryLabel');
+
+            if (title.value.length > 40) title.value = title.value.slice(0, 40);
+            if (signLabel.value.length > 30) signLabel.value = signLabel.value.slice(0, 30);
+
+            if (showMessage) {
+                showToast('Theme values normalized to safe range.');
+            }
+        }
+
+        function validateImageFile(file, key) {
+            if (!file) return true;
+            const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+            if (!allowed.includes(file.type)) {
+                showToast('Only PNG/JPEG/WEBP images allowed.', true);
+                return false;
+            }
+
+            const maxBytes = (FILE_RULES[key]?.maxMb || 2) * 1024 * 1024;
+            if (file.size > maxBytes) {
+                showToast(`Selected ${key} image is too large.`, true);
+                return false;
+            }
+            return true;
+        }
+
+        function setPreviewImage(id, src, displayStyle = 'inline-block') {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (src) {
+                el.src = src;
+                el.style.display = displayStyle;
+            } else {
+                el.src = '';
+                el.style.display = 'none';
+            }
+        }
+
+        function setupImagePreview(inputId, targetIds, key, displayStyle = 'inline-block') {
+            const input = document.getElementById(inputId);
+            input.addEventListener('change', function (e) {
+                const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                if (!file) {
+                    targetIds.forEach(id => setPreviewImage(id, '', displayStyle));
+                    return;
+                }
+
+                if (!validateImageFile(file, key)) {
+                    input.value = '';
+                    targetIds.forEach(id => setPreviewImage(id, '', displayStyle));
+                    return;
+                }
+
+                const objectUrl = URL.createObjectURL(file);
+                targetIds.forEach(id => setPreviewImage(id, objectUrl, displayStyle));
+            });
+        }
+
+        function switchPaperSize(size, el) {
+            document.querySelectorAll('.theme-sub-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('themePaperSize').value = size;
+            applyPaperDefaults();
+            normalizeThemeInputs();
+            syncLivePreview();
+        }
+
+        function loadInvoiceTheme(size = 'A4') {
+            fetch(`/InvoiceTheme/GetTheme?paperSize=${size}`)
+                .then(res => res.json())
+                .then(result => {
+                    const data = result?.data || null;
+                    const form = document.getElementById('frmInvoiceTheme');
+                    form.reset();
+
+                    const savedPaperSize = data?.paperSize || size;
+                    document.querySelectorAll('.theme-sub-tab')
+                        .forEach(tab => {
+                            tab.classList.remove('active');
+                            if (tab.innerText.toLowerCase().includes(savedPaperSize.toLowerCase())) {
+                                tab.classList.add('active');
+                            }
+                        });
+
+                    document.getElementById('themePaperSize').value = savedPaperSize;
+                    document.getElementById('themeId').value = data?.id || 0;
+
+                    // Clear stale previews when switching paper or loading a fresh theme.
+                    setPreviewImage('prevLogo', '', 'inline-block');
+                    setPreviewImage('prevThermalLogo', '', 'block');
+                    setPreviewImage('prevWatermark', '', 'block');
+                    setPreviewImage('prevSign', '', 'block');
+                    setPreviewImage('prevThermalSign', '', 'block');
+
+                    if (data) {
+                        document.getElementById('themeIsDefault').value = boolVal(data.isDefault);
+                        document.getElementById('themeTemplateName').value = data.templateName || 'Classic';
+                        document.getElementById('themeTitle').value = data.title || 'TAX INVOICE';
+                        document.getElementById('themeOrientation').value = data.orientation || 'Portrait';
+                        document.getElementById('themeMargins').value = data.margins || 'Normal';
+                        document.getElementById('themeFontFamily').value = data.fontFamily || 'Arial, sans-serif';
+                        document.getElementById('themeBaseFontSize').value = data.baseFontSize || '';
+                        document.getElementById('themePrimaryColor').value = data.primaryColor || '#2b6ac9';
+                        document.getElementById('themeTextColor').value = data.textColor || '#1e293b';
+
+                        document.getElementById('themeLogoSize').value = data.logoSize || '';
+                        document.getElementById('themeLogoPosition').value = data.logoPosition || 'Left';
+                        document.getElementById('themeWatermarkSize').value = data.watermarkSize || '';
+                        document.getElementById('themeWatermarkOpacity').value = data.watermarkOpacity || '';
+                        document.getElementById('themeSignatoryLabel').value = data.signatoryLabel || 'Auth. Signatory';
+                        document.getElementById('themeThermalPaperSize').value = (data.thermalPaperSize || 80).toString();
+
+                        document.getElementById('themeShowHSN').checked = boolVal(data.showHSN);
+                        document.getElementById('themeShowGSTPercent').checked = boolVal(data.showGSTPercent);
+                        document.getElementById('themeShowGSTAmount').checked = boolVal(data.showGSTAmount);
+                        document.getElementById('themeShowTaxTable').checked = boolVal(data.showTaxSummaryTable);
+                        document.getElementById('themeShowBusinessGSTIN').checked = boolVal(data.showBusinessGSTIN);
+                        document.getElementById('themeShowItemDiscount').checked = boolVal(data.showItemDiscount);
+                        document.getElementById('themeIsZebraStriped').checked = boolVal(data.isZebraStriped);
+                        document.getElementById('themeShowAmountInWords').checked = boolVal(data.showAmountInWords);
+                        document.getElementById('themeShowPaymentQR').checked = boolVal(data.showPaymentQR);
+
+                        document.getElementById('themeTNC').value = data.termsAndConditions || '';
+                        document.getElementById('themeBank').value = data.bankDetails || '';
+                        document.getElementById('themeUPI').value = data.upiDetails || '';
+
+                        const logo = withVersion(getAssetUrl(data.logoPath));
+                        const wm = withVersion(getAssetUrl(data.watermarkPath));
+                        const sign = withVersion(getAssetUrl(data.signaturePath));
+
+                        setPreviewImage('prevLogo', logo, 'inline-block');
+                        setPreviewImage('prevThermalLogo', logo, 'block');
+                        setPreviewImage('prevWatermark', wm, 'block');
+                        setPreviewImage('prevSign', sign, 'block');
+                        setPreviewImage('prevThermalSign', sign, 'block');
+
+                        updateDefaultButtonState(boolVal(data.isDefault), savedPaperSize);
+                    } else {
+                        document.getElementById('themeIsDefault').value = false;
+                        document.getElementById('themeTitle').value = 'TAX INVOICE';
+                        document.getElementById('themeSignatoryLabel').value = 'Auth. Signatory';
+                        document.getElementById('themeThermalPaperSize').value = '80';
+
+                        document.getElementById('themeShowHSN').checked = false;
+                        document.getElementById('themeShowGSTPercent').checked = true;
+                        document.getElementById('themeShowGSTAmount').checked = true;
+                        document.getElementById('themeShowTaxTable').checked = true;
+                        document.getElementById('themeShowBusinessGSTIN').checked = true;
+                        document.getElementById('themeShowItemDiscount').checked = true;
+                        document.getElementById('themeIsZebraStriped').checked = true;
+                        document.getElementById('themeShowAmountInWords').checked = true;
+                        document.getElementById('themeShowPaymentQR').checked = false;
+
+                        updateDefaultButtonState(false, savedPaperSize);
+                    }
+
+                    applyPaperDefaults(!data);
+                    normalizeThemeInputs();
+                    syncLivePreview();
+                    switchPreviewContainer();
+                })
+                .catch(() => showToast('Theme load error!', true));
+        }
+
+        function saveInvoiceTheme() {
+            normalizeThemeInputs(true);
+
+            const form = document.getElementById('frmInvoiceTheme');
+            const formData = new FormData(form);
+            const paperSize = getCurrentPaperSize();
+
+            formData.set('ShowHSN', document.getElementById('themeShowHSN').checked);
+            formData.set('ShowGSTPercent', document.getElementById('themeShowGSTPercent').checked);
+            formData.set('ShowGSTAmount', document.getElementById('themeShowGSTAmount').checked);
+            formData.set('ShowTaxSummaryTable', document.getElementById('themeShowTaxTable').checked);
+            formData.set('ShowBusinessGSTIN', document.getElementById('themeShowBusinessGSTIN').checked);
+            formData.set('ShowItemDiscount', document.getElementById('themeShowItemDiscount').checked);
+            formData.set('IsZebraStriped', document.getElementById('themeIsZebraStriped').checked);
+            formData.set('ShowAmountInWords', document.getElementById('themeShowAmountInWords').checked);
+            formData.set('ShowPaymentQR', document.getElementById('themeShowPaymentQR').checked);
+            formData.set('PaperSize', paperSize);
+
+            if (paperSize === 'Thermal') {
+                formData.set('ThermalPaperSize', document.getElementById('themeThermalPaperSize').value || '80');
+            } else {
+                formData.set('ThermalPaperSize', '');
+            }
+
+            return fetch('/InvoiceTheme/SaveTheme', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message || 'Theme saved');
+                        loadInvoiceTheme(getCurrentPaperSize());
+                        return true;
+                    } else {
+                        showToast(data.message || 'Failed to save theme', true);
+                        return false;
+                    }
+                })
+                .catch(() => {
+                    showToast('Failed to save theme!', true);
+                    return false;
+                });
+        }
+
+        function makeCurrentThemeDefault() {
+            const size = getCurrentPaperSize();
+            const currentId = parseInt(document.getElementById('themeId').value || '0');
+
+            const setDefault = () => {
+                fetch(`/InvoiceTheme/SetDefaultTheme?paperSize=${size}`, { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast(data.message || 'Default changed');
+                            updateDefaultButtonState(true, size);
+                        } else {
+                            showToast(data.message || 'Default change failed', true);
+                        }
+                    });
+            };
+
+            // If this paper has not been saved yet, save once before setting default.
+            if (currentId === 0) {
+                saveInvoiceTheme().then(saved => {
+                    if (saved) setDefault();
+                });
+                return;
+            }
+
+            setDefault();
+        }
+
+        function updateDefaultButtonState(isDefault, size) {
+            const btn = document.getElementById('btnMakeDefault');
+            if (isDefault) {
+                btn.innerHTML = `<i class="bi bi-star-fill"></i> ${size} is your Default Print`;
+                btn.classList.add('is-active');
+            } else {
+                btn.innerHTML = `<i class="bi bi-star"></i> Set as Default Print Size`;
+                btn.classList.remove('is-active');
+            }
+        }
+
+        function setDisplay(selector, show, displayValue = '') {
+            document.querySelectorAll(selector).forEach(el => {
+                el.style.display = show ? displayValue : 'none';
+            });
+        }
+
+        function amountToWords(num) {
+            const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+            function inWords(n) {
+                if (n < 20) return a[n];
+                if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
+                if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + inWords(n % 100) : '');
+                if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + inWords(n % 1000) : '');
+                if (n < 10000000) return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + inWords(n % 100000) : '');
+                return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + inWords(n % 10000000) : '');
+            }
+
+            const rupees = Math.floor(num);
+            const paise = Math.round((num - rupees) * 100);
+
+            const rupeeWords = rupees ? inWords(rupees) + ' Rupees' : 'Zero Rupees';
+            const paiseWords = paise ? ' and ' + inWords(paise) + ' Paise' : '';
+            return rupeeWords + paiseWords + ' Only';
+        }
+
+        function renderPreviewRowsAndTotals() {
+            const showHSN = document.getElementById('themeShowHSN').checked;
+            const showDisc = document.getElementById('themeShowItemDiscount').checked;
+            const showGSTP = document.getElementById('themeShowGSTPercent').checked;
+            const showGSTA = document.getElementById('themeShowGSTAmount').checked;
+
+            let subTotal = 0;
+            let totalDiscount = 0;
+            let taxable = 0;
+            let totalGST = 0;
+
+            const a4Body = document.getElementById('prevItemsBody');
+            const thermalBody = document.getElementById('prevThermalItemsBody');
+            a4Body.innerHTML = '';
+            thermalBody.innerHTML = '';
+
+            PREVIEW_ITEMS.forEach((item, idx) => {
+                const gross = item.qty * item.rate;
+                const disc = item.discount;
+                const netTaxable = gross - disc;
+                const gst = netTaxable * item.gstPercent / 100;
+                const finalAmt = netTaxable + gst;
+
+                subTotal += gross;
+                totalDiscount += disc;
+                taxable += netTaxable;
+                totalGST += gst;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="t-center">${idx + 1}</td>
+                    <td>${item.name}</td>
+                    <td class="col-hsn">${item.hsn}</td>
+                    <td class="t-right">${item.qty}</td>
+                    <td class="t-right">${fmt(item.rate)}</td>
+                    <td class="col-disc t-right">${fmt(disc)}</td>
+                    <td class="col-gstp t-right">${item.gstPercent}%</td>
+                    <td class="col-gsta t-right">${fmt(gst)}</td>
+                    <td class="t-right">${fmt(finalAmt)}</td>
+                `;
+                a4Body.appendChild(row);
+
+                const thermalRateLine = `${item.qty} x ${fmt(item.rate)}`;
+                const thermalSubParts = [];
+                if (showHSN) thermalSubParts.push(`HSN:${item.hsn}`);
+                if (showGSTP) thermalSubParts.push(`GST:${item.gstPercent}%`);
+                if (showGSTA) thermalSubParts.push(`GSTAmt:${fmt(gst)}`);
+                if (showDisc && disc > 0) thermalSubParts.push(`Disc:${fmt(disc)}`);
+                const thermalSubText = thermalSubParts.join(' | ');
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="thermal-item-name">
+                        <span class="thermal-item-main">${item.name}</span>
+                        <span class="thermal-item-sub">${thermalRateLine}</span>
+                        ${thermalSubText ? `<span class="thermal-item-sub thermal-item-sub-2">${thermalSubText}</span>` : ''}
+                    </td>
+                    <td class="thermal-col-qty">${item.qty}</td>
+                    <td class="thermal-col-amt">${fmt(finalAmt)}</td>
+                `;
+                thermalBody.appendChild(tr);
+            });
+
+            const totalPayable = taxable + totalGST;
+
+            document.getElementById('prevSubTotal').innerText = fmt(subTotal);
+            document.getElementById('prevDiscountTotal').innerText = fmt(totalDiscount);
+            document.getElementById('prevTaxableTotal').innerText = fmt(taxable);
+            document.getElementById('prevGstTotal').innerText = fmt(totalGST);
+            document.getElementById('prevGrandTotal').innerText = fmt(totalPayable);
+
+            document.getElementById('prevThermalSubTotal').innerText = fmt(subTotal);
+            document.getElementById('prevThermalDiscountTotal').innerText = fmt(totalDiscount);
+            document.getElementById('prevThermalGstTotal').innerText = fmt(totalGST);
+            document.getElementById('prevThermalGrandTotal').innerText = fmt(totalPayable);
+
+            document.getElementById('prevCGST').innerText = fmt(totalGST / 2);
+            document.getElementById('prevSGST').innerText = fmt(totalGST / 2);
+            document.getElementById('prevIGST').innerText = fmt(0);
+            document.getElementById('prevTaxableForCGST').innerText = fmt(taxable);
+            document.getElementById('prevTaxableForSGST').innerText = fmt(taxable);
+            document.getElementById('prevTaxableForIGST').innerText = fmt(taxable);
+
+            document.getElementById('prevThermalCGST').innerText = fmt(totalGST / 2);
+            document.getElementById('prevThermalSGST').innerText = fmt(totalGST / 2);
+            document.getElementById('prevThermalIGST').innerText = fmt(0);
+
+            document.getElementById('prevAmountWords').innerText = amountToWords(totalPayable);
+
+            setDisplay('.col-hsn', showHSN, 'table-cell');
+            setDisplay('.col-disc', showDisc, 'table-cell');
+            setDisplay('.col-gstp', showGSTP, 'table-cell');
+            setDisplay('.col-gsta', showGSTA, 'table-cell');
+
+            document.getElementById('prevDiscountRow').style.display = showDisc ? '' : 'none';
+            document.getElementById('prevThermalDiscountRow').style.display = showDisc ? '' : 'none';
+
+            const showGstSummary = showGSTA || document.getElementById('themeShowTaxTable').checked;
+            document.getElementById('prevGstRow').style.display = showGstSummary ? '' : 'none';
+            document.getElementById('prevThermalGstRow').style.display = showGstSummary ? '' : 'none';
+        }
+
+        function switchPreviewContainer() {
+            const size = getCurrentPaperSize();
+            const a4 = document.getElementById('prevA4Container');
+            const thermal = document.getElementById('prevThermalContainer');
+
+            if (size === 'Thermal') {
+                a4.style.display = 'none';
+                thermal.style.display = 'block';
+            } else {
+                a4.style.display = 'block';
+                thermal.style.display = 'none';
+            }
+
+            updatePreviewSize();
+        }
+
+        function getActivePaperElement() {
+            return getCurrentPaperSize() === 'Thermal'
+                ? document.getElementById('prevThermalContainer')
+                : document.getElementById('prevA4Container');
+        }
+
+        function updatePreviewSize() {
+            const size = getCurrentPaperSize();
+            const orientation = document.getElementById('themeOrientation').value;
+            const thermalWidth = document.getElementById('themeThermalPaperSize').value || '80';
+
+            const paper = getActivePaperElement();
+            const desk = document.getElementById('paperDesk');
+
+            paper.style.transform = 'none';
+
+            let realWidth = 794;
+            let realHeight = 1123;
+
+            if (size === 'A4') {
+                realWidth = PAPER_RULES.A4[orientation.toLowerCase()]?.w || PAPER_RULES.A4.portrait.w;
+                realHeight = PAPER_RULES.A4[orientation.toLowerCase()]?.h || PAPER_RULES.A4.portrait.h;
+            } else if (size === 'A5') {
+                realWidth = PAPER_RULES.A5[orientation.toLowerCase()]?.w || PAPER_RULES.A5.portrait.w;
+                realHeight = PAPER_RULES.A5[orientation.toLowerCase()]?.h || PAPER_RULES.A5.portrait.h;
+            } else {
+                const rule = thermalWidth === '58' ? PAPER_RULES.Thermal.w58 : PAPER_RULES.Thermal.w80;
+                realWidth = rule.w;
+                realHeight = rule.h;
+            }
+
+            paper.style.width = realWidth + 'px';
+            paper.style.minHeight = realHeight + 'px';
+
+            const availableWidth = desk.clientWidth - 40;
+            let scale = availableWidth / realWidth;
+            if (scale > 1) scale = 1;
+
+            paper.style.transform = `scale(${scale})`;
+            desk.style.height = (realHeight * scale + 40) + 'px';
+        }
+
+        function syncLivePreview() {
+            applyPaperDefaults();
+            normalizeThemeInputs();
+
+            const paperSize = getCurrentPaperSize();
+            const rules = getCurrentRules();
+
+            const title = document.getElementById('themeTitle').value || 'TAX INVOICE';
+            const font = document.getElementById('themeFontFamily').value || 'Arial, sans-serif';
+            const baseSize = clamp(document.getElementById('themeBaseFontSize').value, rules.font.min, rules.font.max, rules.font.def);
+            const primaryColor = document.getElementById('themePrimaryColor').value || '#2b6ac9';
+            const textColor = document.getElementById('themeTextColor').value || '#1e293b';
+            const logoSize = clamp(document.getElementById('themeLogoSize').value, rules.logo.min, rules.logo.max, rules.logo.def);
+            const wmSize = clamp(document.getElementById('themeWatermarkSize').value, rules.watermark.min, rules.watermark.max, rules.watermark.def);
+            const wmOpacity = clamp(document.getElementById('themeWatermarkOpacity').value, rules.watermarkOpacity.min, rules.watermarkOpacity.max, rules.watermarkOpacity.def);
+            const signLabel = document.getElementById('themeSignatoryLabel').value || 'Auth. Signatory';
+            const tnc = document.getElementById('themeTNC').value || '1. Goods once sold will not be taken back.';
+            const bank = document.getElementById('themeBank').value || 'Bank: SBI | A/C: XXXXX | IFSC: SBINXXXX';
+            const upi = document.getElementById('themeUPI').value || '';
+            const marginValue = document.getElementById('themeMargins').value || 'Normal';
+            const thermalWidth = document.getElementById('themeThermalPaperSize').value || '80';
+
+            document.getElementById('prevTitle').innerText = title;
+            document.getElementById('prevThermalTitle').innerText = title;
+
+            document.getElementById('prevA4Container').style.fontFamily = font;
+            document.getElementById('prevA4Container').style.fontSize = baseSize + 'px';
+            document.getElementById('prevA4Container').style.color = textColor;
+
+            const thermalPreview = document.getElementById('prevThermalContainer');
+            thermalPreview.classList.toggle('is-58', thermalWidth === '58');
+            thermalPreview.classList.toggle('is-80', thermalWidth !== '58');
+            thermalPreview.style.fontFamily = paperSize === 'Thermal' ? font : "'Courier New', monospace";
+            thermalPreview.style.fontSize = (thermalWidth === '58' ? Math.max(baseSize - 2, 8) : Math.max(baseSize - 1, 9)) + 'px';
+
+            document.getElementById('prevHeaderBorder').style.borderColor = primaryColor;
+            document.getElementById('prevTitle').style.color = primaryColor;
+            document.getElementById('prevGrandTotal').style.color = primaryColor;
+
+            document.getElementById('prevTableHeader').style.backgroundColor = primaryColor + '1F';
+
+            const marginPx = (paperSize === 'Thermal')
+                ? PAPER_RULES.Thermal.margin[marginValue] || PAPER_RULES.Thermal.margin.Normal
+                : (rules.margin[marginValue] || rules.margin.Normal);
+
+            document.getElementById('prevA4Container').style.padding = `${marginPx}px`;
+
+            document.getElementById('prevSignLabel').innerText = signLabel;
+            document.getElementById('prevThermalSignLabel').innerText = signLabel;
+            document.getElementById('prevTNC').innerText = tnc;
+            document.getElementById('prevThermalTNC').innerText = tnc;
+            document.getElementById('prevBank').innerText = bank;
+
+            document.getElementById('prevUpiText').innerText = upi || 'upi@bank';
+            document.getElementById('prevQrWrap').style.display =
+                (document.getElementById('themeShowPaymentQR').checked && upi) ? 'flex' : 'none';
+
+            const logoAlign = (document.getElementById('themeLogoPosition').value || 'Left').toLowerCase();
+            document.getElementById('prevLogoContainer').style.textAlign = logoAlign;
+            document.getElementById('prevLogo').style.width = logoSize + 'px';
+            const thermalLogoSize = thermalWidth === '58'
+                ? Math.min(Math.max(Math.floor(logoSize * 0.48), 34), 56)
+                : Math.min(Math.max(Math.floor(logoSize * 0.65), 45), 96);
+            document.getElementById('prevThermalLogo').style.width = thermalLogoSize + 'px';
+
+            document.getElementById('prevWatermark').style.width = wmSize + 'px';
+            document.getElementById('prevWatermark').style.opacity = (wmOpacity / 100).toString();
+
+            document.getElementById('prevBusinessGSTIN').style.display =
+                document.getElementById('themeShowBusinessGSTIN').checked ? 'inline' : 'none';
+            document.getElementById('prevThermalGstin').style.display =
+                document.getElementById('themeShowBusinessGSTIN').checked ? 'inline' : 'none';
+
+            document.getElementById('prevTaxTable').style.display =
+                document.getElementById('themeShowTaxTable').checked ? 'block' : 'none';
+
+            document.getElementById('prevThermalTaxTable').style.display =
+                document.getElementById('themeShowTaxTable').checked ? 'block' : 'none';
+
+            document.getElementById('prevAmountWordsWrap').style.display =
+                document.getElementById('themeShowAmountInWords').checked ? 'block' : 'none';
+
+            document.getElementById('prevTable').classList.toggle('table-zebra-off', !document.getElementById('themeIsZebraStriped').checked);
+
+            renderPreviewRowsAndTotals();
+            switchPreviewContainer();
+            setTimeout(updatePreviewSize, 50);
+        }
+
+        function initLivePreview() {
+            const ids = [
+                'themeTitle', 'themeTemplateName', 'themeOrientation', 'themeMargins',
+                'themeFontFamily', 'themeBaseFontSize', 'themePrimaryColor', 'themeTextColor',
+                'themeLogoSize', 'themeLogoPosition', 'themeWatermarkSize', 'themeWatermarkOpacity',
+                'themeSignatoryLabel', 'themeTNC', 'themeBank', 'themeUPI',
+                'themeShowHSN', 'themeShowGSTPercent', 'themeShowGSTAmount', 'themeShowTaxTable',
+                'themeShowBusinessGSTIN', 'themeShowItemDiscount', 'themeIsZebraStriped',
+                'themeShowAmountInWords', 'themeShowPaymentQR', 'themeThermalPaperSize'
+            ];
+
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', syncLivePreview);
+                el.addEventListener('change', syncLivePreview);
+            });
+
+            setupImagePreview('themeLogo', ['prevLogo', 'prevThermalLogo'], 'logo', 'inline-block');
+            setupImagePreview('themeWatermark', ['prevWatermark'], 'watermark', 'block');
+            setupImagePreview('themeSignature', ['prevSign', 'prevThermalSign'], 'signature', 'block');
+
+            window.addEventListener('resize', updatePreviewSize);
+            syncLivePreview();
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            loadSalesSettings();
+            loadPurchaseSettings();
+            loadInvoiceTheme('A4');
+
+            initLivePreview();
+            toggleThermalOptions();
+        });
+
+        document.querySelectorAll('input[name="printType"]').forEach(r => {
+            r.addEventListener('change', toggleThermalOptions);
+        });
+
+        document.querySelectorAll('input[name="thermalSize"]').forEach(r => {
+            r.addEventListener('change', updatePreviewSize);
+        });
+
+        function toggleThermalOptions() {
+            const isThermal = getRadio('printType') === 'thermal';
+            document.getElementById('thermalOptions').style.display = isThermal ? 'flex' : 'none';
+        }
+    </script>
+}

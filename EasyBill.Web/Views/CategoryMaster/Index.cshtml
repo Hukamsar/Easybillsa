@@ -1,0 +1,133 @@
+﻿@using AOne.Models.Entity
+@using EasyBill.Models.ViewModels
+@model CategoryMasterVM
+
+@{
+    ViewData["Title"] = "Item Master";
+}
+
+@* <p>
+    <a asp-controller="CategoryMaster" asp-action="Create" class="btn btn-primary mb-1" style="float:right"> <i class="bi bi-plus-circle"></i> Add </a>
+</p> *@
+<div class="row mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Add Category
+    </div>
+</div>
+
+<style>
+    table.dataTable thead th {
+    background-color: #2b6ac9 !important;
+    color: white !important;
+    }
+</style>
+
+<!-- Category Add Form -->
+@if (User.HasPermission(Permissions.CategoryMaster.Create))
+{
+    <div class="card mb-3">
+
+        <div class="card-body">
+            <form id="categoryForm" method="post" asp-controller="CategoryMaster" asp-action="Create">
+                <div class="row">
+                    <div class="col-md-4 d-flex align-items-center mb-2">
+                        <label asp-for="CategoryName" class="me-2 mb-0" style="width: 100px;">Category Name
+                            <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" asp-for="CategoryName" class="form-control form-control-sm" />
+                        <span asp-validation-for="CategoryName" class="text-danger small"></span>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+                    <a asp-controller="CategoryMaster" asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+<table id="itemTable" class=" table table-bordered table-striped">
+    <thead class="table">
+        <tr>
+            <th>Category Name</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Categories)
+        {
+            <tr id="category_@item.Id">
+                <td>@item.CategoryName</td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        @if (User.HasPermission(Permissions.CategoryMaster.Edit))
+                        {
+                            <a asp-controller="CategoryMaster" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                        }
+                        @if (User.HasPermission(Permissions.CategoryMaster.Delete))
+                        {
+                        <a class="btn-delete" asp-route-id="@item.Id"
+                           title="Delete"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                        }
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<script>
+    $(document).ready(function(){
+       $("#itemTable").DataTable();
+    });
+</script>
+<script>
+    $(document).ready(function () {
+
+        // DataTable
+        $("#itemTable").DataTable();
+
+        // Auto focus on input
+        $("#CategoryName").focus();
+
+        // Confirm Before Save
+        $("#categoryForm").on("submit", function (e) {
+            e.preventDefault();
+            let form = this;
+
+            Swal.fire({
+                title: 'Confirm Save?',
+                text: 'Do you want to save this category?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '✅ Yes, Save',
+                cancelButtonText: '❌ Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#dc3545',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+
+    });
+</script>
+
+@if (TempData["success"] != null)
+{
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: '@TempData["success"]',
+            confirmButtonColor: '#198754'
+        });
+    </script>
+}

@@ -1,0 +1,62 @@
+﻿@using EasyBill.Models.ViewModels
+@model IEnumerable<HoldSalesListVM>
+
+<div class="modal fade" id="holdListModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-top">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Select Hold Sale</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- 🔍 Search -->
+                <input type="text" id="holdSearch"
+                       class="form-control mb-2"
+                       placeholder="Search by customer / mobile / hold no" />
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Hold No</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Mobile</th>
+                                <th>Items</th>
+                                <th width="80">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holdTableBody">
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">
+                                            @item.HoldToken
+                                        </span>
+                                    </td>
+                                    <td>@item.HoldDate.ToString("dd/MM/yyyy hh:mm tt")</td>
+                                    <td>@item.CustomerName</td>
+                                    <td>@item.MobileNo</td>
+                                    <td class="text-center">@item.ItemCount</td>
+                                    <td class="text-center">
+                                        <!-- next step me use hoga -->
+                                        <button class="btn btn-sm btn-success select-hold"
+                                                data-id="@item.Id">
+                                            Select
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>

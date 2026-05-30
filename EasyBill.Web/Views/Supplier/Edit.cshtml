@@ -1,0 +1,596 @@
+﻿@model EasyBill.Models.ViewModels.SupplierVM
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+    /* SweetAlert Button Common Style */
+    .swal2-confirm,
+    .swal2-cancel {
+        border-radius: 8px !important;
+        padding: 8px 20px !important;
+        font-weight: 500 !important;
+        transition: all 0.25s ease-in-out !important;
+        margin: 0 8px !important; /* 👈 Space between buttons */
+    }
+
+        /* Confirm Hover */
+        .swal2-confirm:hover {
+            background-color: #157347 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(25, 135, 84, 0.4);
+        }
+
+        /* Cancel Hover */
+        .swal2-cancel:hover {
+            background-color: #bb2d3b !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(220, 53, 69, 0.4);
+        }
+
+        /* Focus Effect */
+        .swal2-confirm:focus,
+        .swal2-cancel:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.4) !important;
+        }
+</style>
+
+
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            <h5>Edit Supplier</h5>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="Edit" method="post" id="supplierfrom">
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" id="hdnStateId" value="@Model.StateId" />
+                <input type="hidden" id="hdnCityId" value="@Model.CityId" />
+
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="row">
+                    <!-- LEFT SIDE -->
+                    <div class="col-md-8">
+                        <fieldset class="p-3 border border-secondary rounded">
+                            <legend class="float-none w-auto px-2 small">Supplier Details</legend>
+
+                            <div class="row mb-2">
+                                <label asp-for="FirstName" class="col-md-3 col-form-label small">Name *</label>
+                                <div class="col-md-9">
+                                    <input asp-for="FirstName" class="form-control form-control-sm" />
+                                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="AccountGroupId" class="col-md-3 col-form-label small">Account Group *</label>
+                                <div class="col-md-9 d-flex align-items-center">
+                                    <select asp-for="AccountGroupId" asp-items="ViewBag.AccountGroupList"
+                                            id="AccountGroupId"
+                                            class="form-control form-control-sm me-1">
+                                        <option value="">Select</option>
+                                    </select>
+                                    <div class="shortcut-box">
+                                        <span id="btnF2AccGrp" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3AccGrp" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                    <span asp-validation-for="AccountGroupId" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="Email" class="col-md-3 col-form-label small">Email *</label>
+                                <div class="col-md-9">
+                                    <input asp-for="Email" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="Address" class="col-md-3 col-form-label small">Address *</label>
+                                <div class="col-md-9">
+                                    <input asp-for="Address" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label asp-for="Area" class="col-md-3 col-form-label small">Area *</label>
+                                <div class="col-md-9">
+                                    <input asp-for="Area" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label class="col-md-3 col-form-label small">Location *</label>
+                                <div class="col-md-3 d-flex align-items-center">
+                                    <select asp-for="CountryId" asp-items="ViewBag.CountryList" id="countryId" class="form-control form-control-sm me-1">
+                                        <option value="">Country</option>
+                                    </select>
+                                    <div class="shortcut-box" style="margin-left:2px;">
+                                        <span id="btnF2Country" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3Country" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 d-flex align-items-center">
+                                    <select asp-for="StateId" id="stateId" class="form-control form-control-sm me-1">
+                                        <option value="">State</option>
+                                    </select>
+                                    <div class="shortcut-box" style="margin-left:2px;">
+                                        <span id="btnF2State" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3State" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 d-flex align-items-center">
+                                    <select asp-for="CityId" id="cityId" class="form-control form-control-sm me-1">
+                                        <option value="">City</option>
+                                    </select>
+                                    <div class="shortcut-box" style="margin-left:2px;">
+                                        <span id="btnF2City" class="shortcut-link">F2 - New</span>
+                                        <span id="btnF3City" class="shortcut-link text-danger">F3 - Mod</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="PinCode" class="col-md-3 col-form-label small">PinCode *</label>
+                                <div class="col-md-4">
+                                    <input asp-for="PinCode" id="pincode" class="form-control form-control-sm" maxlength="6" inputmode="numeric" placeholder="6-digit" />
+                                    <small id="pinError" class="text-danger"></small>
+                                </div>
+                                <label asp-for="CurrencyId" class="col-md-2 col-form-label small text-end">Currency *</label>
+                                <div class="col-md-3">
+                                    <select asp-for="CurrencyId" asp-items="ViewBag.CurrencyList" class="form-select form-select-sm">
+                                        <option value="">Select</option>
+                                    </select>
+                                </div>
+                            </div>
+
+
+                            <div class="row mb-2">
+                                <label asp-for="PaymentDays" class="col-md-3 col-form-label small">PaymentDays</label>
+                                <div class="col-md-3">
+                                    <input asp-for="PaymentDays" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <!-- RIGHT SIDE -->
+                    <div class="col-md-4">
+                        <fieldset class="p-3 border border-secondary rounded">
+                            <legend class="float-none w-auto px-2 small">Balance</legend>
+
+                            <div class="row mb-2">
+                                <label asp-for="Balance" class="col-md-4 col-form-label small">Balance *</label>
+                                <div class="col-md-8">
+                                    <input asp-for="Balance" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset class="p-3 border border-secondary rounded">
+                            <legend class="float-none w-auto px-2 small">Bank Details</legend>
+                            <div class="row mb-2">
+                                <label asp-for="AccountNo" class="col-md-4 col-form-label small">Account No *</label>
+                                <div class="col-md-8">
+                                    <input asp-for="AccountNo" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="RTGSNo" class="col-md-4 col-form-label small">RTGS *</label>
+                                <div class="col-md-8">
+                                    <input asp-for="RTGSNo" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="IFSCCode" class="col-md-4 col-form-label small">IFSC *</label>
+                                <div class="col-md-8">
+                                    <input asp-for="IFSCCode" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="Branch" class="col-md-4 col-form-label small">Branch *</label>
+                                <div class="col-md-8">
+                                    <input asp-for="Branch" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="MICRNo" class="col-md-4 col-form-label small">MICR *</label>
+                                <div class="col-md-8">
+                                    <input asp-for="MICRNo" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="PhoneNO" class="col-md-4 col-form-label small">
+                                    Phone *
+                                </label>
+                                <div class="col-md-8">
+                                    <input asp-for="PhoneNO"
+                                           class="form-control form-control-sm"
+                                           id="mobilenumber"
+                                           maxlength="10"
+                                           inputmode="numeric"
+                                           required />
+
+                                    <small id="mobileError" class="text-danger"></small>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                </div>
+                <div class="col-md-12 mt-2">
+                    <fieldset class="p-3 border border-secondary rounded">
+                        <legend class="float-none w-auto px-2 small">Licence info</legend>
+
+                        <div class="row mb-2">
+                            <label asp-for="ManufacturingLicNO" class="col-md-2 col-form-label small"></label>
+                            <div class="col-md-8">
+                                <input asp-for="ManufacturingLicNO" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="IFSSAINo" class="col-md-2 col-form-label small"></label>
+                            <div class="col-md-8">
+                                <input asp-for="IFSSAINo" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="GstNO" class="col-md-2 col-form-label small"></label>
+                            <div class="col-md-8">
+                                <input asp-for="GstNO" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="DrugLicNO" class="col-md-2 col-form-label small"></label>
+                            <div class="col-md-8">
+                                <input asp-for="DrugLicNO" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="Type" class="col-md-2 col-form-label small"></label>
+                            <div class="col-md-8">
+                                <select asp-for="Type" class="form-control" asp-items="Html.GetEnumSelectList<GSTType>()">
+                                    <option value="">Select</option>
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <!-- F2 F3 MODALS -->
+                <div class="modal fade" id="accGrpModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content custom-modal"><div class="modal-header"><h4 class="modal-title" id="accGrpModalTitle">Add Account Group</h4></div><div class="modal-body"><input type="hidden" id="modalAccGrpId" value="0" /><label>Name</label><input type="text" id="modalAccGrpName" class="form-control modal-input" /><label class="mt-2">Under</label><select id="modalAccGrpParentId" asp-items="ViewBag.ParentAccountGroupList" class="form-select form-select-sm modal-input"><option value="">select</option></select><div class="form-check mt-2"><input type="checkbox" id="modalAccGrpActive" class="form-check-input" checked /><label class="form-check-label" for="modalAccGrpActive">Active</label></div><span id="accGrpError" class="text-danger small modal-error"></span></div><div class="modal-footer"><button type="button" class="btn btn-success btn-sm px-4" id="btnSaveAccGrp">Save</button><button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button></div></div></div></div>
+                <div class="modal fade" id="countryModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content custom-modal"><div class="modal-header"><h4 class="modal-title" id="countryModalTitle">Add Country</h4></div><div class="modal-body"><input type="hidden" id="modalCountryId" value="0" /><label>Name</label><input type="text" id="modalCountryName" class="form-control modal-input" /><span id="countryError" class="text-danger small modal-error"></span></div><div class="modal-footer"><button type="button" class="btn btn-success btn-sm px-4" id="btnSaveCountry">Save</button><button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button></div></div></div></div>
+                <div class="modal fade" id="stateModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content custom-modal"><div class="modal-header"><h4 class="modal-title" id="stateModalTitle">Add State</h4></div><div class="modal-body"><input type="hidden" id="modalStateId" value="0" /><label>Country</label><div class="d-flex align-items-center mb-2"><select id="modalStateCountryId" asp-items="ViewBag.CountryList" class="form-select form-select-sm modal-input me-1"><option value="">select</option></select><div class="shortcut-box" style="margin-left:2px;"><span id="btnF2StateCountry" class="shortcut-link">F2 - New</span><span id="btnF3StateCountry" class="shortcut-link text-danger">F3 - Mod</span></div></div><label>Name</label><input type="text" id="modalStateName" class="form-control modal-input" /><span id="stateError" class="text-danger small modal-error"></span></div><div class="modal-footer"><button type="button" class="btn btn-success btn-sm px-4" id="btnSaveState">Save</button><button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button></div></div></div></div>
+                <div class="modal fade" id="cityModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content custom-modal"><div class="modal-header"><h4 class="modal-title" id="cityModalTitle">Add City</h4></div><div class="modal-body"><input type="hidden" id="modalCityId" value="0" /><label>Country</label><div class="d-flex align-items-center mb-2"><select id="modalCityCountryId" asp-items="ViewBag.CountryList" class="form-select form-select-sm modal-input me-1"><option value="">select</option></select><div class="shortcut-box" style="margin-left:2px;"><span id="btnF2CityCountry" class="shortcut-link">F2 - New</span><span id="btnF3CityCountry" class="shortcut-link text-danger">F3 - Mod</span></div></div><label>State</label><div class="d-flex align-items-center mb-2"><select id="modalCityStateId" class="form-select form-select-sm modal-input me-1"><option value="">select</option></select><div class="shortcut-box" style="margin-left:2px;"><span id="btnF2CityState" class="shortcut-link">F2 - New</span><span id="btnF3CityState" class="shortcut-link text-danger">F3 - Mod</span></div></div><label>Name</label><input type="text" id="modalCityName" class="form-control modal-input" /><span id="cityError" class="text-danger small modal-error"></span></div><div class="modal-footer"><button type="button" class="btn btn-success btn-sm px-4" id="btnSaveCity">Save</button><button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button></div></div></div></div>
+
+                <!-- Buttons -->
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<link href="~/css/page.css" rel="stylesheet" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            var selectedCountry = $('#countryId').val();
+            var selectedState = $('#hdnStateId').val();
+            var selectedCity = $('#hdnCityId').val();
+
+            if (selectedCountry) {
+                loadStates(selectedCountry, selectedState);
+            }
+
+            function loadStates(countryId, selectedStateId) {
+                $.getJSON('/Supplier/GetStatesByCountry', { countryId: countryId }, function (data) {
+                    $('#stateId').empty().append('<option value="">Select State</option>');
+
+                    $.each(data, function (i, item) {
+                        var option = $('<option>', { value: item.id, text: item.name });
+                        if (item.id == selectedStateId) option.prop('selected', true);
+                        $('#stateId').append(option);
+                    });
+
+                    if (selectedStateId) loadCities(selectedStateId, selectedCity);
+                });
+            }
+
+            function loadCities(stateId, selectedCityId) {
+                $.getJSON('/Supplier/GetCitiesByState', { stateId: stateId }, function (data) {
+                    $('#cityId').empty().append('<option value="">Select City</option>');
+
+                    $.each(data, function (i, item) {
+                        var option = $('<option>', { value: item.id, text: item.name });
+                        if (item.id == selectedCityId) option.prop('selected', true);
+                        $('#cityId').append(option);
+                    });
+                });
+            }
+
+            $('#countryId').change(function () {
+                var countryId = $(this).val();
+                $('#stateId').empty().append('<option value="">Select State</option>');
+                $('#cityId').empty().append('<option value="">Select City</option>');
+
+                if (countryId) loadStates(countryId, null);
+            });
+
+            $('#stateId').change(function () {
+                var stateId = $(this).val();
+                $('#cityId').empty().append('<option value="">Select City</option>');
+                if (stateId) loadCities(stateId, null);
+            });
+
+            // --- PinCode validation ---
+            $("#pincode").on("input", function () {
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+                const val = this.value;
+                if (val.length > 0 && val.length !== 6) $("#pinError").text("Enter 6-digit PinCode");
+                else $("#pinError").text("");
+            });
+
+            // --- Mobile validation ---
+            $("#mobilenumber").on("input", function () {
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+                const val = this.value;
+                if (val.length === 10 && !/^[5-9][0-9]{9}$/.test(val)) {
+                    $("#mobileError").text("Enter 10-digit mobile starting with 5–9");
+                } else {
+                    $("#mobileError").text("");
+                }
+            });
+
+            // --- F2 F3 LOGIC ---
+            $("#btnF2AccGrp").click(() => openModal("accGrp", "new", "#AccountGroupId"));
+            $("#btnF3AccGrp").click(() => openModal("accGrp", "edit", "#AccountGroupId"));
+            $("#btnSaveAccGrp").click(() => saveData("accGrp", '/Supplier/QuickSaveAccountGroup', '#AccountGroupId', null, '/Supplier/GetAccountGroups'));
+            let countryDdlSelector = "#countryId";
+            let returnModalSelector = "";
+            $("#countryModal,#stateModal").on('hidden.bs.modal', function () {
+                if (returnModalSelector && returnModalSelector !== "#" + this.id) {
+                    let modalSelector = returnModalSelector;
+                    returnModalSelector = "";
+                    setTimeout(() => { $(modalSelector).modal('show'); }, 200);
+                }
+            });
+            $("#btnF2Country").click(() => { countryDdlSelector = "#countryId"; openModal("country", "new", "#countryId"); });
+            $("#btnF3Country").click(() => { countryDdlSelector = "#countryId"; openModal("country", "edit", "#countryId"); });
+            $("#btnSaveCountry").click(() => saveData("country", '/Supplier/QuickSaveCountry', countryDdlSelector, null, '/Supplier/GetCountries'));
+            $("#btnF2StateCountry").click(() => { countryDdlSelector = "#modalStateCountryId"; $("#stateModal").modal('hide'); setTimeout(() => { returnModalSelector = "#stateModal"; openModal("country", "new", "#modalStateCountryId"); }, 350); });
+            $("#btnF3StateCountry").click(() => { if(!$("#modalStateCountryId").val()){Swal.fire("Error","Select Country first!","error");return;} countryDdlSelector = "#modalStateCountryId"; $("#stateModal").modal('hide'); setTimeout(() => { returnModalSelector = "#stateModal"; openModal("country", "edit", "#modalStateCountryId"); }, 350); });
+            $("#btnF2CityCountry").click(() => { countryDdlSelector = "#modalCityCountryId"; $("#cityModal").modal('hide'); setTimeout(() => { returnModalSelector = "#cityModal"; openModal("country", "new", "#modalCityCountryId"); }, 350); });
+            $("#btnF3CityCountry").click(() => { if(!$("#modalCityCountryId").val()){Swal.fire("Error","Select Country first!","error");return;} countryDdlSelector = "#modalCityCountryId"; $("#cityModal").modal('hide'); setTimeout(() => { returnModalSelector = "#cityModal"; openModal("country", "edit", "#modalCityCountryId"); }, 350); });
+            $("#btnF2State").click(() => openModal("state", "new", "#stateId"));
+            $("#btnF3State").click(() => openModal("state", "edit", "#stateId"));
+            $("#btnSaveState").click(function () {
+                let id = $("#modalStateId").val();
+                let name = $("#modalStateName").val().trim();
+                let countryId = $("#modalStateCountryId").val();
+                if (!countryId) { $("#stateError").text("Select country first!"); return; }
+                if (!name) { $("#stateError").text("Name required!"); return; }
+                $.post('/Supplier/QuickSaveState', { id: id, name: name, countryId: countryId }, function (res) {
+                    if (res.success) {
+                        $("#stateModal").modal('hide');
+                        $("#countryId").val(countryId);
+                        $.get('/Supplier/GetStatesByCountry?countryId=' + countryId, function (data) {
+                            let ddl = $("#stateId"); ddl.empty().append('<option value="">State</option>');
+                            let modalDdl = $("#modalCityStateId"); modalDdl.empty().append('<option value="">select</option>');
+                            $.each(data, function (i, item) {
+                                let opt = $('<option>', { value: item.id, text: item.name });
+                                let modalOpt = $('<option>', { value: item.id, text: item.name });
+                                if (item.id == res.newId) { opt.attr('selected', 'selected'); modalOpt.attr('selected', 'selected'); }
+                                ddl.append(opt);
+                                modalDdl.append(modalOpt);
+                            });
+                            $("#cityId").empty().append('<option value="">City</option>');
+                        });
+                    } else { $("#stateError").text(res.message); }
+                });
+            });
+            $("#btnF2City").click(() => openModal("city", "new", "#cityId"));
+            $("#btnF3City").click(() => openModal("city", "edit", "#cityId"));
+            $("#btnF2CityState").click(() => { $("#cityModal").modal('hide'); setTimeout(() => { returnModalSelector = "#cityModal"; openModal("state", "new", "#modalCityStateId"); $("#modalStateCountryId").val($("#modalCityCountryId").val()); }, 350); });
+            $("#btnF3CityState").click(() => { if(!$("#modalCityStateId").val()){Swal.fire("Error","Select State first!","error");return;} $("#cityModal").modal('hide'); setTimeout(() => { returnModalSelector = "#cityModal"; openModal("state", "edit", "#modalCityStateId"); $("#modalStateCountryId").val($("#modalCityCountryId").val()); }, 350); });
+            $("#btnSaveCity").click(function () {
+                let id = $("#modalCityId").val();
+                let name = $("#modalCityName").val().trim();
+                let countryId = $("#modalCityCountryId").val();
+                let stateId = $("#modalCityStateId").val();
+                if (!countryId) { $("#cityError").text("Select country first!"); return; }
+                if (!stateId) { $("#cityError").text("Select state first!"); return; }
+                if (!name) { $("#cityError").text("Name required!"); return; }
+                $.post('/Supplier/QuickSaveCity', { id: id, name: name, stateId: stateId, countryId: countryId }, function (res) {
+                    if (res.success) {
+                        $("#cityModal").modal('hide');
+                        $("#countryId").val(countryId);
+                        $.get('/Supplier/GetStatesByCountry?countryId=' + countryId, function (states) {
+                            let stateDdl = $("#stateId"); stateDdl.empty().append('<option value="">State</option>');
+                            $.each(states, function (i, item) {
+                                let opt = $('<option>', { value: item.id, text: item.name });
+                                if (item.id == stateId) opt.attr('selected', 'selected');
+                                stateDdl.append(opt);
+                            });
+                        });
+                        $.get('/Supplier/GetCitiesByState?stateId=' + stateId, function (data) {
+                            let ddl = $("#cityId"); ddl.empty().append('<option value="">City</option>');
+                            $.each(data, function (i, item) {
+                                let opt = $('<option>', { value: item.id, text: item.name });
+                                if (item.id == res.newId) opt.attr('selected', 'selected');
+                                ddl.append(opt);
+                            });
+                        });
+                    } else { $("#cityError").text(res.message); }
+                });
+            });
+
+            $("#modalCityCountryId").change(function () {
+                var countryId = $(this).val();
+                $("#modalCityStateId").empty().append('<option value="">select</option>');
+                if (countryId) {
+                    $.getJSON('/Supplier/GetStatesByCountry', { countryId: countryId }, function (data) {
+                        $.each(data, function (i, item) {
+                            $("#modalCityStateId").append($('<option>', { value: item.id, text: item.name }));
+                        });
+                    });
+                }
+            });
+
+            function openModal(type, mode, ddlSelector) {
+                $("#" + type + "Error").text("");
+                if (mode === "new") {
+                    $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Id").val(0);
+                    $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Name").val("");
+                    if (type === "accGrp") {
+                        $("#modalAccGrpParentId").val("");
+                        $("#modalAccGrpActive").prop("checked", true);
+                    }
+                    $("#" + type + "ModalTitle").text("Add " + type.charAt(0).toUpperCase() + type.slice(1));
+                } else {
+                    let id = $(ddlSelector).val(); let text = $(ddlSelector + " option:selected").text();
+                    if (!id) { Swal.fire("Error", "Select item first!", "error"); return; }
+                    $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Id").val(id);
+                    $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Name").val(text);
+                    if (type === "accGrp") {
+                        $.get('/Supplier/GetAccountGroups', function (data) {
+                            let item = data.find(x => x.value == id);
+                            if (item) {
+                                $("#modalAccGrpParentId").val(item.parentId || "");
+                                $("#modalAccGrpActive").prop("checked", item.isActive === true);
+                            }
+                        });
+                    }
+                    $("#" + type + "ModalTitle").text("Modify " + type.charAt(0).toUpperCase() + type.slice(1));
+                }
+                if (type === "state") {
+                    $("#modalStateCountryId").val($("#countryId").val());
+                }
+                if (type === "city") {
+                    let countryId = $("#countryId").val();
+                    let stateId = $("#stateId").val();
+                    $("#modalCityCountryId").val(countryId);
+                    $("#modalCityStateId").empty().append('<option value="">select</option>');
+                    if (countryId) {
+                        $.getJSON('/Supplier/GetStatesByCountry', { countryId: countryId }, function (data) {
+                            $.each(data, function (i, item) {
+                                let opt = $('<option>', { value: item.id, text: item.name });
+                                if (item.id == stateId) opt.attr('selected', 'selected');
+                                $("#modalCityStateId").append(opt);
+                            });
+                        });
+                    }
+                }
+                $("#" + type + "Modal").modal("show");
+                setTimeout(() => { $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Name").focus(); }, 200);
+            }
+
+            function saveData(type, url, ddlSelector, extraData, reloadUrl, isCustomFormat = false) {
+                let id = $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Id").val();
+                let name = $("#modal" + type.charAt(0).toUpperCase() + type.slice(1) + "Name").val().trim();
+                if (!name) { $("#" + type + "Error").text("Name required!"); return; }
+                let postData = { id: id, name: name };
+                if (type === "accGrp") {
+                    postData.parentId = $("#modalAccGrpParentId").val();
+                    postData.isActive = $("#modalAccGrpActive").is(":checked");
+                }
+                if (extraData) Object.assign(postData, extraData);
+                $.post(url, postData, function (res) {
+                    if (res.success) {
+                        $("#" + type + "Modal").modal('hide');
+                        $.get(reloadUrl, function (data) {
+                            let ddl = $(ddlSelector); ddl.empty();
+                            ddl.append('<option value="">' + (type==='accGrp'?'Select': type.charAt(0).toUpperCase() + type.slice(1)) + '</option>');
+                            $.each(data, function (i, item) {
+                                let val = isCustomFormat ? item.id : item.value;
+                                let txt = isCustomFormat ? item.name : item.text;
+                                let opt = $('<option>', { value: val, text: txt });
+                                if (type === "accGrp") {
+                                    opt.attr('data-parentid', item.parentId || '');
+                                    opt.attr('data-isactive', item.isActive);
+                                }
+                                if (val == res.newId) opt.attr('selected', 'selected');
+                                ddl.append(opt);
+                            });
+                            if(type==='state') { $("#cityId").empty().append('<option value="">City</option>'); }
+                            if(type==='country') {
+                                $("#countryId,#modalStateCountryId,#modalCityCountryId").empty().append('<option value="">Country</option>');
+                                $.each(data, function (i, item) {
+                                    let opt1 = $('<option>', { value: item.value, text: item.text });
+                                    let opt2 = $('<option>', { value: item.value, text: item.text });
+                                    let opt3 = $('<option>', { value: item.value, text: item.text });
+                                    if (item.value == res.newId) { opt1.attr('selected', 'selected'); opt2.attr('selected', 'selected'); opt3.attr('selected', 'selected'); }
+                                    $("#countryId").append(opt1);
+                                    $("#modalStateCountryId").append(opt2);
+                                    $("#modalCityCountryId").append(opt3);
+                                });
+                                $("#stateId").empty().append('<option value="">State</option>');
+                                $("#cityId").empty().append('<option value="">City</option>');
+                                $("#modalCityStateId").empty().append('<option value="">select</option>');
+                            }
+                        });
+                    } else { $("#" + type + "Error").text(res.message); }
+                });
+            }
+
+            $(".modal-input").keypress(function (e) { if (e.which === 13) { e.preventDefault(); $(this).closest('.modal').find('.btn-success').click(); } });
+
+            // ✅ SweetAlert confirmation (Edit)
+            $("#supplierfrom").on("submit", function (e) {
+                e.preventDefault();
+
+                // ✅ First run jQuery unobtrusive validation
+                if ($(this).valid && !$(this).valid()) {
+                    return;
+                }
+
+                // ✅ Custom checks also (pincode/mobile)
+                const pin = $("#pincode").val() || "";
+                if (pin.length > 0 && pin.length !== 6) {
+                    $("#pinError").text("Enter 6-digit PinCode");
+                    return;
+                }
+
+                const mob = $("#mobilenumber").val() || "";
+                if (mob.length > 0 && (mob.length !== 10 || !/^[5-9][0-9]{9}$/.test(mob))) {
+                    $("#mobileError").text("Enter valid 10-digit mobile starting with 5–9");
+                    return;
+                }
+
+                const form = this;
+
+                Swal.fire({
+                    title: 'Confirm Update?',
+                    text: 'Do you want to update this supplier?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Update',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#dc3545',
+                    reverseButtons: true,
+                    focusConfirm: true,
+                    buttonsStyling: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $("#supplierfrom").off("submit");
+                        form.submit();
+                    }
+                });
+            });
+
+        });
+    </script>
+}

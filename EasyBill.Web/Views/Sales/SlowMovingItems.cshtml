@@ -1,0 +1,159 @@
+﻿@model IEnumerable<EasyBill.Models.ViewModels.SalesVM>
+
+@{
+    ViewData["Title"] = "Slow Moving Items";
+    decimal totalQty = Model?.Sum(x => x.TotalQty) ?? 0;
+    decimal totalAmount = Model?.Sum(x => x.TotalAmount) ?? 0;
+}
+<style>
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center"
+         style="background:#2b6ac9">
+
+        <span class="fw-bold">
+            Slow Moving Items
+        </span>
+
+        <span class="ms-auto">
+            Total Qty:
+            <span class="fw-bold">@totalQty</span> |
+
+            Total Amount:
+            <span class="fw-bold">₹ @totalAmount.ToString("0.00")</span>
+        </span>
+
+    </div>
+</div>
+
+
+
+<!-- Filter Section -->
+<div class="card shadow-sm p-3 mb-4">
+    <form method="get" asp-action="SlowMovingItems">
+        <div class="row g-3 align-items-end">
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">From Date</label>
+                <input type="text" name="fromDate"
+                       value="@(ViewBag.FromDate ?? DateTime.Today.ToString("01-MM-yyyy"))"
+                       class="form-control form-control-sm datepicker"
+                       placeholder="dd-MM-yyyy" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">To Date</label>
+                <input type="text" name="toDate"
+                       value="@(ViewBag.ToDate ?? DateTime.Today.ToString("dd-MM-yyyy"))"
+                       class="form-control form-control-sm datepicker"
+                       placeholder="dd-MM-yyyy" />
+            </div>
+
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-sm w-100 text-white"
+                        style="background-color: #2b6ac9 !important;">
+                    Apply
+                </button>
+            </div>
+
+        </div>
+    </form>
+</div>
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="SlowMovingItemsExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+        <a asp-action="SlowMovingItemsPdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+    </div>
+</div>
+<!-- Table Section -->
+<div class="card shadow-sm p-3">
+    <div class="table-responsive">
+        <table id="slowMovingTable" class="table table-bordered table-striped table-sm">
+            <thead>
+                <tr>
+                    <th>Sr No</th>
+                    <th>Item Name</th>
+                    <th class="text-end">Total Qty</th>
+                    <th class="text-end">Total Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td></td>
+                            <td>@item.ItemName</td>
+                            <td class="text-end">@item.TotalQty</td>
+                            <td class="text-end">@item.TotalAmount</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+            <tfoot class="table-secondary fw-bold">
+                <tr>
+                    <td></td>
+                    <td class="text-end">TOTAL</td>
+                    <td class="text-end">@ViewBag.TotalQty</td>
+                    <td class="text-end">@ViewBag.TotalAmt</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+
+ 
+    <script>
+        $(document).ready(function () {
+
+            var t = $("#slowMovingTable").DataTable({
+              ordering: false
+            });
+
+            // Auto Sr No
+            t.on('order.dt search.dt', function () {
+                t.column(0, { search: 'applied', order: 'applied' }).nodes()
+                    .each(function (cell, i) {
+                        cell.innerHTML = i + 1;
+                    });
+            }).draw();
+
+            // Datepicker
+            $(".datepicker").datepicker({
+                dateFormat: "dd-mm-yy",
+                changeMonth: true,
+                changeYear: true
+            });
+
+        });
+    </script>
+
+    <style>
+        table.dataTable thead th {
+            background-color: #2b6ac9 !important;
+            color: white !important;
+        }
+            /* Remove sorting arrows */
+            table.dataTable thead th.sorting,
+            table.dataTable thead th.sorting_asc,
+            table.dataTable thead th.sorting_desc {
+                background-image: none !important;
+                cursor: default !important;
+            }
+    </style>
+}

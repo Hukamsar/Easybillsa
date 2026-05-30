@@ -1,0 +1,1811 @@
+@using EasyBill.Models.ViewModels
+@model TenantRegistrationVM
+@{
+    ViewData["Title"] = "Company Profile";
+}
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+    .profile-page-wrapper {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        background-color: #f8fafc;
+        border-radius: 16px;
+    }
+
+    .profile-page-wrapper * {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    table.dataTable thead th {
+        background-color: #1565c0 !important;
+        color: white !important;
+    }
+
+    .shortcut-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 5px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid transparent;
+        margin-right: 4px;
+    }
+
+    .shortcut-new {
+        background: #eff6ff;
+        color: #1e6091;
+        border-color: #bfdbfe;
+    }
+
+    .shortcut-new:hover {
+        background: #1e6091;
+        color: #ffffff;
+    }
+
+    .shortcut-mod {
+        background: #fff5f5;
+        color: #c53030;
+        border-color: #fee2e2;
+    }
+
+    .shortcut-mod:hover {
+        background: #c53030;
+        color: #ffffff;
+    }
+
+    .shortcut-box {
+        margin-top: 5px;
+        display: flex;
+        gap: 6px;
+    }
+
+    .custom-modal {
+        max-width: 400px;
+    }
+
+    .modal-input {
+        max-width: 100%;
+    }
+
+    .modal-error {
+        display: block;
+    }
+
+    /* Legend and fieldset aesthetics */
+    .profile-edit-fieldset {
+        border: 1px solid #e2e8f0 !important;
+        padding: 1.5rem !important;
+        margin-bottom: 1.5rem !important;
+        background-color: #fff;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.01);
+    }
+
+    .profile-edit-legend {
+        font-size: 0.82rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #1565c0 !important;
+        background-color: #fff;
+        padding: 0 0.75rem !important;
+        width: auto !important;
+        float: none;
+        margin-bottom: 0;
+    }
+
+    /* View / Edit Mode Toggle Styles */
+    .mode-view .edit-only {
+        display: none !important;
+    }
+    .mode-edit .view-only {
+        display: none !important;
+    }
+
+    /* Premium View Mode Dashboard Styles */
+    .detail-card {
+        border-radius: 16px !important;
+        border: none !important;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        padding: 1.75rem !important;
+        margin-bottom: 20px;
+    }
+
+    .profile-section-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1e293b;
+        border-bottom: 2px solid #f1f5f9;
+        padding-bottom: 0.75rem;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .profile-section-title i {
+        color: #1565c0;
+    }
+
+    /* Profile Detail Item Layout */
+    .profile-detail-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 1.25rem;
+    }
+
+    .profile-icon-box {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #eff6ff;
+        color: #1565c0;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+        border: 1px solid #dbeafe;
+    }
+
+    /* Color variations for icon boxes */
+    .icon-success { background: #f0fdf4; color: #16a34a; border-color: #dcfce7; }
+    .icon-warning { background: #fffbeb; color: #d97706; border-color: #fef3c7; }
+    .icon-danger { background: #fef2f2; color: #dc2626; border-color: #fee2e2; }
+    .icon-purple { background: #faf5ff; color: #7c3aed; border-color: #f3e8ff; }
+    .icon-info { background: #ecfeff; color: #0891b2; border-color: #cffafe; }
+
+    .profile-detail-content {
+        flex-grow: 1;
+    }
+
+    .profile-detail-label {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #64748b;
+        font-weight: 700;
+        margin-bottom: 2px;
+        display: block;
+    }
+
+    .profile-detail-value {
+        font-size: 0.88rem;
+        color: #1e293b;
+        font-weight: 600;
+        display: block;
+    }
+
+    .monogram-logo {
+        background: linear-gradient(135deg, #1565c0 0%, #1e88e5 100%);
+        box-shadow: 0 4px 15px rgba(21, 101, 192, 0.25);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        text-transform: uppercase;
+        border-radius: 50%;
+        border: 4px solid #ffffff;
+    }
+
+    /* Form Styles for Edit Mode */
+    .profile-form-control {
+        border-radius: 8px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        font-size: 0.85rem !important;
+        transition: all 0.2s ease !important;
+        padding: 0.4rem 0.75rem;
+    }
+
+    .profile-form-control:focus {
+        border-color: #1565c0 !important;
+        box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1) !important;
+        outline: none;
+    }
+
+    .profile-form-control[readonly] {
+        background-color: #f8fafc !important;
+        border-color: #e2e8f0 !important;
+        color: #64748b !important;
+    }
+
+    /* Premium card header and main container */
+    .profile-card-header {
+        background: linear-gradient(120deg, #1565c0 0%, #1976d2 35%, #0d47a1 65%, #1a237e 100%) !important;
+        color: white !important;
+        font-weight: 700;
+        border: none !important;
+        border-radius: 16px 16px 0 0 !important;
+        padding: 16px 24px !important;
+        box-shadow: 0 4px 15px rgba(21, 101, 192, 0.2);
+        letter-spacing: 0.5px;
+    }
+
+    /* Buttons */
+    .btn-profile-primary {
+        background: linear-gradient(135deg, #1565c0 0%, #1e88e5 100%) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(21, 101, 192, 0.2) !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .btn-profile-primary:hover {
+        transform: translateY(-1.5px) !important;
+        box-shadow: 0 6px 16px rgba(21, 101, 192, 0.3) !important;
+        color: white !important;
+    }
+
+    .btn-profile-secondary {
+        background: #f1f5f9 !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        color: #475569 !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .btn-profile-secondary:hover {
+        background: #e2e8f0 !important;
+        color: #1e293b !important;
+    }
+
+    .btn-profile-success {
+        background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2) !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .btn-profile-success:hover {
+        transform: translateY(-1.5px) !important;
+        box-shadow: 0 6px 16px rgba(22, 163, 74, 0.3) !important;
+        color: white !important;
+    }
+
+    /* Tab navigation custom styling */
+    .profile-tabs .nav-link {
+        color: #64748b;
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 10px 20px;
+        border: none;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s ease;
+        background: transparent;
+    }
+
+    .profile-tabs .nav-link:hover {
+        color: #1565c0;
+        border-bottom-color: #e2e8f0;
+    }
+
+    .profile-tabs .nav-link.active {
+        color: #1565c0 !important;
+        border-bottom: 2px solid #1565c0 !important;
+        background: transparent !important;
+    }
+
+    .profile-tab-content {
+        background: #ffffff;
+        border-radius: 0 0 12px 12px;
+        border: 1px solid #e2e8f0;
+        border-top: none;
+        padding: 20px;
+    }
+
+    .premium-badge {
+        font-size: 0.72rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.3px;
+        padding: 6px 14px !important;
+        border-radius: 30px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    /* Small stat card helper */
+    .stat-mini-card {
+        background: #f8fafc;
+        border: 1px solid #f1f5f9;
+        border-radius: 12px;
+        padding: 12px;
+        margin-top: 10px;
+        text-align: left;
+    }
+</style>
+
+
+<div class="profile-page-wrapper">
+    <div class="card border-0 mb-3 shadow-sm">
+        <div class="card-header profile-card-header py-3">
+            <i class="fas fa-building me-2"></i> Company Profile
+        </div>
+    </div>
+    <form asp-action="EditProfile" id="CompanyForm" asp-controller="Tenant" enctype="multipart/form-data" method="post">
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="container-fluid px-0" id="profileContainer">
+            
+            <!-- ==========================================
+                 VIEW-ONLY PROFILE DASHBOARD (VIEW MODE)
+                 ========================================== -->
+            <div class="view-only">
+                <div class="row">
+                    <!-- Sidebar Profile Summary -->
+                    <div class="col-md-4 mb-4">
+                        <div class="card border-0 text-center detail-card">
+                            <div class="d-flex justify-content-center mb-3">
+                                @if (!string.IsNullOrEmpty(Model.Logo))
+                                {
+                                    <img src="~/@Model.Logo" alt="Logo" class="img-thumbnail rounded-circle shadow-sm" style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #f1f5f9;" />
+                                }
+                                else
+                                {
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white monogram-logo" style="width: 120px; height: 120px; font-size: 2.5rem; font-weight: 700;">
+                                        @(string.IsNullOrEmpty(Model.Name) ? "C" : Model.Name.Substring(0, 1).ToUpper())
+                                    </div>
+                                }
+                            </div>
+                            <h4 class="fw-bold mb-1 text-dark">@Model.Name</h4>
+                            <p class="text-muted small mb-3">@(string.IsNullOrEmpty(Model.Description) ? "No description provided." : Model.Description)</p>
+                            
+                            <div class="d-flex justify-content-center gap-2 flex-wrap mb-2">
+                                <span class="badge bg-primary text-white premium-badge px-3 py-2" style="background: linear-gradient(135deg, #1565c0 0%, #1e88e5 100%) !important;">
+                                    <i class="fas fa-certificate me-1"></i> @ViewBag.SubscriptionPlanName
+                                </span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle premium-badge px-3 py-2">
+                                    Active
+                                </span>
+                            </div>
+                            
+                            <hr class="my-4 text-muted opacity-25" />
+                            
+                            <div class="stat-mini-card">
+                                <div class="row g-0 align-items-center">
+                                    <div class="col-2 text-center text-primary">
+                                        <i class="fas fa-code-branch fa-lg"></i>
+                                    </div>
+                                    <div class="col-10 ps-2">
+                                        <span class="profile-detail-label">Branch Code</span>
+                                        <span class="fw-bold text-dark" style="font-size: 0.85rem;">@(string.IsNullOrEmpty(Model.BranchCode) ? "N/A" : Model.BranchCode)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-mini-card">
+                                <div class="row g-0 align-items-center">
+                                    <div class="col-2 text-center text-primary">
+                                        <i class="fas fa-calendar-alt fa-lg"></i>
+                                    </div>
+                                    <div class="col-10 ps-2">
+                                        <span class="profile-detail-label">Financial Year</span>
+                                        <span class="fw-bold text-dark" style="font-size: 0.85rem;">@(Model.YearFrom.HasValue ? Model.YearFrom.Value.ToString("yyyy") : "N/A") - @(Model.YearTo.HasValue ? Model.YearTo.Value.ToString("yy") : "N/A")</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Details Card -->
+                    <div class="col-md-8">
+                        <div class="card border-0 detail-card">
+                            <h5 class="profile-section-title">
+                                <i class="fas fa-map-marker-alt"></i> Basic & Location Details
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box">
+                                            <i class="fas fa-map-marked-alt"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Address Line 1</span>
+                                            <span class="profile-detail-value">@(string.IsNullOrEmpty(Model.Address1) ? "-" : Model.Address1)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box text-secondary">
+                                            <i class="fas fa-map-marked-alt"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Address Line 2</span>
+                                            <span class="profile-detail-value">@(string.IsNullOrEmpty(Model.Address2) ? "-" : Model.Address2)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-info">
+                                            <i class="fas fa-location-arrow"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Location / Area</span>
+                                            <span class="profile-detail-value">@(string.IsNullOrEmpty(Model.Location) ? "-" : Model.Location)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-purple">
+                                            <i class="fas fa-globe"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Country / State / City</span>
+                                            <span class="profile-detail-value">@ViewBag.CountryName / @ViewBag.StateName / @ViewBag.CityName</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-success">
+                                            <i class="fas fa-mail-bulk"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Pin Code</span>
+                                            <span class="profile-detail-value">@(string.IsNullOrEmpty(Model.PinCode) ? "-" : Model.PinCode)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 detail-card">
+                            <h5 class="profile-section-title">
+                                <i class="fas fa-address-book"></i> Contact Details
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box">
+                                            <i class="fas fa-user-tie"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Contact Person</span>
+                                            <span class="profile-detail-value">@(string.IsNullOrEmpty(Model.ContactPerson) ? "-" : Model.ContactPerson)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-danger">
+                                            <i class="fas fa-envelope"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Email Address</span>
+                                            <span class="profile-detail-value">@Model.Email</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-warning">
+                                            <i class="fas fa-phone-alt"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Phone No</span>
+                                            <span class="profile-detail-value">@(string.IsNullOrEmpty(Model.Phone) ? "-" : Model.Phone)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-success">
+                                            <i class="fas fa-mobile-alt"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Mobile No</span>
+                                            <span class="profile-detail-value">@(string.IsNullOrEmpty(Model.MobileNo) ? "-" : Model.MobileNo)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 detail-card">
+                            <h5 class="profile-section-title">
+                                <i class="fas fa-file-invoice-dollar"></i> Registration & Licensing
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-purple">
+                                            <i class="fas fa-percent"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">GST Number</span>
+                                            <span class="profile-detail-value">@(string.IsNullOrEmpty(Model.GstNo) ? "-" : Model.GstNo) (State Code: @(Model.StateCode.HasValue ? ((int)Model.StateCode.Value).ToString("D2") : "-"))</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-info">
+                                            <i class="fas fa-store"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Business & Company Type</span>
+                                            <span class="profile-detail-value">Type: @(Model.CompanyType.HasValue ? Model.CompanyType.ToString() : "-") | Business: @(Model.BusinessType.HasValue ? Model.BusinessType.ToString() : "-")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-warning">
+                                            <i class="fas fa-calculator"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Tax & Calendar Type</span>
+                                            <span class="profile-detail-value">Tax: @(Model.TaxType.HasValue ? Model.TaxType.ToString() : "-") | Calendar: @(Model.CalenderType.HasValue ? Model.CalenderType.ToString() : "-")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-success">
+                                            <i class="fas fa-clipboard-check"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">FSSAI & Drug License</span>
+                                            <span class="profile-detail-value">FSSAI: @(string.IsNullOrEmpty(Model.IFSSAINo) ? "-" : Model.IFSSAINo) | Drug Lic: @(string.IsNullOrEmpty(Model.DrugLicNo) ? "-" : Model.DrugLicNo)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box icon-danger">
+                                            <i class="fas fa-calendar-times"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">License Expiry Date</span>
+                                            <span class="profile-detail-value">@(Model.LicenceExpiryDate.HasValue ? Model.LicenceExpiryDate.Value.ToString("dd-MM-yyyy") : "-")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="profile-detail-item">
+                                        <div class="profile-icon-box">
+                                            <i class="fas fa-gavel"></i>
+                                        </div>
+                                        <div class="profile-detail-content">
+                                            <span class="profile-detail-label">Jurisdiction</span>
+                                            <span class="profile-detail-value">@(string.IsNullOrEmpty(Model.Jurisdiction) ? "-" : Model.Jurisdiction)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==========================================
+                 EDITABLE PROFILE FORM (EDIT MODE ONLY)
+                 ========================================== -->
+            <div class="edit-only">
+                <div class="row">
+                    <div class="col-md-8">
+                        <fieldset class="profile-edit-fieldset">
+                            <legend class="profile-edit-legend">Basic Info</legend>
+                            <div class="row mb-3">
+                                <label asp-for="Name" class="col-md-3 col-form-label text-start small fw-bold text-secondary">Company Name</label>
+                                <div class="col-md-9">
+                                    <input asp-for="Name" id="Name" type="text" class="form-control form-control-sm profile-form-control bg-light text-muted font-weight-bold" readonly />
+                                    <span class="text-muted small d-block mt-1">
+                                        <i class="fas fa-info-circle text-primary"></i> To change the company name, please submit a request to the Super Admin.
+                                    </span>
+                                </div>
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+                            <div class="row mb-3">
+                                <label asp-for="Address1" class="col-md-3 col-form-label text-start small fw-bold text-secondary">Address Line 1 <i class="text-danger">*</i></label>
+                                <div class="col-md-9">
+                                    <input asp-for="Address1" id="Address1" type="text" class="form-control form-control-sm profile-form-control" required />
+                                </div>
+                                <span asp-validation-for="Address1" class="text-danger"></span>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="row">
+                                        <label asp-for="Address2" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Address Line 2</label>
+                                        <div class="col-md-8">
+                                            <input asp-for="Address2" id="Address2" type="text" class="form-control form-control-sm profile-form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="row">
+                                        <label asp-for="Location" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Location / Area</label>
+                                        <div class="col-md-8">
+                                            <input asp-for="Location" id="Location" type="text" class="form-control form-control-sm profile-form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- COUNTRY / STATE / CITY -->
+                            <div class="row mb-3">
+
+                                <!-- COUNTRY -->
+                                <div class="col-md-6">
+                                    <div class="row">
+                                        <label asp-for="CountryId" class="col-md-4 col-form-label text-start small fw-bold text-secondary">
+                                            Country
+                                        </label>
+
+                                        <div class="col-md-8">
+                                            <select asp-for="CountryId"
+                                                    id="countryId"
+                                                    asp-items="@ViewBag.CountryList"
+                                                    class="form-select form-select-sm profile-form-control">
+                                                <option value="">select</option>
+                                            </select>
+                                            <div class="shortcut-box">
+                                                <a id="btnF2Country" class="shortcut-badge shortcut-new"><i class="fas fa-plus"></i> F2 - New</a>
+                                                <a id="btnF3Country" class="shortcut-badge shortcut-mod"><i class="fas fa-edit"></i> F3 - Mod</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- STATE -->
+                                <div class="col-md-6">
+                                    <div class="row">
+                                        <label asp-for="StateId"
+                                               class="col-md-4 col-form-label text-start small fw-bold text-secondary">
+                                            State
+                                        </label>
+
+                                        <div class="col-md-8">
+                                            <select asp-for="StateId"
+                                                    id="stateId"
+                                                    asp-items="@ViewBag.StateList"
+                                                    class="form-select form-select-sm profile-form-control">
+                                                <option value="">select</option>
+                                            </select>
+                                            <div class="shortcut-box">
+                                                <a id="btnF2State" class="shortcut-badge shortcut-new"><i class="fas fa-plus"></i> F2 - New</a>
+                                                <a id="btnF3State" class="shortcut-badge shortcut-mod"><i class="fas fa-edit"></i> F3 - Mod</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- CITY / PINCODE -->
+                            <div class="row mb-3">
+
+                                <!-- CITY -->
+                                <div class="col-md-6">
+                                    <div class="row">
+                                        <label asp-for="CityId"
+                                               class="col-md-4 col-form-label text-start small fw-bold text-secondary">
+                                            City
+                                        </label>
+
+                                        <div class="col-md-8">
+                                            <select asp-for="CityId"
+                                                    id="cityId"
+                                                    asp-items="@ViewBag.CityList"
+                                                    class="form-select form-select-sm profile-form-control">
+                                                <option value="">select</option>
+                                            </select>
+                                            <div class="shortcut-box">
+                                                <a id="btnF2City" class="shortcut-badge shortcut-new"><i class="fas fa-plus"></i> F2 - New</a>
+                                                <a id="btnF3City" class="shortcut-badge shortcut-mod"><i class="fas fa-edit"></i> F3 - Mod</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- PINCODE -->
+                                <div class="col-md-6">
+                                    <div class="row">
+                                        <label asp-for="PinCode"
+                                               class="col-md-4 col-form-label text-start small fw-bold text-secondary">
+                                            PinCode
+                                        </label>
+
+                                        <div class="col-md-8">
+                                            <input asp-for="PinCode"
+                                                   id="PinCode"
+                                                   type="text"
+                                                   class="form-control form-control-sm profile-form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="row mb-2">
+                                <label asp-for="Description" class="col-md-3 col-form-label text-start small fw-bold text-secondary">Description</label>
+                                <div class="col-md-9">
+                                    <input asp-for="Description" id="Description" type="text" class="form-control form-control-sm profile-form-control" />
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div class="col-md-4">
+                        <fieldset class="profile-edit-fieldset">
+                            <legend class="profile-edit-legend">Company Details</legend>
+                            <div class="row mb-2">
+                                <label asp-for="GstNo" class="col-md-4 col-form-label text-start small fw-bold text-secondary">GST No</label>
+                                <div class="col-md-8">
+                                    <input asp-for="GstNo" id="GSTNo" type="text" class="form-control form-control-sm profile-form-control" />
+                                </div>
+                            </div>
+
+                            <!-- State Code Section -->
+                            <div class="row mb-2">
+                                <label class="col-md-4 col-form-label small fw-bold text-secondary">
+                                    State Code
+                                </label>
+                                <div class="col-md-8">
+                                    <input type="text"
+                                           id="StateCodeDisplay"
+                                           class="form-control form-control-sm profile-form-control"
+                                           placeholder="e.g. 09 - UttarPradesh"
+                                           readonly />
+
+                                    <input type="hidden"
+                                           asp-for="StateCode"
+                                           id="StateCodeHidden"
+                                           value="@((int?)Model.StateCode ?? 0)" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="CompanyType" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Comp Type</label>
+                                <div class="col-md-8">
+                                    <select asp-for="CompanyType" id="CategoryId" asp-items="Html.GetEnumSelectList<CompanyType>()" class="form-select form-select-sm profile-form-control"></select>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label asp-for="BranchCode" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Branch Code</label>
+                                <div class="col-md-8">
+                                    <input asp-for="BranchCode" id="BranchCode" type="text" class="form-control form-control-sm profile-form-control" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-2">
+                                <label asp-for="BusinessType" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Biz Type</label>
+                                <div class="col-md-8">
+                                    <select asp-for="BusinessType" asp-items="Html.GetEnumSelectList<BusinessType>()" class="form-select form-select-sm profile-form-control"></select>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label asp-for="CalenderType" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Calendar</label>
+                                <div class="col-md-8">
+                                    <select asp-for="CalenderType" asp-items="Html.GetEnumSelectList<CalenderType>()" class="form-select form-select-sm profile-form-control"></select>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label asp-for="YearFrom" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Fin Year</label>
+                                <div class="col-md-8">
+                                    <input asp-for="YearFrom" id="YearFrom" type="date" class="form-control form-control-sm profile-form-control mb-1" />
+                                    <input asp-for="YearTo" id="YearTo" type="date" class="form-control form-control-sm profile-form-control" />
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label asp-for="TaxType" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Tax Type</label>
+                                <div class="col-md-8">
+                                    <select asp-for="TaxType" asp-items="Html.GetEnumSelectList<TaxType>()" class="form-select form-select-sm profile-form-control"></select>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label class="col-md-4 col-form-label text-start small fw-bold text-secondary">Subscription</label>
+                                <div class="col-md-8">
+                                    <input type="text" class="form-control form-control-sm profile-form-control bg-light text-muted" value="@ViewBag.SubscriptionPlanName" readonly />
+                                    <input type="hidden" asp-for="SubscriptionPlanId" />
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-8">
+                        <fieldset class="profile-edit-fieldset">
+                            <legend class="profile-edit-legend">Contact Details</legend>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <label asp-for="ContactPerson" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Contact Person</label>
+                                        <div class="col-md-8">
+                                            <input asp-for="ContactPerson" id="ContactPerson" type="text" class="form-control form-control-sm profile-form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <label asp-for="Email" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Email <i class="text-danger">*</i></label>
+                                        <div class="col-md-8">
+                                            <input asp-for="Email" id="Email" type="text" class="form-control form-control-sm profile-form-control" required />
+                                        </div>
+                                        <span asp-validation-for="Email" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <label asp-for="Phone" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Phone</label>
+                                        <div class="col-md-8">
+                                            <input asp-for="Phone" id="Phone" type="text" class="form-control form-control-sm profile-form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <label asp-for="MobileNo" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Mobile No <i class="text-danger">*</i></label>
+                                        <div class="col-md-8">
+                                            <input asp-for="MobileNo" id="MobileNo" type="text" class="form-control form-control-sm profile-form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="row mt-3">
+                            <label asp-for="Logo" class="col-md-4 col-form-label text-start small fw-bold text-secondary">Logo</label>
+                            <div class="col-md-8">
+                                <input asp-for="UploadAttachement" id="UploadAttachement" type="file" class="form-control form-control-sm profile-form-control" />
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.Logo))
+                        {
+                            <div class="col-md-8 offset-md-4 mt-2">
+                                <a href="~/@Model.Logo" class="btn btn-xs btn-profile-secondary py-1 px-2.5 small text-nowrap" target="_blank"><i class="fas fa-download me-1"></i> Download Current Logo</a>
+                            </div>
+                        }
+                    </div>
+
+                </div>
+                <div class="row mt-2">
+                    <ul class="nav nav-tabs flex-nowrap profile-tabs" id="companyInfoTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#licenceInfo" data-bs-toggle="tab">Licence Info</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#otherInfo" data-bs-toggle="tab">Other Info</a>
+                        </li>
+                    </ul>
+                    <div class="tab-content profile-tab-content" id="companyInfoTabsContent">
+                        <div class="tab-pane fade show active" id="licenceInfo">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <label asp-for="IFSSAINo" class="col-md-3 col-form-label text-start small fw-bold text-secondary">FSSAI No</label>
+                                        <div class="col-md-9">
+                                            <input asp-for="IFSSAINo" id="IFSSAINo" type="text" class="form-control form-control-sm profile-form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <label asp-for="DrugLicNo" class="col-md-3 col-form-label text-start small fw-bold text-secondary">Drug Lic</label>
+                                        <div class="col-md-9">
+                                            <input asp-for="DrugLicNo" id="DrugLicNo" class="form-control form-control-sm profile-form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <label asp-for="LicenceExpiryDate" class="col-md-3 col-form-label text-start small fw-bold text-secondary">Expiry Date</label>
+                                        <div class="col-md-9">
+                                            <input asp-for="LicenceExpiryDate" id="LicenceExpiryDate" type="date" class="form-control form-control-sm profile-form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="otherInfo">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <label asp-for="Jurisdiction" class="col-md-3 col-form-label text-start small fw-bold text-secondary">Jurisdiction</label>
+                                        <div class="col-md-9">
+                                            <input asp-for="Jurisdiction" id="Jurisdiction" type="text" class="form-control form-control-sm profile-form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <label asp-for="WorkingStyle" class="col-md-3 col-form-label text-start small fw-bold text-secondary">Working</label>
+                                        <div class="col-md-9">
+                                            <select asp-for="WorkingStyle" id="WorkingStyle" asp-items="@Html.GetEnumSelectList<WorkingStyle>()" class="form-select form-select-sm profile-form-control"></select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODALS FOR COUNTRY/STATE/CITY QUICK CREATION -->
+            <div class="modal fade" id="countryModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                        <div class="modal-header py-3 px-4" style="background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%); color: white !important;">
+                            <h5 class="modal-title fw-bold text-white mb-0" id="countryModalTitle">Add Country</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <input type="hidden" id="modalCountryId" value="0" />
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Name</label>
+                                <input type="text" id="modalCountryName" class="form-control modal-input profile-form-control" />
+                                <span id="countryError" class="text-danger small modal-error mt-1"></span>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light px-4 py-3">
+                            <button type="button" class="btn btn-sm btn-profile-secondary px-3" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-sm btn-profile-primary px-4" id="btnSaveCountry">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="stateModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                        <div class="modal-header py-3 px-4" style="background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%); color: white !important;">
+                            <h5 class="modal-title fw-bold text-white mb-0" id="stateModalTitle">Add State</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <input type="hidden" id="modalStateId" value="0" />
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Country</label>
+                                <div class="d-flex align-items-center mb-2">
+                                    <select id="modalStateCountryId" asp-items="@ViewBag.CountryList" class="form-select form-select-sm modal-input profile-form-control me-2">
+                                        <option value="">select</option>
+                                    </select>
+                                </div>
+                                <div class="shortcut-box mb-3">
+                                    <a id="btnF2StateCountry" class="shortcut-badge shortcut-new"><i class="fas fa-plus"></i> F2 - New</a>
+                                    <a id="btnF3StateCountry" class="shortcut-badge shortcut-mod"><i class="fas fa-edit"></i> F3 - Mod</a>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Name</label>
+                                <input type="text" id="modalStateName" class="form-control modal-input profile-form-control" />
+                                <span id="stateError" class="text-danger small modal-error mt-1"></span>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light px-4 py-3">
+                            <button type="button" class="btn btn-sm btn-profile-secondary px-3" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-sm btn-profile-primary px-4" id="btnSaveState">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="cityModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                        <div class="modal-header py-3 px-4" style="background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%); color: white !important;">
+                            <h5 class="modal-title fw-bold text-white mb-0" id="cityModalTitle">Add City</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <input type="hidden" id="modalCityId" value="0" />
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Country</label>
+                                <div class="d-flex align-items-center mb-2">
+                                    <select id="modalCityCountryId" asp-items="@ViewBag.CountryList" class="form-select form-select-sm modal-input profile-form-control me-2">
+                                        <option value="">select</option>
+                                    </select>
+                                </div>
+                                <div class="shortcut-box mb-3">
+                                    <a id="btnF2CityCountry" class="shortcut-badge shortcut-new"><i class="fas fa-plus"></i> F2 - New</a>
+                                    <a id="btnF3CityCountry" class="shortcut-badge shortcut-mod"><i class="fas fa-edit"></i> F3 - Mod</a>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">State</label>
+                                <div class="d-flex align-items-center mb-2">
+                                    <select id="modalCityStateId" class="form-select form-select-sm modal-input profile-form-control me-2">
+                                        <option value="">select</option>
+                                    </select>
+                                </div>
+                                <div class="shortcut-box mb-3">
+                                    <a id="btnF2CityState" class="shortcut-badge shortcut-new"><i class="fas fa-plus"></i> F2 - New</a>
+                                    <a id="btnF3CityState" class="shortcut-badge shortcut-mod"><i class="fas fa-edit"></i> F3 - Mod</a>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-secondary">Name</label>
+                                <input type="text" id="modalCityName" class="form-control modal-input profile-form-control" />
+                                <span id="cityError" class="text-danger small modal-error mt-1"></span>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light px-4 py-3">
+                            <button type="button" class="btn btn-sm btn-profile-secondary px-3" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-sm btn-profile-primary px-4" id="btnSaveCity">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==========================================
+                 BUTTON CONTROLS (MODE SENSITIVE)
+                 ========================================== -->
+            <div class="mt-4 text-end">
+                <!-- View Mode Buttons -->
+                <button type="button" id="btnEditProfile" class="btn btn-profile-primary px-4 py-2 view-only"><i class="fas fa-edit me-1"></i> Edit Profile</button>
+                <a asp-controller="Home" asp-action="Index" class="btn btn-profile-secondary px-4 py-2 view-only">Back to Home</a>
+
+                <!-- Edit Mode Buttons -->
+                <button type="submit" class="btn btn-profile-success px-4 py-2 edit-only"><i class="fas fa-save me-1"></i> Save Changes</button>
+                <button type="button" id="btnCancelEdit" class="btn btn-profile-secondary px-4 py-2 edit-only">Cancel</button>
+            </div>
+        </div>
+    </form>
+<link href="~/css/page.css" rel="stylesheet" />
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+
+        const gstStateEnumMap = {
+            1: "JammuAndKashmir",
+            2: "HimachalPradesh",
+            3: "Punjab",
+            4: "Chandigarh",
+            5: "Uttarakhand",
+            6: "Haryana",
+            7: "Delhi",
+            8: "Rajasthan",
+            9: "UttarPradesh",
+            10: "Bihar",
+            11: "Sikkim",
+            12: "ArunachalPradesh",
+            13: "Nagaland",
+            14: "Manipur",
+            15: "Mizoram",
+            16: "Tripura",
+            17: "Meghalaya",
+            18: "Assam",
+            19: "WestBengal",
+            20: "Jharkhand",
+            21: "Odisha",
+            22: "Chhattisgarh",
+            23: "MadhyaPradesh",
+            24: "Gujarat",
+            26: "DadraNagarHaveliAndDamanDiu",
+            27: "Maharashtra",
+            28: "AndhraPradeshOld",
+            29: "Karnataka",
+            30: "Goa",
+            31: "Lakshadweep",
+            32: "Kerala",
+            33: "TamilNadu",
+            34: "Puducherry",
+            35: "AndamanNicobar",
+            36: "Telangana",
+            37: "AndhraPradesh",
+            38: "Ladakh"
+        };
+
+        $(document).ready(function () {
+
+            /* =====================================================
+               VIEW/EDIT MODE TOGGLE
+            ======================================================*/
+            function setViewMode() {
+                $("#profileContainer").addClass("mode-view").removeClass("mode-edit");
+                // Reset card header text
+                $(".card-header").html('<i class="fas fa-building me-1.5"></i> Company Profile');
+            }
+
+            function setEditMode() {
+                $("#profileContainer").removeClass("mode-view").addClass("mode-edit");
+                // Reset card header text to edit mode
+                $(".card-header").html('<i class="fas fa-edit me-1.5"></i> Edit Company Profile');
+            }
+
+            // Initialize View Mode on Load
+            setViewMode();
+
+            $("#btnEditProfile").on("click", function (e) {
+                e.preventDefault();
+                setEditMode();
+            });
+
+            $("#btnCancelEdit").on("click", function (e) {
+                e.preventDefault();
+                window.location.reload(); // Reload to discard changes and go back to View Mode
+            });
+
+
+            /* =====================================================
+               GST STATE CODE
+            ======================================================*/
+
+            function initializeStateCode() {
+
+                const stateCodeValue = $("#StateCodeHidden").val();
+
+                if (stateCodeValue && stateCodeValue !== "") {
+
+                    const code = parseInt(stateCodeValue, 10);
+
+                    if (gstStateEnumMap[code]) {
+
+                        const displayValue =
+                            code.toString().padStart(2, '0') +
+                            " - " +
+                            gstStateEnumMap[code];
+
+                        $("#StateCodeDisplay").val(displayValue);
+                    }
+                }
+            }
+
+            initializeStateCode();
+
+            $("#GSTNo").on("input paste", function () {
+
+                setTimeout(() => {
+
+                    const gst = $(this).val().toUpperCase();
+
+                    const $stateDisplay = $("#StateCodeDisplay");
+                    const $stateHidden = $("#StateCodeHidden");
+
+                    if (gst.length >= 2) {
+
+                        const code = parseInt(gst.substring(0, 2), 10);
+
+                        if (gstStateEnumMap[code]) {
+
+                            const displayValue =
+                                gst.substring(0, 2).padStart(2, '0') +
+                                " - " +
+                                gstStateEnumMap[code];
+
+                            $stateDisplay.val(displayValue);
+                            $stateHidden.val(code);
+
+                        } else {
+
+                            $stateDisplay.val("");
+                            $stateHidden.val("");
+                        }
+
+                    } else {
+
+                        $stateDisplay.val("");
+                        $stateHidden.val("");
+                    }
+
+                }, 0);
+            });
+
+
+            /* =====================================================
+               FORM SUBMIT DUPLICATE CHECK
+            ======================================================*/
+
+            let isSubmitting = false;
+
+            $("#CompanyForm").on("submit", function (e) {
+
+                if (isSubmitting)
+                    return false;
+
+                e.preventDefault();
+
+                var form = this;
+
+                var name = $("#Name").val()?.trim();
+                var gstNo = $("#GSTNo").val()?.trim();
+                var mobileNo = $("#MobileNo").val()?.trim();
+                var id = $("#Id").val();
+
+                if (!name) {
+
+                    Swal.fire(
+                        "Error",
+                        "Please enter Company Name!",
+                        "error"
+                    );
+
+                    return;
+                }
+
+                $.ajax({
+
+                    url: "/Tenant/CheckDuplicate",
+                    type: "GET",
+
+                    data: {
+                        Name: name,
+                        GSTNo: gstNo,
+                        MobileNo: mobileNo,
+                        id: id
+                    },
+
+                    success: function (response) {
+
+                        if (response.exists) {
+
+                            Swal.fire(
+                                "Duplicate record already exists!"
+                            );
+
+                        } else {
+
+                            isSubmitting = true;
+                            form.submit();
+                        }
+                    },
+
+                    error: function () {
+
+                        Swal.fire(
+                            "Error checking duplicate"
+                        );
+                    }
+                });
+            });
+
+
+            /* =====================================================
+               COUNTRY
+            ======================================================*/
+
+            let countryDdlSelector = "#countryId";
+            let returnModalSelector = "";
+
+            $("#countryModal,#stateModal").on("hidden.bs.modal", function () {
+                if (returnModalSelector && returnModalSelector !== "#" + this.id) {
+                    let modalSelector = returnModalSelector;
+                    returnModalSelector = "";
+                    setTimeout(function () {
+                        $(modalSelector).modal("show");
+                    }, 200);
+                }
+            });
+
+            $("#btnF2Country").click(function () {
+                countryDdlSelector = "#countryId";
+                openModal("country", "new", "#countryId");
+            });
+
+            $("#btnF3Country").click(function () {
+                countryDdlSelector = "#countryId";
+                openModal("country", "edit", "#countryId");
+            });
+
+            $("#btnSaveCountry").click(function () {
+
+                saveData(
+                    "country",
+                    "/Tenant/QuickSaveCountry",
+                    countryDdlSelector,
+                    null,
+                    "/Tenant/GetCountries"
+                );
+            });
+
+            $("#btnF2StateCountry").click(function () {
+                countryDdlSelector = "#modalStateCountryId";
+                $("#stateModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#stateModal";
+                    openModal("country", "new", "#modalStateCountryId");
+                }, 350);
+            });
+
+            $("#btnF3StateCountry").click(function () {
+                if (!$("#modalStateCountryId").val()) {
+                    Swal.fire("Error", "Select Country First!", "error");
+                    return;
+                }
+
+                countryDdlSelector = "#modalStateCountryId";
+                $("#stateModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#stateModal";
+                    openModal("country", "edit", "#modalStateCountryId");
+                }, 350);
+            });
+
+            $("#btnF2CityCountry").click(function () {
+                countryDdlSelector = "#modalCityCountryId";
+                $("#cityModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#cityModal";
+                    openModal("country", "new", "#modalCityCountryId");
+                }, 350);
+            });
+
+            $("#btnF3CityCountry").click(function () {
+                if (!$("#modalCityCountryId").val()) {
+                    Swal.fire("Error", "Select Country First!", "error");
+                    return;
+                }
+
+                countryDdlSelector = "#modalCityCountryId";
+                $("#cityModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#cityModal";
+                    openModal("country", "edit", "#modalCityCountryId");
+                }, 350);
+            });
+
+
+            /* =====================================================
+               STATE
+            ======================================================*/
+
+            $("#btnF2State").click(function () {
+
+                openModal("state", "new", "#stateId");
+            });
+
+            $("#btnF3State").click(function () {
+
+                if (!$("#stateId").val()) {
+
+                    Swal.fire(
+                        "Error",
+                        "Select State First!",
+                        "error"
+                    );
+
+                    return;
+                }
+
+                openModal("state", "edit", "#stateId");
+            });
+
+            $("#btnSaveState").click(function () {
+
+                let id = $("#modalStateId").val();
+                let name = $("#modalStateName").val().trim();
+                let countryId = $("#modalStateCountryId").val();
+
+                if (!countryId) {
+                    $("#stateError").text("Select Country First!");
+                    return;
+                }
+
+                if (!name) {
+                    $("#stateError").text("Name required!");
+                    return;
+                }
+
+                $.ajax({
+                    url: "/Tenant/QuickSaveState",
+                    type: "POST",
+                    data: { id: id, name: name, countryId: countryId },
+                    success: function (res) {
+                        if (res.success) {
+                            $("#stateModal").modal("hide");
+                            $("#countryId").val(countryId);
+                            $.get("/Tenant/GetStatesByCountry?countryId=" + countryId, function (data) {
+                                let ddl = $("#stateId");
+                                let modalDdl = $("#modalCityStateId");
+                                ddl.empty().append('<option value="">select</option>');
+                                modalDdl.empty().append('<option value="">select</option>');
+                                $.each(data, function (i, item) {
+                                    let opt = $("<option>", { value: item.id, text: item.name });
+                                    let modalOpt = $("<option>", { value: item.id, text: item.name });
+                                    if (item.id == res.newId) {
+                                        opt.attr("selected", "selected");
+                                        modalOpt.attr("selected", "selected");
+                                    }
+                                    ddl.append(opt);
+                                    modalDdl.append(modalOpt);
+                                });
+                                $("#cityId").empty().append('<option value="">select</option>');
+                            });
+                            Swal.fire("Success", res.message || "Saved Successfully!", "success");
+                        } else {
+                            $("#stateError").text(res.message);
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Something went wrong!", "error");
+                    }
+                });
+            });
+
+
+            /* =====================================================
+               CITY
+            ======================================================*/
+
+            $("#btnF2City").click(function () {
+
+                openModal("city", "new", "#cityId");
+            });
+
+            $("#btnF3City").click(function () {
+
+                if (!$("#cityId").val()) {
+
+                    Swal.fire(
+                        "Error",
+                        "Select City First!",
+                        "error"
+                    );
+
+                    return;
+                }
+
+                openModal("city", "edit", "#cityId");
+            });
+
+            $("#btnSaveCity").click(function () {
+
+                let id = $("#modalCityId").val();
+                let name = $("#modalCityName").val().trim();
+                let countryId = $("#modalCityCountryId").val();
+                let stateId = $("#modalCityStateId").val();
+
+                if (!countryId) {
+                    $("#cityError").text("Select Country First!");
+                    return;
+                }
+
+                if (!stateId) {
+                    $("#cityError").text("Select State First!");
+                    return;
+                }
+
+                if (!name) {
+                    $("#cityError").text("Name required!");
+                    return;
+                }
+
+                $.ajax({
+                    url: "/Tenant/QuickSaveCity",
+                    type: "POST",
+                    data: { id: id, name: name, stateId: stateId, countryId: countryId },
+                    success: function (res) {
+                        if (res.success) {
+                            $("#cityModal").modal("hide");
+                            $("#countryId").val(countryId);
+                            $.get("/Tenant/GetStatesByCountry?countryId=" + countryId, function (states) {
+                                let ddl = $("#stateId");
+                                ddl.empty().append('<option value="">select</option>');
+                                $.each(states, function (i, item) {
+                                    let opt = $("<option>", { value: item.id, text: item.name });
+                                    if (item.id == stateId) opt.attr("selected", "selected");
+                                    ddl.append(opt);
+                                });
+                            });
+                            $.get("/Tenant/GetCitiesByState?stateId=" + stateId, function (data) {
+                                let ddl = $("#cityId");
+                                ddl.empty().append('<option value="">select</option>');
+                                $.each(data, function (i, item) {
+                                    let opt = $("<option>", { value: item.id, text: item.name });
+                                    if (item.id == res.newId) opt.attr("selected", "selected");
+                                    ddl.append(opt);
+                                });
+                            });
+                            Swal.fire("Success", res.message || "Saved Successfully!", "success");
+                        } else {
+                            $("#cityError").text(res.message);
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Something went wrong!", "error");
+                    }
+                });
+            });
+
+            $("#btnF2CityState").click(function () {
+                $("#cityModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#cityModal";
+                    openModal("state", "new", "#modalCityStateId");
+                    $("#modalStateCountryId").val($("#modalCityCountryId").val());
+                }, 350);
+            });
+
+            $("#btnF3CityState").click(function () {
+                if (!$("#modalCityStateId").val()) {
+                    Swal.fire("Error", "Select State First!", "error");
+                    return;
+                }
+
+                $("#cityModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#cityModal";
+                    openModal("state", "edit", "#modalCityStateId");
+                    $("#modalStateCountryId").val($("#modalCityCountryId").val());
+                }, 350);
+            });
+
+            $("#modalCityCountryId").change(function () {
+                let countryId = $(this).val();
+                $("#modalCityStateId").empty().append('<option value="">select</option>');
+                if (countryId) {
+                    $.getJSON("/Tenant/GetStatesByCountry", { countryId: countryId }, function (data) {
+                        $.each(data, function (i, item) {
+                            $("#modalCityStateId").append($("<option>", { value: item.id, text: item.name }));
+                        });
+                    });
+                }
+            });
+
+
+            /* =====================================================
+               OPEN MODAL
+            ======================================================*/
+
+            function openModal(type, mode, ddlSelector) {
+
+                $("#" + type + "Error").text("");
+
+                let modalId =
+                    "#modal" + capitalize(type) + "Id";
+
+                let modalName =
+                    "#modal" + capitalize(type) + "Name";
+
+                if (mode === "new") {
+
+                    $(modalId).val(0);
+                    $(modalName).val("");
+
+                    $("#" + type + "ModalTitle")
+                        .text("Add " + capitalize(type));
+
+                } else {
+
+                    let id = $(ddlSelector).val();
+
+                    let text =
+                        $(ddlSelector + " option:selected").text();
+
+                    if (!id) {
+
+                        Swal.fire(
+                            "Error",
+                            "Please select item first!",
+                            "error"
+                        );
+
+                        return;
+                    }
+
+                    $(modalId).val(id);
+                    $(modalName).val(text);
+
+                    $("#" + type + "ModalTitle")
+                        .text("Modify " + capitalize(type));
+                }
+
+                if (type === "state") {
+                    $("#modalStateCountryId").val($("#countryId").val());
+                }
+
+                if (type === "city") {
+                    let countryId = $("#countryId").val();
+                    let stateId = $("#stateId").val();
+                    $("#modalCityCountryId").val(countryId);
+                    $("#modalCityStateId").empty().append('<option value="">select</option>');
+                    if (countryId) {
+                        $.getJSON("/Tenant/GetStatesByCountry", { countryId: countryId }, function (data) {
+                            $.each(data, function (i, item) {
+                                let opt = $("<option>", { value: item.id, text: item.name });
+                                if (item.id == stateId) opt.attr("selected", "selected");
+                                $("#modalCityStateId").append(opt);
+                            });
+                        });
+                    }
+                }
+
+                $("#" + type + "Modal").modal("show");
+
+                setTimeout(function () {
+                    $(modalName).focus();
+                }, 300);
+            }
+
+
+            /* =====================================================
+               SAVE DATA
+            ======================================================*/
+
+            function saveData(
+                type,
+                url,
+                ddlSelector,
+                extraData,
+                reloadUrl,
+                isCustomFormat = false
+            ) {
+
+                let id =
+                    $("#modal" + capitalize(type) + "Id").val();
+
+                let name =
+                    $("#modal" + capitalize(type) + "Name")
+                        .val()
+                        .trim();
+
+                if (!name) {
+
+                    $("#" + type + "Error")
+                        .text("Name required!");
+
+                    return;
+                }
+
+                let postData = {
+                    id: id,
+                    name: name
+                };
+
+                if (extraData) {
+                    Object.assign(postData, extraData);
+                }
+
+                $.ajax({
+
+                    url: url,
+                    type: "POST",
+                    data: postData,
+
+                    success: function (res) {
+
+                        if (res.success) {
+
+                            $("#" + type + "Modal").modal("hide");
+
+                            reloadDropdown(
+                                ddlSelector,
+                                reloadUrl,
+                                res.newId,
+                                isCustomFormat
+                            );
+
+                            Swal.fire(
+                                "Success",
+                                res.message || "Saved Successfully!",
+                                "success"
+                            );
+
+                        } else {
+
+                            $("#" + type + "Error")
+                                .text(res.message);
+                        }
+                    },
+
+                    error: function () {
+
+                        Swal.fire(
+                            "Error",
+                            "Something went wrong!",
+                            "error"
+                        );
+                    }
+                });
+            }
+
+
+            /* =====================================================
+               RELOAD DROPDOWN
+            ======================================================*/
+
+            function reloadDropdown(
+                ddlSelector,
+                reloadUrl,
+                selectedValue,
+                isCustomFormat
+            ) {
+
+                $.get(reloadUrl, function (data) {
+
+                    let ddl = $(ddlSelector);
+
+                    ddl.empty();
+
+                    ddl.append(
+                        '<option value="">select</option>'
+                    );
+
+                    $.each(data, function (i, item) {
+
+                        ddl.append(
+                            $("<option>", {
+                                value: isCustomFormat
+                                    ? item.id
+                                    : item.value,
+
+                                text: isCustomFormat
+                                    ? item.name
+                                    : item.text
+                            })
+                        );
+                    });
+
+                    ddl.val(selectedValue);
+
+                    if (ddlSelector === "#countryId" || ddlSelector === "#modalStateCountryId" || ddlSelector === "#modalCityCountryId") {
+                        $("#countryId,#modalStateCountryId,#modalCityCountryId").empty().append('<option value="">select</option>');
+                        $.each(data, function (i, item) {
+                            let opt1 = $("<option>", { value: item.value, text: item.text });
+                            let opt2 = $("<option>", { value: item.value, text: item.text });
+                            let opt3 = $("<option>", { value: item.value, text: item.text });
+                            if (item.value == selectedValue) {
+                                opt1.attr("selected", "selected");
+                                opt2.attr("selected", "selected");
+                                opt3.attr("selected", "selected");
+                            }
+                            $("#countryId").append(opt1);
+                            $("#modalStateCountryId").append(opt2);
+                            $("#modalCityCountryId").append(opt3);
+                        });
+                        $("#stateId").empty().append('<option value="">select</option>');
+                        $("#cityId").empty().append('<option value="">select</option>');
+                        $("#modalCityStateId").empty().append('<option value="">select</option>');
+                    }
+                });
+            }
+
+
+            /* =====================================================
+               ENTER KEY SAVE
+            ======================================================*/
+
+            $(".modal-input").keypress(function (e) {
+
+                if (e.which == 13) {
+
+                    e.preventDefault();
+
+                    $(this)
+                        .closest(".modal")
+                        .find(".btn-success")
+                        .click();
+                }
+            });
+
+
+            /* =====================================================
+               CAPITALIZE
+            ======================================================*/
+
+            function capitalize(text) {
+                return text.charAt(0).toUpperCase() + text.slice(1);
+            }
+
+        });
+
+    </script>
+}
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <script>
+        $(document).ready(function () {
+            // Auto trigger Edit Mode if validation fails on postback
+            $("#profileContainer").removeClass("mode-view").addClass("mode-edit");
+            $(".card-header").html('<i class="fas fa-edit me-1.5"></i> Edit Company Profile');
+        });
+    </script>
+}

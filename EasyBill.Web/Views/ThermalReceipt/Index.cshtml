@@ -1,0 +1,365 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Receipt</title>
+    <style>
+        /* =====================
+                   BASE STYLES
+                ===================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #fff;
+        }
+
+        .receipt {
+            margin: 0 auto;
+            padding: 5px;
+        }
+
+        /* =====================
+                   58mm = 220px width
+                   80mm = 302px width
+                ===================== */
+        .paper-58mm {
+            width: 220px;
+        }
+
+        .paper-80mm {
+            width: 302px;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .left {
+            text-align: left;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        .shop-name {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .shop-address {
+            font-size: 10px;
+            text-align: center;
+        }
+
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 4px 0;
+        }
+
+        .divider-solid {
+            border-top: 1px solid #000;
+            margin: 4px 0;
+        }
+
+        /* =====================
+                   ITEM TABLE
+                ===================== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            table th {
+                font-size: 11px;
+                border-bottom: 1px dashed #000;
+                padding: 2px 0;
+            }
+
+            table td {
+                font-size: 11px;
+                padding: 2px 0;
+                vertical-align: top;
+            }
+
+        .item-name {
+            width: 45%;
+        }
+
+        .item-qty {
+            width: 20%;
+            text-align: center;
+        }
+
+        .item-rate {
+            width: 15%;
+            text-align: right;
+        }
+
+        .item-amt {
+            width: 20%;
+            text-align: right;
+        }
+
+        /* =====================
+                   TOTALS
+                ===================== */
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            padding: 1px 0;
+        }
+
+        .grand-total {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* =====================
+                   FOOTER
+                ===================== */
+        .footer {
+            text-align: center;
+            font-size: 10px;
+            margin-top: 6px;
+        }
+
+        /* =====================
+                   PRINT STYLES
+                ===================== */
+        @@media print {
+            body {
+                margin: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            @@page {
+                margin: 0;
+                size: auto;
+            }
+        }
+
+        /* =====================
+                   SCREEN PREVIEW STYLES
+                ===================== */
+        @@media screen {
+            body {
+                background: #f0f0f0;
+                padding: 20px;
+            }
+
+            .receipt {
+                background: #fff;
+                box-shadow: 0 0 10px rgba(0,0,0,0.2);
+                padding: 10px;
+            }
+
+            .no-print {
+                text-align: center;
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    @{
+        var paperSize = ViewBag.PaperSize ?? "80mm";
+        var model = Model;
+    }
+
+    <!-- PRINT BUTTONS (Screen only) -->
+    <div class="no-print">
+        <button onclick="window.print()"
+                style="padding:8px 20px; margin:5px;
+                       background:#198754; color:#fff;
+                       border:none; border-radius:4px; cursor:pointer;">
+            🖨️ Print
+        </button>
+        <button onclick="window.close()"
+                style="padding:8px 20px; margin:5px;
+                       background:#6c757d; color:#fff;
+                       border:none; border-radius:4px; cursor:pointer;">
+            ✖ Close
+        </button>
+
+        <!-- PAPER SIZE TOGGLE -->
+        <br />
+        <label style="font-size:12px; margin-top:8px; display:block;">
+            Paper Size:
+            <a href="?saleId=@Model.Id&paperSize=58mm"
+               style="@(paperSize == "58mm" ? "font-weight:bold;text-decoration:underline;" : "")">
+                58mm
+            </a>
+            |
+            <a href="?saleId=@Model.Id&paperSize=80mm"
+               style="@(paperSize == "80mm" ? "font-weight:bold;text-decoration:underline;" : "")">
+                80mm
+            </a>
+        </label>
+    </div>
+
+    <!-- RECEIPT -->
+    <div class="receipt paper-@(paperSize.Replace("mm", ""))mm">
+
+        <!-- HEADER -->
+        <div class="shop-name">@ViewBag.ShopName</div>
+        <div class="shop-address">@ViewBag.ShopAddress</div>
+        <div class="shop-address">Ph: @ViewBag.ShopPhone</div>
+
+        <div class="divider"></div>
+
+        <!-- BILL INFO -->
+        <div class="total-row">
+            <span>Invoice #:</span>
+            <span class="bold">@Model.BillNo</span>
+        </div>
+        <div class="total-row">
+            <span>Date:</span>
+            <span>@Model.BillDate.ToString("dd/MM/yyyy")</span>
+        </div>
+        <div class="total-row">
+            <span>Time:</span>
+            <span>@DateTime.Now.ToString("HH:mm:ss")</span>
+        </div>
+
+        @if (Model.Customers != null)
+        {
+            <div class="divider"></div>
+            <div class="bold">Customer:</div>
+            <div>@Model.Customers.Name</div>
+            <div class="shop-address">Mob: @Model.Customers.PhoneNo</div>
+            @if (!string.IsNullOrEmpty(Model.Customers.Address))
+            {
+                <div class="shop-address">Addr: @Model.Customers.Address</div>
+            }
+        }
+
+        <div class="divider"></div>
+
+        <!-- ITEMS TABLE -->
+        <table>
+            <thead>
+                <tr>
+                    <th class="item-name">Item/Code</th>
+                    <th class="item-qty">Qty*Rate</th>
+                    <th class="item-amt">AMT</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.SalesItems)
+                {
+                    <tr>
+                        <td class="item-name">
+                            @item.ItemMaster?.Name
+                            <br />
+                            <span style="font-size:10px;">@item.Batch</span>
+                        </td>
+                        <td class="item-qty">
+                            @item.Qty x @item.Rate.ToString("0.00")
+                        </td>
+                        <td class="item-amt">
+                            @item.Amount.ToString("0.00")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="divider"></div>
+
+        <!-- TOTALS -->
+        <div class="total-row">
+            <span>Subtotal:</span>
+            <span>Rs-@Model.Total.ToString("0.00")</span>
+        </div>
+
+        @if (Model.TotalGstAmt > 0)
+        {
+            <div class="total-row">
+                <span>CGST:</span>
+                <span>Rs-@((Model.TotalGstAmt / 2).ToString("0.00"))</span>
+            </div>
+            <div class="total-row">
+                <span>SGST:</span>
+                <span>Rs-@((Model.TotalGstAmt / 2).ToString("0.00"))</span>
+            </div>
+            <div class="total-row">
+                <span>Tax:</span>
+                <span>Rs-@Model.TotalGstAmt.ToString("0.00")</span>
+            </div>
+        }
+
+        @if (Model.Totaldiscount > 0)
+        {
+            <div class="total-row">
+                <span>Discount:</span>
+                <span>-Rs.@Model.Totaldiscount.ToString("0.00")</span>
+            </div>
+        }
+
+        <div class="divider-solid"></div>
+
+        <div class="total-row grand-total">
+            <span>TOTAL:</span>
+            <span>Rs-@Model.TotalPayable.ToString("0.00")</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- PAYMENT -->
+        @foreach (var pay in Model.SalsePaymentDetails)
+        {
+            <div class="total-row">
+                <span>Mode:</span>
+                <span>@pay.ModeOfPayment?.Name</span>
+            </div>
+        }
+
+        <div class="total-row">
+            <span>Paid:</span>
+            <span>Rs-@Model.PaidAmount.ToString("0.00")</span>
+        </div>
+
+        <div class="total-row" style="color:red;">
+            <span>Due:</span>
+            <span>Rs-@Model.Balance.ToString("0.00")</span>
+        </div>
+
+        @if (Model.Balance > 0)
+        {
+            <div class="center bold" style="margin:4px 0;">** PARTIAL **</div>
+        }
+
+        <div class="divider"></div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            ** Thank You! Visit Again **
+            <br />
+            Generated: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+        </div>
+
+    </div>
+
+</body>
+</html>

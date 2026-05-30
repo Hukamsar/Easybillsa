@@ -1,0 +1,335 @@
+﻿@model EasyBill.Models.ViewModels.SubCategoryVM
+@{
+    ViewData["Title"] = "Edit";
+}
+<link href="~/css/page.css" rel="stylesheet" />
+
+<style>
+
+    body {
+        background: #f4f7fb;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #2b6ac9, #4a8df0);
+        color: white;
+        border-radius: 8px 8px 0 0;
+        font-weight: 600;
+        padding: 12px 18px;
+        font-size: 16px;
+    }
+
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    }
+
+    .card-body {
+        padding: 15px;
+    }
+
+    .form-row-custom {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .form-label {
+        font-size: 13px;
+        margin-bottom: 0;
+        min-width: 90px;
+        color: #444;
+    }
+
+    .form-control-sm {
+        height: 32px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+
+</style>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            Edit SubCategory
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit" id="editCategoryForm">
+                <input type="hidden" asp-for="Id" />
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="row mb-2 align-items-center">
+                    <div class="col-md-2 text-end">
+                        <label asp-for="CategoryName" class="form-label">Category</label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-center">
+                        <select asp-for="CategoryId" asp-items="@(ViewData["Categorydata"] as SelectList)"
+                                class="form-select form-select-sm" id="categoryId">
+                            <option value="">-- Select --</option>
+                        </select>
+                        <div class="d-flex flex-column">
+                            <a class="shortcut-link" id="btnF2">F2 - New</a>
+                            <a class="shortcut-link text-danger" id="btnF3">F3 - Mod</a>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2 text-end">
+                        <label asp-for="Name" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="Name" class="form-control form-control-sm" id="subCatName" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                    <a asp-controller="SubCategory" asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="catModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+
+            <div class="modal-header">
+                <h4 class="modal-title" id="catModalTitle">Add Category</h4>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="modalCatId" value="0" />
+
+                <label>Name</label>
+
+                <input type="text" id="modalCatName" class="form-control modal-input" />
+
+                <span id="modalError" class="text-danger small"></span>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveModal">
+                    <span id="saveButtonText">Save</span>
+                    <span id="saveButtonLoader" class="spinner-border spinner-border-sm d-none"></span>
+                </button>
+
+                <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            $("#categoryId").focus();
+
+            $("#editCategoryForm").on("submit", function (e) {
+                let form = this;
+                let isValid = true;
+
+                if (typeof $(this).valid === 'function') {
+                    isValid = $(this).valid();
+                } else {
+                    let categoryId = $("#categoryId").val();
+                    let name = $("#subCatName").val().trim();
+
+                    if (!categoryId || categoryId == "0" || categoryId == "") {
+                        alert("Please select a category!");
+                        isValid = false;
+                    }
+                    if (name === "") {
+                        alert("Please enter subcategory name!");
+                        isValid = false;
+                    }
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                if (!$(this).data('confirmed')) {
+                    e.preventDefault();
+
+                    Swal.fire({
+                        title: 'Confirm Update?',
+                        text: 'Do you want to update this subcategory?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Update',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#198754',
+                        cancelButtonColor: '#dc3545',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $(this).data('confirmed', true);
+                            $(this)[0].submit();
+                        }
+                    });
+                } else {
+                    $(this).data('confirmed', false);
+                }
+            });
+
+            $(document).on('keydown', function (e) {
+                if (e.key === "F2") {
+                    e.preventDefault();
+                    openCategoryModal('new');
+                }
+                if (e.key === "F3") {
+                    e.preventDefault();
+                    openCategoryModal('edit');
+                }
+            });
+
+            $("#btnF2").click(function (e) {
+                e.preventDefault();
+                openCategoryModal('new');
+            });
+
+            $("#btnF3").click(function (e) {
+                e.preventDefault();
+                openCategoryModal('edit');
+            });
+
+            function openCategoryModal(mode) {
+                $("#modalError").text("");
+                $("#modalCatName").val("");
+
+                if (mode === 'new') {
+                    $("#modalCatId").val("0");
+                    $("#catModalTitle").text("Add Category");
+                    $("#saveButtonText").text("Save");
+                    $("#catModal").modal('show');
+                } else {
+                    let selectedId = $("#categoryId").val();
+                    let selectedText = $("#categoryId option:selected").text();
+
+                    if (!selectedId || selectedId == "0" || selectedId == "") {
+                        Swal.fire('Warning', 'Please select a category to modify', 'warning');
+                        return;
+                    }
+
+                    $("#modalCatId").val(selectedId);
+                    $("#modalCatName").val(selectedText);
+                    $("#catModalTitle").text("Modify Category");
+                    $("#saveButtonText").text("Update");
+                    $("#catModal").modal('show');
+                }
+
+                setTimeout(function () {
+                    $("#modalCatName").focus();
+                }, 500);
+            }
+
+            $("#btnSaveModal").click(function () {
+                let catId = $("#modalCatId").val();
+                let catName = $("#modalCatName").val().trim();
+
+                $("#modalError").text("");
+
+                if (catName === "") {
+                    $("#modalError").text("Name is required!");
+                    $("#modalCatName").focus();
+                    return;
+                }
+
+                $("#saveButtonText").text("Saving...");
+                $("#saveButtonLoader").removeClass("d-none");
+                $("#btnSaveModal").prop("disabled", true);
+
+                $.ajax({
+                    url: '/SubCategory/QuickSaveCategory',
+                    type: 'POST',
+                    data: {
+                        id: catId,
+                        name: catName
+                    },
+                    success: function (res) {
+                        if (res.success) {
+                            $("#catModal").modal('hide');
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: res.message,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                            refreshCategoryDropdown(res.newId);
+                        } else {
+                            $("#modalError").text(res.message);
+                            $("#modalCatName").focus();
+                        }
+                    },
+                    error: function () {
+                        $("#modalError").text("Server error occurred!");
+                    },
+                    complete: function () {
+                        let mode = $("#modalCatId").val() === "0" ? "Save" : "Update";
+                        $("#saveButtonText").text(mode);
+                        $("#saveButtonLoader").addClass("d-none");
+                        $("#btnSaveModal").prop("disabled", false);
+                    }
+                });
+            });
+
+            $("#modalCatName").on('keypress', function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    $("#btnSaveModal").click();
+                }
+            });
+
+            function refreshCategoryDropdown(selectedId) {
+                $.ajax({
+                    url: '/SubCategory/GetCategories',
+                    type: 'GET',
+                    success: function (data) {
+                        let dropdown = $("#categoryId");
+                        dropdown.empty();
+                        dropdown.append('<option value="">-- Select --</option>');
+
+                        $.each(data, function (index, item) {
+                            let option = $('<option>', {
+                                value: item.value,
+                                text: item.text
+                            });
+                            if (item.value == selectedId) {
+                                option.attr('selected', 'selected');
+                            }
+                            dropdown.append(option);
+                        });
+                    },
+                    error: function () {
+                        console.log("Error loading categories");
+                    }
+                });
+            }
+
+            $("#catModal").on('hidden.bs.modal', function () {
+                $("#modalCatName").val("");
+                $("#modalError").text("");
+                $("#modalCatId").val("0");
+                $("#categoryId").focus();
+            });
+        });
+    </script>
+    }
+   

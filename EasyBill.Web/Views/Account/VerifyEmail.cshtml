@@ -1,0 +1,79 @@
+﻿@model AOne.Models.ViewModels.VerifyEmailViewModel
+@{
+	Layout = null;
+}
+<!DOCTYPE Html>
+<html lang="en">
+<head>
+
+	<title>@ViewData["Title"] - EasyBill</title>
+
+
+	<!-- Page Title Here -->
+	<!-- FAVICONS ICON -->
+	<link rel="shortcut icon" type="image/png" href="~/assets/">
+	<link href="~/assets1/vendor/lightgallery/css/lightgallery.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="~/assets1/vendor/chartist/css/chartist.min.css">
+	<link href="~/assets1/vendor/wow-master/css/libs/animate.css" rel="stylesheet">
+	<link href="~/assets1/vendor/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="~/assets1/vendor/jquery-nice-select/css/nice-select.css">
+
+	<!-- Style css -->
+	<link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
+	<link href="~/assets1/css/style.css" rel="stylesheet">
+
+
+</head>
+<body class="body  h-100">
+	<div class="authincation d-flex flex-column flex-lg-row flex-column-fluid">
+		<div class="login-aside text-center  d-flex flex-column flex-row-auto">
+			<div class="d-flex flex-column-auto flex-column pt-lg-40 pt-15">
+				<div class="text-center mb-lg-4 mb-2 pt-5 logo">
+					<img src="images/logo-white.png" alt="">
+				</div>
+				<h3 class="mb-2 text-white">Welcome To AOne Coatings Pvt. Ltd.</h3>
+				@* <p class="mb-4">User Experience & Interface Design <br>Strategy SaaS Solutions</p> *@
+			</div>
+			<div class="aside-image position-relative" style="background-image:url(assets1/images/logo-ct-dark.png)">
+			</div>
+		</div>
+		<div class="container flex-row-fluid d-flex flex-column justify-content-center position-relative overflow-hidden p-7 mx-auto">
+			<div class="d-flex justify-content-center h-100 align-items-center">
+				<div class="authincation-content style-2">
+					<div class="row no-gutters">
+						<div class="col-xl-12 tab-content">
+							<div id="sign-up" class="auth-form tab-pane fade show active  form-validation">
+								<section>
+									<form method="post" asp-action="VerifyEmail" >
+										@Html.AntiForgeryToken()
+										<div asp-validation-summary="ModelOnly" class="text-danger" role="alert" ></div>
+										<div class="form-floating mb-3">
+											<label asp-for="Email" class="form-label"></label>
+											<input asp-for="Email" class="form-control" placeholder="name@example.com" />
+											<span asp-validation-for="Email" class="text-danger"></span>
+										</div>
+										<input type="submit" class="w-100 btn btn-lg btn-primary" value="Verify"/>
+									</form>
+								</section>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+	<!--**********************************
+		Scripts
+	***********************************-->
+	<!-- Required vendors -->
+	<script src="~/assets/vendor/global/global.min.js"></script>
+	<script src="~/assets/js/custom.min.js"></script>
+	<script src="~/assets/js/dlabnav-init.js"></script>
+
+</body>
+</html>
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}

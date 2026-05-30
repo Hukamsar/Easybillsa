@@ -1,0 +1,1332 @@
+@using EasyBill.Models.ViewModels
+@model TenantRegistrationVM
+@{
+    ViewData["Title"] = "Create Company";
+}
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .shortcut-link {
+        cursor: pointer;
+        font-size: 9px;
+        text-decoration: underline;
+        color: #0066cc;
+        line-height: 11px;
+        white-space: nowrap;
+        margin: 0;
+        padding: 0;
+    }
+
+        .shortcut-link:hover {
+            color: #004499;
+        }
+
+    .shortcut-box {
+        margin-top: 3px;
+    }
+
+    .custom-modal {
+        max-width: 400px;
+    }
+
+    .modal-input {
+        max-width: 100%;
+    }
+
+    .modal-error {
+        display: block;
+    }
+
+    fieldset {
+        border-radius: 5px;
+    }
+
+    legend {
+        font-size: 14px;
+        font-weight: 600;
+        color: #2b6ac9;
+        float: none;
+        width: auto;
+        padding: 0 10px;
+    }
+</style>
+
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Edit Company Registration
+    </div>
+</div>
+<form asp-action="Edit" id="CompanyForm" asp-controller="Tenant" enctype="multipart/form-data" method="post">
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8">
+                <fieldset style="border:1px solid gray;" class="p-2">
+                    <legend>Basic Info</legend>
+                    <div class="row mb-2">
+                        <label asp-for="Name" class="col-md-2 col-form-label text-start small">Company Name<i class="text-danger">*</i> </label>
+                        <div class="col-md-10">
+                            <input asp-for="Name" type="text" class="form-control form-control-sm" required />
+                        </div>
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                    <div class="row mb-2">
+                        <label asp-for="Address1" class="col-md-2 col-form-label text-start small">Address1 <i class="text-danger">*</i></label>
+                        <div class="col-md-10">
+                            <input asp-for="Address1" type="text" class="form-control form-control-sm" required />
+                        </div>
+                        <span asp-validation-for="Address1" class="text-danger"></span>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="Address2" class="col-md-4 col-form-label text-start small"> </label>
+                                <div class="col-md-8">
+                                    <input asp-for="Address2" type="text" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="Location" class="col-md-4 col-form-label text-start small"> </label>
+                                <div class="col-md-8">
+                                    <input asp-for="Location" type="text" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- COUNTRY / STATE / CITY -->
+                    <div class="row mb-2">
+
+                        <!-- COUNTRY -->
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="CountryId" class="col-md-4 col-form-label text-start">
+                                    Country
+                                </label>
+
+                                <div class="col-md-8 d-flex align-items-center">
+
+                                    <select asp-for="CountryId"
+                                            id="countryId"
+                                            asp-items="@ViewBag.CountryList"
+                                            class="form-select form-select-sm me-2">
+                                        <option value="">select</option>
+                                    </select>
+
+                                    <div class="shortcut-box">
+                                        <span id="btnF2Country" class="shortcut-link">
+                                            F2 - New
+                                        </span>
+
+                                        <span id="btnF3Country" class="shortcut-link text-danger">
+                                            F3 - Mod
+                                        </span>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- STATE -->
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="StateId"
+                                       class="col-md-4 col-form-label text-start">
+                                    State
+                                </label>
+
+                                <div class="col-md-8 d-flex align-items-center">
+
+                                    <select asp-for="StateId"
+                                            id="stateId"
+                                            asp-items="@ViewBag.StateList"
+                                            class="form-select form-select-sm me-2">
+                                        <option value="">select</option>
+                                    </select>
+
+                                    <div class="shortcut-box">
+                                        <span id="btnF2State" class="shortcut-link">
+                                            F2 - New
+                                        </span>
+
+                                        <span id="btnF3State" class="shortcut-link text-danger">
+                                            F3 - Mod
+                                        </span>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- CITY / PINCODE -->
+                    <div class="row mb-2">
+
+                        <!-- CITY -->
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+
+                                <label asp-for="CityId"
+                                       class="col-md-4 col-form-label text-start">
+                                    City
+                                </label>
+
+                                <div class="col-md-8 d-flex align-items-center">
+
+                                    <select asp-for="CityId"
+                                            id="cityId"
+                                            asp-items="@ViewBag.CityList"
+                                            class="form-select form-select-sm me-2">
+                                        <option value="">select</option>
+                                    </select>
+
+                                    <div class="shortcut-box">
+                                        <span id="btnF2City" class="shortcut-link">
+                                            F2 - New
+                                        </span>
+
+                                        <span id="btnF3City" class="shortcut-link text-danger">
+                                            F3 - Mod
+                                        </span>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PINCODE -->
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="PinCode"
+                                       class="col-md-4 col-form-label text-start small">
+                                    PinCode
+                                </label>
+
+                                <div class="col-md-8">
+                                    <input asp-for="PinCode"
+                                           type="text"
+                                           class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="row mb-2">
+                        <label asp-for="Description" class="col-md-2 col-form-label text-start small"> </label>
+                        <div class="col-md-10">
+                            <input asp-for="Description" type="text" row="2" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="col-md-4">
+                <fieldset style="border:1px solid gray;" class="p-2">
+                    <legend>Company Details</legend>
+                    <div class="row mb-2">
+                        <label asp-for="GstNo" class="col-md-4 col-form-label text-start small"> </label>
+                        <div class="col-md-8">
+                            <input asp-for="GstNo" id="GSTNo" type="text" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+
+                    <!-- State Code Section -->
+                    <div class="row mb-2">
+                        <label class="col-md-4 col-form-label small">
+                            State Code
+                        </label>
+                        <div class="col-md-8">
+                            <!-- Display field (readonly) -->
+                            <input type="text"
+                                   id="StateCodeDisplay"
+                                   class="form-control form-control-sm"
+                                   placeholder="e.g. 09 - UttarPradesh"
+                                   readonly />
+
+                            <input type="hidden"
+                                   asp-for="StateCode"
+                                   id="StateCodeHidden"
+                                   value="@((int?)Model.StateCode ?? 0)" />
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <label asp-for="CompanyType" class="col-md-4 col-form-label text-start"></label>
+                        <div class="col-md-8">
+                            <select asp-for="CompanyType" id="CategoryId" asp-items="Html.GetEnumSelectList<CompanyType>()" class="form-select form-select-sm"></select>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <label asp-for="BranchCode" class="col-md-4 col-form-label text-start"></label>
+                        <div class="col-md-8">
+                            <input asp-for="BranchCode" type="text" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <label asp-for="BusinessType" class="col-md-4 col-form-label text-start"></label>
+                        <div class="col-md-8">
+                            <select asp-for="BusinessType" asp-items="Html.GetEnumSelectList<BusinessType>()" class="form-select form-select-sm"></select>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <label asp-for="CalenderType" class="col-md-4 col-form-label text-start"></label>
+                        <div class="col-md-8">
+                            <select asp-for="CalenderType" asp-items="Html.GetEnumSelectList<CalenderType>()" class="form-select form-select-sm"></select>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <label asp-for="YearFrom" class="col-md-4 col-form-label text-start">Financial Year</label>
+                        <div class="col-md-8">
+                            <input asp-for="YearFrom" type="date" class="form-control form-control-sm" />
+                            <input asp-for="YearTo" type="date" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <label asp-for="TaxType" class="col-md-4 col-form-label text-start"></label>
+                        <div class="col-md-8">
+                            <select asp-for="TaxType" asp-items="Html.GetEnumSelectList<TaxType>()" class="form-select form-select-sm"></select>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <label asp-for="SubscriptionPlanId" class="col-md-4 col-form-label text-start small">Subscription Plan</label>
+                        <div class="col-md-8">
+                            <select asp-for="SubscriptionPlanId" id="subscriptionPlanId" asp-items="@ViewBag.SubscriptionPlanList" class="form-select form-select-sm">
+                                <option value="">select plan</option>
+                            </select>
+                        </div>
+                    </div>
+                </fieldset>
+
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-8">
+                <fieldset style="border:1px solid gray;" class="p-2 mt-1">
+                    <legend>Contact Details</legend>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="ContactPerson" class="col-md-4 col-form-label text-start small"> </label>
+                                <div class="col-md-8">
+                                    <input asp-for="ContactPerson" type="text" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label asp-for="Email" class="col-md-4 col-form-label text-start small">Email <i class="text-danger">*</i> </label>
+                                <div class="col-md-8">
+                                    <input asp-for="Email" type="text" class="form-control form-control-sm" required />
+                                </div>
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="Phone" class="col-md-4 col-form-label text-start small"> </label>
+                                <div class="col-md-8">
+                                    <input asp-for="Phone" type="text" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label asp-for="MobileNo" class="col-md-4 col-form-label text-start small"> Mobile No <i class="text-danger">*</i></label>
+                                <div class="col-md-8">
+                                    <input asp-for="MobileNo" type="text" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="col-md-4">
+                <div class="row mt-3">
+                    <label asp-for="Logo" class="col-md-4 col-form-label text-start small"> </label>
+                    <div class="col-md-8">
+                        <input asp-for="UploadAttachement" type="file" class="form-control form-control-sm" />
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.Logo))
+                {
+                    <div class="col-md-4 mt-3">
+                        <a href="~/@Model.Logo" target="_blank">Download Attachment</a>
+                    </div>
+                }
+                <span></span>
+            </div>
+
+        </div>
+        <div class="row mt-2">
+            <ul class="nav nav-tabs flex-nowrap" id="companyInfoTabs">
+                <li>
+                    <a class="nav-link active" href="#licenceInfo" data-bs-toggle="tab">Licence Info</a>
+                </li>
+                <li>
+                    <a class="nav-link" href="#otherInfo" data-bs-toggle="tab">Other Info</a>
+                </li>
+                <li>
+                    <a class="nav-link" href="#moduleAccess" data-bs-toggle="tab">Module Access</a>
+                </li>
+            </ul>
+            <div class="tab-content p-3 border border-top-0" id="companyInfoTabsContent">
+                <div class="tab-pane fade show active" id="licenceInfo">
+                    <div class="row ">
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="IFSSAINo" class="col-md-3 col-form-label text-start small"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="IFSSAINo" type="text" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="DrugLicNo" class="col-md-3 col-form-label text-start small"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="DrugLicNo" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="LicenceExpiryDate" class="col-md-3 col-form-label text-start small"> </label>
+                                <div class="col-md-9">
+                                    <input asp-for="LicenceExpiryDate" type="date" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="otherInfo">
+                    <div class="row ">
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="Jurisdiction" class="col-md-3 col-form-label text-start small"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="Jurisdiction" type="text" class="form-control form-control-sm" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label asp-for="WorkingStyle" class="col-md-3 col-form-label text-start small"> </label>
+                                <div class="col-md-9">
+                                    <select asp-for="WorkingStyle" id="CategoryId" asp-items="@Html.GetEnumSelectList<WorkingStyle>()" class="form-select form-select-sm"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="moduleAccess">
+                    <p class="text-muted small">Customize company-level module and sub-module overrides. Leaving a module unchecked will disable it for this company. Checked modules will be allowed.</p>
+                    <div class="row">
+                        @if (ViewBag.Features != null)
+                        {
+                            var features = (List<Feature>)ViewBag.Features;
+                            var parents = features.Where(f => f.ParentFeatureId == null).ToList();
+                            foreach (var parent in parents)
+                            {
+                                var children = features.Where(f => f.ParentFeatureId == parent.Id).ToList();
+                                <div class="col-md-4 mb-3">
+                                    <div class="card border">
+                                        <div class="card-header bg-light py-1 px-2 d-flex align-items-center">
+                                            <input type="checkbox" name="SelectedFeatures" value="@parent.FeatureKey" 
+                                                   id="feat-@parent.Id" class="form-check-input me-2 tenant-parent-chk" 
+                                                   @(Model.SelectedFeatures != null && Model.SelectedFeatures.Contains(parent.FeatureKey) ? "checked" : "") />
+                                            <label for="feat-@parent.Id" class="form-check-label mb-0 small font-weight-bold">@parent.DisplayName</label>
+                                        </div>
+                                        <div class="card-body p-2">
+                                            @if (children.Any())
+                                            {
+                                                <div class="ms-3">
+                                                    @foreach (var child in children)
+                                                    {
+                                                        <div class="form-check mb-1">
+                                                            <input type="checkbox" name="SelectedFeatures" value="@child.FeatureKey" 
+                                                                   id="feat-@child.Id" data-parent-id="feat-@parent.Id" 
+                                                                   class="form-check-input tenant-child-chk" 
+                                                                   @(Model.SelectedFeatures != null && Model.SelectedFeatures.Contains(child.FeatureKey) ? "checked" : "") />
+                                                            <label for="feat-@child.Id" class="form-check-label small">@child.DisplayName</label>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small italic">No sub-modules</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- MODALS -->
+        <div class="modal fade" id="countryModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content custom-modal">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="countryModalTitle">Add Country</h4>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="modalCountryId" value="0" />
+                        <label>Name</label>
+                        <input type="text" id="modalCountryName" class="form-control modal-input" />
+                        <span id="countryError" class="text-danger small modal-error"></span>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveCountry">Save</button>
+                        <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="stateModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content custom-modal">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="stateModalTitle">Add State</h4>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="modalStateId" value="0" />
+                        <label>Country</label>
+                        <div class="d-flex align-items-center mb-2">
+                            <select id="modalStateCountryId" asp-items="@ViewBag.CountryList" class="form-select form-select-sm modal-input me-2">
+                                <option value="">select</option>
+                            </select>
+                            <div class="shortcut-box">
+                                <span id="btnF2StateCountry" class="shortcut-link">F2 - New</span>
+                                <span id="btnF3StateCountry" class="shortcut-link text-danger">F3 - Mod</span>
+                            </div>
+                        </div>
+                        <label>Name</label>
+                        <input type="text" id="modalStateName" class="form-control modal-input" />
+                        <span id="stateError" class="text-danger small modal-error"></span>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveState">Save</button>
+                        <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="cityModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content custom-modal">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="cityModalTitle">Add City</h4>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="modalCityId" value="0" />
+                        <label>Country</label>
+                        <div class="d-flex align-items-center mb-2">
+                            <select id="modalCityCountryId" asp-items="@ViewBag.CountryList" class="form-select form-select-sm modal-input me-2">
+                                <option value="">select</option>
+                            </select>
+                            <div class="shortcut-box">
+                                <span id="btnF2CityCountry" class="shortcut-link">F2 - New</span>
+                                <span id="btnF3CityCountry" class="shortcut-link text-danger">F3 - Mod</span>
+                            </div>
+                        </div>
+                        <label>State</label>
+                        <div class="d-flex align-items-center mb-2">
+                            <select id="modalCityStateId" class="form-select form-select-sm modal-input me-2">
+                                <option value="">select</option>
+                            </select>
+                            <div class="shortcut-box">
+                                <span id="btnF2CityState" class="shortcut-link">F2 - New</span>
+                                <span id="btnF3CityState" class="shortcut-link text-danger">F3 - Mod</span>
+                            </div>
+                        </div>
+                        <label>Name</label>
+                        <input type="text" id="modalCityName" class="form-control modal-input" />
+                        <span id="cityError" class="text-danger small modal-error"></span>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveCity">Save</button>
+                        <button type="button" class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3 text-end">
+            <button type="submit" class="btn btn-primary px-4">Save</button>
+            <a asp-controller="Tenant" asp-action="Index" class="btn btn-secondary px-4">Cancel</a>
+
+        </div>
+    </div>
+</form>
+<link href="~/css/page.css" rel="stylesheet" />
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+
+        const gstStateEnumMap = {
+            1: "JammuAndKashmir",
+            2: "HimachalPradesh",
+            3: "Punjab",
+            4: "Chandigarh",
+            5: "Uttarakhand",
+            6: "Haryana",
+            7: "Delhi",
+            8: "Rajasthan",
+            9: "UttarPradesh",
+            10: "Bihar",
+            11: "Sikkim",
+            12: "ArunachalPradesh",
+            13: "Nagaland",
+            14: "Manipur",
+            15: "Mizoram",
+            16: "Tripura",
+            17: "Meghalaya",
+            18: "Assam",
+            19: "WestBengal",
+            20: "Jharkhand",
+            21: "Odisha",
+            22: "Chhattisgarh",
+            23: "MadhyaPradesh",
+            24: "Gujarat",
+            26: "DadraNagarHaveliAndDamanDiu",
+            27: "Maharashtra",
+            28: "AndhraPradeshOld",
+            29: "Karnataka",
+            30: "Goa",
+            31: "Lakshadweep",
+            32: "Kerala",
+            33: "TamilNadu",
+            34: "Puducherry",
+            35: "AndamanNicobar",
+            36: "Telangana",
+            37: "AndhraPradesh",
+            38: "Ladakh"
+        };
+
+        $(document).ready(function () {
+
+            // Checkbox Tree Logic for Tenant Module Access Override
+            $(".tenant-parent-chk").on("change", function () {
+                var isChecked = $(this).is(":checked");
+                var parentId = $(this).attr("id");
+                $("[data-parent-id='" + parentId + "']").prop("checked", isChecked);
+            });
+
+            $(".tenant-child-chk").on("change", function () {
+                var parentId = $(this).data("parent-id");
+                var anyChecked = false;
+                $("[data-parent-id='" + parentId + "']").each(function () {
+                    if ($(this).is(":checked")) {
+                        anyChecked = true;
+                    }
+                });
+                $("#" + parentId).prop("checked", anyChecked);
+            });
+
+            // Subscription Plan Dropdown change event to load default features
+            $("#subscriptionPlanId").on("change", function () {
+                var planId = $(this).val();
+                if (!planId) {
+                    $(".tenant-parent-chk, .tenant-child-chk").prop("checked", false);
+                    return;
+                }
+
+                $.ajax({
+                    url: "/CompanyPlan/GetPlanFeatures",
+                    type: "GET",
+                    data: { planId: planId },
+                    success: function (features) {
+                        $(".tenant-parent-chk, .tenant-child-chk").prop("checked", false);
+                        if (features && features.length > 0) {
+                            features.forEach(function (key) {
+                                $("input[name='SelectedFeatures'][value='" + key + "']").prop("checked", true);
+                            });
+                        }
+                    },
+                    error: function () {
+                        console.error("Failed to load plan features.");
+                    }
+                });
+            });
+
+            /* =====================================================
+               GST STATE CODE
+            ======================================================*/
+
+            function initializeStateCode() {
+
+                const stateCodeValue = $("#StateCodeHidden").val();
+
+                if (stateCodeValue && stateCodeValue !== "") {
+
+                    const code = parseInt(stateCodeValue, 10);
+
+                    if (gstStateEnumMap[code]) {
+
+                        const displayValue =
+                            code.toString().padStart(2, '0') +
+                            " - " +
+                            gstStateEnumMap[code];
+
+                        $("#StateCodeDisplay").val(displayValue);
+                    }
+                }
+            }
+
+            initializeStateCode();
+
+            $("#GSTNo").on("input paste", function () {
+
+                setTimeout(() => {
+
+                    const gst = $(this).val().toUpperCase();
+
+                    const $stateDisplay = $("#StateCodeDisplay");
+                    const $stateHidden = $("#StateCodeHidden");
+
+                    if (gst.length >= 2) {
+
+                        const code = parseInt(gst.substring(0, 2), 10);
+
+                        if (gstStateEnumMap[code]) {
+
+                            const displayValue =
+                                gst.substring(0, 2).padStart(2, '0') +
+                                " - " +
+                                gstStateEnumMap[code];
+
+                            $stateDisplay.val(displayValue);
+                            $stateHidden.val(code);
+
+                        } else {
+
+                            $stateDisplay.val("");
+                            $stateHidden.val("");
+                        }
+
+                    } else {
+
+                        $stateDisplay.val("");
+                        $stateHidden.val("");
+                    }
+
+                }, 0);
+            });
+
+
+            /* =====================================================
+               FORM SUBMIT DUPLICATE CHECK
+            ======================================================*/
+
+            let isSubmitting = false;
+
+            $("#CompanyForm").on("submit", function (e) {
+
+                if (isSubmitting)
+                    return false;
+
+                e.preventDefault();
+
+                var form = this;
+
+                var name = $("#Name").val()?.trim();
+                var gstNo = $("#GSTNo").val()?.trim();
+                var mobileNo = $("#MobileNo").val()?.trim();
+                var id = $("#Id").val();
+
+                if (!name) {
+
+                    Swal.fire(
+                        "Error",
+                        "Please enter Company Name!",
+                        "error"
+                    );
+
+                    return;
+                }
+
+                $.ajax({
+
+                    url: "/Tenant/CheckDuplicate",
+                    type: "GET",
+
+                    data: {
+                        Name: name,
+                        GSTNo: gstNo,
+                        MobileNo: mobileNo,
+                        id: id
+                    },
+
+                    success: function (response) {
+
+                        if (response.exists) {
+
+                            Swal.fire(
+                                "Duplicate record already exists!"
+                            );
+
+                        } else {
+
+                            isSubmitting = true;
+                            form.submit();
+                        }
+                    },
+
+                    error: function () {
+
+                        Swal.fire(
+                            "Error checking duplicate"
+                        );
+                    }
+                });
+            });
+
+
+            /* =====================================================
+               COUNTRY
+            ======================================================*/
+
+            let countryDdlSelector = "#countryId";
+            let returnModalSelector = "";
+
+            $("#countryModal,#stateModal").on("hidden.bs.modal", function () {
+                if (returnModalSelector && returnModalSelector !== "#" + this.id) {
+                    let modalSelector = returnModalSelector;
+                    returnModalSelector = "";
+                    setTimeout(function () {
+                        $(modalSelector).modal("show");
+                    }, 200);
+                }
+            });
+
+            $("#btnF2Country").click(function () {
+                countryDdlSelector = "#countryId";
+                openModal("country", "new", "#countryId");
+            });
+
+            $("#btnF3Country").click(function () {
+                countryDdlSelector = "#countryId";
+                openModal("country", "edit", "#countryId");
+            });
+
+            $("#btnSaveCountry").click(function () {
+
+                saveData(
+                    "country",
+                    "/Tenant/QuickSaveCountry",
+                    countryDdlSelector,
+                    null,
+                    "/Tenant/GetCountries"
+                );
+            });
+
+            $("#btnF2StateCountry").click(function () {
+                countryDdlSelector = "#modalStateCountryId";
+                $("#stateModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#stateModal";
+                    openModal("country", "new", "#modalStateCountryId");
+                }, 350);
+            });
+
+            $("#btnF3StateCountry").click(function () {
+                if (!$("#modalStateCountryId").val()) {
+                    Swal.fire("Error", "Select Country First!", "error");
+                    return;
+                }
+
+                countryDdlSelector = "#modalStateCountryId";
+                $("#stateModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#stateModal";
+                    openModal("country", "edit", "#modalStateCountryId");
+                }, 350);
+            });
+
+            $("#btnF2CityCountry").click(function () {
+                countryDdlSelector = "#modalCityCountryId";
+                $("#cityModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#cityModal";
+                    openModal("country", "new", "#modalCityCountryId");
+                }, 350);
+            });
+
+            $("#btnF3CityCountry").click(function () {
+                if (!$("#modalCityCountryId").val()) {
+                    Swal.fire("Error", "Select Country First!", "error");
+                    return;
+                }
+
+                countryDdlSelector = "#modalCityCountryId";
+                $("#cityModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#cityModal";
+                    openModal("country", "edit", "#modalCityCountryId");
+                }, 350);
+            });
+
+
+            /* =====================================================
+               STATE
+            ======================================================*/
+
+            $("#btnF2State").click(function () {
+
+                openModal("state", "new", "#stateId");
+            });
+
+            $("#btnF3State").click(function () {
+
+                if (!$("#stateId").val()) {
+
+                    Swal.fire(
+                        "Error",
+                        "Select State First!",
+                        "error"
+                    );
+
+                    return;
+                }
+
+                openModal("state", "edit", "#stateId");
+            });
+
+            $("#btnSaveState").click(function () {
+
+                let id = $("#modalStateId").val();
+                let name = $("#modalStateName").val().trim();
+                let countryId = $("#modalStateCountryId").val();
+
+                if (!countryId) {
+                    $("#stateError").text("Select Country First!");
+                    return;
+                }
+
+                if (!name) {
+                    $("#stateError").text("Name required!");
+                    return;
+                }
+
+                $.ajax({
+                    url: "/Tenant/QuickSaveState",
+                    type: "POST",
+                    data: { id: id, name: name, countryId: countryId },
+                    success: function (res) {
+                        if (res.success) {
+                            $("#stateModal").modal("hide");
+                            $("#countryId").val(countryId);
+                            $.get("/Tenant/GetStatesByCountry?countryId=" + countryId, function (data) {
+                                let ddl = $("#stateId");
+                                let modalDdl = $("#modalCityStateId");
+                                ddl.empty().append('<option value="">select</option>');
+                                modalDdl.empty().append('<option value="">select</option>');
+                                $.each(data, function (i, item) {
+                                    let opt = $("<option>", { value: item.id, text: item.name });
+                                    let modalOpt = $("<option>", { value: item.id, text: item.name });
+                                    if (item.id == res.newId) {
+                                        opt.attr("selected", "selected");
+                                        modalOpt.attr("selected", "selected");
+                                    }
+                                    ddl.append(opt);
+                                    modalDdl.append(modalOpt);
+                                });
+                                $("#cityId").empty().append('<option value="">select</option>');
+                            });
+                            Swal.fire("Success", res.message || "Saved Successfully!", "success");
+                        } else {
+                            $("#stateError").text(res.message);
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Something went wrong!", "error");
+                    }
+                });
+            });
+
+
+            /* =====================================================
+               CITY
+            ======================================================*/
+
+            $("#btnF2City").click(function () {
+
+                openModal("city", "new", "#cityId");
+            });
+
+            $("#btnF3City").click(function () {
+
+                if (!$("#cityId").val()) {
+
+                    Swal.fire(
+                        "Error",
+                        "Select City First!",
+                        "error"
+                    );
+
+                    return;
+                }
+
+                openModal("city", "edit", "#cityId");
+            });
+
+            $("#btnSaveCity").click(function () {
+
+                let id = $("#modalCityId").val();
+                let name = $("#modalCityName").val().trim();
+                let countryId = $("#modalCityCountryId").val();
+                let stateId = $("#modalCityStateId").val();
+
+                if (!countryId) {
+                    $("#cityError").text("Select Country First!");
+                    return;
+                }
+
+                if (!stateId) {
+                    $("#cityError").text("Select State First!");
+                    return;
+                }
+
+                if (!name) {
+                    $("#cityError").text("Name required!");
+                    return;
+                }
+
+                $.ajax({
+                    url: "/Tenant/QuickSaveCity",
+                    type: "POST",
+                    data: { id: id, name: name, stateId: stateId, countryId: countryId },
+                    success: function (res) {
+                        if (res.success) {
+                            $("#cityModal").modal("hide");
+                            $("#countryId").val(countryId);
+                            $.get("/Tenant/GetStatesByCountry?countryId=" + countryId, function (states) {
+                                let ddl = $("#stateId");
+                                ddl.empty().append('<option value="">select</option>');
+                                $.each(states, function (i, item) {
+                                    let opt = $("<option>", { value: item.id, text: item.name });
+                                    if (item.id == stateId) opt.attr("selected", "selected");
+                                    ddl.append(opt);
+                                });
+                            });
+                            $.get("/Tenant/GetCitiesByState?stateId=" + stateId, function (data) {
+                                let ddl = $("#cityId");
+                                ddl.empty().append('<option value="">select</option>');
+                                $.each(data, function (i, item) {
+                                    let opt = $("<option>", { value: item.id, text: item.name });
+                                    if (item.id == res.newId) opt.attr("selected", "selected");
+                                    ddl.append(opt);
+                                });
+                            });
+                            Swal.fire("Success", res.message || "Saved Successfully!", "success");
+                        } else {
+                            $("#cityError").text(res.message);
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Something went wrong!", "error");
+                    }
+                });
+            });
+
+            $("#btnF2CityState").click(function () {
+                $("#cityModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#cityModal";
+                    openModal("state", "new", "#modalCityStateId");
+                    $("#modalStateCountryId").val($("#modalCityCountryId").val());
+                }, 350);
+            });
+
+            $("#btnF3CityState").click(function () {
+                if (!$("#modalCityStateId").val()) {
+                    Swal.fire("Error", "Select State First!", "error");
+                    return;
+                }
+
+                $("#cityModal").modal("hide");
+                setTimeout(function () {
+                    returnModalSelector = "#cityModal";
+                    openModal("state", "edit", "#modalCityStateId");
+                    $("#modalStateCountryId").val($("#modalCityCountryId").val());
+                }, 350);
+            });
+
+            $("#modalCityCountryId").change(function () {
+                let countryId = $(this).val();
+                $("#modalCityStateId").empty().append('<option value="">select</option>');
+                if (countryId) {
+                    $.getJSON("/Tenant/GetStatesByCountry", { countryId: countryId }, function (data) {
+                        $.each(data, function (i, item) {
+                            $("#modalCityStateId").append($("<option>", { value: item.id, text: item.name }));
+                        });
+                    });
+                }
+            });
+
+
+            /* =====================================================
+               OPEN MODAL
+            ======================================================*/
+
+            function openModal(type, mode, ddlSelector) {
+
+                $("#" + type + "Error").text("");
+
+                let modalId =
+                    "#modal" + capitalize(type) + "Id";
+
+                let modalName =
+                    "#modal" + capitalize(type) + "Name";
+
+                if (mode === "new") {
+
+                    $(modalId).val(0);
+                    $(modalName).val("");
+
+                    $("#" + type + "ModalTitle")
+                        .text("Add " + capitalize(type));
+
+                } else {
+
+                    let id = $(ddlSelector).val();
+
+                    let text =
+                        $(ddlSelector + " option:selected").text();
+
+                    if (!id) {
+
+                        Swal.fire(
+                            "Error",
+                            "Please select item first!",
+                            "error"
+                        );
+
+                        return;
+                    }
+
+                    $(modalId).val(id);
+                    $(modalName).val(text);
+
+                    $("#" + type + "ModalTitle")
+                        .text("Modify " + capitalize(type));
+                }
+
+                if (type === "state") {
+                    $("#modalStateCountryId").val($("#countryId").val());
+                }
+
+                if (type === "city") {
+                    let countryId = $("#countryId").val();
+                    let stateId = $("#stateId").val();
+                    $("#modalCityCountryId").val(countryId);
+                    $("#modalCityStateId").empty().append('<option value="">select</option>');
+                    if (countryId) {
+                        $.getJSON("/Tenant/GetStatesByCountry", { countryId: countryId }, function (data) {
+                            $.each(data, function (i, item) {
+                                let opt = $("<option>", { value: item.id, text: item.name });
+                                if (item.id == stateId) opt.attr("selected", "selected");
+                                $("#modalCityStateId").append(opt);
+                            });
+                        });
+                    }
+                }
+
+                $("#" + type + "Modal").modal("show");
+
+                setTimeout(function () {
+                    $(modalName).focus();
+                }, 300);
+            }
+
+
+            /* =====================================================
+               SAVE DATA
+            ======================================================*/
+
+            function saveData(
+                type,
+                url,
+                ddlSelector,
+                extraData,
+                reloadUrl,
+                isCustomFormat = false
+            ) {
+
+                let id =
+                    $("#modal" + capitalize(type) + "Id").val();
+
+                let name =
+                    $("#modal" + capitalize(type) + "Name")
+                        .val()
+                        .trim();
+
+                if (!name) {
+
+                    $("#" + type + "Error")
+                        .text("Name required!");
+
+                    return;
+                }
+
+                let postData = {
+                    id: id,
+                    name: name
+                };
+
+                if (extraData) {
+                    Object.assign(postData, extraData);
+                }
+
+                $.ajax({
+
+                    url: url,
+                    type: "POST",
+                    data: postData,
+
+                    success: function (res) {
+
+                        if (res.success) {
+
+                            $("#" + type + "Modal").modal("hide");
+
+                            reloadDropdown(
+                                ddlSelector,
+                                reloadUrl,
+                                res.newId,
+                                isCustomFormat
+                            );
+
+                            Swal.fire(
+                                "Success",
+                                res.message || "Saved Successfully!",
+                                "success"
+                            );
+
+                        } else {
+
+                            $("#" + type + "Error")
+                                .text(res.message);
+                        }
+                    },
+
+                    error: function () {
+
+                        Swal.fire(
+                            "Error",
+                            "Something went wrong!",
+                            "error"
+                        );
+                    }
+                });
+            }
+
+
+            /* =====================================================
+               RELOAD DROPDOWN
+            ======================================================*/
+
+            function reloadDropdown(
+                ddlSelector,
+                reloadUrl,
+                selectedValue,
+                isCustomFormat
+            ) {
+
+                $.get(reloadUrl, function (data) {
+
+                    let ddl = $(ddlSelector);
+
+                    ddl.empty();
+
+                    ddl.append(
+                        '<option value="">select</option>'
+                    );
+
+                    $.each(data, function (i, item) {
+
+                        ddl.append(
+                            $("<option>", {
+                                value: isCustomFormat
+                                    ? item.id
+                                    : item.value,
+
+                                text: isCustomFormat
+                                    ? item.name
+                                    : item.text
+                            })
+                        );
+                    });
+
+                    ddl.val(selectedValue);
+
+                    if (ddlSelector === "#countryId" || ddlSelector === "#modalStateCountryId" || ddlSelector === "#modalCityCountryId") {
+                        $("#countryId,#modalStateCountryId,#modalCityCountryId").empty().append('<option value="">select</option>');
+                        $.each(data, function (i, item) {
+                            let opt1 = $("<option>", { value: item.value, text: item.text });
+                            let opt2 = $("<option>", { value: item.value, text: item.text });
+                            let opt3 = $("<option>", { value: item.value, text: item.text });
+                            if (item.value == selectedValue) {
+                                opt1.attr("selected", "selected");
+                                opt2.attr("selected", "selected");
+                                opt3.attr("selected", "selected");
+                            }
+                            $("#countryId").append(opt1);
+                            $("#modalStateCountryId").append(opt2);
+                            $("#modalCityCountryId").append(opt3);
+                        });
+                        $("#stateId").empty().append('<option value="">select</option>');
+                        $("#cityId").empty().append('<option value="">select</option>');
+                        $("#modalCityStateId").empty().append('<option value="">select</option>');
+                    }
+                });
+            }
+
+
+            /* =====================================================
+               ENTER KEY SAVE
+            ======================================================*/
+
+            $(".modal-input").keypress(function (e) {
+
+                if (e.which == 13) {
+
+                    e.preventDefault();
+
+                    $(this)
+                        .closest(".modal")
+                        .find(".btn-success")
+                        .click();
+                }
+            });
+
+
+            /* =====================================================
+               CAPITALIZE
+            ======================================================*/
+
+            function capitalize(text) {
+                return text.charAt(0).toUpperCase() + text.slice(1);
+            }
+
+        });
+
+    </script>
+}

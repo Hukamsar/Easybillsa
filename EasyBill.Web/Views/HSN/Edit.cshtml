@@ -1,0 +1,181 @@
+﻿@model EasyBill.Models.ViewModels.HSNVM
+@{
+    ViewData["Title"] = "Edit";
+}
+<style>
+  
+
+    .swal2-confirm,
+    .swal2-cancel {
+        border-radius: 8px !important;
+        padding: 8px 20px !important;
+        font-weight: 500 !important;
+        transition: all 0.25s ease-in-out !important;
+        margin: 0 8px !important; 
+    }
+
+ 
+        .swal2-confirm:hover {
+            background-color: #157347 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(25, 135, 84, 0.4);
+        }
+        .swal2-cancel:hover {
+            background-color: #bb2d3b !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(220, 53, 69, 0.4);
+        }
+        .swal2-confirm:focus,
+        .swal2-cancel:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.4) !important;
+        }
+</style>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header text-white py-2" style="background:#2b6ac9">
+                      Edit  HSN
+                </div>
+            </div>
+        <div class="card-body">
+            <form asp-action="Edit" id="HSNForm">
+                <input type="hidden" asp-for="Id" />
+
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <!-- ROW 1 -->
+                <div class="row mb-2 align-items-center">
+                    <div class="col-md-1 text-end">
+                        <label asp-for="HsnCode" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="HsnCode" class="form-control" />
+                        <span asp-validation-for="HsnCode" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-2 text-end">
+                        <label asp-for="SGST" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="SGST" class="form-control" />
+                        <span asp-validation-for="SGST" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- ROW 2 -->
+                <div class="row mb-2 align-items-center">
+                    <div class="col-md-1 text-end">
+                        <label asp-for="CGST" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="CGST" class="form-control" />
+                        <span asp-validation-for="CGST" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-2 text-end">
+                        <label asp-for="IGST" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="IGST" class="form-control" />
+                        <span asp-validation-for="IGST" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- ROW 3 -->
+                <div class="row mb-2 align-items-center">
+                    <div class="col-md-1 text-end">
+                        <label asp-for="Cess" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="Cess" class="form-control" />
+                        <span asp-validation-for="Cess" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-2 text-end">
+                        <label asp-for="HsnType" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <select asp-for="HsnType" class="form-control"
+                                asp-items="Html.GetEnumSelectList<HsnType>()">
+                            <option value="" disabled>Select HSN Type</option>
+                        </select>
+                        <span asp-validation-for="HsnType" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-sm text-light" style="background:#2b6ac9">Submit</button>
+                    <a asp-controller="HSN" asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+
+        let isSubmitting = false;
+
+        $("#HSNForm").on("submit", function (e) {
+
+            if (isSubmitting) return false;
+
+            e.preventDefault();
+
+            var form = this;
+            var hsnCode = $("#HsnCode").val().trim();
+            var hsnId = $("#Id").val();
+
+            if (!hsnCode) {
+                Swal.fire("Error", "Please enter HSN Code!", "error");
+                return;
+            }
+
+            $.ajax({
+                url: "/HSN/CheckDuplicate",
+                type: "GET",
+                data: { hsnCode: hsnCode, id: hsnId },
+                success: function (response) {
+
+                    if (response.exists) {
+                        Swal.fire("Already exists!");
+                    } else {
+
+                        Swal.fire({
+                            title: 'Confirm Update?',
+                            text: 'Do you want to update this HSN?',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'Yes, Update',
+                            cancelButtonText: 'Cancel',
+                            confirmButtonColor: '#198754',
+                            cancelButtonColor: '#dc3545',
+                            reverseButtons: true,
+                            focusConfirm: true,
+                            buttonsStyling: true
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                isSubmitting = true;
+                                form.submit();
+                            }
+                        });
+
+                    }
+                },
+                error: function () {
+                    Swal.fire("Error checking duplicate");
+                }
+            });
+
+        });
+
+    });
+</script>

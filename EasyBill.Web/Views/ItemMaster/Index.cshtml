@@ -1,0 +1,183 @@
+﻿@using AOne.Models.Entity 
+ @model IEnumerable<ItemMaster>
+
+@{
+    ViewData["Title"] = "Item Master";
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    string searchQuery = ViewBag.Search ?? "";
+}
+<style>
+    .table-primary {
+    --bs-table-color: #ffffff;
+    --bs-table-bg: #2b6ac9;
+    }
+</style>
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2" style="background:#2b6ac9">
+        Item Master
+    </div>
+</div>
+<p class="d-flex justify-content-end gap-2 mb-2">
+    @if (User.HasPermission(Permissions.ItemMaster.Create))
+    {
+        <a asp-controller="ItemMaster" asp-action="Create" class="btn text-light" style="background:#2b6ac9">
+            <i class="bi bi-plus-circle"></i> Add
+        </a>
+    }
+    <a asp-action="ExportToExcel" asp-controller="ItemMaster" class="btn btn-info">
+        Export to Excel
+    </a>
+    <a asp-action="Import" asp-controller="ItemMaster" class="btn btn-success">
+        Import from Excel
+    </a>
+</p>
+<form method="get" class="mb-3">
+    <div class="row">
+        <div class=" col-sm-3">
+            <input type="text" name="search" class="form-control" value="" placeholder="Search by Name or Code">
+        </div>
+        <div class="col-sm-2">
+            <button type="submit" class="btn text-light" style="background:#2b6ac9">Search</button>
+
+        </div>
+    </div>
+</form>
+<table id="itemTable" class=" table table-bordered table-striped">
+    <thead class="table-primary">
+        <tr>
+            <th>Item Code</th>
+            <th>Item Name</th>
+            <th>Bar Code</th>
+            <th>Category Name</th> 
+            <th>Hsn</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Code</td>
+                <td>@item.Name</td>
+                <td>@item.Barcode</td>
+                <td>@item.Category?.CategoryName</td> 
+                <td>@item.Hsn?.HsnCode</td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        @if (User.HasPermission(Permissions.ItemMaster.Edit))
+                        {
+                            <a asp-controller="ItemMaster" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                        }
+                        @if (User.HasPermission(Permissions.ItemMaster.Delete))
+                        {
+                            @* ItemMaster delete fix: href and data-url keep the trash icon clickable while AJAX prevents page navigation. *@
+                            <a href="javascript:void(0)"
+                               class="btn-delete"
+                               title="Delete" 
+                               data-id="@item.Id"
+                               data-delete-url="@Url.Action("Delete", "ItemMaster")"
+                               style="cursor:pointer;">
+                                <i class="bi bi-trash-fill text-danger p-1"></i>
+                            </a>
+                        }
+                    </div>
+                </td>
+            </tr>
+        }
+
+    </tbody>
+</table>
+@* <div>
+    Page @ViewBag.CurrentPage of @ViewBag.TotalPages
+</div>
+
+<div class="mt-2">
+    @for (int i = 1; i <= ViewBag.TotalPages; i++)
+    {
+        <a class="btn btn-sm @(i == ViewBag.CurrentPage ? "btn-primary" : "btn-outline-secondary")"
+           href="?search=@ViewBag.Search&page=@i">@i</a>
+    }
+</div> *@
+<div class="mb-2">
+    <span>Page @currentPage of @totalPages</span>
+</div>
+<!-- Previous and Next Buttons -->
+<div class="mt-2">
+    <!-- Previous Button -->
+    @if (currentPage > 1)
+    {
+        <a class="btn btn-sm btn-outline-secondary me-1"
+           href="?search=@searchQuery&page=@(currentPage - 1)">Previous</a>
+    }
+    else
+    {
+        <button class="btn btn-sm btn-secondary me-1" disabled>Previous</button>
+    }
+
+    <!-- Next Button -->
+    @if (currentPage < totalPages)
+    {
+        <a class="btn btn-sm btn-outline-secondary"
+           href="?search=@searchQuery&page=@(currentPage + 1)">Next</a>
+    }
+    else
+    {
+        <button class="btn btn-sm btn-secondary" disabled>Next</button>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // ItemMaster delete fix: delegated click keeps delete working after paging/search reloads.
+            $(document).on("click", ".btn-delete", function (e) {
+                e.preventDefault();
+
+                var deleteButton = $(this);
+                var itemId = deleteButton.data("id");
+                var deleteUrl = deleteButton.data("delete-url") || "/ItemMaster/Delete";
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "This item and all its images will be permanently deleted!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, Delete!',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: deleteUrl,
+                            type: "POST",
+                            data: { id: itemId },
+                            success: function (response) {
+                                if (response.success) {
+                                    Swal.fire({
+                                        title: 'Deleted!',
+                                        text: response.message,
+                                        icon: 'success',
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    }).then(() => {
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire('Error!', response.message, 'error');
+                                }
+                            },
+                            error: function () {
+                                Swal.fire('Error!', 'Something went wrong. Please try again.', 'error');
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+}

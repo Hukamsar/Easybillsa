@@ -1,0 +1,127 @@
+﻿@model List<EasyBill.Models.ViewModels.SalesBookVM>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewBag.Title = "Sales Book Report";
+    int sno = 1;
+}
+<style>
+    .table-primary {
+    --bs-table-color: #ffffff ;
+    --bs-table-bg: #2b6ac9;
+    }
+</style>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center"
+         style="background:#2b6ac9">
+
+        <span class="fw-bold">
+            Sales Book Report
+        </span>
+
+        <span class="fw-bold ms-auto">
+           Taxable Amt : @ViewBag.TaxableAmt | Tax Value: ₹ @ViewBag.TotalGst  | Total Amt: ₹ @ViewBag.TotalAmt.ToString("0.00")
+        </span>
+
+    </div>
+</div>
+
+<!-- Filter Form -->
+<form method="get" class="mb-3">
+    <div class="row">
+        <div class="col-md-3">
+            <label>From Date</label>
+            <input type="date" name="fromDate" class="form-control" value="@ViewBag.FromDate" />
+        </div>
+        <div class="col-md-3">
+            <label>To Date</label>
+            <input type="date" name="toDate" class="form-control" value="@ViewBag.ToDate" />
+        </div>
+        <div class="col-md-3">
+            <label>Party</label>
+            <select name="customerId" class="form-control" asp-items="@(ViewBag.CustomerList as SelectList)">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-md-3 align-self-end">
+            <button type="submit" class="btn text-light" style="background:#2b6ac9">Filter</button>
+        </div>
+    </div>
+</form>
+
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="ExportSalesBookExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+        <a asp-action="ExportSalesBookPdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Report Table -->
+<table id="salesBooktbl" class="table table-bordered table-striped">
+    <thead class="table-primary">
+        <tr>
+            <th>S.No</th>
+            <th>Inv No</th>
+            <th>Customer</th>
+            @* <th>Type</th> *@
+            <th class="text-end">Taxable Amt</th>
+            <th class="text-end">Tax Value</th>
+            <th class="text-end">Total Discount</th>
+            <th class="text-end">Round off Amt</th>
+            <th class="text-end">Total Amt</th>
+            @* <th>Payment Mode</th> *@
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model != null && Model.Count > 0)
+        {
+            foreach (var item in Model)
+            {
+                <tr>
+                    <td>@sno</td>
+                    <td>@item.InvNo</td>
+                    <td>@item.Customer</td>
+                   @*  <td>@item.Type</td> *@
+                    <td class="text-end">@item.TaxableAmt.ToString("0.00")</td>
+                    <td class="text-end">@item.TaxValue.ToString("0.00")</td>
+                    <td class="text-end">@item.TotalDiscount.ToString("0.00")</td>
+                    <td class="text-end">@item.RoundOff.ToString("0.00")</td>
+                    <td class="text-end">@item.TotalAmt.ToString("0.00")</td>
+                   @*  <td>@item.PaymentMode</td> *@
+                </tr>
+                sno++;
+            }
+        }
+    </tbody>
+    <tfoot class="table-secondary fw-bold">
+        <tr>
+            <td></td>
+            <td></td>
+            <td class="text-end">TOTAL</td>
+            <td class="text-end">@ViewBag.TaxableAmt</td>
+            <td class="text-end">@ViewBag.TotalGst</td>
+            <td class="text-end">@Model?.Sum(x => x.TotalDiscount)</td>
+            <td class="text-end">@Model?.Sum(x => x.RoundOff)</td>
+            <td class="text-end">@ViewBag.TotalAmt</td>
+        </tr>
+    </tfoot>
+</table>
+@section Scripts {
+<script>
+        $(document).ready(function () {
+            $("#salesBooktbl").DataTable({
+                ordering: false
+                  });
+        });
+               
+</script>
+}

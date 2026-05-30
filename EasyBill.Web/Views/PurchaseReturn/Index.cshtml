@@ -1,0 +1,106 @@
+﻿@model IEnumerable<PurchaseReturn>
+
+@{
+    ViewData["Title"] = "List";
+}
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+          Purchase Return
+        </div>
+    </div>
+
+</div>
+
+<p>
+    <a asp-action="Create" class="btn btn-primary mb-1" style="float:right"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table class="table table-bordered table-striped" id="purchaseReturnTbl">
+    <thead class="custom-header">
+        <tr>
+
+
+            <th>
+                Supplier
+            </th>
+
+            <th>
+                @Html.DisplayNameFor(model => model.BillNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.BillDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PartyBillNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PartyBillDate)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.Suppliers.FirstName)
+                </td>
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.BillNo)
+                </td>
+                <td>
+                   @item.BillDate?.ToString("dd/MM/yyyy")
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PartyBillNo)
+                </td>
+                <td>
+                 @item.PartyBillDate?.ToString("dd/MM/yyyy")
+                </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="PurchaseReturn" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="PurchaseReturn" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $("#purchaseReturnTbl").DataTable({
+                "order": [[2, "Desc"]]
+            });
+        });
+    </script>
+}

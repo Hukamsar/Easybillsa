@@ -1,0 +1,13 @@
+﻿@{
+    ViewData["Title"] = "Report Viewer";
+}
+
+<h2>Report Viewer</h2>
+<iframe id="reportFrame" width="100%" height="600px"></iframe>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var reportUrl = "@Url.Action("Index", "Report")";
+        document.getElementById("reportFrame").src = reportUrl;
+    });
+</script>

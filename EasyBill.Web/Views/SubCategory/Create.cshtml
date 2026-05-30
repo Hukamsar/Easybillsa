@@ -1,0 +1,324 @@
+﻿@model EasyBill.Models.ViewModels.SubCategoryVM
+@{
+    ViewData["Title"] = "Create SubCategory";
+}
+
+<style>
+
+    /* PAGE BG */
+    body {
+        background: #f4f7fb;
+    }
+
+    /* HEADER */
+    .card-header {
+        background: linear-gradient(135deg, #2b6ac9, #4a8df0);
+        color: white;
+        border-radius: 8px 8px 0 0;
+        font-weight: 600;
+        padding: 12px 18px;
+        font-size: 16px;
+    }
+
+    /* CARD */
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    }
+
+    .card-body {
+        padding: 15px;
+    }
+
+    /* FORM */
+    .form-row-custom {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .form-label {
+        font-size: 13px;
+        margin-bottom: 0;
+        min-width: 90px;
+        color: #444;
+    }
+
+    /* INPUT */
+    .form-control-sm {
+        height: 32px;
+        font-size: 13px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        transition: 0.2s;
+    }
+
+        .form-control-sm:focus {
+            border-color: #2b6ac9;
+            box-shadow: 0 0 0 2px rgba(43,106,201,0.15);
+        }
+
+   
+</style>
+
+
+<div class="card-header">Create SubCategory</div>
+
+<div class="container mt-2">
+    <div class="card">
+        <div class="card-body">
+
+            <form asp-action="Create" id="subCategoryForm">
+
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+
+                <div class="form-row-custom">
+
+                    <!-- CATEGORY -->
+                    <label class="form-label">Category *</label>
+
+                    <div class="d-flex align-items-center">
+
+                        <select asp-for="CategoryId"
+                                asp-items="@(ViewData["Categorydata"] as SelectList)"
+                                id="categoryId"
+                                class="form-control form-control-sm"
+                                style="width:200px;">
+                            <option value="">-- Select --</option>
+                        </select>
+
+                        <div class="shortcut-box">
+                            <span id="btnF2" class="shortcut-link">F2 - New</span>
+                            <span id="btnF3" class="shortcut-link text-danger">F3 - Mod</span>
+                        </div>
+
+                    </div>
+
+                    <span asp-validation-for="CategoryId" class="text-danger small"></span>
+
+                    <!-- NAME -->
+                    <label class="form-label ms-2">Name *</label>
+
+                    <input type="text"
+                           asp-for="Name"
+                           id="subCatName"
+                           class="form-control form-control-sm"
+                           style="width:220px;" />
+
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+
+                    <!-- BUTTON -->
+                    <div class="ms-auto">
+                        <button class="btn btn-primary btn-sm">Submit</button>
+                        <a asp-controller="SubCategory" asp-action="Index" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL ================= -->
+
+<div class="modal fade" id="catModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+
+            <div class="modal-header">
+                <h4 class="modal-title" id="catModalTitle">Add Category</h4>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="modalCatId" value="0" />
+
+                <label>Name</label>
+
+                <input type="text"
+                       id="modalCatName"
+                       class="form-control modal-input" />
+
+                <span id="modalError" class="text-danger small"></span>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button class="btn btn-success btn-sm px-4" id="btnSaveModal">
+                    Save
+                </button>
+
+                <button class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">
+                    Close
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+<link href="~/css/page.css" rel="stylesheet" />
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+            $("#categoryId").focus();
+
+            // BUTTON CLICK
+            $("#btnF2").click(() => openModal("new"));
+            $("#btnF3").click(() => openModal("edit"));
+
+            // KEYBOARD SHORTCUT
+            $(document).keydown(function (e) {
+                if (e.key === "F2") {
+                    e.preventDefault();
+                    openModal("new");
+                }
+                if (e.key === "F3") {
+                    e.preventDefault();
+                    openModal("edit");
+                }
+            });
+
+            function openModal(mode) {
+
+                $("#modalError").text("");
+
+                if (mode === "new") {
+                    $("#modalCatId").val(0);
+                    $("#modalCatName").val("");
+                    $("#catModalTitle").text("Add Category");
+                } else {
+
+                    let id = $("#categoryId").val();
+                    let text = $("#categoryId option:selected").text();
+
+                    if (!id) {
+                        alert("Select category first!");
+                        return;
+                    }
+
+                    $("#modalCatId").val(id);
+                    $("#modalCatName").val(text);
+                    $("#catModalTitle").text("Modify Category");
+                }
+
+                $("#catModal").modal("show");
+
+                setTimeout(() => {
+                    $("#modalCatName").focus();
+                }, 200);
+            }
+
+            // SAVE
+            $("#btnSaveModal").click(function () {
+
+                let id = $("#modalCatId").val();
+                let name = $("#modalCatName").val().trim();
+
+                if (name === "") {
+                    $("#modalError").text("Name required!");
+                    return;
+                }
+
+                $.ajax({
+                    url: '/SubCategory/QuickSaveCategory',
+                    type: 'POST',
+                    data: { id: id, name: name },
+
+                    success: function (res) {
+
+                        if (res.success) {
+                            $("#catModal").modal('hide');
+                            refreshDropdown(res.newId);
+                        } else {
+                            $("#modalError").text(res.message);
+                        }
+                    }
+                });
+            });
+
+            // REFRESH DROPDOWN
+            function refreshDropdown(selectedId) {
+
+                $.get('/SubCategory/GetCategories', function (data) {
+
+                    let ddl = $("#categoryId");
+                    ddl.empty();
+                    ddl.append('<option value="">-- Select --</option>');
+
+                    $.each(data, function (i, item) {
+
+                        let opt = $('<option>', {
+                            value: item.value,
+                            text: item.text
+                        });
+
+                        if (item.value == selectedId) {
+                            opt.attr('selected', 'selected');
+                        }
+
+                        ddl.append(opt);
+                    });
+
+                    Swal.fire({
+                        title: 'Confirm Save?',
+                        text: 'Do you want to save this category?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Save',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#198754',
+                        cancelButtonColor: '#dc3545',
+                        reverseButtons: true,
+                        focusConfirm: true,
+                        buttonsStyling: true
+                    });
+
+                });
+            }
+
+            // ENTER KEY SAVE
+            $("#modalCatName").keypress(function (e) {
+                if (e.which === 13) {
+                    $("#btnSaveModal").click();
+                }
+            });
+
+            // FORM SUBMIT
+            $("#subCategoryForm").on("submit", function (e) {
+
+                e.preventDefault();
+                let form = this;
+
+                Swal.fire({
+                    title: 'Confirm Save?',
+                    text: 'Do you want to save this subcategory?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Save',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#dc3545',
+                    reverseButtons: true,
+                    focusConfirm: true,
+                    buttonsStyling: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+
+            });
+
+        });
+    </script>
+
+}

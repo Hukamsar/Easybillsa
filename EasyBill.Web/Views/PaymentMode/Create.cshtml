@@ -1,0 +1,34 @@
+﻿@using EasyBill.Models.ViewModels
+@model ModeOfPaymentVM
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+
+<div class="card mb-3">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            Add ModeOfPayment
+    </div>
+    <div class="card-body">
+        <form method="post" asp-action="Create">
+            <div class="row">
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="Name" class="me-2 mb-0" style="width: 100px;">Name</label>
+                    <input type="text" asp-for="Name" class="form-control form-control-sm" required />
+                </div>
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="Description" class="me-2 mb-0" style="width: 100px;">Description</label>
+                    <textarea type="text" asp-for="Description" class="form-control form-control-sm"></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue mt-3">Save</button>
+        </form>
+
+    </div>
+</div>

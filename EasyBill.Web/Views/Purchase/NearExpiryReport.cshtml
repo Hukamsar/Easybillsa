@@ -1,0 +1,109 @@
+﻿@using EasyBill.Models.ViewModels
+@model List<NearExpiryVM>
+
+@{
+    ViewData["Title"] = "Near Expiry Report";
+}
+
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Near Expiry Report
+    </div>
+</div>
+
+
+<form method="get" asp-action="NearExpiryReport" asp-controller="Purchase" class="mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label for="expiryFrom" class="form-label">Expiry From</label>
+            <input type="date" name="expiryFrom" id="expiryFrom" class="form-control form-control-sm"
+                   value="@(Context.Request.Query["expiryFrom"])" />
+        </div>
+        <div class="col-md-3">
+            <label for="expiryTo" class="form-label">Expiry To</label>
+            <input type="date" name="expiryTo" id="expiryTo" class="form-control form-control-sm"
+                   value="@(Context.Request.Query["expiryTo"])" />
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-sm w-100 text-white"
+                    style="background-color: #2b6ac9 !important;">
+                Apply 
+            </button>
+        </div>
+    </div>
+</form>
+<div class="row mb-2">
+    <div class="col text-end">
+<a asp-action="NearExpiryReportExcel"
+   asp-route-expiryFrom="@Context.Request.Query["expiryFrom"]"
+   asp-route-expiryTo="@Context.Request.Query["expiryTo"]">
+    <i class="fa-solid fa-file-excel text-success fs-5"></i>
+</a>
+
+<a asp-action="NearExpiryReportPdf"
+   asp-route-expiryFrom="@Context.Request.Query["expiryFrom"]"
+   asp-route-expiryTo="@Context.Request.Query["expiryTo"]">
+    <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+</a>
+</div>
+</div>
+
+
+<table id="NearId" class="table table-bordered table-striped table-sm">
+    <thead>
+        <tr> 
+            <th>Item Name</th>
+            <th>Category</th>
+            <th>Batch No</th>
+            <th>Expiry Date</th>
+            <th>Days Left</th>
+            <th>Stock</th> 
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr class="@(item.DaysToExpire <= 30 ? "table-danger" : "")"> 
+                <td>@item.ItemName</td>
+                <td>@item.CategoryName</td>
+                <td>@item.BatchNo</td>
+                <td>@item.ExpiryDate?.ToString("dd-MMM-yyyy")</td>
+                <td>@item.DaysToExpire</td>
+                <td>@item.Stocks</td> 
+            </tr>
+        }
+    </tbody>
+</table>
+@section Scripts {
+
+    <script>
+        $(document).ready(function () {
+
+           $("#NearId").DataTable({
+            ordering: false
+           });
+
+            $(".datepicker").datepicker({
+                dateFormat: "dd-mm-yy",
+                changeMonth: true,
+                changeYear: true
+            });
+        });
+    </script>
+}
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+        Remove sorting arrows
+        table.dataTable thead th.sorting,
+        table.dataTable thead th.sorting_asc,
+        table.dataTable thead th.sorting_desc {
+            background-image: none !important;
+            cursor: default !important;
+        }
+</style>

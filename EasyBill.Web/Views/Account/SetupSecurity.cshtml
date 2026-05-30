@@ -1,0 +1,63 @@
+@model EasyBill.Models.ViewModels.SetupSecurityViewModel
+
+@{
+    ViewData["Title"] = "Setup Security";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    Complete Security Setup
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">
+                        First login complete karne ke liye PIN aur password set karein.
+                    </p>
+
+                    <form asp-action="SetupSecurity" method="post">
+                        @Html.AntiForgeryToken()
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label">Email</label>
+                            <input asp-for="Email" class="form-control" />
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Password" class="form-label">Password</label>
+                            <input asp-for="Password" class="form-control" />
+                            <span asp-validation-for="Password" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ConfirmPassword" class="form-label">Confirm Password</label>
+                            <input asp-for="ConfirmPassword" class="form-control" />
+                            <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Pin" class="form-label">PIN (4 to 6 digits)</label>
+                            <input asp-for="Pin" class="form-control" />
+                            <span asp-validation-for="Pin" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ConfirmPin" class="form-label">Confirm PIN</label>
+                            <input asp-for="ConfirmPin" class="form-control" />
+                            <span asp-validation-for="ConfirmPin" class="text-danger"></span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Save Security Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

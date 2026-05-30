@@ -1,0 +1,243 @@
+﻿@model IEnumerable<EasyBill.Models.ViewModels.SalesVM>
+
+@{
+    ViewData["Title"] = "Billwise Collection Report";
+
+    decimal totalAmount = Model?.Sum(x => x.TotalPayable) ?? 0;
+    decimal totalPaid = Model?.Sum(x => x.PaidAmount) ?? 0;
+    decimal totalNet = Model?.Sum(x => x.NetCollection) ?? 0;
+    decimal totalreturnamt = Model?.Sum(x => x.ReturnAmount) ?? 0;
+}
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center"
+         style="background:#2b6ac9">
+        <span class="fw-bold">
+            Billwise Collection Report
+        </span>
+
+        <span class="ms-auto">
+            Total: ₹ <span class="fw-bold">@totalAmount.ToString("0.00")</span> |
+            Net Collection: ₹ <span class="fw-bold">@totalNet.ToString("0.00")</span>
+        </span>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="card shadow-sm p-3 mb-4">
+    <form method="get" asp-action="Billwisecollectionreport">
+        <div class="row g-3 align-items-end">
+
+            <!-- From Date -->
+            <div class="col-md-2">
+                <label class="fw-bold">From Date</label>
+                <input type="text" name="fromDate"
+                       value="@ViewBag.FromDate"
+                       class="form-control form-control-sm datepicker" />
+            </div>
+
+            <!-- To Date -->
+            <div class="col-md-2">
+                <label class="fw-bold">To Date</label>
+                <input type="text" name="toDate"
+                       value="@ViewBag.ToDate"
+                       class="form-control form-control-sm datepicker" />
+            </div>
+
+            <!-- Customer Dropdown -->
+            <div class="col-md-2">
+                <label class="fw-bold">Customer</label>
+                <select name="CustomerId"
+                        class="form-control form-control-sm">
+                    <option value="">All</option>
+
+                    @if (ViewBag.CustomerList != null)
+                    {
+                        foreach (var customer in ViewBag.CustomerList)
+                        {
+                            <option value="@customer.Value"
+                                    selected="@(Context.Request.Query["CustomerId"] == customer.Value ? "selected" : null)">
+                                @customer.Text
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Bill No Dropdown -->
+            <div class="col-md-2">
+                <label class="fw-bold">Bill No</label>
+                <select name="billNo"
+                        class="form-control form-control-sm">
+                    <option value="">All</option>
+
+                    @if (ViewBag.BillList != null)
+                    {
+                        foreach (var bill in ViewBag.BillList)
+                        {
+                            <option value="@bill.Value"
+                                    selected="@(Context.Request.Query["billNo"] == bill.Value ? "selected" : null)">
+                                @bill.Text
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <!-- Search Button -->
+            <div class="col-md-2">
+                <button type="submit"
+                        class="btn btn-sm w-100 text-white"
+                        style="background:#2b6ac9">
+                    Search
+                </button>
+            </div>
+
+        </div>
+    </form>
+</div>
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="ExportBillWiseCollectionExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+        <a asp-action="ExportBillWiseCollectionPdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+    </div>
+</div>
+<div class="card shadow-sm p-3">
+    <div class="table-responsive">
+        <table id="collectionTable" class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Sr</th>
+                    <th>Bill No</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                 
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Paid</th>
+                    <th class="text-end">Net Collection</th>
+                    <th class="text-end">Return Amt</th>
+                    <th></th>
+                
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td></td>
+                            <td>@item.BillNo</td>
+                            <td>@item.BillDate?.ToString("dd-MM-yyyy")</td>
+                            <td>@item.CustomerName</td>
+                         
+                            <td class="text-end">@item.TotalPayable.ToString("0.00")</td>
+                            <td class="text-end">@item.PaidAmount.ToString("0.00")</td>
+                            <td class="text-end">@item.NetCollection.ToString("0.00")</td>
+                            <td class="text-end">@item.ReturnAmount.ToString("0.00")</td>
+                            <td>
+                                <a href="javascript:void(0)" class="sales-report-edit" data-url="@Url.Action("Edit", "Sales", new { id = item.Id })" title="Edit">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            </td>
+                       
+                        </tr>
+                    }
+                }
+            </tbody>
+
+            <tfoot class="table-secondary fw-bold">
+                <tr>
+                    <td></td> <!-- Sr -->
+                    <td colspan="3" class="text-end">TOTAL</td> <!-- BillNo, Date, Patient -->
+                    <td class="text-end">@totalAmount.ToString("0.00")</td>
+                    <td class="text-end">@totalPaid.ToString("0.00")</td>
+                    <td class="text-end">@totalNet.ToString("0.00")</td>
+                    <td class="text-end">@totalreturnamt.ToString("0.00")</td>
+                    <td></td>
+                  
+                </tr>
+            </tfoot>
+
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="salesEditReportModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header text-white py-2" style="background:#2b6ac9">
+                <h6 class="modal-title mb-0">Edit Sales</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="salesEditFrame" style="width:100%;height:calc(100vh - 50px);border:0;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    <script>
+        $(document).ready(function () {
+
+            var t = $("#collectionTable").DataTable({
+                "order": [[2, "desc"]],
+                "columnDefs": [
+                    { "orderable": false, "targets": "_all" }
+                ]
+            });
+
+            t.on('order.dt search.dt', function () {
+                t.column(0, { search: 'applied', order: 'applied' }).nodes()
+                    .each(function (cell, i) {
+                        cell.innerHTML = i + 1;
+                    });
+            }).draw();
+
+            $(".datepicker").datepicker({
+                dateFormat: "dd-mm-yy",
+                changeMonth: true,
+                changeYear: true
+            });
+
+            $(document).on("click", ".sales-report-edit", function () {
+                $("#salesEditFrame").attr("src", $(this).data("url"));
+                $("#salesEditReportModal").modal("show");
+            });
+
+            $("#salesEditReportModal").on("hidden.bs.modal", function () {
+                $("#salesEditFrame").attr("src", "");
+            });
+
+        });
+
+        window.addEventListener("message", function (e) {
+            if (e.data && e.data.salesEditSaved) {
+                $("#salesEditReportModal").modal("hide");
+                window.location.reload();
+            }
+            if (e.data && e.data.salesEditCancel) {
+                $("#salesEditReportModal").modal("hide");
+            }
+        });
+    </script>
+
+}

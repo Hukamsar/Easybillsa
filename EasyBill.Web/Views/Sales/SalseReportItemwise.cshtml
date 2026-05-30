@@ -1,0 +1,285 @@
+﻿@using EasyBill.Models.ViewModels
+@model List<EasyBill.Models.ViewModels.StockVM>
+@{
+    ViewData["Title"] = "Item Wise Sales Report";
+    int sno = 1;
+}
+@{
+    decimal totalQty = 0;
+    decimal totalAmount = 0;
+
+    if (ViewBag.ReportType == "Summary")
+    {
+        var summary = ViewBag.Summary as List<StockVM>;
+        totalQty = summary?.Sum(x => x.Qty) ?? 0;
+        totalAmount = summary?.Sum(x => x.Amount ?? 0) ?? 0;
+    }
+    else
+    {
+        totalQty = Model?.Sum(x => x.Qty) ?? 0;
+        totalAmount = Model?.Sum(x => x.Amount ?? 0) ?? 0;
+    }
+}
+
+<style>
+
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center"
+         style="background:#2b6ac9">
+
+        <span class="fw-bold">
+            Item Wise Sales Report
+        </span>
+
+        
+        <span class="ms-auto">
+            Total Qty:  <span class="fw-bold">@totalQty.ToString("0.0")</span> |
+            Total Amount: ₹ <span class="fw-bold">@totalAmount.ToString("0.00")</span>
+        </span>
+
+    </div>
+</div>
+
+<!-- ================= FILTER HEADER ================= -->
+<form method="get" class="card p-3 mb-3">
+    <div class="row">
+
+        <div class="col-md-2">
+            <label>Date From</label>
+            <input type="date"
+                   id="fromDate"
+                   name="fromDate"
+                   class="form-control"
+                   value="@ViewBag.FromDate" />
+        </div>
+
+        <div class="col-md-2">
+            <label>Date To</label>
+            <input type="date"
+                   id="toDate"
+                   name="toDate"
+                   class="form-control"
+                   value="@ViewBag.ToDate" />
+        </div>
+
+        <div class="col-md-2">
+            <label>Company</label>
+            <select id="companyId"
+                    name="companyId"
+                    class="form-control"
+                    asp-items="@(ViewBag.CompanyList as SelectList)">
+                <option value="">All</option>
+            </select>
+
+        </div>
+
+        <div class="col-md-2">
+            <label>Division</label>
+            <select id="divisionId"
+                    name="divisionId"
+                    class="form-control"
+                    asp-items="@(ViewBag.DivisionList as SelectList)">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-md-2 mt-4">
+            <div class="mt-2">
+                <label class="me-3">
+                    <input type="radio" name="reportType" value="Summary"
+                           @(ViewBag.ReportType == "Summary" ? "checked" : "") />
+                    Summary
+                </label>
+
+                <label>
+                    <input type="radio" name="reportType" value="Details"
+                           @(ViewBag.ReportType == "Details" ? "checked" : "") />
+                    Details
+                </label>
+            </div>
+        </div>
+
+
+        <div class="col-md-2 text-end mt-3">
+            <button type="submit" class="btn text-light" style="background: #2b6ac9;">
+                Search
+            </button>
+        </div>
+    </div>
+        
+
+</form>
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="ExportItemWiseSalesExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-companyId="companyId"
+           asp-route-divisionId="divisionId"
+           asp-route-reportType="@ViewBag.ReportType">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+
+        <a asp-action="ExportItemWiseSalesPdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-companyId="companyId"
+           asp-route-divisionId="divisionId"
+           asp-route-reportType="@ViewBag.ReportType">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+
+</div>
+</div>
+
+@if (ViewBag.ReportType == "Details")
+{
+    <table id="itemWisetbl" class="table table-bordered table-striped">
+        <thead class="table-primary">
+            <tr>
+                <th>S.No</th>
+                <th>Bill No</th>
+                <th>Bill Date</th>
+                <th>Item Name</th>
+                <th class="text-end">Qty</th>
+                <th class="text-end">Packing</th>
+                <th class="text-end">MRP</th>
+                <th class="text-end">Rate</th>
+                <th class="text-end">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@sno</td>
+                    <td>@item.BillNo</td>
+                    <td>@item.BillDate?.ToString("dd-MM-yyyy")</td>
+                    <td>@item.ItemName</td>
+                    <td class="text-end">@item.StockDisplay</td>
+                    <td class="text-end">@item.Packing</td>
+
+                    <td class="text-end">@item.Mrp.ToString("0.00")</td>
+                    <td class="text-end">@item.Rate.ToString("0.00")</td>
+                    <td class="text-end">@item.Amount?.ToString("0.00")</td>
+                </tr>
+                sno++;
+            }
+        </tbody>
+            <!-- ===== GRAND TOTAL (LAST ROW, NO COLSPAN) ===== -->
+        <tfoot class="table-secondary fw-bold">
+            <tr class="fw-bold table-secondary">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="text-end">TOTAL</td>
+                <td class="text-end">
+                    @Model.Sum(x => x.Qty).ToString("0.00")
+                </td>
+        <td></td>
+        <td></td>
+        <td></td>
+
+
+                <td class="text-end">
+                    @Model.Sum(x => x.Amount ?? 0).ToString("0.00")
+                </td>
+            </tr>
+            </tfoot>
+       
+
+    </table>
+}
+
+@if (ViewBag.ReportType == "Summary")
+{
+    var summary = ViewBag.Summary as List<StockVM>;
+
+    <table id="summaryItemTble" class="table table-bordered table-striped">
+        <thead class="table-primary">
+            <tr>
+                <th>S.No</th>
+                <th>Item Name</th>
+                <th class="text-end">Total Qty</th>
+                <th class="text-end">Packing</th>
+
+                <th class="text-end">Total Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                int s = 1;
+            }
+            @foreach (var item in summary)
+            {
+                <tr>
+                    <td>@s</td>
+                    <td>@item.ItemName</td>
+                    <td class="text-end">@item.StockDisplay</td>
+                    <td class="text-end">@item.Packing</td>
+                   @*  <td class="text-end">@item.Qty.ToString("0.0").Replace(".", " : ")</td> *@
+                    <td class="text-end">@item.Amount?.ToString("0.00")</td>
+                </tr>
+                s++;
+            }
+        </tbody>
+            <!-- ===== GRAND TOTAL ROW (NO COLSPAN) ===== -->
+        <tfoot class="table-secondary fw-bold">
+            <tr>
+                <td></td>
+                <td class="text-end">TOTAL</td>
+
+                <!-- 🔥 CHANGE 3: Summary Table Total Qty in Decimal -->
+                <td class="text-end">
+                    @summary.Sum(x => x.Qty).ToString("0.00")
+                </td>
+                <td></td>
+                <td class="text-end">
+                    @summary.Sum(x => x.Amount ?? 0).ToString("0.00")
+                </td>
+            </tr>
+        </tfoot>
+
+
+    </table>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+
+            $("#summaryItemTble").DataTable({
+                ordering: false,
+                columnDefs: [{ orderable: false, targets: 0 }]
+            });
+
+            var t = $("#itemWisetbl").DataTable({
+                "order": [[2, "desc"]],
+                columnDefs: [{ orderable: false, targets: "_all" }]
+            });
+
+            t.on('order.dt search.dt', function () {
+                t.column(0, { search: 'applied', order: 'applied' }).nodes().each(function (cell, i) {
+                    cell.innerHTML = i + 1;
+                });
+            }).draw();
+
+                    $("input[name='viewType']").change(function () {
+            if ($(this).val() === "summary") {
+                $("#summaryDiv").show();
+                $("#detailsDiv").hide();
+            } else {
+                $("#summaryDiv").hide();
+                $("#detailsDiv").show();
+            }
+        });
+
+
+        });
+    </script>
+}

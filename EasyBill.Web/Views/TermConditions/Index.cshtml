@@ -1,0 +1,171 @@
+﻿@using EasyBill.Models.ViewModels
+@model TermConditionsVM
+
+@{
+    ViewData["Title"] = "Index";
+}
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+    }
+</style>
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Add Term & Conditions
+    </div>
+    <div class="card-body">
+        <form method="post" asp-controller="TermConditions" asp-action="Create" id="TermForm">
+            <div class="row">
+                <div class="col-md-2 mb-2">
+                    <label asp-for="Name" class="me-2 mb-0">Name</label>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <textarea asp-for="Name"
+                              class="form-control form-control-sm"
+                              rows="4"
+                              placeholder="Enter terms and conditions..."></textarea>
+
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue mt-3">
+                Save
+            </button>
+        </form>
+    </div>
+</div>
+<table class="table table-bordered table-striped">
+    <thead class="custom-header">
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.TermsConditions)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Name)
+                </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+
+                        <a asp-controller="TermConditions" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="TermConditions" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        $(document).ready(function () {
+
+            let isSubmitting = false;
+
+            $("#TermForm").on("submit", function (e) {
+
+                if (isSubmitting) return false;
+
+                e.preventDefault();
+
+                var form = this;
+                var name = $("#Name").val().trim();
+
+                if (!name) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Please enter Name!'
+                    });
+                    return;
+                }
+
+                $.ajax({
+                    url: "/TermConditions/CheckDuplicate",
+                    type: "GET",
+                    data: {
+                        Name: name,
+                        id: 0
+                    },
+                    success: function (response) {
+
+                        if (response.exists) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Warning',
+                                text: 'already exists!'
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Are you sure?',
+                                text: "Do you want to save this record?",
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Yes, save it!',
+                                cancelButtonText: 'Cancel',
+                                confirmButtonColor: '#3085d6',   // blue (same as delete)
+                                 cancelButtonColor: '#d33'
+                            }).then((result) => {
+
+                                if (result.isConfirmed) {
+                                    isSubmitting = true;
+                                    form.submit();
+                                }
+
+                            });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Error checking duplicate'
+                        });
+                    }
+                });
+
+            });
+
+        });
+    </script>
+}
+
+@if (TempData["success"] != null)
+{
+    <script>
+        Swal.fire({
+            title: 'Success!',
+            text: '@TempData["success"]',
+            icon: 'success',
+            confirmButtonText: 'OK'
+        });
+    </script>
+}

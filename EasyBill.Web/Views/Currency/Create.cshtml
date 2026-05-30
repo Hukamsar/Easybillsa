@@ -1,0 +1,153 @@
+﻿@model EasyBill.Models.ViewModels.CurrencyVM
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .swal2-confirm,
+    .swal2-cancel {
+        border-radius: 8px !important;
+        padding: 8px 20px !important;
+        font-weight: 500 !important;
+        transition: all 0.25s ease-in-out !important;
+        margin: 0 8px !important;
+    }
+
+        .swal2-confirm:hover {
+            background-color: #157347 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(25, 135, 84, 0.4);
+        }
+
+        .swal2-cancel:hover {
+            background-color: #bb2d3b !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(220, 53, 69, 0.4);
+        }
+
+        .swal2-confirm:focus,
+        .swal2-cancel:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.4) !important;
+        }
+</style>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+            <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+                Create Currency
+        </div>
+
+        <div class="card-body">
+            <form asp-action="Create" method="post" id="CurrencyForm">
+
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <!-- ROW 1 -->
+                <div class="row mb-2 align-items-center">
+                    <div class="col-md-2 text-end">
+                        <label asp-for="Code" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="Code" class="form-control" />
+                        <span asp-validation-for="Code" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-2 text-end">
+                        <label asp-for="Name" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="Name" class="form-control" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- ROW 2 -->
+                <div class="row mb-2 align-items-center">
+                    <div class="col-md-2 text-end">
+                        <label asp-for="Symbol" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="Symbol" class="form-control" />
+                        <span asp-validation-for="Symbol" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-2 text-end">
+                        <label asp-for="SubName" class="form-label"></label>
+                        <span class="text-danger"> *</span>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="SubName" class="form-control" />
+                        <span asp-validation-for="SubName" class="text-danger"></span>
+                    </div>
+                </div>
+
+
+                <!-- Buttons -->
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary px-4">Save</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary px-4">Cancel</a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        $(document).ready(function () {
+
+            $("#CurrencyForm").on("submit", function (e) {
+
+                e.preventDefault();
+                let form = this;
+
+                // Unobtrusive validation
+                if ($(this).valid && !$(this).valid()) {
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Confirm Save?',
+                    text: 'Do you want to save this Currency?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Save',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#dc3545',
+                    reverseButtons: true,
+                    focusConfirm: true,
+                    buttonsStyling: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $("#CurrencyForm").off("submit"); // loop avoid
+                        form.submit();
+                    }
+                });
+
+            });
+
+        });
+    </script>
+
+    @if (TempData["success"] != null)
+    {
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: '@TempData["success"]',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#2b6ac9'
+            });
+        </script>
+    }
+}

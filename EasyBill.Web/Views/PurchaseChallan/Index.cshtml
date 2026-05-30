@@ -1,0 +1,165 @@
+@model IEnumerable<EasyBill.Models.Entity.PurchaseChallan>
+@{
+    ViewData["Title"] = "Purchase Challan List";
+}
+
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+    }
+
+    .table-sm th, .table-sm td {
+        vertical-align: middle;
+    }
+</style>
+
+<div class="card mb-3 shadow-sm">
+    <div class="row card-header py-2 d-flex justify-content-between align-items-center">
+        <div class="col-sm-2">
+        <span class="fw-bold"><i class="bi bi-list-ul"></i> Purchase Challan List</span>
+        </div>
+        <div class="col-sm-8"></div>
+        <div class="col-sm-2">
+        <a asp-action="Create" class="btn btn-sm btn-light text-dark fw-bold">
+            <i class="bi bi-plus-circle"></i> Create New
+        </a>
+        </div>
+    </div>
+    <div class="card-body">
+        @Html.AntiForgeryToken()
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success py-2">@TempData["SuccessMessage"]</div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger py-2">@TempData["ErrorMessage"]</div>
+        }
+
+        <div class="table-responsive">
+            <table id="challanTable" class="table table-bordered table-striped table-sm text-center">
+                <thead class="custom-header">
+                    <tr>
+                        <th>#</th>
+                        <th>Challan No</th>
+                        <th>Date</th>
+                        <th>Supplier</th>
+                        <th>Status</th>
+                        <th>Total Payable</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        var counter = 1;
+                        foreach (var item in Model)
+                        {
+                            var isConverted = item.ConvertedPurchaseId.HasValue || string.Equals(item.Status, "Converted", StringComparison.OrdinalIgnoreCase);
+
+                            <tr id="row-@item.Id">
+                                <td>@counter</td>
+                                <td class="fw-bold">@item.BillNo</td>
+                                <td>@item.BillDate?.ToString("dd-MM-yyyy")</td>
+                                <td class="text-start">@(item.Suppliers?.FirstName ?? "N/A")</td>
+                                <td>
+                                    @if (isConverted)
+                                    {
+                                        <span class="badge bg-success px-2 py-1">Converted</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark px-2 py-1">Pending</span>
+                                    }
+                                </td>
+                                <td class="text-end fw-bold">@item.TotalPayable.ToString("0.00")</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        @if (!isConverted)
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="bi bi-pencil-square"></i> Edit
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" onclick="deleteChallan(@item.Id)">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">Locked</span>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                            counter++;
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(document).ready(function () {
+            $('#challanTable').DataTable({
+                "order": [[1, "desc"]],
+                "pageLength": 25,
+                "columnDefs": [
+                    { "orderable": false, "targets": [6] }
+                ]
+            });
+        });
+
+        function deleteChallan(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Deleting this pending challan will remove it permanently.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '/PurchaseChallan/Delete/' + id,
+                    type: 'POST',
+                    data: {
+                        __RequestVerificationToken: token
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            Swal.fire('Deleted!', response.message, 'success');
+                            $('#row-' + id).fadeOut(300, function () {
+                                $(this).remove();
+                            });
+                            return;
+                        }
+
+                        Swal.fire('Error!', response.message, 'error');
+                    },
+                    error: function () {
+                        Swal.fire('Error!', 'An error occurred while communicating with the server.', 'error');
+                    }
+                });
+            });
+        }
+    </script>
+}

@@ -1,0 +1,116 @@
+@model EasyBill.Models.ViewModels.CurrentStockRegisterVM
+
+@{
+    ViewData["Title"] = "Current Stock Register";
+}
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center"
+         style="background:#2b6ac9;">
+        <span class="fw-bold">
+            Current Stock Register
+        </span>
+        <span class="ms-auto">
+            Current Stock :
+            <span class="fw-bold">@Model.CurrentStockDisplay</span>
+        </span>
+    </div>
+</div>
+<div class="card shadow-sm p-3 mb-3">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-6">
+            <label class="fw-bold">Item</label>
+            <div>@Model.ItemName</div>
+        </div>
+
+        <div class="col-md-3">
+            <label class="fw-bold">Unit</label>
+            <div>@Model.Unit</div>
+        </div>
+
+        <div class="col-md-3">
+            <label class="fw-bold">Current Stock</label>
+            <div>@Model.CurrentStockDisplay</div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="CurrentStock"
+           asp-controller="Purchase"
+           class="btn btn-sm btn-outline-secondary me-1">
+            Back
+        </a>
+        <a asp-action="CurrentStockBatchDetails"
+           asp-controller="Purchase"
+           asp-route-itemId="@Model.ItemId"
+           class="btn btn-sm text-white"
+           style="background:#2b6ac9;">
+            Batch Details
+        </a>
+    </div>
+</div>
+
+<table id="currentStockRegisterTable"
+       class="table table-bordered table-striped table-sm">
+    <thead>
+        <tr>
+            <th>Bill No</th>
+            <th>Date</th>
+            <th>Particulars</th>
+            <th>Type</th>
+            <th class="text-end">Receive</th>
+            <th class="text-end">Issue</th>
+            <th class="text-end">Balance</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Rows != null && Model.Rows.Any())
+        {
+            foreach (var row in Model.Rows)
+            {
+                <tr class="register-row"
+                    data-href="@row.NavigateUrl?returnUrl=@Context.Request.Path@Context.Request.QueryString">
+                    <td>@row.BillNo</td>
+                    <td>@row.BillDate?.ToString("dd-MM-yyyy")</td>
+                    <td>@row.Particulars</td>
+                    <td>@row.Type</td>
+                    <td class="text-end">@row.ReceiveDisplay</td>
+                    <td class="text-end">@row.IssueDisplay</td>
+                    <td class="text-end fw-bold">@row.BalanceDisplay</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<script>
+    $(document).ready(function () {
+        $("#currentStockRegisterTable").DataTable({
+            ordering: false,
+            pageLength: 50
+        });
+
+        // Each row opens the original document so the user can verify the exact stock movement.
+        $("#currentStockRegisterTable tbody").on("click", "tr.register-row", function () {
+            var navigateUrl = $(this).data("href");
+            if (navigateUrl) {
+                window.location.href = navigateUrl;
+            }
+        });
+    });
+</script>
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    #currentStockRegisterTable tbody tr.register-row:hover {
+        background: #e6f2f2;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+</style>

@@ -1,0 +1,48 @@
+﻿@using EasyBill.Models.ViewModels
+@model StateVM
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+
+<div class="card mb-3">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            Add State
+    </div>
+    <div class="card-body">
+        <form method="post" asp-controller="State" asp-action="Create">
+           
+            <div class="row">
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="CountryId" class="me-2 mb-0" style="width: 100px;">Country
+                        <span class="text-danger">*</span>
+                    </label>
+                    <select asp-for="CountryId" asp-items="@ViewBag.Country" class="form-control form-control-sm">
+                        <option>select</option>
+                    </select>
+                 @*    <span asp-validation-for="CountryId" class="text-danger small"></span> *@
+                </div>
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="Name" class="me-2 mb-0" style="width: 100px;">Name
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" asp-for="Name" class="form-control form-control-sm" />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+                </div>
+            </div>
+
+@*             <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue mt-3">Save</button> *@
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue">Save</button>
+                <a asp-controller="State" asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+
+    </div>
+</div>

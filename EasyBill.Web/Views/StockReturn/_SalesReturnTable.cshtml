@@ -1,0 +1,53 @@
+﻿@model IEnumerable<StockReturn>
+
+<table class="table table-bordered table-striped table-hover" id="salesTable">
+    <thead class="table-light">
+        <tr>
+            <th>Challan No</th>
+            <th>Challan Date</th>
+            <th>Customer</th>
+            <th>Mobile No</th>
+            <th>Address</th>
+            <th>GST Amt</th> 
+            <th>Total Amt</th>
+            <th style="width: 100px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model != null && Model.Any())
+        {
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.ChallanNo</td>
+                    <td>@item.ChallanDate?.ToString("dd/MM/yyyy")</td>
+                    <td>@item.Customers?.Name</td>
+                    <td>@item.MobileNo</td>
+                    <td>@item.Address</td>
+                    <td>@item.TotalGstAmt</td>
+                    <td>@item.TotalPayable</td>
+                    <td>
+                        <div class="btn-group" role="group" style="float:right">
+                            <a asp-controller="StockReturn"
+                               asp-action="Edit"
+                               asp-route-id="@item.Id"
+                               class="btn btn-sm btn-outline-primary"
+                               title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a asp-controller="StockReturn"
+                               asp-action="Delete"
+                               asp-route-id="@item.Id"
+                               class="btn btn-sm btn-outline-danger btn-delete"
+                               title="Delete"
+                               data-id="@item.Id"
+                               data-controller="@ViewContext.RouteData.Values["controller"]">
+                                <i class="bi bi-trash-fill text-danger p-1"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>

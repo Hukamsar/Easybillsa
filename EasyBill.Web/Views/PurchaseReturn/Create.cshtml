@@ -1,0 +1,3101 @@
+﻿@model EasyBill.Models.ViewModels.PurchaseReturnVM
+@{
+    ViewData["Title"] = "Create Purchase Return";
+}
+
+<style>
+    /* ===============================
+               BATCH MODAL STYLING
+               =============================== */
+    .batch-row.selected td {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        font-weight: 500;
+    }
+
+    #batchModal.keyboard-nav .batch-row:hover td {
+        background-color: inherit !important;
+        color: inherit !important;
+        cursor: default;
+    }
+
+    #batchModal.mouse-nav .batch-row:hover td {
+        background-color: #f1d27a !important;
+        color: #000 !important;
+        cursor: pointer;
+    }
+
+    #batchModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #batchModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+    .batch-table-wrapper {
+        max-height: 350px;
+        overflow-y: auto;
+        position: relative;
+    }
+
+    #batchTable thead th {
+        position: sticky;
+        top: 0;
+        background-color: #2465c7f7;
+        color: #fff;
+        font-weight: 700;
+        z-index: 2;
+    }
+</style>
+
+<style>
+    /* ===============================
+               ITEM MODAL STYLING
+               =============================== */
+    .item-row.selected td {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        font-weight: 500;
+    }
+
+    #itemModal.keyboard-nav .item-row:hover td {
+        background-color: inherit !important;
+        color: inherit !important;
+        cursor: default;
+    }
+
+    #itemModal.mouse-nav .item-row:hover td {
+        background-color: #f1d27a !important;
+        color: #000 !important;
+        cursor: pointer;
+    }
+
+    .item-row:focus {
+        outline: none;
+    }
+
+    .item-row {
+        scroll-margin-top: 50px;
+    }
+
+    #itemModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #itemModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+    #itemTable thead th {
+        background-color: #2465c7f7 !important;
+        color: #fff !important;
+        font-weight: 700;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+</style>
+
+<style>
+    /* ===============================
+               SUPPLIER MODAL STYLING
+               =============================== */
+    #supplierModal .modal-header {
+        background-color: #2465c7f7;
+        color: #fff;
+    }
+
+        #supplierModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+    #supplierTable thead th {
+        background-color: #2465c7f7 !important;
+        color: #fff !important;
+        font-weight: 700;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .supplier-row.selected td {
+        background-color: #d4af37 !important;
+        color: #000 !important;
+        font-weight: 500;
+    }
+
+    #supplierModal.keyboard-nav .supplier-row:hover td {
+        background-color: inherit !important;
+        color: inherit !important;
+        cursor: default;
+    }
+
+    #supplierModal.mouse-nav .supplier-row:hover td {
+        background-color: #f1d27a !important;
+        color: #000 !important;
+        cursor: pointer;
+    }
+
+    .supplier-row {
+        scroll-margin-top: 50px;
+    }
+
+        .supplier-row:focus {
+            outline: none;
+        }
+</style>
+
+<style>
+    .qty.is-invalid {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    }
+</style>
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+<style>
+    /* ====================================
+       RETURN HISTORY TABLE STYLING (COMPACT)
+       ==================================== */
+
+    #itemReturnInfoWrapper {
+        background: linear-gradient(to bottom, #fffbf5, #ffffff);
+        border: 1.5px solid #ffd9a3 !important; /* ✅ Orange tone */
+        box-shadow: 0 1px 4px rgba(255, 152, 0, 0.08);
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .return-history-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        overflow: hidden;
+        border-radius: 6px;
+        font-size: 11px;
+    }
+
+        .return-history-table thead tr {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); /* ✅ Orange gradient */
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .return-history-table thead th {
+            border: none !important;
+            padding: 6px 5px;
+            vertical-align: middle;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+            .return-history-table thead th:first-child {
+                border-top-left-radius: 6px;
+            }
+
+            .return-history-table thead th:last-child {
+                border-top-right-radius: 6px;
+            }
+
+        .return-history-table tbody tr {
+            border-bottom: 1px solid #ffe4c4; /* ✅ Light orange border */
+            transition: all 0.15s ease;
+        }
+
+            .return-history-table tbody tr:hover {
+                background-color: #fff3e0; /* ✅ Orange hover */
+                transform: scale(1.005);
+            }
+
+        .return-history-table tbody td {
+            padding: 5px 5px;
+            font-size: 11px;
+            border-left: 1px solid #ffe4c4;
+            border-right: 1px solid #ffe4c4;
+            vertical-align: middle;
+            line-height: 1.3;
+        }
+
+            .return-history-table tbody td:first-child {
+                border-left: none;
+            }
+
+            .return-history-table tbody td:last-child {
+                border-right: none;
+            }
+
+        .return-history-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Alternating row colors */
+        .return-history-table tbody tr:nth-child(even) {
+            background-color: #fffaf0; /* ✅ Very light orange */
+        }
+
+        .return-history-table tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+    /* Responsive scrolling */
+    .table-responsive {
+        border-radius: 6px;
+        overflow-x: auto;
+    }
+
+    /* Custom scrollbar - Orange theme */
+    #itemReturnInfoWrapper::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    #itemReturnInfoWrapper::-webkit-scrollbar-track {
+        background: #fff8f0;
+        border-radius: 3px;
+    }
+
+    #itemReturnInfoWrapper::-webkit-scrollbar-thumb {
+        background: #ffd9a3; /* ✅ Orange scrollbar */
+        border-radius: 3px;
+    }
+
+        #itemReturnInfoWrapper::-webkit-scrollbar-thumb:hover {
+            background: #ff9800;
+        }
+
+    /* Empty state */
+    #itemReturnInfoBody:empty::after {
+        content: "No return history available";
+        display: block;
+        text-align: center;
+        padding: 20px;
+        color: #6c757d;
+        font-style: italic;
+        font-size: 11px;
+    }
+</style>
+
+<style>
+    #refreshBtn:hover {
+        opacity: 0.85;
+        transform: rotate(90deg);
+        transition: all 0.2s ease;
+    }
+</style>
+
+<style>
+    .custom-header th {
+        background: linear-gradient(180deg, #eef3f8, #d8e3ef);
+        color: #16202b;
+        font-weight: 700;
+        text-align: center;
+        border-bottom: 0px solid #b6c6d6;
+        box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+
+        <div class="card mb-2 shadow-sm" style="border-radius: 6px; overflow: hidden;">
+            <div class="card-header text-white d-flex align-items-center py-1 px-3"
+                 style="background:#2b6ac9">
+
+                <h6 class="mb-0 me-auto" style="font-size: 0.85rem;">
+                    Create Purchase Return
+                </h6>
+
+                <button type="button"
+                        id="refreshBtn"
+                        class="btn btn-sm p-1 me-2 border-0 bg-transparent text-white"
+                        title="Refresh">
+                    <span class="fs-5">🔄</span>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create" id="purchaseReturnForm">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="row">
+                    <!-- Bill No -->
+                    <div class="col-md-6 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="BillNo"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input asp-for="BillNo" id="BillNo" class="form-control form-control-sm" readonly />
+                            <span asp-validation-for="BillNo" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Bill Date -->
+                    <div class="col-md-6 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="BillDate"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="date" asp-for="BillDate" id="BillDate" class="form-control form-control-sm" />
+                            <span asp-validation-for="BillDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- ✅ SUPPLIER - TEXT INPUT + MODAL -->
+                    <div class="col-md-6 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="SupplierName"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="hidden" asp-for="SupplierId" class="supplier-id" />
+                            <input type="text"
+                                   class="form-control form-control-sm supplier-input"
+                                   placeholder="Press Enter to select supplier"
+                                   autocomplete="off" />
+                            <span asp-validation-for="SupplierId" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Party Bill No -->
+                    <div class="col-md-6 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="PartyBillNo"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input asp-for="PartyBillNo" id="PartyBillNo" class="form-control form-control-sm" />
+                            <span asp-validation-for="PartyBillNo" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Party Bill Date -->
+                    <div class="col-md-6 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="PartyBillDate"></label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="date" asp-for="PartyBillDate" id="PartyBillDate" class="form-control form-control-sm" />
+                            <span asp-validation-for="PartyBillDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- ✅ NEW: Reason Field -->
+                    <div class="col-md-6 d-flex align-items-center mb-1">
+                        <div class="col-md-5">
+                            <label asp-for="Reason">Reason</label>
+                        </div>
+                        <div class="col-md-5">
+                            <select asp-for="Reason" id="Reason" class="form-control form-control-sm reason-dropdown-header">
+                                <option value="">-- Select Reason --</option>
+                                @foreach (var item in ViewBag.PurchaseReturnReasons)
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Reason" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto; width: 100%;">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table custom-header">
+                                <tr>
+                                    <th style="min-width:30%">Item</th>
+                                    <th style="min-width:30%">Batch</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-center">Free</th>
+                                    <th class="text-center">Rate</th>
+                                    <th class="text-center">Disc %</th>
+                                    <th class="text-center">Gst %</th>
+                                    <th class="text-center">Cess</th>
+                                    <th class="text-center">Amount</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="PurchaseReturnItemBody"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <th class="float-start">
+                                        <u id="addRow" style="color:green; cursor:pointer;">Add Row</u>
+                                    </th>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <div class="row mt-3">
+                            <!-- ===============================
+                            LEFT : ITEM RETURN HISTORY
+                            =============================== -->
+                            <div class="col-md-9">
+                                <div id="itemReturnInfoWrapper" class="border rounded p-3 h-90" style="display:none;">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0 text-center return-history-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Supplier</th>
+                                                    <th>Bill No</th>
+                                                    <th>Bill Date</th>
+                                                    <th>Qty</th>
+                                                    <th>FreeQty</th>
+                                                    <th>Batch</th>
+                                                    <th>MRP</th>
+                                                    <th>Rate</th>
+                                                    <th>Expiry</th>
+                                                    <th>Total Discount</th>
+                                                    <th>Cost</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="itemReturnInfoBody">
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ===============================
+                                 RIGHT : TOTALS
+                                 =============================== -->
+                            <div class="col-md-3">
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-6 col-form-label small">Total</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="Total" class="form-control form-control-sm total-input text-end" readonly />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-6 col-form-label small">Bill Discount</label>
+                                    <div class="col-md-3 text-end">
+                                        <input asp-for="discountPercent" id="discountPercent" class="form-control form-control-sm discount-input text-end" value="0" />
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        <input asp-for="discountAmount" id="discountamount" class="form-control form-control-sm total-input text-end" />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-6 col-form-label small">Total Discount</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="Totaldiscount" class="form-control form-control-sm total-input text-end" readonly />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-6 col-form-label small">Gst</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="TotalGstAmt" class="form-control form-control-sm total-input text-end" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-6 col-form-label small">Total Cess Amt</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="TotalCessAmt" class="form-control form-control-sm total-input text-end" readonly />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2 align-items-center">
+                                    <label asp-for="RoundOffAmount" class="col-md-6 col-form-label small"></label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="RoundOffAmount" id="roundOffAmount" class="form-control form-control-sm text-end" readonly />
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2 align-items-center">
+                                    <label class="col-md-6 col-form-label small fw-bold">Total Payable</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="TotalPayable" class="form-control form-control-sm total-input text-end fw-bold" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-sm btn-primary">End | Submit 💾</button>
+                    <a asp-controller="PurchaseReturn" asp-action="Index" id="btnCancel" class="btn btn-sm btn-outline-secondary">F11 | Cancel ❌</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ BATCH MODAL -->
+<div class="modal fade" id="batchModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Batch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="batch-table-wrapper">
+                    <table id="batchTable" class="table mb-0">
+                        <thead class="table-light">
+                            <tr><th>Batch No</th><th>Expiry</th><th>Rate</th><th>Mrp</th><th>Qty</th></tr>
+                        </thead>
+                        <tbody id="batchTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ ITEM SELECTION MODAL -->
+<div class="modal fade" id="itemModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <input type="text" id="itemSearch" class="form-control form-control-sm" placeholder="Search by item name..." />
+                </div>
+                <div class="item-table-wrapper" style="max-height: 350px; overflow-y: auto;">
+                    <table id="itemTable" class="table table-sm table-bordered mb-0">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 2;">
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Qty</th>
+                                <th>Unit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ SUPPLIER SELECTION MODAL -->
+<div class="modal fade" id="supplierModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Supplier</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <input type="text" id="supplierSearch" class="form-control form-control-sm" placeholder="Search by supplier name..." />
+                </div>
+                <div class="supplier-table-wrapper" style="max-height: 350px; overflow-y: auto;">
+                    <table id="supplierTable" class="table table-sm table-bordered mb-0">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 2;">
+                            <tr>
+                                <th>Name</th>
+                                <th>Area</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supplierTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <!-- ================================================================
+         🔹 GLOBAL VARIABLES & STATE
+         ================================================================ -->
+    <script>
+        let selectedRow = null;
+        let popupOpen = false;
+        let currentRow = null;
+        let currentBatchIndex = -1;
+        let rowIndex = 0;
+        let lastFocusSource = null;
+        let currentItemIndex = -1;
+        let currentRowForItemModal = null;
+        let focusBatchAfterItemSelect = false;
+
+        let groupedPurchaseData = [];
+        let returnedQtyData = [];
+        let supplierItemList = [];
+        let selectedSupplierId = null;
+
+        // ITEM MODAL VARIABLES
+        let itemNavMode = "keyboard";
+        let isKeyboardScrollingItemModal = false;
+
+        // BATCH MODAL VARIABLES
+        let batchNavMode = "keyboard";
+        let isKeyboardScrollingBatchModal = false;
+
+        // SUPPLIER MODAL VARIABLES
+        let supplierNavMode = "keyboard";
+        let isKeyboardScrollingSupplierModal = false;
+        let currentSupplierIndex = -1;
+        let supplierWasSelected = false;
+
+        let itemReturnHistory = [];
+    </script>
+
+    <!-- ================================================================
+         🔹 VALIDATION HELPERS
+         ================================================================ -->
+    <script>
+        function isValidSupplier() {
+            const supplierId = $(".supplier-id").val();
+            return supplierId && supplierId !== "0";
+        }
+
+        function isValidPartyBillNo() {
+            return $("#PartyBillNo").val().trim().length > 0;
+        }
+
+        function isValidPartyBillDate() {
+            const date = $("#PartyBillDate").val();
+            return date && date.length > 0;
+        }
+
+        function isValidQty(value) {
+            const qty = parseFloat(value);
+            return !isNaN(qty) && qty > 0;
+        }
+
+        function isValidRate(value) {
+            const rate = parseFloat(value);
+            return !isNaN(rate) && rate > 0;
+        }
+
+        function validateHeaderFields() {
+            if (!isValidSupplier()) {
+                toastr.error("Please select a supplier", "Validation Error");
+                $(".supplier-input").focus();
+                return false;
+            }
+
+            if (!isValidPartyBillNo()) {
+                toastr.error("Party Bill No is required", "Validation Error");
+                $("#PartyBillNo").focus().select();
+                return false;
+            }
+
+            if (!isValidPartyBillDate()) {
+                toastr.error("Party Bill Date is required", "Validation Error");
+                $("#PartyBillDate").focus();
+                return false;
+            }
+
+            if (!$(".reason-dropdown-header").val()) {
+                toastr.error("Reason is required", "Validation Error");
+                $(".reason-dropdown-header").focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        function validateRow(row) {
+            const itemId = row.find(".item-id").val();
+            const batch = row.find(".batch").val().trim();
+            const qty = row.find(".qty").val();
+            const rate = row.find(".rate").val();
+
+            if (!itemId || itemId === "") {
+                toastr.error("Please select an item", "Validation Error");
+                row.find(".item-input").focus();
+                return false;
+            }
+
+            if (!batch) {
+                toastr.error("Batch is required", "Validation Error");
+                row.find(".batch").focus().select();
+                return false;
+            }
+
+            if (!isValidQty(qty)) {
+                toastr.error("Quantity must be greater than 0", "Validation Error");
+                row.find(".qty").focus().select();
+                return false;
+            }
+
+            if (!isValidRate(rate)) {
+                toastr.error("Rate must be greater than 0", "Validation Error");
+                row.find(".rate").focus().select();
+                return false;
+            }
+
+            return true;
+        }
+
+        function validateAllRows() {
+            let isValid = true;
+
+            $("#PurchaseReturnItemBody tr").each(function() {
+                const row = $(this);
+                const itemId = row.find(".item-id").val();
+                const batch = row.find(".batch").val().trim();
+                const qty = row.find(".qty").val();
+                const rate = row.find(".rate").val();
+
+                if (itemId || batch || qty || rate) {
+                    if (!validateRow(row)) {
+                        isValid = false;
+                        return false;
+                    }
+                }
+            });
+
+            return isValid;
+        }
+    </script>
+
+    <!-- ================================================================
+         🔹 FOCUS SOURCE TRACKING
+         ================================================================ -->
+    <script>
+        $(document).on("keydown", function (e) {
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "Tab"].includes(e.key)) {
+                lastFocusSource = "keyboard";
+            }
+        });
+
+        $(document).on("mousedown", "input, select", function () {
+            lastFocusSource = "mouse";
+        });
+
+        $(document).on("focus", ".batch, .qty, .freeqty, .rate, .discount", function() {
+            const input = this;
+            setTimeout(() => {
+                if (lastFocusSource === "keyboard") {
+                    input.select();
+                }
+                lastFocusSource = null;
+            }, 0);
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 KEYBOARD NAVIGATION - HEADER
+         ================================================================ -->
+    <script>
+        $(document).ready(function () {
+            setTimeout(() => $("#BillDate").focus(), 100);
+
+            $("#BillDate").on("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    $(".supplier-input").focus();
+                }
+            });
+
+            $(".supplier-input").on("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    const typedText = $(this).val().trim();
+                    openSupplierModal(typedText);
+                    return;
+                }
+
+                if (e.key === "Tab") {
+                    if (!isValidSupplier()) {
+                        e.preventDefault();
+                        toastr.warning("Please select a supplier");
+                        return;
+                    }
+                }
+            });
+
+            $("#PartyBillNo").on("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!isValidPartyBillNo()) {
+                        toastr.warning("Party Bill No is required");
+                        return;
+                    }
+                    $("#PartyBillDate").focus();
+                }
+            });
+
+            $("#PartyBillDate").on("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!isValidPartyBillDate()) {
+                        toastr.warning("Party Bill Date is required");
+                        return;
+                    }
+                    // ✅ NEW: Focus on Reason dropdown
+                    $(".reason-dropdown-header").focus();
+                }
+            });
+
+            // NEW: Reason dropdown navigation
+            $(".reason-dropdown-header").on("keydown", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+
+                    // Validate reason is selected
+                    if (!$(this).val()) {
+                        toastr.warning("Please select a reason");
+                        return;
+                    }
+
+                    focusItemGrid();
+                }
+            });
+        });
+
+        function focusItemGrid() {
+            setTimeout(() => {
+                const firstRow = $("#PurchaseReturnItemBody tr:first");
+                if (firstRow.length) {
+                    firstRow.find(".item-input").focus();
+                } else {
+                    addNewRow();
+                    setTimeout(() => $("#PurchaseReturnItemBody tr:first .item-input").focus(), 150);
+                }
+            }, 100);
+        }
+    </script>
+
+
+    <script>
+        // AUTO-OPEN Reason DROPDOWN ON FOCUS
+        $(document).on("focus", ".reason-dropdown-header", function () {
+            const select = this;
+
+            if (typeof select.showPicker === "function") {
+                setTimeout(() => {
+                    select.showPicker();
+                }, 0);
+            }
+        });
+
+        // ENTER key pe bhi dropdown open ho
+        $(document).on("keydown", ".reason-dropdown-header", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+
+                if (typeof this.showPicker === "function") {
+                    this.showPicker();
+                }
+            }
+        });
+
+        // Prevent arrow keys from changing Reason after selection
+        $(document).on("keydown", ".reason-dropdown-header", function (e) {
+
+            const blockedKeys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+
+            // If dropdown is NOT open and a value is already selected
+            if (blockedKeys.includes(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 SUPPLIER MODAL - COMPLETE SECTION
+         ================================================================ -->
+    <script>
+        function openSupplierModal(searchText = "") {
+            showLoader("Loading suppliers...");
+
+            $.get('/Purchase/GetAllSuppliers', function (suppliers) {
+                hideLoader();
+
+                let rows = "";
+                suppliers.forEach(sup => {
+                    rows += `
+                        <tr class="supplier-row" tabindex="0"
+                            data-supplierid="${sup.id}"
+                            data-name="${sup.firstName}">
+                            <td>${sup.firstName}</td>
+                            <td>${sup.area || '--'}</td>
+                        </tr>`;
+                });
+
+                $("#supplierTableBody").html(rows);
+                $("#supplierSearch").val(searchText);
+                $("#supplierSearch").trigger("input");
+
+                $("#supplierModal").modal("show");
+
+            }).fail(function() {
+                hideLoader();
+                toastr.error("Error loading suppliers");
+            });
+        }
+
+        $(document).on("input", "#supplierSearch", function () {
+            const searchWords = $(this).val()
+                .toLowerCase()
+                .trim()
+                .split(/\s+/);
+
+            $("#supplierTableBody tr").each(function () {
+                const supplierText = $(this).find("td:first").text().toLowerCase();
+                const supplierWords = supplierText.split(/\s+/);
+
+                let match = true;
+
+                for (let i = 0; i < searchWords.length; i++) {
+                    if (!supplierWords[i] || !supplierWords[i].startsWith(searchWords[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                $(this).toggle(match);
+            });
+
+            currentSupplierIndex = -1;
+            $("#supplierTableBody .supplier-row").removeClass("selected");
+        });
+
+        $(document).on("keydown", function (e) {
+            if (!$("#supplierModal").is(":visible")) return;
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                supplierNavMode = "keyboard";
+                isKeyboardScrollingSupplierModal = true;
+                $("#supplierModal")
+                    .addClass("keyboard-nav")
+                    .removeClass("mouse-nav");
+
+                setTimeout(() => {
+                    isKeyboardScrollingSupplierModal = false;
+                }, 300);
+            }
+
+            const $rows = $(".supplier-row:visible");
+            if (!$rows.length) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+
+                if (currentSupplierIndex === -1) {
+                    currentSupplierIndex = 0;
+                } else if (currentSupplierIndex < $rows.length - 1) {
+                    currentSupplierIndex++;
+                }
+
+                highlightSupplierRow($rows, currentSupplierIndex);
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (currentSupplierIndex <= 0) return;
+                currentSupplierIndex--;
+                highlightSupplierRow($rows, currentSupplierIndex);
+            }
+            else if (e.key === "Enter" && currentSupplierIndex >= 0) {
+                e.preventDefault();
+                $rows.eq(currentSupplierIndex).trigger("click");
+            }
+        });
+
+        function highlightSupplierRow($rows, index) {
+            $rows.removeClass("selected");
+            const $row = $rows.eq(index);
+            $row.addClass("selected");
+            $row[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+
+        $(document).on("mouseenter", ".supplier-row", function () {
+            if (!$("#supplierModal").is(":visible")) return;
+            if (isKeyboardScrollingSupplierModal) return;
+
+            supplierNavMode = "mouse";
+
+            $("#supplierModal")
+                .addClass("mouse-nav")
+                .removeClass("keyboard-nav");
+
+            const $rows = $(".supplier-row:visible");
+            $rows.removeClass("selected");
+            $(this).addClass("selected");
+
+            currentSupplierIndex = $rows.index(this);
+        });
+
+        $(document).on("click", ".supplier-row", function () {
+            const supplierId = $(this).data("supplierid");
+            const supplierName = $(this).data("name");
+
+            if (!supplierId) return;
+
+            const previousSupplierId = selectedSupplierId;
+            const hasItemsInGrid = $("#PurchaseReturnItemBody tr").length > 0;
+
+            if (previousSupplierId && previousSupplierId !== supplierId && hasItemsInGrid) {
+                // ✅ Close supplier modal FIRST
+                $("#supplierModal").modal("hide");
+
+                // ✅ Wait for supplier modal to fully close
+                setTimeout(() => {
+                    confirmAction(
+                        "Changing supplier will clear all items and calculations. Continue?",
+                        function(confirmed) {
+                            if (confirmed) {
+                                clearItemGridAndCalculations();
+                                completeSupplierSelection(supplierId, supplierName);
+                            } else {
+                                // ✅ Reopen supplier modal
+                                setTimeout(() => {
+                                    $("#supplierModal").modal("show");
+                                }, 300);
+                            }
+                        }
+                    );
+                }, 500); // ✅ Increased delay to ensure modal fully closed
+
+                return;
+            }
+
+            completeSupplierSelection(supplierId, supplierName);
+        });
+
+        // ✅ Helper function to complete supplier selection
+        function completeSupplierSelection(supplierId, supplierName) {
+            $(".supplier-id").val(supplierId);
+            $(".supplier-input").val(supplierName);
+
+            selectedSupplierId = supplierId;
+            supplierWasSelected = true;
+
+            loadSupplierItems(supplierId);
+            loadReturnedQtyData(supplierId);
+
+            $("#supplierModal").modal("hide");
+        }
+
+        $('#supplierModal').on('shown.bs.modal', function () {
+            supplierWasSelected = false;
+            supplierNavMode = "keyboard";
+
+            $("#supplierModal")
+                .addClass("keyboard-nav")
+                .removeClass("mouse-nav");
+
+            const $rows = $(".supplier-row:visible");
+            currentSupplierIndex = -1;
+
+            if ($rows.length) {
+                currentSupplierIndex = 0;
+                highlightSupplierRow($rows, currentSupplierIndex);
+            }
+
+            setTimeout(() => {
+                $("#supplierSearch").focus().select();
+            }, 200);
+        });
+
+        $('#supplierModal').on('hidden.bs.modal', function () {
+            setTimeout(() => {
+                if (supplierWasSelected) {
+                    $("#PartyBillNo").focus().select();
+                    supplierWasSelected = false;
+                } else {
+                    $(".supplier-input").focus();
+                }
+            }, 150);
+        });
+
+        function loadSupplierItems(supplierId) {
+            showLoader("Loading items...");
+
+            $.get('/PurchaseReturn/GetItemsBySupplierId', { supplierId: supplierId }, function (res) {
+                hideLoader();
+
+                if (res.success && res.items.length > 0) {
+                    supplierItemList = res.items;
+                    toastr.success("Items loaded for selected supplier.");
+                } else {
+                    supplierItemList = [];
+                    toastr.warning("No items found for selected supplier.");
+                }
+            }).fail(function() {
+                hideLoader();
+                toastr.error("Failed to load items for selected supplier.");
+            });
+        }
+
+        function loadReturnedQtyData(supplierId) {
+            $.get(`/PurchaseReturn/GetReturnedQtyData?supplierId=${supplierId}`, function (data) {
+                returnedQtyData = data;
+            });
+        }
+    </script>
+
+    <!-- ================================================================
+     🔹 CLEAR GRID & CALCULATIONS ON SUPPLIER CHANGE
+     ================================================================ -->
+    <script>
+        function clearItemGridAndCalculations() {
+            // ✅ 1. Clear all item rows
+            $("#PurchaseReturnItemBody").empty();
+
+            // ✅ 2. Reset row index
+            rowIndex = 0;
+
+            // ✅ 3. Reset all calculation fields
+            $("[name='Total']").val("0.00");
+            $("[name='Totaldiscount']").val("0.00");
+            $("[name='TotalGstAmt']").val("0.00");
+            $("[name='TotalPayable']").val("0.00");
+            $("#discountPercent").val("0");
+            $("#discountamount").val("0");
+
+            // ✅ 4. Clear grouped purchase data
+            groupedPurchaseData = [];
+            returnedQtyData = [];
+
+            // ✅ 5. HIDE AND CLEAR ITEM RETURN HISTORY
+            $("#itemReturnInfoWrapper").hide();
+            $("#itemReturnInfoBody").empty();
+
+            // ✅ 6. Show notification
+            toastr.info("Item grid cleared due to supplier change", "Supplier Changed");
+
+            // ✅ 7. Add first row and focus
+            setTimeout(() => {
+                addNewRow();
+                setTimeout(() => {
+                    $("#PurchaseReturnItemBody tr:first .item-input").focus();
+                }, 100);
+            }, 150);
+        }
+    </script>
+<script>
+
+    function confirmAction(message, callback) {
+        if (typeof Swal !== 'undefined') {
+
+            // ✅ DISABLE background inputs before showing modal
+            const supplierInput = document.querySelector('.supplier-input');
+            const previousTabIndex = supplierInput?.tabIndex;
+            if (supplierInput) {
+                supplierInput.setAttribute('disabled', 'true');
+                supplierInput.blur(); // Remove focus
+            }
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: message,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, proceed!',
+                cancelButtonText: 'No, cancel',
+                reverseButtons: true,
+                allowEnterKey: true,
+                allowEscapeKey: true,
+                allowOutsideClick: false,
+                backdrop: true,
+                focusConfirm: false,
+                focusCancel: false,
+
+                didOpen: () => {
+                    const confirmBtn = document.querySelector('.swal2-confirm');
+
+                    const focusBtn = () => {
+                        if (confirmBtn) {
+                            confirmBtn.focus();
+                        }
+                    };
+
+                    focusBtn();
+                    setTimeout(focusBtn, 50);
+                    setTimeout(focusBtn, 100);
+                },
+
+                // ✅ RE-ENABLE inputs after modal closes
+                didClose: () => {
+                    if (supplierInput) {
+                        supplierInput.removeAttribute('disabled');
+                    }
+                }
+            }).then((result) => {
+                // ✅ Re-enable before callback
+                if (supplierInput) {
+                    supplierInput.removeAttribute('disabled');
+                }
+
+                callback(result.isConfirmed);
+            });
+        } else {
+            if (confirm(message)) {
+                callback(true);
+            } else {
+                callback(false);
+            }
+        }
+    }
+
+    // Block all keyboard events when SweetAlert is visible
+    document.addEventListener('keydown', function (e) {
+        // Check if SweetAlert is open
+        if (typeof Swal !== 'undefined' && Swal.isVisible()) {
+            // Get the target element
+            const target = e.target;
+
+            // If event is NOT from SweetAlert buttons, block it
+            if (!target.classList.contains('swal2-confirm') &&
+                !target.classList.contains('swal2-cancel') &&
+                !target.closest('.swal2-container')) {
+
+                // Allow only specific keys
+                const allowedKeys = ['Enter', 'Escape', 'Tab', 'ArrowLeft', 'ArrowRight', 'Space'];
+
+                if (!allowedKeys.includes(e.key)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                }
+            }
+        }
+    }, true); // Use capture phase
+</script>
+
+    <!-- ================================================================
+         🔹 KEYBOARD NAVIGATION - ITEM GRID
+         ================================================================ -->
+    <script>
+        $(document).on("keydown", ".item-input", function (e) {
+            const row = $(this).closest("tr");
+
+            if (e.key === "ArrowRight") {
+                e.preventDefault();
+                row.find(".batch").focus().select();
+                return;
+            }
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                const nextRow = row.next("tr");
+                if (nextRow.length) nextRow.find(".item-input").focus();
+                return;
+            }
+
+            if (e.key === "ArrowUp") {
+                e.preventDefault();
+                const prevRow = row.prev("tr");
+                if (prevRow.length) {
+                    prevRow.find(".item-input").focus();
+                } else {
+                    $("#PartyBillDate").focus();
+                }
+                return;
+            }
+
+            if (e.key === "Enter") {
+                e.preventDefault();
+
+                if (!isValidSupplier()) {
+                    toastr.warning("Please select a supplier first");
+                    $(".supplier-input").focus();
+                    return;
+                }
+
+                currentRow = row;
+                currentRowForItemModal = row;
+
+                const typedText = $(this).val().trim();
+                openItemModal(typedText);
+            }
+        });
+
+        function openItemModal(searchText = "") {
+            if (supplierItemList.length === 0) {
+                toastr.warning("No items available for selected supplier");
+                return;
+            }
+
+            let rows = "";
+            const businessType = @ViewBag.BusinessType;
+            supplierItemList.forEach(item => {
+                rows += `
+                    <tr class="item-row" tabindex="0"
+                        data-itemid="${item.value}"
+                        data-name="${item.text}"
+                        data-qty="${item.qty}">
+                        <td>${item.text}</td>
+                        ${
+                            businessType === 2
+                            ? `
+                                <td style="display:none;">${item.qty}</td>
+                                <td>${item.availableQty}</td>
+                              `
+                            : `
+                                <td>${item.qty}</td>
+                              `
+                            }
+                        <td>${item.unit || 'N/A'}</td>
+                    </tr>`;
+            });
+
+            $("#itemTableBody").html(rows);
+            $("#itemSearch").val(searchText);
+            $("#itemSearch").trigger("input");
+
+            $("#itemModal").modal("show");
+        }
+
+        $(document).on("input", "#itemSearch", function () {
+            const searchWords = $(this).val()
+                .toLowerCase()
+                .trim()
+                .split(/\s+/);
+
+            $("#itemTableBody tr").each(function () {
+                const itemText = $(this).find("td:first").text().toLowerCase();
+                const itemWords = itemText.split(/\s+/);
+
+                let match = true;
+
+                for (let i = 0; i < searchWords.length; i++) {
+                    if (!itemWords[i] || !itemWords[i].startsWith(searchWords[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                $(this).toggle(match);
+            });
+
+            currentItemIndex = -1;
+            $("#itemTableBody .item-row").removeClass("selected");
+        });
+
+        $(document).on("keydown", function (e) {
+            if (!$("#itemModal").is(":visible")) return;
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                itemNavMode = "keyboard";
+                isKeyboardScrollingItemModal = true;
+                $("#itemModal")
+                    .addClass("keyboard-nav")
+                    .removeClass("mouse-nav");
+
+                setTimeout(() => {
+                    isKeyboardScrollingItemModal = false;
+                }, 300);
+            }
+
+            const $rows = $(".item-row:visible");
+            if (!$rows.length) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+
+                if (currentItemIndex === -1) {
+                    currentItemIndex = 0;
+                }
+                else if (currentItemIndex < $rows.length - 1) {
+                    currentItemIndex++;
+                }
+
+                highlightItemRow($rows, currentItemIndex);
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (currentItemIndex <= 0) return;
+                currentItemIndex = (currentItemIndex - 1 + $rows.length) % $rows.length;
+                highlightItemRow($rows, currentItemIndex);
+            }
+            else if (e.key === "Enter" && currentItemIndex >= 0) {
+                e.preventDefault();
+                $rows.eq(currentItemIndex).trigger("click");
+            }
+        });
+
+        function highlightItemRow($rows, index) {
+            $rows.removeClass("selected");
+            const $row = $rows.eq(index);
+            $row.addClass("selected");
+            $row[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+
+        $(document).on("click", ".item-row", function () {
+            const itemId = $(this).data("itemid");
+            const itemName = $(this).data("name");
+
+            if (!itemId || !currentRowForItemModal) return;
+
+            currentRowForItemModal.find(".item-id").val(itemId);
+            currentRowForItemModal.find(".item-input").val(itemName);
+
+            $("#itemModal").modal("hide");
+
+            processItemSelection(itemId, currentRowForItemModal);
+        });
+
+        $(document).on("mouseenter", ".item-row", function () {
+            if (!$("#itemModal").is(":visible")) return;
+            if (isKeyboardScrollingItemModal) return;
+
+            itemNavMode = "mouse";
+
+            $("#itemModal")
+                .addClass("mouse-nav")
+                .removeClass("keyboard-nav");
+
+            const $rows = $(".item-row:visible");
+            $rows.removeClass("selected");
+            $(this).addClass("selected");
+
+            currentItemIndex = $rows.index(this);
+        });
+
+        $('#itemModal').on('shown.bs.modal', function () {
+            itemNavMode = "keyboard";
+
+            $("#itemModal")
+                .addClass("keyboard-nav")
+                .removeClass("mouse-nav");
+
+            const $rows = $(".item-row:visible");
+
+            currentItemIndex = -1;
+
+            if ($rows.length) {
+                currentItemIndex = 0;
+                highlightItemRow($rows, currentItemIndex);
+            }
+
+            setTimeout(() => {
+                $("#itemSearch").focus().select();
+            }, 200);
+        });
+
+        $('#itemModal').on('hidden.bs.modal', function () {
+            setTimeout(() => {
+                if (focusBatchAfterItemSelect && currentRowForItemModal) {
+                    currentRowForItemModal.find(".batch").focus().select();
+                    focusBatchAfterItemSelect = false;
+                    return;
+                }
+
+                if (currentRowForItemModal && currentRowForItemModal.length) {
+                    currentRowForItemModal.find(".item-input").focus();
+                }
+            }, 150);
+        });
+
+        // function processItemSelection(itemId, row) {
+        //     currentRow = row;
+        //     showLoader("Checking batches...");
+
+        //     const supplierId = $(".supplier-id").val();
+
+        //     $.get('/PurchaseReturn/GetBatchesByItemId', { id: itemId, supplierId: supplierId }, function (data) {
+        //         hideLoader();
+
+        //         if (data.error) {
+        //             toastr.error(data.error);
+        //             return;
+        //         }
+
+        //         row.find(".gst").val(data.gst);
+        //         row.find(".hsn-dropdown").val(data.hsn);
+
+        //         if (!data.groupedResult || data.groupedResult.length === 0) {
+        //             toastr.warning("No batches available for this item");
+        //             focusBatchAfterItemSelect = true;
+        //             return;
+        //         }
+
+        //         // ✅ Store FULL batch data (with purchased + returned info)
+        //         groupedPurchaseData = data.groupedResult.map(batch => ({
+        //             itemId: batch.itemId,
+        //             batch: batch.batch,
+        //             expiry: batch.expiry,
+        //             rate: batch.rate,
+        //             mrp: batch.mrp,
+        //             qty: batch.purchasedQty || batch.qty,        // ✅ Use purchasedQty if available
+        //             freeQty: batch.purchasedFreeQty || batch.freeQty,  // ✅ Use purchasedFreeQty
+        //             currentStock: batch.currentStock || batch.qty,     // Display stock
+        //             purchaseItemId: batch.purchaseItemId
+        //         }));
+
+        //         loadItemPurchaseHistory(itemId);
+
+        //         // ✅ Display batches (show current stock in table)
+        //         let batchRows = '';
+        //         data.groupedResult.forEach(batch => {
+        //             const d = new Date(batch.expiry);
+        //             const formattedExpiry = ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear();
+
+        //             const batchData = {
+        //                 itemId: batch.itemId,
+        //                 batch: batch.batch,
+        //                 expiry: batch.expiry,
+        //                 rate: batch.rate,
+        //                 mrp: batch.mrp,
+        //                 qty: batch.purchasedQty || batch.qty,           // ✅ Original purchased
+        //                 freeQty: batch.purchasedFreeQty || batch.freeQty, // ✅ Original free
+        //                 currentStock: batch.currentStock || batch.qty     // Current available
+        //             };
+
+        //             const encoded = encodeURIComponent(JSON.stringify(batchData));
+        //             const businessType = @ViewBag.BusinessType;
+        //             batchRows += `
+        //                 <tr class="batch-row"  data-qty="${batch.qty}" data-batch="${encoded}">
+        //                     <td>${batch.batch}</td>
+        //                     <td>${formattedExpiry}</td>
+        //                     <td>${batch.rate}</td>
+        //                     <td>${batch.mrp}</td>
+        //                    ${
+        //                     businessType === 2
+        //                     ? `
+        //                         <td style="display:none;">${item.qty}</td>
+        //                         <td>${item.availableQty}</td>
+        //                       `
+        //                     : `
+        //                         <td>${item.qty}</td>
+        //                       `
+        //                     }
+        //                 </tr>`;
+        //         });
+
+        //         $("#batchTableBody").html(batchRows);
+        //         currentBatchIndex = 0;
+        //         $("#batchModal").modal("show");
+
+        //     }).fail(function() {
+        //         hideLoader();
+        //         toastr.error("Error loading batches");
+        //     });
+        // }
+
+        function processItemSelection(itemId, row) {
+            currentRow = row;
+            showLoader("Checking batches...");
+
+            const supplierId = $(".supplier-id").val();
+            const businessType = parseInt('@ViewBag.BusinessType') || 0;
+
+            $.get('/PurchaseReturn/GetBatchesByItemId', { id: itemId, supplierId: supplierId }, function (data) {
+                hideLoader();
+
+                if (data.error) {
+                    toastr.error(data.error);
+                    return;
+                }
+
+                // ✅ Set GST + HSN
+                row.find(".gst").val(data.gst || 0);
+                row.find(".cess").val(data.cess || 0);
+                row.find(".hsn-dropdown").val(data.hsn || "");
+
+                if (!data.groupedResult || data.groupedResult.length === 0) {
+                    toastr.warning("No batches available for this item");
+                    focusBatchAfterItemSelect = true;
+                    return;
+                }
+
+                // ✅ Store full batch data (SAFE)
+                groupedPurchaseData = data.groupedResult.map(batch => ({
+                    itemId: batch.itemId,
+                    batch: batch.batch,
+                    expiry: batch.expiry,
+                    rate: batch.rate,
+                    mrp: batch.mrp,
+                    qty: batch.purchasedQty ?? batch.qty ?? 0,
+                    freeQty: batch.purchasedFreeQty ?? batch.freeQty ?? 0,
+                    currentStock: batch.currentStock ?? batch.qty ?? 0,
+                    availableQty: batch.availableQty ?? null,
+                    purchaseItemId: batch.purchaseItemId
+                }));
+
+                loadItemPurchaseHistory(itemId);
+
+                // ===================== BUILD TABLE =====================
+                let batchRows = '';
+
+                data.groupedResult.forEach(batch => {
+
+                    // ✅ Date format safe
+                    const d = batch.expiry ? new Date(batch.expiry) : null;
+                    const formattedExpiry = d
+                        ? ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear()
+                        : "";
+
+                    // ✅ Safe values
+                    const currentStock = batch.currentStock ?? batch.qty ?? 0;
+
+                    // ✅ Final display qty (conversion handled from backend)
+                    const displayQty = batch.availableQty || currentStock;
+
+                    // ✅ Encode full batch object
+                    const batchData = {
+                        itemId: batch.itemId,
+                        batch: batch.batch,
+                        expiry: batch.expiry,
+                        rate: batch.rate,
+                        mrp: batch.mrp,
+                        qty: batch.purchasedQty ?? batch.qty ?? 0,
+                        freeQty: batch.purchasedFreeQty ?? batch.freeQty ?? 0,
+                        currentStock: currentStock
+                    };
+
+                    const encoded = encodeURIComponent(JSON.stringify(batchData));
+
+                    // ===================== ROW =====================
+                    batchRows += `
+                    <tr class="batch-row"
+                        data-qty="${currentStock}"
+                        data-batch="${encoded}">
+
+                        <td>${batch.batch || ''}</td>
+                        <td>${formattedExpiry}</td>
+                        <td>${batch.rate ?? 0}</td>
+                        <td>${batch.mrp ?? 0}</td>
+
+                        ${
+                            businessType === 2
+                            ? `
+                                <td style="display:none;">${currentStock}</td>
+                                <td>${displayQty}</td>
+                              `
+                            : `
+                                <td>${currentStock}</td>
+                              `
+                        }
+                    </tr>`;
+                });
+
+                $("#batchTableBody").html(batchRows);
+                currentBatchIndex = 0;
+                $("#batchModal").modal("show");
+
+            }).fail(function () {
+                hideLoader();
+                toastr.error("Error loading batches");
+            });
+        }
+
+        $(document).on("keydown", ".batch", function(e) {
+            if (e.key === "Enter" && !popupOpen) {
+                e.preventDefault();
+                const row = $(this).closest("tr");
+                if (!$(this).val().trim()) {
+                    toastr.warning("Batch is required");
+                    return;
+                }
+                row.find(".qty").focus().select();
+            }
+        });
+
+        $(document).on("keydown", ".qty", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                const row = $(this).closest("tr");
+                if (!isValidQty($(this).val())) {
+                    toastr.warning("Quantity must be greater than 0");
+                    $(this).focus().select();
+                    return;
+                }
+                row.find(".freeqty").focus().select();
+            }
+        });
+
+        $(document).on("keydown", ".freeqty", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                $(this).closest("tr").find(".rate").focus().select();
+            }
+        });
+
+        $(document).on("keydown", ".rate", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                const row = $(this).closest("tr");
+                if (!isValidRate($(this).val())) {
+                    toastr.warning("Rate must be greater than 0");
+                    $(this).focus().select();
+                    return;
+                }
+                row.find(".discount").focus().select();
+            }
+        });
+
+        $(document).on("keydown", ".discount", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                const row = $(this).closest("tr");
+
+                // CHANGED: Validate row without reason
+                if (!validateRow(row)) return;
+
+                const isLastRow = row.is("#PurchaseReturnItemBody tr:last");
+
+                if (isLastRow) {
+                    addNewRow();
+                    setTimeout(() => $("#PurchaseReturnItemBody tr:last .item-input").focus(), 150);
+                } else {
+                    const nextRow = row.next("tr");
+                    if (nextRow.length) nextRow.find(".item-input").focus();
+                }
+            }
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 ARROW KEY NAVIGATION
+         ================================================================ -->
+    <script>
+        // CLEANED VERSION - Remove .reason-dropdown references
+        $(document).on("keydown", ".batch, .qty, .freeqty, .rate, .discount", function(e) {
+            const row = $(this).closest("tr");
+            const current = $(this);
+
+            // ✅ ARROW RIGHT
+            if (e.key === "ArrowRight") {
+                e.preventDefault();
+                if (current.hasClass("batch")) row.find(".qty").focus().select();
+                else if (current.hasClass("qty")) row.find(".freeqty").focus().select();
+                else if (current.hasClass("freeqty")) row.find(".rate").focus().select();
+                else if (current.hasClass("rate")) row.find(".discount").focus().select();
+                // ✅ Discount is now the last field in row
+            }
+
+            // ✅ ARROW LEFT
+            if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                if (current.hasClass("discount")) row.find(".rate").focus().select();
+                else if (current.hasClass("rate")) row.find(".freeqty").focus().select();
+                else if (current.hasClass("freeqty")) row.find(".qty").focus().select();
+                else if (current.hasClass("qty")) row.find(".batch").focus().select();
+                else if (current.hasClass("batch")) row.find(".item-input").focus();
+            }
+
+            // ✅ ARROW DOWN - Navigate to next row
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                const nextRow = row.next("tr");
+                if (!nextRow.length) return;
+
+                if (current.hasClass("batch")) nextRow.find(".batch").focus().select();
+                else if (current.hasClass("qty")) nextRow.find(".qty").focus().select();
+                else if (current.hasClass("freeqty")) nextRow.find(".freeqty").focus().select();
+                else if (current.hasClass("rate")) nextRow.find(".rate").focus().select();
+                else if (current.hasClass("discount")) nextRow.find(".discount").focus().select();
+            }
+
+            // ✅ ARROW UP - Navigate to previous row
+            if (e.key === "ArrowUp") {
+                e.preventDefault();
+                const prevRow = row.prev("tr");
+
+                if (!prevRow.length) {
+                    // ✅ If first row, go back to Reason dropdown in header
+                    $(".reason-dropdown-header").focus();
+                    return;
+                }
+
+                if (current.hasClass("batch")) prevRow.find(".batch").focus().select();
+                else if (current.hasClass("qty")) prevRow.find(".qty").focus().select();
+                else if (current.hasClass("freeqty")) prevRow.find(".freeqty").focus().select();
+                else if (current.hasClass("rate")) prevRow.find(".rate").focus().select();
+                else if (current.hasClass("discount")) prevRow.find(".discount").focus().select();
+            }
+        });
+
+    </script>
+
+    <!-- ================================================================
+         🔹 BATCH MODAL NAVIGATION
+         ================================================================ -->
+    <script>
+        $('#batchModal').on('shown.bs.modal', function () {
+            batchNavMode = "keyboard";
+            isKeyboardScrollingBatchModal = false;
+
+            $("#batchModal")
+                .addClass("keyboard-nav")
+                .removeClass("mouse-nav");
+
+            const $rows = $(".batch-row:visible");
+
+            if (currentBatchIndex >= 0 && currentBatchIndex < $rows.length) {
+                highlightBatchRow($rows, currentBatchIndex);
+            } else {
+                currentBatchIndex = 0;
+                if ($rows.length) {
+                    highlightBatchRow($rows, currentBatchIndex);
+                }
+            }
+        });
+
+        function highlightBatchRow($rows, index) {
+            $rows.removeClass("selected");
+
+            const $row = $rows.eq(index);
+            if (!$row.length) return;
+
+            $row.addClass("selected");
+
+            const container = document.querySelector("#batchModal .batch-table-wrapper");
+            if (!container) return;
+
+            const rowRect = $row[0].getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const headerHeight = document.querySelector("#batchTable thead")?.offsetHeight || 50;
+
+            if (rowRect.top < containerRect.top + headerHeight) {
+                container.scrollTop -= (containerRect.top + headerHeight - rowRect.top);
+            }
+            else if (rowRect.bottom > containerRect.bottom) {
+                container.scrollTop += (rowRect.bottom - containerRect.bottom);
+            }
+        }
+
+        $(document).on("click", ".batch-row", function () {
+            $(".batch-row").removeClass("selected");
+            $(this).addClass("selected");
+
+            const encoded = $(this).attr("data-batch");
+            try {
+                const batch = JSON.parse(decodeURIComponent(encoded));
+                if (currentRow) {
+                    currentRow.find(".batch").val(batch.batch);
+                    currentRow.find(".rate").val(batch.rate || 0);
+                    currentRow.find(".mrp").val(batch.mrp || 0);
+
+                    // ✅ Store original purchase qty and free qty for ratio calculation
+                    currentRow.find(".original-purchase-qty").val(batch.qty || 0);
+                    currentRow.find(".original-purchase-free").val(batch.freeQty || 0);
+
+                    if (batch.expiry) {
+                        let date = new Date(batch.expiry);
+                        let formatted = ("0" + (date.getMonth() + 1)).slice(-2) + "/" + date.getFullYear();
+                        currentRow.find(".expirydate").val(formatted);
+                    }
+
+                    calculateRow(currentRow);
+                }
+                $("#batchModal").modal("hide");
+
+                setTimeout(() => {
+                    if (currentRow) currentRow.find(".qty").focus().select();
+                }, 150);
+
+            } catch (err) {
+                alert("Invalid batch data.");
+                console.error(err);
+            }
+        });
+
+        $(document).on("keydown", function (e) {
+            if (!$("#batchModal").is(":visible")) return;
+
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                batchNavMode = "keyboard";
+                isKeyboardScrollingBatchModal = true;
+
+                $("#batchModal")
+                    .addClass("keyboard-nav")
+                    .removeClass("mouse-nav");
+
+                setTimeout(() => {
+                    isKeyboardScrollingBatchModal = false;
+                }, 300);
+            }
+
+            const $rows = $(".batch-row:visible");
+            if (!$rows.length) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+
+                if (currentBatchIndex === -1) {
+                    currentBatchIndex = 0;
+                } else if (currentBatchIndex < $rows.length - 1) {
+                    currentBatchIndex++;
+                }
+
+                highlightBatchRow($rows, currentBatchIndex);
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (currentBatchIndex <= 0) return;
+
+                currentBatchIndex--;
+                highlightBatchRow($rows, currentBatchIndex);
+            }
+            else if (e.key === "Enter" && currentBatchIndex >= 0) {
+                e.preventDefault();
+                $rows.eq(currentBatchIndex).trigger("click");
+            }
+        });
+
+        $(document).on("mouseenter", ".batch-row", function () {
+            if (!$("#batchModal").is(":visible")) return;
+
+            if (isKeyboardScrollingBatchModal) return;
+
+            batchNavMode = "mouse";
+
+            $("#batchModal")
+                .addClass("mouse-nav")
+                .removeClass("keyboard-nav");
+
+            const $rows = $(".batch-row:visible");
+            $rows.removeClass("selected");
+
+            $(this).addClass("selected");
+            currentBatchIndex = $rows.index(this);
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 ADD ROW & REMOVE ROW
+         ================================================================ -->
+    <script>
+        $(document).ready(function() {
+            $("#addRow").click(function() {
+                if (!validateHeaderFields()) return;
+
+                if ($("#PurchaseReturnItemBody tr").length > 0) {
+                    if (!validateAllRows()) return;
+                }
+
+                addNewRow();
+                setTimeout(() => $("#PurchaseReturnItemBody tr:last .item-input").focus(), 150);
+            });
+        });
+
+        function addNewRow() {
+            if (!selectedSupplierId) {
+                toastr.warning("Please select a supplier first.");
+                return;
+            }
+
+            let newRow = `
+                <tr>
+                    <td style="min-width:250px;">
+                       <input type="hidden" name="PurchaseReturnItemVMs[${rowIndex}].ItemId" class="item-id" />
+
+                       <input type="hidden" class="original-purchase-qty" />
+                       <input type="hidden" class="original-purchase-free" />
+
+
+                       <input type="text" name="PurchaseReturnItemVMs[${rowIndex}].ItemName" class="form-control form-control-sm item-input" placeholder="Press Enter to select item" />
+                    </td>
+                    <td><input name="PurchaseReturnItemVMs[${rowIndex}].Batch" class="form-control form-control-sm batch" /></td>
+                    <td hidden><input type="text" name="PurchaseReturnItemVMs[${rowIndex}].ExpiryDate" class="form-control form-control-sm expirydate" placeholder="MM/YYYY" maxlength="7" /></td>
+                    <td hidden><input name="PurchaseReturnItemVMs[${rowIndex}].Mrp" class="form-control form-control-sm mrp" /></td>
+                    <td><input name="PurchaseReturnItemVMs[${rowIndex}].Qty" class="form-control form-control-sm qty" value="1" /></td>
+                    <td><input name="PurchaseReturnItemVMs[${rowIndex}].FreeQty" class="form-control form-control-sm freeqty" value="0" readonly /></td>
+                    <td><input name="PurchaseReturnItemVMs[${rowIndex}].Rate" class="form-control form-control-sm rate" /></td>
+                    <td hidden><input name="PurchaseReturnItemVMs[${rowIndex}].salserateA" class="form-control form-control-sm salserateA" /></td>
+                    <td hidden><input name="PurchaseReturnItemVMs[${rowIndex}].salserateB" class="form-control form-control-sm salserateB" /></td>
+                    <td hidden style="min-width:100px;">
+                        <select name="PurchaseReturnItemVMs[${rowIndex}].HsnId" class="form-control form-control-sm hsn-dropdown">
+                            <option value="">-- Select HSN --</option>
+            @foreach (var item in ViewBag.Hsn)
+            {
+                                    <option value="@item.Value">@item.Text</option>
+            }
+                        </select>
+                    </td>
+                    <td><input name="PurchaseReturnItemVMs[${rowIndex}].Discount" class="form-control form-control-sm discount" value="0" /></td>
+                    <td hidden><input name="PurchaseReturnItemVMs[${rowIndex}].DiscountAmt" class="form-control form-control-sm discount-amt" readonly /></td>
+                    <td><input name="PurchaseReturnItemVMs[${rowIndex}].Gst" class="form-control form-control-sm gst" readonly /></td>
+                    <td><input name="PurchaseReturnItemVMs[${rowIndex}].Cess" class="form-control form-control-sm cess" readonly /></td>
+                    <td><input name="PurchaseReturnItemVMs[${rowIndex}].TotalAmt" class="form-control form-control-sm total" readonly /></td>
+                    <td hidden><input name="PurchaseReturnItemVMs[${rowIndex}].BatchWiseCose" class="form-control form-control-sm batch-wise" readonly /></td>
+                    <td><u class="remove-row-btn text-danger" style="cursor:pointer;">Remove</u></td>
+                </tr>`;
+
+            $("#PurchaseReturnItemBody").append(newRow);
+            rowIndex++;
+        }
+
+        $(document).on("click", ".remove-row-btn", function() {
+            const $removedRow = $(this).closest("tr");
+
+            // ✅ Store removed row details BEFORE removing
+            const removedItemId = $removedRow.find(".item-id").val();
+            const removedBatch = $removedRow.find(".batch").val()?.trim();
+            const removedExpiry = $removedRow.find(".expirydate").val()?.trim();
+            const removedMrp = parseFloat($removedRow.find(".mrp").val()) || 0;
+            const removedRate = parseFloat($removedRow.find(".rate").val()) || 0;
+
+            // ✅ Remove the row
+            $removedRow.remove();
+
+            // ✅ Recalculate all rows with same item-batch combination
+            if (removedItemId && removedBatch && removedExpiry) {
+                const formattedExpiry = normalizeExpiryDate(removedExpiry);
+
+                if (formattedExpiry) {
+                    recalculateFreeQtyForBatch(removedItemId, removedBatch, formattedExpiry, removedMrp, removedRate);
+                }
+            }
+
+            // ✅ Recalculate totals
+            calculateTotalSummary();
+        });
+    </script>
+
+    <script>
+        $(document).on("keydown", ".item-input, .batch, .qty, .freeqty, .rate, .discount, .reason-dropdown", function (e) {
+            if (e.key !== "Tab") return;
+
+            const row = $(this).closest("tr");
+
+            const itemId = row.find(".item-id").val();
+            const batch = row.find(".batch").val()?.trim();
+            const qty = row.find(".qty").val();
+            const rate = row.find(".rate").val();
+
+            const isBlankRow =
+                (!itemId || itemId === "") &&
+                (!batch || batch === "") &&
+                (!rate || rate === "0" || rate === "");
+
+            if (!isBlankRow) return;
+
+            const totalRows = $("#PurchaseReturnItemBody tr").length;
+
+            if (totalRows <= 1) {
+                e.preventDefault();
+                toastr.error("At least one item row is required", "Validation Error");
+                return;
+            }
+
+            e.preventDefault();
+            row.remove();
+
+            setTimeout(() => {
+                $("#discountPercent").focus().select();
+            }, 50);
+        });
+    </script>
+
+    <!-- ================================================================
+     QUANTITY VALIDATION WITH RETURNED QTY CHECK
+     ================================================================ -->
+    <script>
+        // ✅ EXISTING INPUT VALIDATION (update this)
+        $(document).on("input", ".qty", function () {
+            const $qtyInput = $(this);
+            const $row = $qtyInput.closest("tr");
+
+            // ✅ FIRST: Ensure original purchase data is set
+            ensureOriginalPurchaseData($row);
+
+            // ✅ AUTO-CALCULATE FREE QTY for current row
+            autoCalculateFreeQty($row);
+
+            // ✅ NEW: Recalculate ALL other rows with same item-batch
+            const itemId = $row.find(".item-id").val();
+            const batch = $row.find(".batch").val()?.trim();
+            const expiry = $row.find(".expirydate").val()?.trim();
+            const mrp = parseFloat($row.find(".mrp").val()) || 0;
+            const rate = parseFloat($row.find(".rate").val()) || 0;
+
+            if (itemId && batch && expiry) {
+                const formattedExpiry = normalizeExpiryDate(expiry);
+                if (formattedExpiry) {
+                    // Recalculate other rows (excluding current)
+                    $("#PurchaseReturnItemBody tr").each(function() {
+                        const $otherRow = $(this);
+
+                        // Skip current row (already calculated above)
+                        if ($otherRow.is($row)) return;
+
+                        const otherItemId = $otherRow.find(".item-id").val();
+                        const otherBatch = $otherRow.find(".batch").val()?.trim();
+                        const otherExpiry = normalizeExpiryDate($otherRow.find(".expirydate").val()?.trim());
+                        const otherMrp = parseFloat($otherRow.find(".mrp").val()) || 0;
+                        const otherRate = parseFloat($otherRow.find(".rate").val()) || 0;
+
+                        if (otherItemId == itemId &&
+                            compareBatch(otherBatch, batch) &&
+                            otherExpiry === formattedExpiry &&
+                            compareFloats(otherMrp, mrp) &&
+                            compareFloats(otherRate, rate)) {
+                            autoCalculateFreeQty($otherRow);
+                        }
+                    });
+                }
+            }
+
+            // Then validate
+            validateQuantityInput($qtyInput);
+        });
+
+        // ✅ NEW: FOCUS VALIDATION (update this)
+        $(document).on("focus", ".qty", function () {
+            const $qtyInput = $(this);
+            const $row = $qtyInput.closest("tr");
+
+            // ✅ FIRST: Ensure original purchase data is set
+            ensureOriginalPurchaseData($row);
+
+            // ✅ AUTO-CALCULATE FREE QTY ON FOCUS
+            autoCalculateFreeQty($row);
+
+            validateQuantityInput($qtyInput);
+        });
+
+        // ✅ NEW HELPER FUNCTION
+        function ensureOriginalPurchaseData($row) {
+            const itemId = $row.find(".item-id").val();
+            const batchValue = $row.find(".batch").val()?.trim();
+
+            // Skip if no item/batch or data already set
+            if (!itemId || !batchValue) return;
+
+            const existingOriginalQty = $row.find(".original-purchase-qty").val();
+            if (existingOriginalQty) return; // Already set
+
+            // Try to find and set from groupedPurchaseData
+            if (!Array.isArray(groupedPurchaseData) || groupedPurchaseData.length === 0) {
+                return;
+            }
+
+            const matchedBatch = groupedPurchaseData.find(b =>
+                b.itemId == itemId &&
+                compareBatch(b.batch, batchValue)
+            );
+
+            if (matchedBatch) {
+                $row.find(".original-purchase-qty").val(matchedBatch.qty || 0);
+                $row.find(".original-purchase-free").val(matchedBatch.freeQty || 0);
+
+                console.log(`✅ Ensured original data: Qty=${matchedBatch.qty}, Free=${matchedBatch.freeQty}`);
+            }
+        }
+        // NEW FUNCTION: Auto-calculate free qty based on purchase ratio
+        // ✅ NEW FUNCTION: Auto-calculate free qty based on CUMULATIVE logic
+        function autoCalculateFreeQty($row) {
+            const originalQty = parseFloat($row.find(".original-purchase-qty").val()) || 0;
+            const originalFree = parseFloat($row.find(".original-purchase-free").val()) || 0;
+            const returnQty = parseFloat($row.find(".qty").val()) || 0;
+
+            console.log(`🔍 autoCalculateFreeQty: OrigQty=${originalQty}, OrigFree=${originalFree}, ReturnQty=${returnQty}`);
+
+            if (originalQty === 0) {
+                console.log("⚠️ No original qty, skipping");
+                return;
+            }
+
+            if (originalFree === 0) {
+                $row.find(".freeqty").val(0);
+                console.log("✅ Original free is 0, set return free to 0");
+                return;
+            }
+
+            // ✅ Get item details for cumulative calculation
+            const itemId = $row.find(".item-id").val();
+            const batch = $row.find(".batch").val()?.trim();
+            const expiry = $row.find(".expirydate").val()?.trim();
+            const mrp = parseFloat($row.find(".mrp").val()) || 0;
+            const rate = parseFloat($row.find(".rate").val()) || 0;
+
+            if (!itemId || !batch || !expiry) {
+                console.log("⚠️ Missing item/batch/expiry, using simple ratio");
+                // Fallback to simple ratio
+                const freeRatio = originalFree / originalQty;
+                const calculatedFree = returnQty * freeRatio;
+                const roundedFree = Math.round(calculatedFree);
+                $row.find(".freeqty").val(roundedFree);
+                return;
+            }
+
+            const formattedExpiry = normalizeExpiryDate(expiry);
+            if (!formattedExpiry) {
+                console.log("⚠️ Invalid expiry format");
+                return;
+            }
+
+            // ✅ CUMULATIVE LOGIC: Calculate total returned qty (EXCLUDING current row)
+            const totalReturnedExcludingCurrent = calculateTotalEnteredQtyExcludingRow(
+                itemId, batch, formattedExpiry, mrp, rate, $row
+            );
+
+            // ✅ Calculate total returned INCLUDING current row
+            const totalReturnedIncludingCurrent = totalReturnedExcludingCurrent + returnQty;
+
+            // ✅ Calculate how many free qty should be given based on cumulative percentage
+            let cumulativeFreeQty = 0;
+
+            // Simple proportion: If 60% qty returned, give 60% of free qty
+            const returnPercentage = totalReturnedIncludingCurrent / originalQty;
+            cumulativeFreeQty = Math.floor(returnPercentage * originalFree);
+
+            // ✅ Calculate already distributed free qty (from other rows)
+            const freeQtyAlreadyGiven = calculateTotalEnteredFreeQtyExcludingRow(
+                itemId, batch, formattedExpiry, mrp, rate, $row
+            );
+
+            // ✅ Calculate free qty for current row
+            const freeQtyForCurrentRow = cumulativeFreeQty - freeQtyAlreadyGiven;
+
+            // ✅ Make sure it's not negative
+            const finalFreeQty = Math.max(0, freeQtyForCurrentRow);
+
+            $row.find(".freeqty").val(finalFreeQty);
+
+            console.log(`✅ Cumulative Calculation:
+                - Total Returned (excl current): ${totalReturnedExcludingCurrent}
+                - Total Returned (incl current): ${totalReturnedIncludingCurrent}
+                - Return %: ${(returnPercentage * 100).toFixed(1)}%
+                - Cumulative Free Should Be: ${cumulativeFreeQty}
+                - Free Already Given: ${freeQtyAlreadyGiven}
+                - Free For Current Row: ${finalFreeQty}`);
+        }
+
+        // MODIFIED VALIDATION LOGIC
+        function validateQuantityInput($qtyInput) {
+            const $row = $qtyInput.closest("tr");
+
+            // Clear previous validation state
+            $qtyInput.removeClass('is-invalid');
+            $row.find(".freeqty").removeClass('is-invalid');
+
+            // Get row data
+            const itemId = $row.find(".item-id").val();
+            const batch = $row.find(".batch").val()?.trim();
+            const expiry = $row.find(".expirydate").val()?.trim();
+            const mrp = parseFloat($row.find(".mrp").val()) || 0;
+            const rate = parseFloat($row.find(".rate").val()) || 0;
+            const inputQty = parseFloat($qtyInput.val()) || 0;
+            const inputFreeQty = parseFloat($row.find(".freeqty").val()) || 0;
+
+            // ✅ STEP 1-4: Basic validation
+            if (!itemId || !batch || !expiry || !mrp || !rate) {
+                calculateRow($row);
+                return;
+            }
+
+            const formattedExpiry = normalizeExpiryDate(expiry);
+            if (!formattedExpiry) {
+                calculateRow($row);
+                return;
+            }
+
+            if (!Array.isArray(groupedPurchaseData) || groupedPurchaseData.length === 0) {
+                calculateRow($row);
+                return;
+            }
+
+            const matched = groupedPurchaseData.find(g => {
+                const backendExpiry = normalizeBackendExpiry(g.expiry);
+                if (!backendExpiry) return false;
+
+                return (
+                    g.itemId == itemId &&
+                    compareBatch(g.batch, batch) &&
+                    backendExpiry === formattedExpiry &&
+                    compareFloats(parseFloat(g.mrp), mrp) &&
+                    compareFloats(parseFloat(g.rate), rate)
+                );
+            });
+
+            if (!matched) {
+                toastr.error("No purchase record found for this item group.");
+                $qtyInput.val('').addClass('is-invalid');
+                $row.find(".freeqty").val('0');
+                calculateRow($row);
+                return;
+            }
+
+            // ✅ STEP 5: Calculate OTHER ROWS' total
+            const totalEnteredExcludingCurrent = calculateTotalEnteredQtyExcludingRow(
+                itemId, batch, formattedExpiry, mrp, rate, $row
+            );
+            const totalEnteredFreeExcludingCurrent = calculateTotalEnteredFreeQtyExcludingRow(
+                itemId, batch, formattedExpiry, mrp, rate, $row
+            );
+
+            // ✅ STEP 6: Get already returned from database
+            const alreadyReturned = getAlreadyReturnedQty(itemId, batch, formattedExpiry, mrp, rate);
+            const alreadyReturnedFree = getAlreadyReturnedFreeQty(itemId, batch, formattedExpiry, mrp, rate);
+
+            // 🔍🔍🔍 DEBUG CONSOLE LOGS
+            console.log("=== VALIDATION DEBUG ===");
+            console.log("ItemId:", itemId);
+            console.log("Batch:", batch);
+            console.log("Expiry (formatted):", formattedExpiry);
+            console.log("MRP:", mrp);
+            console.log("Rate:", rate);
+            console.log("---");
+            console.log("Matched Purchase Record:", matched);
+            console.log("Purchased Qty:", matched.qty);
+            console.log("Purchased Free Qty:", matched.freeQty);
+            console.log("---");
+            console.log("Already Returned (DB):", alreadyReturned);
+            console.log("Already Returned Free (DB):", alreadyReturnedFree);
+            console.log("---");
+            console.log("Entered in OTHER rows:", totalEnteredExcludingCurrent);
+            console.log("Entered Free in OTHER rows:", totalEnteredFreeExcludingCurrent);
+            console.log("---");
+            console.log("Input Qty (current row):", inputQty);
+            console.log("Input Free Qty (current row):", inputFreeQty);
+            console.log("---");
+
+            // ✅ STEP 7: Calculate available
+            const totalAvailableQty = matched.qty - alreadyReturned;
+            const totalAvailableFreeQty = matched.freeQty - alreadyReturnedFree;
+
+            console.log("Total Available Qty:", totalAvailableQty);
+            console.log("Total Available Free Qty:", totalAvailableFreeQty);
+            console.log("---");
+
+            // ✅ STEP 8: Calculate remaining after other rows
+            const remainingQtyAfterOtherRows = totalAvailableQty - totalEnteredExcludingCurrent;
+            const remainingFreeQtyAfterOtherRows = totalAvailableFreeQty - totalEnteredFreeExcludingCurrent;
+
+            console.log("Remaining Qty (for current row):", remainingQtyAfterOtherRows);
+            console.log("Remaining Free Qty (for current row):", remainingFreeQtyAfterOtherRows);
+            console.log("---");
+
+            // ✅ STEP 9: Validate Qty
+            console.log(`Checking: ${inputQty} > ${remainingQtyAfterOtherRows}?`);
+
+            if (inputQty > remainingQtyAfterOtherRows) {
+                console.log("❌ VALIDATION FAILED - QTY EXCEEDED");
+                toastr.error(
+                    `Only ${remainingQtyAfterOtherRows} qty available for this row. ` +
+                    `(Purchased: ${matched.qty}, Already returned in DB: ${alreadyReturned}, ` +
+                    `Entered in other rows: ${totalEnteredExcludingCurrent})`
+                );
+                $qtyInput.addClass('is-invalid');
+
+                const correctedQty = Math.max(0, remainingQtyAfterOtherRows);
+                $qtyInput.val(correctedQty);
+
+                autoCalculateFreeQty($row);
+                calculateRow($row);
+                return;
+            }
+
+            console.log("✅ QTY VALIDATION PASSED");
+
+            // ✅ STEP 10: Validate Free Qty
+            console.log(`Checking: ${inputFreeQty} > ${remainingFreeQtyAfterOtherRows}?`);
+
+            if (inputFreeQty > remainingFreeQtyAfterOtherRows) {
+                console.log("❌ VALIDATION FAILED - FREE QTY EXCEEDED");
+                toastr.error(
+                    `Only ${remainingFreeQtyAfterOtherRows} free qty available for this row. ` +
+                    `(Purchased: ${matched.freeQty}, Already returned in DB: ${alreadyReturnedFree}, ` +
+                    `Entered in other rows: ${totalEnteredFreeExcludingCurrent})`
+                );
+                $row.find(".freeqty").addClass('is-invalid');
+
+                const correctedFreeQty = Math.max(0, remainingFreeQtyAfterOtherRows);
+                $row.find(".freeqty").val(correctedFreeQty);
+            }
+
+            console.log("✅ FREE QTY VALIDATION PASSED");
+            console.log("========================");
+
+            calculateRow($row);
+        }
+
+        // NEW HELPER: Calculate total entered free qty
+        function calculateTotalEnteredFreeQty(itemId, batch, expiry, mrp, rate) {
+            let total = 0;
+            $("#PurchaseReturnItemBody tr").each(function () {
+                const row = $(this);
+                const rowItemId = row.find(".item-id").val();
+                const rowBatch = row.find(".batch").val()?.trim();
+                const rowExpiry = normalizeExpiryDate(row.find(".expirydate").val()?.trim());
+                const rowMrp = parseFloat(row.find(".mrp").val()) || 0;
+                const rowRate = parseFloat(row.find(".rate").val()) || 0;
+                const rowFreeQty = parseFloat(row.find(".freeqty").val()) || 0;
+
+                if (!rowExpiry) return;
+
+                if (
+                    rowItemId == itemId &&
+                    compareBatch(rowBatch, batch) &&
+                    rowExpiry === expiry &&
+                    compareFloats(rowMrp, mrp) &&
+                    compareFloats(rowRate, rate)
+                ) {
+                    total += rowFreeQty;
+                }
+            });
+            return total;
+        }
+
+        // NEW HELPER: Get already returned free qty
+        function getAlreadyReturnedFreeQty(itemId, batch, expiry, mrp, rate) {
+            if (!Array.isArray(returnedQtyData)) return 0;
+
+            const found = returnedQtyData.find(r => {
+                const rExpiry = normalizeBackendExpiry(r.expiry);
+                if (!rExpiry) return false;
+
+                return (
+                    r.itemId == itemId &&
+                    compareBatch(r.batch, batch) &&
+                    rExpiry === expiry &&
+                    compareFloats(parseFloat(r.mrp), mrp) &&
+                    compareFloats(parseFloat(r.rate), rate)
+                );
+            });
+
+            return found?.returnedFreeQty || 0;
+        }
+
+        // ================================================================
+        // 🔹 HELPER FUNCTIONS FOR VALIDATION
+        // ================================================================
+        function normalizeExpiryDate(expiryStr) {
+            if (!expiryStr) return null;
+
+            // Trim whitespace
+            expiryStr = expiryStr.trim();
+
+            if (!expiryStr.includes('/')) return null;
+
+            const parts = expiryStr.split('/');
+            if (parts.length !== 2) return null;
+
+            const [mm, yy] = parts;
+
+            // Validate inputs exist
+            if (!mm || !yy) return null;
+
+            const month = mm.trim().padStart(2, '0');
+            const yearStr = yy.trim();
+
+            // Handle both 2-digit and 4-digit year
+            let year;
+            if (yearStr.length === 2) {
+                // Convert 2-digit year to 4-digit (26 → 2026)
+                year = "20" + yearStr;
+            } else if (yearStr.length === 4) {
+                // Already 4-digit
+                year = yearStr;
+            } else {
+                return null; // Invalid year format
+            }
+
+            // Validate month
+            const monthNum = parseInt(month);
+            if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) return null;
+
+            return `${year}-${month}-01`;
+        }
+
+        function normalizeBackendExpiry(expiry) {
+            if (!expiry) return null;
+
+            try {
+                let dateStr;
+
+                if (typeof expiry === 'string') {
+                    if (expiry.includes('T')) {
+                        // ISO format: "2026-06-01T00:00:00"
+                        dateStr = expiry.split("T")[0];
+                    } else if (expiry.includes('/')) {
+                        // MM/YYYY or MM/YY format
+                        const [mm, yy] = expiry.split('/');
+                        const month = mm.padStart(2, '0');
+
+                        // ✅ Handle both 2-digit and 4-digit year
+                        let year;
+                        if (yy.length === 2) {
+                            year = "20" + yy;
+                        } else if (yy.length === 4) {
+                            year = yy;
+                        } else {
+                            return null;
+                        }
+
+                        dateStr = `${year}-${month}-01`;
+                    } else if (expiry.includes('-')) {
+                        // Already in YYYY-MM-DD format
+                        dateStr = expiry;
+                    } else {
+                        return null;
+                    }
+                } else if (expiry instanceof Date) {
+                    const d = new Date(expiry);
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    dateStr = `${year}-${month}-01`;
+                }
+
+                return dateStr;
+            } catch (e) {
+                console.error("Error normalizing expiry:", e);
+                return null;
+            }
+        }
+
+        function compareFloats(a, b, tolerance = 0.01) {
+            return Math.abs(a - b) < tolerance;
+        }
+
+        function compareBatch(batch1, batch2) {
+            if (!batch1 || !batch2) return false;
+            return batch1.trim().toLowerCase() === batch2.trim().toLowerCase();
+        }
+
+                // ✅ MODIFIED: Calculate total entered qty EXCLUDING current row
+        function calculateTotalEnteredQtyExcludingRow(itemId, batch, expiry, mrp, rate, $currentRow) {
+            let total = 0;
+            $("#PurchaseReturnItemBody tr").each(function () {
+                const $row = $(this);
+
+                // ✅ Skip current row
+                if ($row.is($currentRow)) {
+                    return; // continue to next iteration
+                }
+
+                const rowItemId = $row.find(".item-id").val();
+                const rowBatch = $row.find(".batch").val()?.trim();
+                const rowExpiry = normalizeExpiryDate($row.find(".expirydate").val()?.trim());
+                const rowMrp = parseFloat($row.find(".mrp").val()) || 0;
+                const rowRate = parseFloat($row.find(".rate").val()) || 0;
+                const rowQty = parseFloat($row.find(".qty").val()) || 0;
+
+                if (!rowExpiry) return;
+
+                if (
+                    rowItemId == itemId &&
+                    compareBatch(rowBatch, batch) &&
+                    rowExpiry === expiry &&
+                    compareFloats(rowMrp, mrp) &&
+                    compareFloats(rowRate, rate)
+                ) {
+                    total += rowQty;
+                }
+            });
+            return total;
+        }
+
+        // MODIFIED: Calculate total entered free qty EXCLUDING current row
+        function calculateTotalEnteredFreeQtyExcludingRow(itemId, batch, expiry, mrp, rate, $currentRow) {
+            let total = 0;
+            $("#PurchaseReturnItemBody tr").each(function () {
+                const $row = $(this);
+
+                // ✅ Skip current row
+                if ($row.is($currentRow)) {
+                    return; // continue to next iteration
+                }
+
+                const rowItemId = $row.find(".item-id").val();
+                const rowBatch = $row.find(".batch").val()?.trim();
+                const rowExpiry = normalizeExpiryDate($row.find(".expirydate").val()?.trim());
+                const rowMrp = parseFloat($row.find(".mrp").val()) || 0;
+                const rowRate = parseFloat($row.find(".rate").val()) || 0;
+                const rowFreeQty = parseFloat($row.find(".freeqty").val()) || 0;
+
+                if (!rowExpiry) return;
+
+                if (
+                    rowItemId == itemId &&
+                    compareBatch(rowBatch, batch) &&
+                    rowExpiry === expiry &&
+                    compareFloats(rowMrp, mrp) &&
+                    compareFloats(rowRate, rate)
+                ) {
+                    total += rowFreeQty;
+                }
+            });
+            return total;
+        }
+
+        function calculateTotalEnteredQty(itemId, batch, expiry, mrp, rate) {
+            let total = 0;
+            $("#PurchaseReturnItemBody tr").each(function () {
+                const row = $(this);
+                const rowItemId = row.find(".item-id").val();
+                const rowBatch = row.find(".batch").val()?.trim();
+                const rowExpiry = normalizeExpiryDate(row.find(".expirydate").val()?.trim());
+                const rowMrp = parseFloat(row.find(".mrp").val()) || 0;
+                const rowRate = parseFloat(row.find(".rate").val()) || 0;
+                const rowQty = parseFloat(row.find(".qty").val()) || 0;
+
+                if (!rowExpiry) return;
+
+                if (
+                    rowItemId == itemId &&
+                    compareBatch(rowBatch, batch) &&
+                    rowExpiry === expiry &&
+                    compareFloats(rowMrp, mrp) &&
+                    compareFloats(rowRate, rate)
+                ) {
+                    total += rowQty;
+                }
+            });
+            return total;
+        }
+
+        function getAlreadyReturnedQty(itemId, batch, expiry, mrp, rate) {
+            if (!Array.isArray(returnedQtyData)) return 0;
+
+            const found = returnedQtyData.find(r => {
+                const rExpiry = normalizeBackendExpiry(r.expiry);
+                if (!rExpiry) return false;
+
+                return (
+                    r.itemId == itemId &&
+                    compareBatch(r.batch, batch) &&
+                    rExpiry === expiry &&
+                    compareFloats(parseFloat(r.mrp), mrp) &&
+                    compareFloats(parseFloat(r.rate), rate)
+                );
+            });
+
+            return found?.returnedQty || 0;
+        }
+    </script>
+    <!-- ================================================================
+         🔹 CALCULATIONS
+         ================================================================ -->
+    <script>
+        $(document).on("input", ".qty, .discount, .rate", function () {
+            calculateRow($(this).closest("tr"));
+        });
+
+        function calculateRow(row) {
+            let qty = parseFloat(row.find(".qty").val()) || 0;
+            let freeQty = parseFloat(row.find(".freeqty").val()) || 0;
+            let rate = parseFloat(row.find(".rate").val()) || 0;
+            let gst = parseFloat(row.find(".gst").val()) || 0;
+            let cess = parseFloat(row.find(".cess").val()) || 0;
+            let discount = parseFloat(row.find(".discount").val()) || 0;
+
+            let grossAmount = qty * rate;
+            let discountAmt = (grossAmount * discount) / 100;
+            let amountAfterDiscount = grossAmount - discountAmt;
+            let gstAmt = (amountAfterDiscount * gst) / 100;
+            let cessAmt = (amountAfterDiscount * cess) / 100;
+            let total = amountAfterDiscount + gstAmt + cessAmt;
+
+            row.find(".discount-amt").val(discountAmt.toFixed(2));
+            row.find(".total").val(total.toFixed(2));
+
+            calculateTotalSummary();
+        }
+
+        function calculateTotalSummary() {
+            let total = 0, totalGst = 0, totalCess =0, totalDiscount = 0, totalamt = 0;
+            let gstRows = [];
+
+            $("#PurchaseReturnItemBody tr").each(function () {
+                let row = $(this);
+                let qty = parseFloat(row.find(".qty").val()) || 0;
+                let rate = parseFloat(row.find(".rate").val()) || 0;
+                let gst = parseFloat(row.find(".gst").val()) || 0;
+                let cess = parseFloat(row.find(".cess").val()) || 0;
+                let discount = parseFloat(row.find(".discount").val()) || 0;
+
+                let grossAmount = qty * rate;
+                let discountAmt = (grossAmount * discount) / 100;
+                let amountAfterDiscount = grossAmount - discountAmt;
+                let gstAmt = (amountAfterDiscount * gst) / 100;
+                let cessAmt = (amountAfterDiscount * cess) / 100;
+
+                total += amountAfterDiscount;
+                totalamt += amountAfterDiscount;
+                totalDiscount += discountAmt;
+                totalGst += gstAmt;
+                totalCess += cessAmt;
+
+                gstRows.push({ rate: amountAfterDiscount, gst: gst, cess:cess });
+            });
+
+            let percentInput = parseFloat($("#discountPercent").val()) || 0;
+            let amountInput = parseFloat($("#discountamount").val()) || 0;
+
+            let globalDiscountPercent = 0;
+            let globalDiscountAmt = 0;
+
+            if ($("#discountPercent").is(":focus") || (percentInput > 0 && amountInput === 0)) {
+                globalDiscountPercent = percentInput;
+                globalDiscountAmt = (total * globalDiscountPercent) / 100;
+                $("#discountamount").val(globalDiscountAmt.toFixed(2));
+            } else if ($("#discountamount").is(":focus") || (amountInput > 0 && percentInput === 0)) {
+                globalDiscountAmt = amountInput;
+                globalDiscountPercent = total > 0 ? (globalDiscountAmt / total) * 100 : 0;
+                $("#discountPercent").val(globalDiscountPercent.toFixed(2));
+            }
+
+            if (globalDiscountAmt > 0) {
+                totalDiscount += globalDiscountAmt;
+                totalamt = total - globalDiscountAmt;
+
+                totalGst = 0;
+                totalCess = 0;
+                gstRows.forEach(row => {
+                    let rowDiscountAmt = (row.rate * globalDiscountPercent) / 100;
+                    let rowAfterGlobalDiscount = row.rate - rowDiscountAmt;
+                    let gstAmt = (rowAfterGlobalDiscount * row.gst) / 100;
+                    let cessAmt = (rowAfterGlobalDiscount * row.cess) / 100;
+                    totalGst += gstAmt;
+                    totalCess += cessAmt;
+                });
+            }
+
+            let totalPayable = totalamt + totalGst + totalCess;
+            let roundedPayable = Math.round(totalPayable);
+            let roundOffAmount = Number((roundedPayable - totalPayable).toFixed(2));
+
+            $("[name='Total']").val(total.toFixed(2));
+            $("[name='Totaldiscount']").val(totalDiscount.toFixed(2));
+            $("[name='TotalGstAmt']").val(totalGst.toFixed(2));
+            $("[name='TotalCessAmt']").val(totalCess.toFixed(2));
+            $("[name='TotalPayable']").val(roundedPayable);
+            $("[name='RoundOffAmount']").val(roundOffAmount);
+        }
+
+        $("#discountPercent, #discountamount").on("input", function () {
+            calculateTotalSummary();
+        });
+
+        // NEW VALIDATION HANDLER (Bill discount validation)
+        $("#discountPercent").on("input", function() {
+            let value = parseFloat($(this).val()) || 0;
+
+            // HARD LIMIT: Cannot exceed 100%
+            if (value > 100) {
+                toastr.error("Discount cannot exceed 100%", "Invalid Discount");
+                $(this).val(100); // Set to max 100
+                return;
+            }
+
+            // WARNING: If discount > 50%
+            if (value > 50) {
+                toastr.warning("High discount alert: " + value + "%", "Review Required");
+            }
+        });
+    </script>
+
+    <!-- ================================================================
+         🔹 FOOTER NAVIGATION & FORM SUBMIT
+         ================================================================ -->
+    <script>
+        $("#discountPercent").on("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                $("#discountamount").focus().select();
+            }
+        });
+
+        $(document).on("keydown", function(e) {
+            if (e.key === "End") {
+                e.preventDefault();
+                saveData();
+            }
+        });
+
+        function saveData() {
+            toastr.options = {
+                closeButton: true,
+                progressBar: true,
+                positionClass: "toast-top-right",
+                timeOut: 3000
+            };
+
+            if (!validateHeaderFields()) return;
+
+            if ($("#PurchaseReturnItemBody tr").length === 0) {
+                toastr.error("Please add at least one item");
+                $("#addRow").focus();
+                return;
+            }
+
+            if (!validateAllRows()) return;
+
+            confirmSave(function (ok) {
+                if (!ok) return;
+
+                showLoader("Creating purchase return...");
+                document.getElementById("purchaseReturnForm").submit();
+            });
+        }
+
+        $("#purchaseReturnForm").on("submit", function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const form = this;
+
+            toastr.options = {
+                closeButton: true,
+                progressBar: true,
+                positionClass: "toast-top-right",
+                timeOut: 3000
+            };
+
+            if (!validateHeaderFields()) return false;
+
+            if ($("#PurchaseReturnItemBody tr").length === 0) {
+                toastr.error("Please add at least one item");
+                $("#addRow").focus();
+                return false;
+            }
+
+            if (!validateAllRows()) return false;
+
+            confirmSave(function (ok) {
+                if (!ok) return;
+
+                showLoader("Creating purchase return...");
+                form.submit();
+            });
+        });
+    </script>
+
+    <script>
+        function loadItemPurchaseHistory(itemId) {
+            const supplierId = $(".supplier-id").val();
+
+            // SHOW wrapper when function is called
+            $("#itemReturnInfoWrapper").show();
+
+            $.get(`/PurchaseReturn/GetItemPurchaseHistory`,
+                { itemId, supplierId },
+                function (res) {
+
+                if (!res.success || !res.data.length) {
+                    $("#itemReturnInfoBody").html(`
+                        <tr>
+                            <td colspan="9" class="text-warning text-center">
+                                No purchase history found
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                let rows = "";
+                res.data.forEach(x => {
+                    rows += `
+                        <tr>
+                            <td>${x.supplier}</td>
+                            <td>${x.billNo}</td>
+                            <td>${formatDate(x.billDate)}</td>
+                            <td>${x.qty}</td>
+                            <td>${x.freeQty}</td>
+                            <td>${x.batch}</td>
+                            <td>${x.mrp}</td>
+                            <td>${x.rate}</td>
+                            <td>${x.expiryDate ? formatDate(x.expiryDate) : "--"}</td>
+                            <td>${x.totalDiscount}</td>
+                            <td>${x.batchWiseCost}</td>
+                        </tr>`;
+                });
+
+                $("#itemReturnInfoBody").html(rows);
+            });
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            if (isNaN(d)) return "--";
+
+            return (
+                ("0" + d.getDate()).slice(-2) + "/" +
+                ("0" + (d.getMonth() + 1)).slice(-2) + "/" +
+                d.getFullYear()
+            );
+        }
+
+    </script>
+
+    <!-- ================================================================
+     🔹 AUTO-POPULATE ORIGINAL PURCHASE DATA ON BATCH CHANGE
+     ================================================================ -->
+    <script>
+        // ✅ When user types/changes batch manually
+        $(document).on("input blur", ".batch", function() {
+            const $row = $(this).closest("tr");
+            const itemId = $row.find(".item-id").val();
+            const batchValue = $(this).val()?.trim();
+
+            // Skip if no item selected or batch is empty
+            if (!itemId || !batchValue) {
+                return;
+            }
+
+            // Check if original purchase data is already set
+            const existingOriginalQty = $row.find(".original-purchase-qty").val();
+            const existingOriginalFree = $row.find(".original-purchase-free").val();
+
+            // Try to find matching batch in groupedPurchaseData
+            if (!Array.isArray(groupedPurchaseData) || groupedPurchaseData.length === 0) {
+                return;
+            }
+
+            const matchedBatch = groupedPurchaseData.find(b =>
+                b.itemId == itemId &&
+                compareBatch(b.batch, batchValue)
+            );
+
+            if (matchedBatch) {
+                // ✅ Auto-populate original purchase data
+                $row.find(".original-purchase-qty").val(matchedBatch.qty || 0);
+                $row.find(".original-purchase-free").val(matchedBatch.freeQty || 0);
+
+                // Also populate other fields if empty
+                if (!$row.find(".rate").val() || parseFloat($row.find(".rate").val()) === 0) {
+                    $row.find(".rate").val(matchedBatch.rate || 0);
+                }
+
+                if (!$row.find(".mrp").val() || parseFloat($row.find(".mrp").val()) === 0) {
+                    $row.find(".mrp").val(matchedBatch.mrp || 0);
+                }
+
+                if (!$row.find(".expirydate").val()) {
+                    const d = new Date(matchedBatch.expiry);
+                    const formatted = ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear();
+                    $row.find(".expirydate").val(formatted);
+                }
+
+                console.log(`✅ Auto-populated original data for batch ${batchValue}: Qty=${matchedBatch.qty}, Free=${matchedBatch.freeQty}`);
+
+                // ✅✅ NEW: IMMEDIATELY CALCULATE FREE QTY AFTER SETTING ORIGINAL DATA
+                const currentQty = parseFloat($row.find(".qty").val()) || 0;
+                if (currentQty > 0) {
+                    autoCalculateFreeQty($row);
+                }
+            }
+        });
+
+        // ✅ NEW FUNCTION: Recalculate free qty for all rows with same item-batch
+        function recalculateFreeQtyForBatch(itemId, batch, expiry, mrp, rate) {
+            console.log(`🔄 Recalculating free qty for: ItemId=${itemId}, Batch=${batch}`);
+
+            // ✅ Find all rows with matching item-batch-expiry-mrp-rate
+            const $matchingRows = [];
+
+            $("#PurchaseReturnItemBody tr").each(function() {
+                const $row = $(this);
+                const rowItemId = $row.find(".item-id").val();
+                const rowBatch = $row.find(".batch").val()?.trim();
+                const rowExpiry = normalizeExpiryDate($row.find(".expirydate").val()?.trim());
+                const rowMrp = parseFloat($row.find(".mrp").val()) || 0;
+                const rowRate = parseFloat($row.find(".rate").val()) || 0;
+
+                if (rowItemId == itemId &&
+                    compareBatch(rowBatch, batch) &&
+                    rowExpiry === expiry &&
+                    compareFloats(rowMrp, mrp) &&
+                    compareFloats(rowRate, rate)) {
+                    $matchingRows.push($row);
+                }
+            });
+
+            console.log(`📊 Found ${$matchingRows.length} matching rows to recalculate`);
+
+            // ✅ Recalculate free qty for each matching row
+            $matchingRows.forEach($row => {
+                autoCalculateFreeQty($row);
+            });
+        }
+    </script>
+    <script>
+        $(document).on("keydown", function (e) {
+            // F10 pressed
+            if (e.key === "F10") {
+
+                // ❌ Browser refresh band
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                // ❌ Agar koi modal open hai to kuch mat karo
+                if ($(".modal.show").length > 0) return;
+
+                $("#refreshBtn").trigger("click");
+            }
+
+            // F11 pressed
+            if (e.key === "F11") {
+
+                // ❌ Browser refresh band
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                // ❌ Agar koi modal open hai to kuch mat karo
+                if ($(".modal.show").length > 0) return;
+
+                $("#btnCancel").trigger("click");
+            }
+        });
+
+        function confirmCancel(callback) {
+            Swal.fire({
+                title: 'Confirm Cancel?',
+                text: 'Changes will be lost. Do you want to cancel?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '❌ Yes, Cancel',
+                cancelButtonText: '↩ No, Stay',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then((result) => {
+                callback(result.isConfirmed);
+            });
+        }
+
+        $("#btnCancel").on("click", function (e) {
+            e.preventDefault();
+
+            confirmCancel(function (isConfirmed) {
+                if (isConfirmed) {
+                    window.location.href = $("#btnCancel").attr("href");
+                }
+            });
+        });
+
+        $(document).on("click", "#refreshBtn", function () {
+            Swal.fire({
+                title: 'Refresh Page?',
+                html: `
+                    <p class="text-danger mb-2">⚠️ Any unsaved changes will be lost!</p>
+                    <p class="mb-0">All items, payments, and customer details will be cleared.</p>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '🔄 Yes, Refresh',
+                cancelButtonText: '❌ No, Stay',
+                reverseButtons: true,
+                customClass: {
+                    confirmButton: 'btn btn-primary',
+                    cancelButton: 'btn btn-secondary'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loader while refreshing
+                    showLoader("Refreshing page...");
+                    location.reload();
+                }
+            });
+        });
+    </script>
+}

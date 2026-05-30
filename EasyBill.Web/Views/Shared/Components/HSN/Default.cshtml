@@ -1,0 +1,79 @@
+﻿ <div id="hsnpopup" class="popup">
+	<div class="popup-content">
+		<h2>Add HSN/SAC</h2>
+		<form id="hsnform">
+            <div class="row">
+                <div class="col-md-6">
+                    <label>HSN Code *</label>
+                    <input type="text" name="HsnCode" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label>SGST (%)</label>
+                    <input type="number" name="SGST" class="form-control" required step="0.01" />
+                </div>
+                <div class="col-md-6">
+                    <label>CGST (%)</label>
+                    <input type="number" name="CGST" class="form-control" required step="0.01" />
+                </div>
+                <div class="col-md-6">
+                    <label>IGST (%)</label>
+                    <input type="number" name="IGST" class="form-control" required step="0.01" />
+                </div>
+                <div class="col-md-6">
+                    <label>Cess (%)</label>
+                    <input type="number" name="Cess" class="form-control" required step="0.01" />
+                </div>
+                <div class="col-md-6">
+                    <label>HSN Type *</label>
+                    <select name="HsnType" class="form-control">
+                        <option value="" disabled selected>Select HSN Type</option>
+                        <option value="1">Goods</option>
+                        <option value="2">Services</option>
+                    </select>
+                </div>
+            </div>
+            
+            <br />
+            <button type="button" class="btn btn-success" onclick="savehsn()">Save</button>
+            <button type="button" class="btn btn-danger" onclick="closehsnpopup()">Close</button>
+		</form>
+	 </div>
+ </div>
+
+<style>
+   /*  .popup {
+        display: none;
+        position: fixed;
+        top: 20%; 
+        left: 35%;
+        width: 30%; 
+        background: white;
+        padding: 20px;
+        box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+        border-radius: 5px;
+        z-index: 1000;
+    }
+
+    .popup-content {
+        text-align: center;
+    } */
+    .popup {
+        display: none;
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%); /* ✅ Centers the popup */
+        width: 40%; /* Default width */
+        max-width: 600px; /* Maximum width */
+        min-width: 300px; /* Minimum width */
+        background: white;
+        padding: 20px;
+        box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+        border-radius: 5px;
+        z-index: 1000;
+    }
+
+    .popup-content {
+        text-align: center;
+    }
+</style>

@@ -1,0 +1,296 @@
+﻿@using EasyBill.Models.ViewModels
+@model List<OpeningStockVM>
+<div class="d-flex justify-content-end align-items-center gap-2 mb-2">
+    <form asp-action="ImportOpeningStock" method="post" enctype="multipart/form-data" class="d-flex gap-2">
+        <input type="file" name="file" class="form-control form-control-sm" required />
+        <button class="btn btn-primary btn-sm">Import</button>
+    </form>
+
+    <a href="/OpeningStock/ExportOpeningStock" class="btn btn-success btn-sm">
+        Export
+    </a>
+</div>
+<form asp-action="Save" method="post">
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Qty</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.Count; i++)
+            {
+                <tr>
+                    <td>
+                        @Model[i].ItemName
+                        <input type="hidden" name="[@i].ItemId" value="@Model[i].ItemId" />
+                    </td>
+
+                    <td>
+                      
+
+                        <div id="batchContainer_@i">
+                            <div class="text-success fw-bold mb-1 qty-summary">
+                                 @(Model[i].Batches?.Sum(x => x.Qty) ?? 0)
+                            </div>
+                            @if (Model[i].Batches != null)
+                            {
+                                for (int j = 0; j < Model[i].Batches.Count; j++)
+                                {
+                                    <input type="hidden" name="[@i].Batches[@j].Batch" value="@Model[i].Batches[j].Batch" />
+                                    <input type="hidden" name="[@i].Batches[@j].Expirydate" value="@Model[i].Batches[j].Expirydate?.ToString("yyyy-MM-dd")" />
+                                    <input type="hidden" name="[@i].Batches[@j].Qty" value="@Model[i].Batches[j].Qty" />
+                                    <input type="hidden" name="[@i].Batches[@j].Mrp" value="@Model[i].Batches[j].Mrp" />
+                                    <input type="hidden" name="[@i].Batches[@j].RateA" value="@Model[i].Batches[j].RateA" />
+                                    <input type="hidden" name="[@i].Batches[@j].RateB" value="@Model[i].Batches[j].RateB" />
+                                }
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-primary btn-sm"
+                                onclick="openModal(@i)">
+                            Add / Edit Stock
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <button type="submit" class="btn btn-success">Save</button>
+</form>
+
+<!-- MODAL -->
+<div class="modal fade" id="stockModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>Opening Stock</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="rowIndex" />
+
+                <table class="table" id="batchTable">
+                    <thead>
+                        <tr>
+                            <th>Batch</th>
+                            <th>Expiry (MM/YYYY)</th>
+                            <th>Qty</th>
+                            <th>MRP</th>
+                            <th>RateA</th>
+                            <th>RateB</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <button type="button" class="btn btn-sm btn-primary" onclick="addRow(true)">+ Add Row</button>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="applyData()">Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+       let modal;
+
+    document.addEventListener("DOMContentLoaded", function () {
+        modal = new bootstrap.Modal(document.getElementById('stockModal'));
+    });
+
+    // ✅ Add Row
+    function addRow(focus=false, b='', e='', q='', m='', a='', b2='') {
+
+        let row = `
+        <tr>
+            <td><input class="form-control batch" value="${b}"></td>
+            <td><input class="form-control expiry" placeholder="MM/YYYY" value="${e}"></td>
+            <td><input class="form-control qty" value="${q}"></td>
+            <td><input class="form-control mrp" value="${m}"></td>
+            <td><input class="form-control rateA" value="${a}"></td>
+            <td><input class="form-control rateB" value="${b2}"></td>
+            <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">X</button></td>
+        </tr>`;
+
+        let tbody = document.querySelector("#batchTable tbody");
+        tbody.insertAdjacentHTML("beforeend", row);
+
+        if (focus) {
+            setTimeout(() => {
+                tbody.lastElementChild.querySelector(".batch").focus();
+            }, 100);
+        }
+    }
+
+    // ✅ Convert MM/YYYY → yyyy-MM-dd
+    function convertToDate(val) {
+
+        let match = val.match(/^(0[1-9]|1[0-2])\/(\d{4})$/);
+        if (!match) return "";
+
+        let month = parseInt(match[1]);
+        let year = parseInt(match[2]);
+
+        let lastDay = new Date(year, month, 0).getDate();
+
+        return `${year}-${month.toString().padStart(2, '0')}-${lastDay}`;
+    }
+
+    // ✅ Convert yyyy-MM-dd → MM/YYYY
+    function formatExpiry(dateStr) {
+
+        if (!dateStr) return "";
+
+        // expect: yyyy-MM-dd
+        let parts = dateStr.split('-');
+
+        if (parts.length !== 3) return "";
+
+        let year = parts[0];
+        let month = parts[1];
+
+        return `${month}/${year}`;
+    }
+
+    // ✅ Modal Open
+    function openModal(i) {
+
+        document.getElementById("rowIndex").value = i;
+
+        let tbody = document.querySelector("#batchTable tbody");
+        tbody.innerHTML = "";
+
+        let inputs = document.querySelectorAll(`[name^='[${i}].Batches']`);
+
+        if (inputs.length > 0) {
+
+            let data = {};
+
+            inputs.forEach(x => {
+                let m = x.name.match(/Batches\[(\d+)\]\.(\w+)/);
+                if (!m) return;
+
+                let idx = m[1];
+                let key = m[2];
+
+                if (!data[idx]) data[idx] = {};
+                data[idx][key] = x.value;
+            });
+
+            Object.values(data).forEach(d => {
+                addRow(false, d.Batch, formatExpiry(d.Expirydate), d.Qty, d.Mrp, d.RateA, d.RateB);
+            });
+
+        } else {
+            addRow(true);
+        }
+
+        modal.show();
+
+        setTimeout(() => {
+            document.querySelector(".batch")?.focus();
+        }, 200);
+    }
+
+    // ✅ Apply Data
+    function applyData() {
+
+        let i = document.getElementById("rowIndex").value;
+        let rows = document.querySelectorAll("#batchTable tbody tr");
+
+        let container = document.getElementById(`batchContainer_${i}`);
+        container.innerHTML = "";
+        let totalQty = 0;
+        rows.forEach((r, index) => {
+
+            let batch = r.querySelector(".batch").value;
+            let expiryText = r.querySelector(".expiry").value;
+            let expiry = convertToDate(expiryText);
+
+            let qty = r.querySelector(".qty").value;
+            let mrp = r.querySelector(".mrp").value;
+            let rateA = r.querySelector(".rateA").value;
+            let rateB = r.querySelector(".rateB").value;
+
+            // ❌ invalid skip
+            if (!batch || qty <= 0 || !expiry) return;
+             totalQty += parseFloat(qty) || 0;
+            container.insertAdjacentHTML("beforeend", `
+                <input type="hidden" name="[${i}].Batches[${index}].Batch" value="${batch}">
+                <input type="hidden" name="[${i}].Batches[${index}].Expirydate" value="${expiry}">
+                <input type="hidden" name="[${i}].Batches[${index}].Qty" value="${qty}">
+                <input type="hidden" name="[${i}].Batches[${index}].Mrp" value="${mrp}">
+                <input type="hidden" name="[${i}].Batches[${index}].RateA" value="${rateA}">
+                <input type="hidden" name="[${i}].Batches[${index}].RateB" value="${rateB}">
+            `);
+           
+        });
+         let summaryDiv = document.createElement("div");
+         summaryDiv.className = "text-success fw-bold mb-1 qty-summary";
+         summaryDiv.innerText = "Qty: " + totalQty;
+         
+         container.prepend(summaryDiv);
+        modal.hide();
+    }
+
+    // ✅ Enter Navigation
+    document.addEventListener("keydown", function (e) {
+
+        if (e.key !== "Enter") return;
+
+        let active = document.activeElement;
+
+        if (!active.closest("#batchTable")) return;
+
+        e.preventDefault();
+
+        let row = active.closest("tr");
+        let inputs = Array.from(row.querySelectorAll("input"));
+        let index = inputs.indexOf(active);
+
+        if (index < inputs.length - 1) {
+            inputs[index + 1].focus();
+        } else {
+            addRow(true);
+        }
+    });
+
+    // ✅ Strict Expiry Input (REAL FIX)
+    document.addEventListener("input", function (e) {
+
+        if (!e.target.classList.contains("expiry")) return;
+
+        let val = e.target.value.replace(/[^0-9]/g, '');
+
+        if (val.length >= 2) {
+            val = val.substring(0,2) + "/" + val.substring(2,6);
+        }
+
+        e.target.value = val.substring(0,7);
+    });
+
+    // ✅ Final Validation (on blur)
+    document.addEventListener("blur", function (e) {
+
+        if (!e.target.classList.contains("expiry")) return;
+
+        let val = e.target.value;
+
+        if (!/^(0[1-9]|1[0-2])\/\d{4}$/.test(val)) {
+            e.target.value = "";
+        }
+
+    }, true);
+</script>

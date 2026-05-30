@@ -1,0 +1,377 @@
+﻿@model EasyBill.Models.Entity.Sales
+@{
+    // BTR FIX: Layout = null ensures no old broken Master Layouts interfere.
+    Layout = null;
+
+    // 1. डेटाबेस से सेटिंग्स निकालना
+    var theme = ViewBag.ThemeSettings as EasyBill.Models.Entity.InvoiceThemeSetting;
+
+    // 2. MNC Grade Fallback
+    string primaryColor = theme?.PrimaryColor ?? "#2b6ac9";
+    string textColor = theme?.TextColor ?? "#1e293b";
+    string fontFamily = theme?.FontFamily ?? "Arial, sans-serif";
+    string baseFontSize = (theme?.BaseFontSize ?? 12).ToString() + "px";
+    
+    string title = theme?.Title ?? "TAX INVOICE";
+    string tnc = theme?.TermsAndConditions ?? "1. Goods once sold will not be taken back.";
+    string bank = theme?.BankDetails ?? "";
+    string signLabel = theme?.SignatoryLabel ?? "Auth. Signatory";
+    string businessName = ViewBag.BusinessName as string ?? "Your Business Name";
+    string businessAddress = ViewBag.BusinessAddress as string ?? "";
+    string businessPhone = ViewBag.BusinessPhone as string ?? "";
+    string businessEmail = ViewBag.BusinessEmail as string ?? "";
+    string businessGstin = ViewBag.BusinessGSTIN as string;
+
+    // 3. इमेजेज की लॉजिक 
+    string logo = theme?.LogoPath ?? "";
+    string logoDisplay = string.IsNullOrEmpty(logo) ? "none" : "inline-block";
+    string logoPos = (theme?.LogoPosition ?? "left").ToLower();
+    string logoSize = (theme?.LogoSize ?? 150).ToString() + "px";
+
+    string watermark = theme?.WatermarkPath ?? "";
+    string wmDisplay = string.IsNullOrEmpty(watermark) ? "none" : "block";
+    string wmSize = (theme?.WatermarkSize ?? 300).ToString() + "px";
+    double wmOpacity = (theme?.WatermarkOpacity ?? 10) / 100.0;
+
+    string sign = theme?.SignaturePath ?? "";
+    string signDisplay = string.IsNullOrEmpty(sign) ? "none" : "block";
+
+    // 4. Data Toggles
+    bool showHsn = theme?.ShowHSN ?? false;
+    bool showGstPct = theme?.ShowGSTPercent ?? false;
+    bool showGstAmt = theme?.ShowGSTAmount ?? false;
+    bool showDisc = theme?.ShowItemDiscount ?? false;
+    bool showGstin = theme?.ShowBusinessGSTIN ?? false;
+    bool showTaxTable = theme?.ShowTaxSummaryTable ?? false;
+    bool isZebra = theme?.IsZebraStriped ?? false;
+
+    // 5. Orientation Logic
+    bool isLandscape = theme?.Orientation == "Landscape";
+    string paperWidth = isLandscape ? "297mm" : "210mm";  
+    string paperHeight = isLandscape ? "210mm" : "297mm";
+    string pageCssSize = isLandscape ? "A4 landscape" : "A4 portrait";
+
+    // Fallback totals for PDF conversion path where header values may occasionally be missing.
+    decimal ResolveDisplayRate(EasyBill.Models.Entity.SalesItem x) => x.StripRate > 0m ? x.StripRate : x.Rate;
+    decimal lineSubtotal = Model?.SalesItems?.Sum(x => x.Qty * ResolveDisplayRate(x)) ?? 0m;
+    decimal lineDiscount = Model?.SalesItems?.Sum(x => ((x.Qty * ResolveDisplayRate(x)) * x.Discount) / 100m) ?? 0m;
+    decimal lineTaxable = lineSubtotal - lineDiscount;
+    decimal lineGst = Model?.SalesItems?.Sum(x =>
+    {
+        var rate = ResolveDisplayRate(x);
+        var taxable = (x.Qty * rate) - (((x.Qty * rate) * x.Discount) / 100m);
+        return taxable > 0 ? (taxable * x.Gst) / 100m : 0m;
+    }) ?? 0m;
+
+    decimal displaySubTotal = (Model?.Total ?? 0m) > 0m ? (Model?.Total ?? 0m) : lineTaxable;
+    decimal displayDiscount = (Model?.Totaldiscount ?? 0m) > 0m ? (Model?.Totaldiscount ?? 0m) : lineDiscount;
+    decimal displayGst = (Model?.TotalGstAmt ?? 0m) > 0m ? (Model?.TotalGstAmt ?? 0m) : lineGst;
+    decimal displayCess = Model?.TotalCessAmount ?? 0m;
+    decimal displayGrandTotal = (Model?.TotalPayable ?? 0m) > 0m
+        ? (Model?.TotalPayable ?? 0m)
+        : Math.Round(displaySubTotal + displayGst + displayCess, 2, MidpointRounding.AwayFromZero);
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print Invoice - @(Model?.BillNo ?? "New")</title>
+    <style>
+        /* #region 🟢 BTR FIX: Pure Server-Side Razor CSS */
+        :root {
+            --primary: @primaryColor;
+            --text: @textColor;
+            --bg-light: @(primaryColor)1A; 
+            --border: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        /* 🟢 1. SCREEN PREVIEW STYLES */
+        @@media screen {
+            body {
+                margin: 0; padding: 40px 0;
+                background: #525659; /* PDF Viewer Grey */
+                font-family: @Html.Raw(fontFamily);
+                color: var(--text);
+                font-size: @baseFontSize;
+                -webkit-font-smoothing: antialiased;
+            }
+
+            .paper-container {
+                background: #fff;
+                margin: 0 auto; 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                
+                width: @paperWidth;
+                min-height: @paperHeight; /* स्क्रीन पर पूरा A4 का फील देने के लिए */
+                
+                padding: 14mm 18mm; 
+                position: relative;
+            }
+        }
+
+        /* 🟢 2. ACTUAL REAL-WORLD PRINTER STYLES */
+        @@media print {
+            @@page {
+                size: @pageCssSize !important; 
+                margin: 10mm !important; /* 🟢 असली प्रिंटर के लिए सेफ हार्डवेयर मार्जिन */
+            }
+
+            html, body { 
+                background: #fff !important; 
+                margin: 0 !important;
+                padding: 0 !important; 
+                width: auto !important;
+                height: auto !important;
+                font-family: @Html.Raw(fontFamily) !important;
+                color: var(--text) !important;
+                font-size: @baseFontSize !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .paper-container { 
+                box-shadow: none !important; 
+                border: none !important;
+                margin: 0 !important; 
+                width: 100% !important;
+                
+                /* 🟢 BTR FIX: फिक्स हाइट हटा दी! अब यह नैचुरली बहेगा और खाली पन्ने नहीं बनाएगा */
+                height: auto !important;
+                min-height: auto !important; 
+                
+                /* Side breathing space so content does not hug page edges. */
+                padding: 0 8mm !important; 
+                position: relative !important;
+                overflow: visible !important;
+            }
+            
+            .no-print { display: none !important; }
+        }
+
+        /* Elements */
+        .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: @wmOpacity; width: @wmSize; display: @wmDisplay; z-index: 0; pointer-events: none; object-fit: contain; }
+        
+        .inv-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 15px; border-bottom: 2px solid var(--primary); margin-bottom: 20px; position: relative; z-index: 1; }
+        .logo-box { width: 50%; text-align: @logoPos; }
+        .logo-box img { max-width: 100%; max-height: 80px; object-fit: contain; }
+        .business-block { margin-top: 10px; text-align: left; }
+        .business-name { font-size: 1.35em; font-weight: 800; color: var(--primary); line-height: 1.2; margin-bottom: 4px; }
+        .business-meta { font-size: 0.92em; color: #475569; line-height: 1.45; }
+        .title-box { width: 50%; text-align: right; }
+        .title-box h1 { margin: 0 0 5px 0; font-size: 26px; font-weight: 900; color: var(--primary); text-transform: uppercase; line-height: 1.1; }
+
+        .info-grid { display: flex; justify-content: space-between; margin-bottom: 20px; position: relative; z-index: 1; line-height: 1.5; }
+
+        .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; position: relative; z-index: 1; }
+        .inv-table th { background: var(--bg-light); padding: 8px 10px; text-align: left; border-bottom: 2px solid var(--border); color: #0f172a; font-weight: bold; text-transform: uppercase; font-size: 0.85em; }
+        .inv-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        
+        @if (isZebra)
+        {
+            @Html.Raw(".inv-table tbody tr:nth-child(even) { background-color: #f8fafc; }")
+        }
+
+        .footer-grid { display: flex; justify-content: space-between; gap: 25px; position: relative; z-index: 1; page-break-inside: avoid; }
+        .footer-left { flex: 1; }
+        .footer-right { width: 280px; text-align: right; }
+        .footer-label { font-weight: 800; margin-bottom: 5px; color: var(--text); text-transform: uppercase; font-size: 0.85em; }
+
+        .totals-table { width: 100%; border-collapse: collapse; }
+        .totals-table td { padding: 3px 0; vertical-align: top; }
+        .totals-label { text-align: left; }
+        .totals-value { text-align: right; font-weight: 700; }
+        .totals-discount { color: #dc2626; }
+        /* #endregion */
+    </style>
+</head>
+<body>
+
+    @if (!(ViewBag.HidePrintControls as bool? ?? false))
+    {
+        <button class="no-print" onclick="window.print()" style="position: fixed; top: 20px; right: 30px; padding: 12px 24px; background: #0f172a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.2); z-index: 2000;">
+            <i class="bi bi-printer"></i> PRINT INVOICE
+        </button>
+    }
+
+    <div class="paper-container">
+        
+        <img class="watermark" src="@watermark" alt="Watermark">
+
+        <div class="inv-header">
+            <div class="logo-box">
+                <img src="@logo" style="width: @logoSize; display: @logoDisplay;" alt="Logo">
+                @* Legacy header block kept commented for reference.
+                @if (showGstin && !string.IsNullOrWhiteSpace(businessGstin))
+                {
+                    <div style="font-size: 0.9em; margin-top: 5px; color: #475569;"><b>GSTIN:</b> @businessGstin</div>
+                }
+                *@
+                <div class="business-block">
+                    <div class="business-name">@businessName</div>
+                    @if (!string.IsNullOrWhiteSpace(businessAddress))
+                    {
+                        <div class="business-meta">@businessAddress</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(businessPhone) || !string.IsNullOrWhiteSpace(businessEmail))
+                    {
+                        <div class="business-meta">
+                            @if (!string.IsNullOrWhiteSpace(businessPhone))
+                            {
+                                <span>Phone: @businessPhone</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(businessPhone) && !string.IsNullOrWhiteSpace(businessEmail))
+                            {
+                                <span> | </span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(businessEmail))
+                            {
+                                <span>Email: @businessEmail</span>
+                            }
+                        </div>
+                    }
+                    @if (showGstin && !string.IsNullOrWhiteSpace(businessGstin))
+                    {
+                        <div class="business-meta"><b>GSTIN:</b> @businessGstin</div>
+                    }
+                </div>
+            </div>
+            <div class="title-box">
+                <h1>@title</h1>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div>
+                <div class="footer-label">Billed To:</div>
+                <div style="font-size: 1.1em; font-weight: 600;">@(Model?.Customers?.Name ?? "Walk-in Customer")</div>
+                @if (!string.IsNullOrEmpty(Model?.Customers?.PhoneNo)) { <div>+91 @Model.Customers.PhoneNo</div> }
+                @if (!string.IsNullOrEmpty(Model?.Customers?.Address)) { <div>@Model.Customers.Address</div> }
+            </div>
+            <div style="text-align:right;">
+                <div><b>Invoice No:</b> @(Model?.BillNo ?? "INV-XXXX")</div>
+                <div><b>Date:</b> @(Model?.BillDate?.ToString("dd-MMM-yyyy") ?? DateTime.Now.ToString("dd-MMM-yyyy"))</div>
+            </div>
+        </div>
+
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>Item Description</th>
+                    @if(showHsn){ <th>HSN</th> }
+                    <th style="text-align:center;">Qty</th>
+                    <th style="text-align:right;">Rate</th>
+                    @if(showDisc){ <th style="text-align:right;">Disc</th> }
+                    @if(showGstPct){ <th style="text-align:center;">GST%</th> }
+                    @if(showGstAmt){ <th style="text-align:right;">GST Amt</th> }
+                    <th style="text-align:right;">Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.SalesItems != null)
+                {
+                    foreach (var item in Model.SalesItems)
+                    {
+                        var displayRate = ResolveDisplayRate(item);
+                        <tr>
+                            <td><b>@(item.ItemMaster?.Name ?? "Item Name")</b></td>
+                            @if(showHsn){ <td>@(item.ItemMaster?.Hsn?.HsnCode ?? "-")</td> }
+                            
+                            <td style="text-align:center;">@item.Qty</td>
+                            <td style="text-align:right;">@displayRate.ToString("0.00")</td>
+                            
+                            @if(showDisc){ <td style="text-align:right;">@item.Discount.ToString("0.00")</td> }
+                            @if(showGstPct){ <td style="text-align:center;">@item.Gst%</td> }
+                            @if(showGstAmt){ 
+                                decimal taxable = (item.Qty * displayRate) - item.Discount;
+                                decimal gAmt = (taxable > 0 && item.Gst > 0) ? (taxable * item.Gst) / 100m : 0m; 
+                                <td style="text-align:right;">₹ @gAmt.ToString("0.00")</td> 
+                            }
+                            
+                            <td style="text-align:right; font-weight:700;">₹ @item.Amount.ToString("0.00")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <div class="footer-grid">
+            <div class="footer-left">
+                @if(!string.IsNullOrWhiteSpace(bank))
+                {
+                    <div style="margin-bottom: 15px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border);">
+                        <div class="footer-label">Bank Details</div>
+                        <div style="white-space: pre-wrap; font-weight:600; font-size: 0.95em;">@bank</div>
+                    </div>
+                }
+
+                @if(!string.IsNullOrWhiteSpace(tnc))
+                {
+                    <div style="margin-bottom: 15px;">
+                        <div class="footer-label">Terms & Conditions</div>
+                        <div style="white-space: pre-wrap; font-size: 0.9em; color:#475569;">@tnc</div>
+                    </div>
+                }
+
+                @if(showTaxTable)
+                {
+                    <div style="margin-top:20px; width: 90%;">
+                        <div class="footer-label">Tax Summary</div>
+                        <table style="width:100%; border-collapse:collapse; border: 1px solid var(--border); font-size:0.85em;">
+                            <tr style="background:var(--bg-light);">
+                                <th style="border:1px solid var(--border); padding:6px; color:var(--primary);">GST %</th>
+                                <th style="border:1px solid var(--border); padding:6px; text-align:right; color:var(--primary);">Taxable</th>
+                                <th style="border:1px solid var(--border); padding:6px; text-align:right; color:var(--primary);">CGST</th>
+                                <th style="border:1px solid var(--border); padding:6px; text-align:right; color:var(--primary);">SGST</th>
+                            </tr>
+                            <tr>
+                                <td style="border:1px solid var(--border); padding:6px;">TOTAL</td>
+                                <td style="border:1px solid var(--border); padding:6px; text-align:right;">₹ @(Model?.Total ?? 0)</td>
+                                <td style="border:1px solid var(--border); padding:6px; text-align:right;">₹ @((Model?.TotalGstAmt ?? 0) / 2)</td>
+                                <td style="border:1px solid var(--border); padding:6px; text-align:right;">₹ @((Model?.TotalGstAmt ?? 0) / 2)</td>
+                            </tr>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="footer-right">
+                <div style="border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 10px;">
+                    <table class="totals-table">
+                        <tr>
+                            <td class="totals-label">Sub Total:</td>
+                            <td class="totals-value">₹ @displaySubTotal.ToString("0.00")</td>
+                        </tr>
+                        <tr>
+                            <td class="totals-label totals-discount">Discount:</td>
+                            <td class="totals-value totals-discount">- ₹ @displayDiscount.ToString("0.00")</td>
+                        </tr>
+                        <tr>
+                            <td class="totals-label">Total GST:</td>
+                            <td class="totals-value">+ ₹ @displayGst.ToString("0.00")</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div style="font-size: 26px; font-weight: 900; margin-bottom: 40px; color: var(--primary);">
+                    ₹ @displayGrandTotal.ToString("0.00")
+                </div>
+
+                <div style="text-align: center; float: right;">
+                    <img src="@sign" style="max-height: 70px; max-width: 150px; display: @signDisplay; margin-bottom: 10px; object-fit:contain;" alt="Signature">
+                    <div style="border-top: 1px solid #94a3b8; padding-top: 8px; font-weight: 700; font-size: 0.9em; color: var(--primary); text-align:center; width: 180px;">
+                        <div style="font-weight: 500; color: #0f172a; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">For @businessName</div>
+                        @signLabel
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

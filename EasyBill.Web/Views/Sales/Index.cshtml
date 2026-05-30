@@ -1,0 +1,205 @@
+﻿@model IEnumerable<Sales>
+
+@{
+    ViewData["Title"] = "Index";
+}
+<style>
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+</style>
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white d-flex align-items-center justify-content-between" style="background:#2b6ac9">
+        <h6 class="mb-0">
+           Edit Sales     
+        </h6>
+    </div>
+</div>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header bg-light fw-semibold">
+        <i class="bi bi-funnel-fill text-primary me-1"></i>
+        Sales Filters
+    </div>
+
+    <div class="card-body">
+        <form id="salesFilterForm" method="get">
+            <div class="row g-3">
+
+                <!-- Start Date -->
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            Start Date
+                        </label>
+                        <div class="col-7">
+                            <input type="date"
+                                   name="StartBillDate"
+                                   value="@Context.Request.Query["StartBillDate"]"
+                                   class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- End Date -->
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            End Date
+                        </label>
+                        <div class="col-7">
+                            <input type="date"
+                                   name="EndBillDate"
+                                   value="@Context.Request.Query["EndBillDate"]"
+                                   class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row g-3">
+
+                <!-- Bill No -->
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            Bill No
+                        </label>
+                        <div class="col-7">
+                            <input type="text"
+                                   name="BillNo"
+                                   class="form-control form-control-sm"
+                                   placeholder="Enter Bill No" />
+
+                        </div>
+                    </div>
+                </div>
+ 
+                <!-- Customer -->
+                 <div class="col-md-3">
+                    <div class="row align-items-center">
+
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            Customer
+                        </label>
+                        <div class="col-7">
+                            <select name="CustomerId"
+                                    class="form-control form-control-sm">
+                                <option value="">-- Select Customer --</option>
+                                @foreach (var customer in ViewBag.CustomerList)
+                                {
+                                    <option value="@customer.Value">
+                                        @customer.Text
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile -->
+                <div class="col-md-3">
+                    <div class="row align-items-center">
+                        <label class="col-5 col-form-label fw-semibold text-end">
+                            Mobile No
+                        </label>
+                        <div class="col-7">
+                            <input type="tel"
+                                   name="MobileNo"
+                                   id="filterMobile"
+                                   class="form-control form-control-sm"
+                                   placeholder="Mobile Number"
+                                   maxlength="10"
+                                   inputmode="numeric" />
+
+                            <small id="mobileError" class="text-danger"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="col-md-3 d-flex align-items-center justify-content-end">
+                    <button type="submit" class="btn btn-sm btn-primary me-1">
+                        Search
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="btnClear">
+                        Clear
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="salesTableWrapper">
+    @Html.Partial("_SalesTable", Model)
+</div>
+
+@section Scripts {
+    <script>
+
+        $("#salesFilterForm").on("submit", function (e) {
+            e.preventDefault();
+
+            $.ajax({
+                url: '/Sales/GetDataByFilter',
+                type: 'GET',
+                data: $(this).serialize(),
+                success: function (result) {
+                    $("#salesTableWrapper").html(result);
+
+                          $("#salesTable").DataTable({
+            destroy: true,
+            order: [[2, "desc"]] // 👈 date column index
+        });
+                },
+                error: function (xhr) {
+                    console.log(xhr.responseText);
+                    alert("Error while filtering data");
+                }
+            });
+        });
+    </script>
+
+    <script>
+        function clearSalesFilters() {
+
+            $("#salesFilterForm input[type='text']").val("");
+            $("#salesFilterForm input[type='date']").val("");
+            $("#salesFilterForm select").prop("selectedIndex", 0);
+
+            // 🔄 reload full table
+            $.get('/Sales/GetDataByFilter', function (result) {
+                $("#salesTableWrapper").html(result);
+                $("#salesTable").DataTable({ destroy: true });
+            });
+        }
+
+        $("#btnClear").on("click", function () {
+            clearSalesFilters();
+        });
+    </script>
+}
+
+<script>
+    document.getElementById("filterMobile").addEventListener("input", function () {
+
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+
+        const value = this.value;
+        const error = document.getElementById("mobileError");
+
+        if (value.length === 10) {
+            if (!/^[5-9][0-9]{9}$/.test(value)) {
+                error.innerText = "Enter 10-digit mobile starting with 5–9";
+            } else {
+                error.innerText = "";
+            }
+        } else {
+            error.innerText = "";
+        }
+    });
+</script>

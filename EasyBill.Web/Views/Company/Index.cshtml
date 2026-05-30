@@ -1,0 +1,61 @@
+﻿@model IEnumerable<EasyBill.Models.Entity.Company>
+
+@{
+    ViewData["Title"] = "Index";
+}
+<div class="row mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+         Company
+    </div>
+</div>
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+<p>
+    <a asp-controller="Company" asp-action="Create" class="btn btn-primary mb-1 float-end"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table id="companytable" class="table table-bordered table-striped">
+    <thead>
+        <tr> 
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr> 
+            <td>
+                @Html.DisplayFor(modelItem => item.Name)
+            </td>
+            
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="Company" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="Company" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+        </tr>
+}
+    </tbody>
+</table>
+<script>
+    $(document).ready(function(){
+        $("#companytable").DataTable();
+    });
+</script>

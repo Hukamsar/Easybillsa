@@ -1,0 +1,155 @@
+﻿@using EasyBill.Models.ViewModels
+@model DepartmentVM
+
+@{
+    ViewData["Title"] = "Department List";
+}
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+<div class="card mb-3">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            Add Department
+    </div>
+    <div class="card-body">
+        <form method="post" asp-controller="Department" asp-action="Create" id="departmentForm">
+            <div class="row">
+                <div class="col-md-6 d-flex align-items-center mb-2">
+                    <label asp-for="Name" class="me-2 mb-0" style="width: 100px;">
+                        Name
+                        <i class="text-danger">*</i>
+                    </label>
+                    <input type="text" id="name" asp-for="Name" class="form-control form-control-sm" />
+                </div>
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span id="nameMessage" class="text-danger"></span>
+
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue mt-3">Save</button>
+        </form>
+    </div>
+</div>
+
+
+<table id="departmenttable" class="table table-bordered table-striped">
+    <thead class="table custom-header">
+        <tr>
+
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+
+
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Departments)
+        {
+            <tr>
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.Name)
+                </td>
+
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+
+                        <a asp-controller="Department" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+
+                        <a asp-controller="Department" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        $(document).ready(function () {
+
+            $("#departmenttable").DataTable();
+
+            // Duplicate check on blur
+            $("#name").on("blur", function () {
+                var name = $(this).val().trim();
+                if (name === "") return;
+
+                $.ajax({
+                    url: '/Department/ExistName',
+                    type: 'GET',
+                    data: { name: name, id: 0 },
+                    success: function (response) {
+                        if (response.exists) {
+                            Swal.fire("Already Exists");
+                            $("#name").val('').focus();
+                        }
+                    }
+                });
+            });
+
+            // ✅ Create Confirm Save
+            $("#departmentForm").on("submit", function (e) {
+                e.preventDefault();
+                var form = this;
+                var name = $("#name").val().trim();
+
+                if (!name) {
+                    Swal.fire("Error", "Department Name is required!", "error");
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Confirm Save?',
+                    text: 'Do you want to save this Department?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Save',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#dc3545',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $("#departmentForm").off("submit");
+                        form.submit();
+                    }
+                });
+            });
+
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    @if (TempData["success"] != null)
+    {
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: '@TempData["success"]',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#2b6ac9'
+            });
+        </script>
+    }
+    }

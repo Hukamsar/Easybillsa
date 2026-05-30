@@ -1,0 +1,274 @@
+﻿@* @using System.Text.Json.Nodes
+@using EasyBill.DataAccess.Repository.IRepository
+@using EasyBill.Models.Entity
+@inject IUnitOfWork UnitOfWork
+
+@{
+    /* #region Circular Layout Fix */
+    // <summary>
+    // Explicitly setting Layout to null ensures this file acts as the master 
+    // and doesn't try to inherit another view, preventing infinite loops.
+    // </summary>
+    Layout = null; 
+    /* #endregion */
+
+    #region Global Settings Extraction
+    var repository = UnitOfWork.GetRepository<InvoiceThemeSetting>();
+    var setting = repository.Query().FirstOrDefault(); 
+    
+    string paperSize = ViewData["PaperSize"]?.ToString() ?? "A4";
+
+    string primaryColor = "#1e293b"; 
+    string textColor = "#334155";
+    string fontFamily = "'Inter', 'Segoe UI', Roboto, Helvetica, sans-serif";
+    string watermarkUrl = "";
+    string watermarkOpacity = "10";
+    string watermarkSize = "60";
+    string logoUrl = "";
+    string logoPos = "left";
+    string logoSize = "80";
+    string title = "TAX INVOICE";
+    string bankDetails = "";
+    string tnc = "";
+    string signatureUrl = "";
+    string margins = "narrow";
+
+    if (setting != null && !string.IsNullOrEmpty(setting.ConfigsJson))
+    {
+        try
+        {
+            var jNode = JsonNode.Parse(setting.ConfigsJson);
+            
+            if (jNode["ActivePaperSize"] != null) { paperSize = jNode["ActivePaperSize"].ToString(); }
+            if (ViewData["PaperSize"] != null) { paperSize = ViewData["PaperSize"].ToString(); }
+
+            var config = jNode[paperSize] ?? jNode["A4"]; 
+
+            if (config != null)
+            {
+                primaryColor = config["primaryColor"]?.ToString() ?? primaryColor;
+                watermarkUrl = config["watermarkUrl"]?.ToString() ?? watermarkUrl;
+                watermarkOpacity = config["wmOpacity"]?.ToString() ?? watermarkOpacity;
+                watermarkSize = config["wmSize"]?.ToString() ?? watermarkSize;
+                logoUrl = config["logoUrl"]?.ToString() ?? logoUrl;
+                logoPos = config["logoPos"]?.ToString() ?? logoPos;
+                logoSize = config["logoSize"]?.ToString() ?? logoSize;
+                title = config["title"]?.ToString() ?? title;
+                bankDetails = config["bank"]?.ToString() ?? bankDetails;
+                tnc = config["tnc"]?.ToString() ?? tnc;
+                signatureUrl = config["signatureUrl"]?.ToString() ?? signatureUrl;
+                margins = config["margins"]?.ToString() ?? margins;
+            }
+        }
+        catch { /* JSON Error fallback */ }
+    }
+
+    string headerFlex = logoPos == "right" ? "row-reverse" : (logoPos == "center" ? "column" : "row");
+    string titleAlign = logoPos == "right" ? "left" : (logoPos == "center" ? "center" : "right");
+    string logoAlign = logoPos == "right" ? "right" : (logoPos == "center" ? "center" : "left");
+    string paddingVal = margins == "narrow" ? "12mm 15mm" : "20mm 25mm";
+
+    #endregion
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Print - @title</title>
+    
+    <style>
+        /* /* #region Master Canvas & Typography */
+        :root {
+            --inv-primary: @primaryColor;
+            --inv-text: @textColor;
+            --inv-border: #e2e8f0;
+            --inv-muted: #64748b;
+        }
+
+        body {
+            font-family: @Html.Raw(fontFamily);
+            color: var(--inv-text);
+            background: #cbd5e1; 
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            font-size: 11px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* The Master Paper Canvas */
+        .print-container {
+            background: #fff;
+            position: relative;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            padding: @paddingVal;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .size-A4 { width: 210mm; min-height: 297mm; }
+        .size-A5 { width: 148mm; min-height: 210mm; font-size: 10px; }
+        .size-Thermal { width: 80mm; min-height: auto; font-size: 9px; padding: 5mm; }
+
+        /* The Background Watermark (Absolute Center) */
+        .inv-watermark-container {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2; /* Behind the content */
+            pointer-events: none; overflow: hidden;
+        }
+        
+       .inv-watermark {
+            max-width: @(watermarkSize)%;
+            max-height: @(watermarkSize)%;
+            object-fit: contain;
+            opacity: @(Convert.ToDouble(watermarkOpacity) / 100.0);
+        }
+
+        /* The Content Wrapper */
+        .inv-body { 
+            position: relative; 
+            z-index: 10; /* Ensures content is ABOVE the watermark */
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+        }
+
+        .inv-header {
+            display: flex;
+            flex-direction: @headerFlex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--inv-primary);
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+
+        .inv-company-name {
+            margin: 0; color: var(--inv-primary); font-weight: 800; font-size: 24px; letter-spacing: -0.5px;
+        }
+        .inv-title-text {
+            margin: 0; text-transform: uppercase; font-weight: 800; color: var(--inv-muted); letter-spacing: 2px; font-size: 20px;
+        }
+
+        .inv-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--inv-border);
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            page-break-inside: avoid;
+            font-size: 10px;
+        }
+
+        .footer-heading {
+            color: var(--inv-primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: inline-block;
+        }
+
+        @Html.Raw("@media print { ")
+        @Html.Raw("@page { size: auto; margin: 0 ; } ")
+        body {
+            padding: 0;
+            background: #fff !important;
+        }
+
+        .print-container {
+            box-shadow: none !important;
+            width: 100% !important;
+            border: none;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .inv-watermark-container {
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            height: 100% !important;
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+        @Html.Raw("}")
+        /* #endregion */
+
+    </style>
+</head>
+<body>
+    
+    <button class="no-print" onclick="window.print()" style="position: fixed; top: 20px; right: 30px; padding: 12px 24px; background: #0f172a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000;">
+        <i class="bi bi-printer me-2"></i> PRINT INVOICE
+    </button>
+
+    <div class="print-container size-@paperSize">
+        
+        @if(!string.IsNullOrEmpty(watermarkUrl))
+        {
+            <div class="inv-watermark-container">
+                <img class="inv-watermark" src="@watermarkUrl" alt="Watermark" />
+            </div>
+        }
+
+        <div class="inv-body">
+            
+            <div class="inv-header">
+                <div style="flex:1; text-align: @logoAlign;">
+                    @if(!string.IsNullOrEmpty(logoUrl))
+                    {
+                        <img src="@logoUrl" style="max-height: @(logoSize)px; object-fit: contain;" />
+                    }
+                    else
+                    {
+                        <h2 class="inv-company-name">COMPANY NAME</h2>
+                    }
+                </div>
+                <div style="flex:1; text-align: @titleAlign;">
+                    <h2 class="inv-title-text">@title</h2>
+                </div>
+            </div>
+
+            @RenderBody()
+
+            <div class="inv-footer">
+                <div style="flex: 2; padding-right: 30px;">
+                    @if(!string.IsNullOrEmpty(bankDetails))
+                    {
+                        <div style="margin-bottom: 10px;">
+                            <span class="footer-heading">Bank Details</span><br/>
+                            <span style="white-space: pre-wrap; color: var(--inv-text); font-weight: 600;">@bankDetails</span>
+                        </div>
+                    }
+                    @if(!string.IsNullOrEmpty(tnc))
+                    {
+                        <div>
+                            <span class="footer-heading">Terms & Conditions</span><br/>
+                            <span style="white-space: pre-wrap; color: var(--inv-muted); font-size: 9px;">@tnc</span>
+                        </div>
+                    }
+                </div>
+                <div style="flex: 1; text-align: center; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end;">
+                    @if(!string.IsNullOrEmpty(signatureUrl))
+                    {
+                        <img src="@signatureUrl" style="max-height: 50px; object-fit: contain; margin-bottom: 8px;" />
+                    }
+                    <span style="font-weight: 700; color: var(--inv-text); border-top: 1px solid var(--inv-border); padding-top: 6px; width: 160px; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Authorized Signatory
+                    </span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html> *@

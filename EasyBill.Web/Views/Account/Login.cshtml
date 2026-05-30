@@ -1,0 +1,383 @@
+@model AOne.Models.ViewModels.LoginViewModels
+@using AOne.Utility.Enums
+@{
+	Layout = null;
+	var registerSuccess = TempData["RegisterSuccess"] as string;
+	var registerError = TempData["RegisterError"] as string;
+	var showRegisterForm = !string.IsNullOrWhiteSpace(registerError);
+}
+<!DOCTYPE Html>
+<html lang="en">
+<head>
+
+	<title>@ViewData["Title"] - EasyBill</title>
+
+
+	<!-- Page Title Here -->
+	<!-- FAVICONS ICON -->
+    <link rel="shortcut icon" type="image/png" href="~/assets/">
+    <link href="~/lib/bootstrap/dist/css/lightgallery.min.css" rel="stylesheet" />
+    <link href="~/lib/bootstrap/dist/css/chartist.min.css" rel="stylesheet" /> 
+    <link href="~/lib/bootstrap/dist/css/animate.css" rel="stylesheet" />
+    <link href="~/bootstrap-select/css/bootstrap-select.min.css" rel="stylesheet" />  
+    <link href="~/lib/bootstrap/dist/css/nice-select.css" rel="stylesheet" />
+	<!-- Style css -->
+	<link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
+    @*     <link href="~/css/style.css" rel="stylesheet" /> *@  
+    <link href="~/assets1/css/style.css" rel="stylesheet" />
+	<style>
+		.authincation .login-aside {
+			background: #ff6600;
+			padding-top: 5rem;
+			max-width: 35rem;
+			width: 100%;
+			z-index: 1;
+			position: relative;
+		}
+
+		.authincation .login-aside:after {
+			content: "";
+			clip-path: polygon(0% 100%, 100% 0%, 0% 0%);
+			width: 8.75rem;
+			height: 100%;
+			position: absolute;
+			right: -8.75rem;
+			z-index: -1;
+			top: 0;
+				background-color: #ff6600;
+			box-shadow: 0.125rem 0rem 1.875rem rgba(0, 0, 0, 0.15);
+		}
+
+		.text-color-blue{
+			color: #4845b1 !important;
+		}
+		.text-color{
+			color: white;
+		}
+
+		.btn-dark-blue {
+			background-color: #ff6600;
+			color: white;
+			border: none;
+		}
+
+			.btn-dark-blue:hover {
+				background-color: #ff6600;
+			}
+
+		.login-mode-btn {
+			border: 1px solid #fff;
+			background: transparent;
+			color: #fff;
+		}
+
+		.login-mode-btn.active {
+			background: #ff6600;
+		    color: #fff;
+			border-color: #ff6600;
+		}
+
+	</style>
+
+</head>
+<body class="body  h-100">
+	<div class="authincation d-flex flex-column flex-lg-row flex-column-fluid">
+		<div class="login-aside text-center  d-flex flex-column flex-row-auto">
+			<div class="d-flex flex-column-auto flex-column pt-lg-40 pt-15">
+				<div class="text-center mb-lg-4 mb-2 pt-5 logo">
+				@* 	<img src="~/assets/img/user2-160x160.jpg" alt=""> *@
+				</div>
+				<h3 class="mb-2 text-color">Welcome To Easy Bill Pvt. Ltd.</h3>
+				@* <p class="mb-4 text-color-blue">User Experience & Interface Design <br>Strategy SaaS Solutions</p> *@
+			</div>
+			<div class="aside-image position-relative" style="background-image:url(assets/img/latesteasybilllogo.jpg)">
+ 
+			</div>
+		</div>
+		<div class="container flex-row-fluid d-flex flex-column justify-content-center position-relative overflow-hidden p-7 mx-auto">
+			<div class="d-flex justify-content-center h-100 align-items-center">
+				<div class="authincation-content style-2">
+					<div class="row no-gutters">
+						<div class="col-xl-12 tab-content">
+							<div id="sign-up" class="auth-form tab-pane fade show active  form-validation">
+								<section>
+									@if (!string.IsNullOrWhiteSpace(registerSuccess))
+									{
+										<div class="alert alert-success" role="alert">
+											@registerSuccess
+										</div>
+									}
+									@if (!string.IsNullOrWhiteSpace(registerError))
+									{
+										<div class="alert alert-danger" role="alert">
+											@registerError
+										</div>
+									}
+								@* 	<div class="card shadow p-4" style="background-color: #f8f9fa; max-width: 400px; margin: auto; border: 1px solid #dee2e6;">
+										<form id="account" method="post">
+											<h2 class="text-center mb-3">Login</h2>
+											<hr />
+											@Html.AntiForgeryToken()
+											<div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+											<div class="form-floating mb-3">
+												<input asp-for="Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+												<label asp-for="Email" class="form-label">Email</label>
+												<span asp-validation-for="Email" class="text-danger"></span>
+											</div>
+
+											<div class="form-floating mb-3">
+												<input asp-for="Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
+												<label asp-for="Password" class="form-label">Password</label>
+												<span asp-validation-for="Password" class="text-danger"></span>
+											</div>
+
+											<div class="form-check mb-3">
+												<input class="form-check-input" asp-for="RememberMe" />
+												<label class="form-check-label" asp-for="RememberMe">@Html.DisplayNameFor(m => m.RememberMe)</label>
+											</div>
+
+											<div>
+												<input id="login-submit" type="submit" class="w-100 btn btn-lg btn-primary" value="Log in" />
+											</div>
+
+											<p class="text-end mt-3 mb-0">
+												<a asp-controller="Account" asp-action="VerifyEmail" class="text-dark">Forgot Password?</a>
+											</p>
+										</form>
+									</div> *@
+									<div style="border: 1px solid #ccc; padding: 2rem; background-color: #2465c7f7; max-width: 450px; margin: 2rem auto; border-radius: 8px;">
+										<form id="account" method="post">
+											<h2 class="text-center mb-3 text-color">Login</h2>
+											<hr />
+											@Html.AntiForgeryToken()
+										@* 	<input type="hidden" asp-for="LoginType" id="LoginType" /> *@
+											<input type="hidden" asp-for="LoginType" id="LoginType" value="MobileOtp" />
+											<div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+										@* 	<div class="d-flex justify-content-between mb-3 gap-2">
+												<button type="button" class="btn login-mode-btn active flex-fill" data-mode="EmailPassword">Email</button>
+												<button type="button" class="btn login-mode-btn flex-fill" data-mode="MobilePin">Mobile PIN</button>
+												<button type="button" class="btn login-mode-btn flex-fill" data-mode="MobileOtp">Mobile OTP</button>
+											</div>
+ *@
+											<div class="d-flex justify-content-between mb-3 gap-2">
+												<button type="button" class="btn login-mode-btn active flex-fill" data-mode="MobileOtp">Mobile OTP</button>
+
+												<button type="button" class="btn login-mode-btn flex-fill" data-mode="EmailPassword">Email</button>
+
+												<button type="button" class="btn login-mode-btn flex-fill" data-mode="MobilePin">Mobile PIN</button>
+											</div>
+											<div id="emailPasswordSection">
+												<div class="form-floating mb-3">
+													<input asp-for="Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+													<label asp-for="Email" class="form-label" style="color:#114070;"><b>User Name</b></label>
+													<span asp-validation-for="Email" class="text-danger"></span>
+												</div>
+
+												<div class="form-floating mb-3">
+													<input asp-for="Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
+													<label asp-for="Password" class="form-label" style="color:#114070;"><b>Password</b></label>
+													<span asp-validation-for="Password" class="text-danger"></span>
+												</div>
+											</div>
+
+											<div id="mobileSection" style="display:none;">
+												<div class="form-floating mb-3">
+													<input asp-for="MobileNumber" id="MobileNumberInput" class="form-control" maxlength="10" placeholder="9876543210" />
+													<label asp-for="MobileNumber" class="form-label" style="color:#114070;"><b>Mobile Number</b></label>
+													<span asp-validation-for="MobileNumber" class="text-danger"></span>
+												</div>
+											</div>
+
+											<div id="mobilePinSection" style="display:none;">
+												<div class="form-floating mb-3">
+													<input asp-for="Pin" class="form-control" autocomplete="off" placeholder="PIN" />
+													<label asp-for="Pin" class="form-label" style="color:#114070;"><b>PIN</b></label>
+													<span asp-validation-for="Pin" class="text-danger"></span>
+												</div>
+											</div>
+
+											<div id="mobileOtpSection" style="display:none;">
+												<div class="d-flex gap-2 mb-3">
+													<input asp-for="Otp" class="form-control" maxlength="6" placeholder="Enter OTP" />
+													<button type="button" class="btn btn-dark-blue" id="sendOtpBtn">Send OTP</button>
+												</div>
+												<span asp-validation-for="Otp" class="text-danger d-block mb-2"></span>
+												<small id="otpMessage" class="text-color d-block"></small>
+											</div>
+
+											<div class="form-check mb-3">
+												<input class="form-check-input" asp-for="RememberMe" />
+												<label class="form-check-label text-color" asp-for="RememberMe">@Html.DisplayNameFor(m => m.RememberMe)</label>
+											</div>
+
+											<div>
+												<input id="login-submit" type="submit" class="w-100 btn btn-lg btn-dark-blue" value="Log in" />
+											</div>
+
+											<div class="d-flex justify-content-between align-items-center mt-3 mb-0">
+												<button type="button" class="btn btn-sm btn-light" id="toggleRegisterBtn">Register</button>
+												<a asp-controller="Account" asp-action="VerifyEmail" class="text-color">Update Password?</a>
+											</div>
+										</form>
+									</div>
+
+									<div id="registerFormContainer" style="display:@(showRegisterForm ? "block" : "none"); border: 1px solid #ccc; padding: 2rem; background-color: #ffffff; max-width: 650px; margin: 2rem auto; border-radius: 8px;">
+										<h4 class="text-center mb-3 text-color-blue">New Company Registration</h4>
+										<form asp-action="RegisterCompanyFromLogin" asp-controller="Account" method="post">
+											@Html.AntiForgeryToken()
+											<div class="row">
+												<div class="col-md-6 mb-3">
+													<label class="form-label"><b>Company Name</b></label>
+													<input type="text" name="CompanyName" class="form-control" required />
+												</div>
+												<div class="col-md-6 mb-3">
+													<label class="form-label"><b>Contact Person</b></label>
+													<input type="text" name="ContactPerson" class="form-control" required />
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6 mb-3">
+													<label class="form-label"><b>Address1</b></label>
+													<input type="text" name="Address1" class="form-control" required />
+												</div>
+												<div class="col-md-6 mb-3">
+													<label class="form-label"><b>Address2</b></label>
+													<input type="text" name="Address2" class="form-control" required />
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6 mb-3">
+													<label class="form-label"><b>City</b></label>
+													<input type="text" name="City" class="form-control" required />
+												</div>
+												<div class="col-md-6 mb-3">
+													<label class="form-label"><b>Business Type</b></label>
+													<select name="BusinessType" class="form-select" required>
+														<option value="">Select</option>
+														@foreach (var item in Html.GetEnumSelectList<BusinessType>())
+														{
+															<option value="@item.Value">@item.Text</option>
+														}
+													</select>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-6 mb-3">
+													<label class="form-label"><b>Mobile Number</b></label>
+													<input type="text" name="MobileNumber" maxlength="10" class="form-control" required />
+												</div>
+												<div class="col-md-6 mb-3">
+													<label class="form-label"><b>Email</b></label>
+													<input type="email" name="Email" class="form-control" />
+												</div>
+											</div>
+											<button type="submit" class="btn btn-dark-blue w-100">Register Company</button>
+										</form>
+									</div>
+
+								</section>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+	<!--**********************************
+		Scripts
+	***********************************-->
+    <!-- Required vendors -->
+    <script src="~/js/global.min.js"></script> 
+    <script src="~/js/custom.min.js"></script>  
+    <script src="~/js/dlabnav-init.js"></script>
+	<script>
+		(function () {
+			const modeButtons = document.querySelectorAll(".login-mode-btn");
+			const loginTypeInput = document.getElementById("LoginType");
+			const emailPasswordSection = document.getElementById("emailPasswordSection");
+			const mobileSection = document.getElementById("mobileSection");
+			const mobilePinSection = document.getElementById("mobilePinSection");
+			const mobileOtpSection = document.getElementById("mobileOtpSection");
+			const otpMessage = document.getElementById("otpMessage");
+			const toggleRegisterBtn = document.getElementById("toggleRegisterBtn");
+			const registerFormContainer = document.getElementById("registerFormContainer");
+
+			function setMode(mode) {
+				loginTypeInput.value = mode;
+				modeButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.mode === mode));
+				emailPasswordSection.style.display = mode === "EmailPassword" ? "block" : "none";
+				mobileSection.style.display = mode === "EmailPassword" ? "none" : "block";
+				mobilePinSection.style.display = mode === "MobilePin" ? "block" : "none";
+				mobileOtpSection.style.display = mode === "MobileOtp" ? "block" : "none";
+				if (otpMessage) {
+					otpMessage.textContent = "";
+				}
+			}
+
+			modeButtons.forEach(btn => {
+				btn.addEventListener("click", function () {
+					setMode(this.dataset.mode);
+				});
+			});
+
+			//setMode(loginTypeInput.value || "EmailPassword");
+			setMode(loginTypeInput.value || "MobileOtp");
+
+			if (toggleRegisterBtn && registerFormContainer) {
+				toggleRegisterBtn.addEventListener("click", function () {
+					const isHidden = registerFormContainer.style.display === "none" || registerFormContainer.style.display === "";
+					registerFormContainer.style.display = isHidden ? "block" : "none";
+				});
+			}
+
+			const sendOtpBtn = document.getElementById("sendOtpBtn");
+			if (sendOtpBtn) {
+				sendOtpBtn.addEventListener("click", function () {
+					const mobileNumber = document.getElementById("MobileNumberInput")?.value || "";
+					const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+					if (!mobileNumber) {
+						otpMessage.textContent = "Please enter mobile number.";
+						return;
+					}
+
+					const formData = new URLSearchParams();
+					formData.append("mobileNumber", mobileNumber);
+					formData.append("__RequestVerificationToken", token || "");
+
+					fetch("@Url.Action("SendLoginOtp", "Account")", {
+						method: "POST",
+						headers: { "Content-Type": "application/x-www-form-urlencoded" },
+						body: formData.toString()
+					})
+					.then(response => response.json())
+					.then(data => {
+						if (data.success) {
+							otpMessage.textContent = `${data.message} OTP: ${data.otp}`;
+						} else {
+							otpMessage.textContent = data.message || "OTP send failed.";
+						}
+					})
+					.catch(() => {
+						otpMessage.textContent = "OTP send failed.";
+					});
+				});
+			}
+		})();
+	</script>
+</body>
+</html>
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}
+
+
+
+
+
+
+
+

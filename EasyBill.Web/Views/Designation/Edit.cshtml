@@ -1,0 +1,144 @@
+﻿@using EasyBill.Models.ViewModels
+@model DesignationVM
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+<div class="card mb-3">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            Edit Designation
+    </div>
+    <div class="card-body card-form">
+        <form id="designationForm" method="post" asp-controller="Designation" asp-action="Edit">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Id" id="designationId" />
+
+            <div class="row">
+                <div class="col-md-6 d-flex align-items-center mb-2">
+                    <label asp-for="Name" class="me-2 mb-0" style="width: 100px;">Name <i class="text-danger">*</i></label>
+                    <input type="text" asp-for="Name" id="name" class="form-control form-control-sm" />
+                </div>
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span id="nameMessage" class="text-danger small"></span>
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue">Submit</button>
+                <a asp-controller="Designation" asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+
+    </div>
+</div>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <!-- SweetAlert CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            // Duplicate check on blur
+            $("#name").on("blur", function () {
+
+                var name = $(this).val().trim();
+                var designationId = $("#designationId").val() || 0;
+
+                if (name === "") {
+                    $("#nameMessage").text('');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Designation/ExistName',
+                    type: 'GET',
+                    data: { name: name, id: designationId },
+                    success: function (response) {
+                        if (response.exists) {
+                            $("#nameMessage").text(name + " already exists.");
+                        } else {
+                            $("#nameMessage").text('');
+                        }
+                    },
+                    error: function () {
+                        $("#nameMessage").text("An error occurred. Please try again.");
+                    }
+                });
+            });
+
+
+            // Submit with duplicate check + confirm update
+            $("#designationForm").on("submit", function (e) {
+
+                e.preventDefault();
+
+                var form = this;
+                var name = $("#name").val().trim();
+                var id = $("#designationId").val() || 0;
+
+                if (!name) {
+                    Swal.fire("Error", "Designation Name is required!", "error");
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Designation/ExistName',
+                    type: 'GET',
+                    data: { name: name, id: id },
+                    success: function (response) {
+
+                        if (response.exists) {
+                            Swal.fire("Already Exists", "This designation already exists.", "warning");
+                        }
+                        else {
+
+                            // Confirm Update
+                            Swal.fire({
+                                title: 'Confirm Update?',
+                                text: 'Do you want to update this Designation?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonText: 'Yes, Update',
+                                cancelButtonText: 'Cancel',
+                                confirmButtonColor: '#198754',
+                                cancelButtonColor: '#dc3545',
+                                reverseButtons: true
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    $("#designationForm").off("submit");
+                                    form.submit();
+                                }
+                            });
+
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Error", "Something went wrong!", "error");
+                    }
+                });
+
+            });
+
+        });
+    </script>
+
+    <!-- Success Popup -->
+    @if (TempData["success"] != null)
+    {
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: '@TempData["success"]',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#2b6ac9'
+            });
+        </script>
+    }
+}

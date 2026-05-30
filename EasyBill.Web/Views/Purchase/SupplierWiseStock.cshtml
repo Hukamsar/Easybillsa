@@ -1,0 +1,136 @@
+﻿@model List<EasyBill.Models.ViewModels.PurchaseItemVM>
+@using EasyBill.Models
+@{
+    ViewData["Title"] = "Supplier Wise Stock";
+}
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center" style="background:#2b6ac9">
+        <span class="fw-bold">Supplier Wise Stock</span>
+        <span class="ms-auto">
+            @if (!(bool)ViewBag.IsTabletWise)
+            {
+                <text>Total Qty: <span class="fw-bold">@ViewBag.TotalQty</span> | </text>
+            }
+            Stock Value: <span class="fw-bold">₹ @(((decimal)ViewBag.TotalStockValue).ToString("0.00"))</span>
+        </span>
+    </div>
+</div>
+
+<!-- FILTER FORM -->
+<div class="card shadow-sm p-3 mb-4">
+    <form method="get">
+        <div class="row align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Supplier</label>
+                <select name="supplierId" class="form-control form-control-sm">
+                    <option value="">All Suppliers</option>
+                    @if (ViewBag.SupplierList != null)
+                    {
+                        foreach (var s in (IEnumerable<Supplier>)ViewBag.SupplierList)
+                        {
+                            <option value="@s.Id"
+                                    selected="@(ViewBag.SelectedSupplier == s.Id ? "selected" : null)">
+                                @s.FirstName
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-success w-100" style="background-color: #2b6ac9 !important;">Search</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="SupplierWiseStockExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-supplierId="@ViewBag.SelectedSupplier">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+
+        <a asp-action="SupplierWiseStockPdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate"
+           asp-route-supplierId="@ViewBag.SelectedSupplier">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+    </div>
+</div>
+
+<!-- REPORT TABLE -->
+@if (Model != null && Model.Any())
+{
+    <div class="card shadow-sm p-3">
+        <table class="table table-bordered table-striped table-sm" id="supplierStockTable">
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Supplier</th>
+                    <th>Item Name</th>
+                    <th>Batch</th>
+                    <th>Expiry</th>
+                    <th class="text-end">Current Qty</th>
+                    <th class="text-end">Avg Rate</th>
+                    <th class="text-end">Stock Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int sr = 1;
+                }
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@sr</td>
+                        <td>@item.SupplierName</td>
+                        <td>@item.ItemName</td>
+                        <td>@item.Batch</td>
+                        <td>@item.ExpiryDate?.ToString("MM/yyyy")</td>
+                        <td class="text-end">@item.CurrentQtyDisplay</td>
+                        <td class="text-end">@item.AvgRate.ToString("0.00")</td>
+                        <td class="text-end">@item.StockValue.ToString("0.00")</td>
+                    </tr>
+                    sr++;
+                }
+            </tbody>
+            <tfoot class="table-secondary fw-bold">
+                <tr>
+                    @if (!(bool)ViewBag.IsTabletWise)
+                    {
+                        <td colspan="5" class="text-end">TOTAL</td>
+                        <td class="text-end">@ViewBag.TotalQty</td>
+                    }
+                    else
+                    {
+                        <td colspan="6" class="text-end">TOTAL</td>
+                    }
+                    <td></td>
+                    <td class="text-end">₹ @(((decimal)ViewBag.TotalStockValue).ToString("0.00"))</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+else
+{
+    <div class="text-center text-danger mt-3">No records found.</div>
+}
+
+<script>
+    $(document).ready(function () {
+        $("#supplierStockTable").DataTable({ ordering: false });
+   
+    });
+</script>
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>

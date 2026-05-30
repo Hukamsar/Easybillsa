@@ -1,0 +1,201 @@
+﻿@using EasyBill.Models.ViewModels
+@model List<SalesVM>
+
+@{
+    ViewData["Title"] = "Ledger Report";
+
+    bool isSupplier = ViewBag.SupplierChecked != null && ViewBag.SupplierChecked == true;
+    bool isCustomer = ViewBag.CustomerChecked != null && ViewBag.CustomerChecked == true;
+}
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white" style="background:#2b6ac9">
+        <span class="fw-bold">Ledger Report</span>
+    </div>
+</div>
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        padding: 4px 5px !important;
+        font-size: 12px;
+        text-align: center;
+    }
+</style>
+
+
+<!-- FILTER -->
+<div class="card p-3 mb-4">
+    <form method="get" asp-action="LedgerReport">
+        <div class="row g-3">
+
+            <div class="col-md-2">
+                <label>From Date</label>
+                <input type="text" id="fromDate" name="fromDate"
+                       value="@ViewBag.FromDate"
+                       class="form-control form-control-sm datepicker" />
+            </div>
+
+            <div class="col-md-2">
+                <label>To Date</label>
+                <input type="text" id="toDate" name="toDate"
+                       value="@ViewBag.ToDate"
+                       class="form-control form-control-sm datepicker" />
+            </div>
+
+            <div class="col-md-4 mt-4">
+                <input type="radio" id="chkSupplier" name="supplier" value="true" @(isSupplier ? "checked" : "") /> Supplier
+                <input type="radio" id="chkCustomer" name="customer" value="true" @(isCustomer ? "checked" : "") class="ms-3" /> Customer
+            </div>
+
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-sm text-white w-100" style="background:#2b6ac9">
+                    Search
+                </button>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+<!-- TABLE -->
+<div class="card p-3">
+    <div class="table-responsive">
+
+        <table id="ledgerTable" class="table table-bordered table-striped">
+
+
+            <thead>
+                <tr style="background:#2b6ac9; color:white">
+                    <th></th>
+                    <th>Date</th>
+                    <th>Voucher No</th>
+
+                    @if (isSupplier)
+                    {
+                        <th>Party Bill No</th>
+                        <th>Party Bill Date</th>
+                    }
+
+                    <th>Bill Amount</th>
+                    <th>Payment</th>
+                    <th>Balance</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <!-- Parent Row -->
+                    <tr class="parent-row">
+                        <td>
+                            <button type="button" class="toggleBtn btn btn-sm btn-outline-primary">+</button>
+                        </td>
+
+                        <td>@item.BillDate?.ToString("dd-MM-yyyy")</td>
+                        <td>@item.BillNo</td>
+
+                        @if (isSupplier)
+                        {
+                            <td>@item.PartyBillNo</td>
+                            <td>@item.PartyBillDate?.ToString("dd-MM-yyyy")</td>
+                        }
+
+                        <td>@item.TotalPayable.ToString("0.00")</td>
+                        <td>@item.PaidAmount.ToString("0.00")</td>
+                        <td>@item.Balance.ToString("0.00")</td>
+                    </tr>
+
+                    <!-- Child Row -->
+                    <tr class="child-row" style="display:none;">
+                        <td colspan="@(isSupplier ? 7 : 5)">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr style="background:#d1e0ff">
+                                        <th>Date</th>
+                                        <th>Payment</th>
+                                        <th>Running Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (item.ChildPayments != null && item.ChildPayments.Any())
+                                    {
+                                        foreach (var c in item.ChildPayments)
+                                        {
+                                            <tr class="text-center">
+                                                <!-- center all td in this row -->
+                                                <td>@c.BillDate?.ToString("dd-MM-yyyy")</td>
+                                                <td>@c.PaidAmount.ToString("0.00")</td>
+                                                <td>@c.Balance.ToString("0.00")</td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+
+        </table>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var table = $("#ledgerTable").DataTable({
+                ordering: false,
+                paging: false,
+                searching: false,
+                "rowCallback": function (row, data, index) {
+                    if ($(row).hasClass('child-row')) {
+                        $(row).hide();
+                    }
+                },
+                "columnDefs": [
+                    { "orderable": false, "targets": 0 }
+                ]
+            });
+            $(".datepicker").datepicker({
+                dateFormat: "dd-mm-yy",
+                changeMonth: true,
+                changeYear: true
+            });
+            $('input[name="supplier"]').change(function () {
+                if ($(this).is(':checked')) $('input[name="customer"]').prop('checked', false);
+            });
+            $('input[name="customer"]').change(function () {
+                if ($(this).is(':checked')) $('input[name="supplier"]').prop('checked', false);
+            });
+
+        });
+        $(document).on("click", ".toggleBtn", function () {
+
+            let btn = $(this);
+            let row = btn.closest("tr");
+            let child = row.next(".child-row");
+
+            child.toggle();
+
+            btn.text(child.is(":visible") ? "-" : "+");
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+            $('#chkSupplier').change(function () {
+                if ($(this).is(':checked')) {
+                    $('#chkCustomer').prop('checked', false);
+                }
+            });
+
+            $('#chkCustomer').change(function () {
+                if ($(this).is(':checked')) {
+                    $('#chkSupplier').prop('checked', false);
+                }
+            });
+
+        });</script>
+}

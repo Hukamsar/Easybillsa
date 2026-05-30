@@ -1,0 +1,353 @@
+﻿@model EasyBill.Models.ViewModels.DivisionVM
+@{
+    ViewData["Title"] = "Edit Division";
+}
+
+<style>
+
+    /* PAGE BG */
+    body {
+        background: #f4f7fb;
+    }
+
+    /* HEADER */
+    .card-header {
+        background: linear-gradient(135deg, #2b6ac9, #4a8df0);
+        color: white;
+        border-radius: 8px 8px 0 0;
+        font-weight: 600;
+        padding: 12px 18px;
+        font-size: 16px;
+    }
+
+    /* CARD */
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    }
+
+    .card-body {
+        padding: 15px;
+    }
+
+    /* FORM */
+    .form-row-custom {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .form-label {
+        font-size: 13px;
+        margin-bottom: 0;
+        min-width: 90px;
+        color: #444;
+    }
+
+    /* INPUT */
+    .form-control-sm {
+        height: 32px;
+        font-size: 13px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        transition: 0.2s;
+    }
+
+        .form-control-sm:focus {
+            border-color: #2b6ac9;
+            box-shadow: 0 0 0 2px rgba(43,106,201,0.15);
+        }
+   /* SweetAlert Buttons */
+    .swal2-confirm,
+    .swal2-cancel {
+        border-radius: 8px !important;
+        padding: 8px 20px !important;
+        font-weight: 500 !important;
+        margin: 0 8px !important;
+        transition: all 0.25s ease-in-out !important;
+    }
+
+        .swal2-confirm:hover {
+            background-color: #157347 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(25,135,84,0.4);
+        }
+
+        .swal2-cancel:hover {
+            background-color: #bb2d3b !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(220,53,69,0.4);
+        }
+
+        .swal2-confirm:focus,
+        .swal2-cancel:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(13,110,253,0.4) !important;
+        }
+</style>
+
+
+<div class="card-header">Edit Division</div>
+
+<div class="container mt-2">
+    <div class="card">
+        <div class="card-body">
+
+            <form asp-action="Edit" id="EditDivisionForm">
+
+                <!-- HIDDEN ID FOR EDIT -->
+                <input type="hidden" asp-for="Id" />
+
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+
+                <div class="form-row-custom">
+
+                    <!-- COMPANY -->
+                    <label class="form-label">Company *</label>
+
+                    <div class="d-flex align-items-center">
+
+                        <select asp-for="CompanyId"
+                                asp-items="@ViewBag.companydata"
+                                id="companyId"
+                                class="form-control form-control-sm"
+                                style="width:200px;">
+                            <option value="">-- Select --</option>
+                        </select>
+
+                        <div class="shortcut-box">
+                            <span id="btnF2" class="shortcut-link">F2 - New</span>
+                            <span id="btnF3" class="shortcut-link text-danger">F3 - Mod</span>
+                        </div>
+
+                    </div>
+
+                    <span asp-validation-for="CompanyId" class="text-danger small"></span>
+
+                    <!-- NAME -->
+                    <label class="form-label ms-2">Name *</label>
+
+                    <input type="text"
+                           asp-for="Name"
+                           id="divisionName"
+                           class="form-control form-control-sm"
+                           style="width:220px;" />
+
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+
+                    <!-- BUTTON -->
+                    <div class="ms-auto">
+                        <button class="btn btn-primary btn-sm">Update</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL ================= -->
+
+<div class="modal fade" id="compModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+
+            <div class="modal-header">
+                <h4 class="modal-title" id="compModalTitle">Add Company</h4>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="modalCompId" value="0" />
+
+                <label>Name</label>
+
+                <input type="text"
+                       id="modalCompName"
+                       class="form-control modal-input" />
+
+                <span id="modalCompError" class="text-danger small"></span>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button class="btn btn-success btn-sm px-4" id="btnSaveCompModal">
+                    Save
+                </button>
+
+                <button class="btn btn-danger btn-sm px-4" data-bs-dismiss="modal">
+                    Close
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+<link href="~/css/page.css" rel="stylesheet" />
+
+@section Scripts {
+
+    <script>
+
+        $(document).ready(function () {
+
+            $("#divisionName").focus();
+
+            // BUTTON CLICK
+            $("#btnF2").click(() => openModal("new"));
+            $("#btnF3").click(() => openModal("edit"));
+
+            // KEYBOARD SHORTCUT
+            $(document).keydown(function (e) {
+                if (e.key === "F2") {
+                    e.preventDefault();
+                    openModal("new");
+                }
+                if (e.key === "F3") {
+                    e.preventDefault();
+                    openModal("edit");
+                }
+            });
+
+            function openModal(mode) {
+
+                $("#modalCompError").text("");
+
+                if (mode === "new") {
+                    $("#modalCompId").val(0);
+                    $("#modalCompName").val("");
+                    $("#compModalTitle").text("Add Company");
+                } else {
+
+                    let id = $("#companyId").val();
+                    let text = $("#companyId option:selected").text();
+
+                    if (!id) {
+                        alert("Select company first!");
+                        return;
+                    }
+
+                    $("#modalCompId").val(id);
+                    $("#modalCompName").val(text);
+                    $("#compModalTitle").text("Modify Company");
+                }
+
+                $("#compModal").modal("show");
+
+                setTimeout(() => {
+                    $("#modalCompName").focus();
+                }, 200);
+            }
+
+            // SAVE
+            $("#btnSaveCompModal").click(function () {
+
+                let id = $("#modalCompId").val();
+                let name = $("#modalCompName").val().trim();
+
+                if (name === "") {
+                    $("#modalCompError").text("Name required!");
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Division/QuickSaveCompany',
+                    type: 'POST',
+                    data: { id: id, name: name },
+
+                    success: function (res) {
+
+                        if (res.success) {
+                            $("#compModal").modal('hide');
+                            refreshDropdown(res.newId);
+                        } else {
+                            $("#modalCompError").text(res.message);
+                        }
+                    }
+                });
+            });
+
+            // REFRESH DROPDOWN
+            function refreshDropdown(selectedId) {
+
+                $.get('/Division/GetCompanies', function (data) {
+
+                    let ddl = $("#companyId");
+                    ddl.empty();
+                    ddl.append('<option value="">-- Select --</option>');
+
+                    $.each(data, function (i, item) {
+
+                        let opt = $('<option>', {
+                            value: item.value,
+                            text: item.text
+                        });
+
+                        if (item.value == selectedId) {
+                            opt.attr('selected', 'selected');
+                        }
+
+                        ddl.append(opt);
+                    });
+
+                    // ✅ SHOW CONFIRM AFTER DROPDOWN LOAD
+                    Swal.fire({
+                        title: 'Confirm Save?',
+                        text: 'Do you want to save this company?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Save',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#198754',
+                        cancelButtonColor: '#dc3545',
+                        reverseButtons: true,
+                        focusConfirm: true,
+                        buttonsStyling: true
+                    });
+
+                });
+            }
+
+            // ENTER KEY SAVE
+            $("#modalCompName").keypress(function (e) {
+                if (e.which === 13) {
+                    $("#btnSaveCompModal").click();
+                }
+            });
+
+            // FORM SUBMIT WITH CONFIRMATION
+            $("#EditDivisionForm").on("submit", function (e) {
+
+                e.preventDefault();
+                let form = this;
+
+                Swal.fire({
+                    title: 'Confirm Update?',
+                    text: 'Do you want to update this division?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Update',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#dc3545',
+                    reverseButtons: true,
+                    focusConfirm: true,
+                    buttonsStyling: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+
+            });
+
+        });
+    </script>
+
+}

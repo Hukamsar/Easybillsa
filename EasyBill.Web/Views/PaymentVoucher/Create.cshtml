@@ -1,0 +1,441 @@
+﻿@model EasyBill.Models.ViewModels.PaymentVoucherVM
+@{
+    ViewData["Title"] = "Create Payment Voucher  ";
+}
+<style>
+    .overdue-row td {
+        background-color: #fdd;
+    }
+
+    .big-checkbox {
+        transform: scale(1.5);
+        cursor: pointer;
+        border: 1px solid black !important;
+    }
+</style>
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            <h5 class="mb-0">Add Payment Voucher </h5>
+        </div>
+        <div class="card-body card-form ">
+            <form asp-action="Create" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="row ">
+                    <div class="row mb-2">
+
+                        <label asp-for="VouncherNo" class="col-md-2 col-form-label text-start small">VouncherNo <i class="text-danger">*</i></label>
+                        <div class="col-md-4">
+                            <input asp-for="VouncherNo" required class="form-control form-control-sm" />
+                            <span asp-validation-for="VouncherNo" class="text-danger small"></span>
+                        </div>
+
+                        <label asp-for="Date" class="col-md-2 col-form-label text-start small">Date<i class="text-danger">*</i></label>
+                        <div class="col-md-4">
+                            <input type="date" asp-for="Date" required class="form-control form-control-sm" />
+                            <span asp-validation-for="Date" class="text-danger small"></span>
+                        </div>
+                        <label asp-for="Party" class="col-md-2 col-form-label text-start small">Party <i class="text-danger">*</i> </label>
+                        <div class="col-md-4">
+                            <Select asp-for="Party" id="partyddl" asp-items="@Html.GetEnumSelectList<Party>()" required class="form-control form-control-sm">
+                                <option selected disabled>Select</option>
+                            </Select>
+                            <span asp-validation-for="Party" class="text-danger small"></span>
+                        </div>
+                        
+                        <div class="col-md-2 col-form-label text-start small venderdiv" style="display:none">
+                            <label asp-for="SupplierId">Vendor <i class="text-danger">*</i></label>
+                        </div>
+                        <div class="col-md-4 venderdiv" style="display:none">
+                            <select asp-for="SupplierId" id="venderId" class="form-select form-select-sm">
+                                <option selected disabled>Select</option>
+                            </select>
+                            <span asp-validation-for="SupplierId" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-2 col-form-label text-start small customerdiv" style="display:none">
+                            <label asp-for="CustomerId">Customer <i class="text-danger">*</i></label>
+                        </div>
+                        <div class="col-md-4 customerdiv" style="display:none">
+                            <select asp-for="CustomerId" id="customerId" asp-items="@ViewBag.CustomerList" class="form-select form-select-sm">
+                                <option selected disabled>Select</option>
+                            </select>
+                            <span asp-validation-for="CustomerId" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-2 col-form-label text-start small staffdiv" style="display:none">
+                            <label asp-for="EmployeeId">Employee <i class="text-danger">*</i></label>
+                        </div>
+                        <div class="col-md-4 staffdiv" style="display:none">
+                            <select asp-for="EmployeeId" id="employeeId" asp-items="@ViewBag.EmployeeList" class="form-select form-select-sm">
+                                <option selected disabled>Select</option>
+                            </select>
+                            <span asp-validation-for="EmployeeId" class="text-danger small"></span>
+                        </div>
+                         
+                        <label asp-for="VoucherCategoryId" class="col-md-2 col-form-label text-start small">Category <i class="text-danger">*</i> </label>
+                        <div class="col-md-4">
+                            <Select asp-for="VoucherCategoryId" id="voucherCategory" asp-items="@ViewBag.PaymentCategorylist" required class="form-control form-control-sm">
+                                <option value="">select</option>
+                            </Select>
+                            <span asp-validation-for="VoucherCategoryId" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Cheque No -->
+                    @*     <div class="col-md-4 d-none cheque-section">
+                            <label asp-for="ChequeNo" class="col-3">Cheque No</label>
+                            <input asp-for="ChequeNo" class="col-8 form-control form-control-sm" />
+                            <span asp-validation-for="ChequeNo" class="text-danger small"></span>
+                        </div> *@
+                        <div class="col-md-2 col-form-label text-start small chequediv" style="display:none">
+                            <label asp-for="ChequeNo">Cheque No <i class="text-danger">*</i></label>
+                        </div>
+                        <div class="col-md-4 chequediv" style="display:none">
+                            <input asp-for="ChequeNo" id="chequeno" class="col-8 form-control form-control-sm" />
+                            <span asp-validation-for="EmployeeId" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-2 col-form-label text-start small chequediv" style="display:none">
+                            <label asp-for="ChequeDate">Cheque Date <i class="text-danger">*</i></label>
+                        </div>
+                        <div class="col-md-4 chequediv" style="display:none">
+                            <input asp-for="ChequeDate" id="chequedate" type="date" class="col-8 form-control form-control-sm" />
+                            <span asp-validation-for="ChequeDate" class="text-danger small"></span>
+                        </div>
+                     @*    <!-- Cheque Date -->
+                        <div class="col-md-4 d-none cheque-section">
+                            <label asp-for="ChequeDate" class="col-3">Cheque Date</label>
+                            <input type="date" asp-for="ChequeDate" class="col-8 form-control form-control-sm" />
+                            <span asp-validation-for="ChequeDate" class="text-danger small"></span>
+                        </div> *@
+                        <!-- Ref No -->
+                      @*   <div class="col-md-4 d-none ref-section">
+                            <label asp-for="RefNo" class="col-3">Ref No</label>
+                            <input asp-for="RefNo" class="col-8 form-control form-control-sm" />
+                            <span asp-validation-for="RefNo" class="text-danger small"></span>
+                        </div> *@
+                        <div class="col-md-2 col-form-label text-start small refdiv" style="display:none">
+                            <label asp-for="RefNo">Ref No<i class="text-danger">*</i></label>
+                        </div>
+                        <div class="col-md-4 refdiv" style="display:none">
+                            <input asp-for="RefNo" id="refno" class="col-8 form-control form-control-sm" />
+                            <span asp-validation-for="RefNo" class="text-danger small"></span>
+                        </div>
+                        <!-- Amount -->
+                        <label asp-for="PaymentModeId" class="col-md-2 col-form-label text-start small">Payment Mode <i class="text-danger">*</i> </label>
+                        <div class="col-md-4">
+                            <Select asp-for="PaymentModeId" asp-items="@ViewBag.PaymentModeList" required class="form-control form-control-sm">
+                                <option value="">select</option>
+                            </Select>
+                            <span asp-validation-for="PaymentModeId" class="text-danger small"></span>
+                        </div>
+                        <label asp-for="Amount" class="col-md-2 col-form-label text-start small">Amount <i class="text-danger">*</i></label>
+                        <div class="col-md-4">
+                            <input asp-for="Amount" class="form-control form-control-sm" id="balanceAmount" required />
+                            <span asp-validation-for="Amount" class="text-danger small"></span>
+                        </div>
+
+                        <label asp-for="UploadAttachments" class="col-md-2 col-form-label text-start small">Attachments</label>
+                        <div class="col-md-4">
+                            <input asp-for="UploadAttachments" class="form-control form-control-sm" />
+                            <span asp-validation-for="UploadAttachments" class="text-danger small"></span>
+                        </div>
+
+                        <label asp-for="Description" class="col-md-2 col-form-label text-start small">Description</label>
+                        <div class="col-md-4">
+                            <input asp-for="Description" class="form-control form-control-sm" />
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue">Submit</button>
+                    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                </div>
+            </form> 
+            <div class="customer-table-section" style="display:none;">
+                <div class="table-responsive mt-2">
+                    <table class="table table-bordered table-striped">
+                        <thead class="table custom-header">
+                            <tr>
+                                <th style="min-width:30%">Bill No</th>
+                                <th class="text-center">Bill Date</th>
+                                <th class="text-center">Customer Name</th>
+                                <th class="text-center">Phone</th>
+                                <th class="text-center">Payable Amt</th>
+                                <th class="text-center">Paid Amt</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="SalesItemBody">
+                        </tbody>
+
+
+                    </table>
+
+                </div>
+            </div>
+            <div class="vender-table-section" style="display:none;">
+                <h6 class="mt-3">Supplier Purchases</h6>
+                <div class="table-responsive mt-2">
+                    <table class="table table-bordered table-striped">
+                        <thead class="table custom-header">
+                            <tr>
+                                <th>Purchase No</th>
+                                <th class="text-center">Purchase Date</th>
+                                <th class="text-center">Supplier Name</th>
+                                <th class="text-center">Total Amount</th>
+                                <th class="text-center">Payable Amount</th>
+                                <th class="text-center">Paid Amount</th>
+                                <th class="text-center">Balance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="PurchaseItemBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+
+            $('.customerdiv, .venderdiv, .staffdiv, .customer-table-section, .vender-table-section').hide();
+             
+            $('#partyddl').change(function () {
+                let selectedParty = $(this).find("option:selected").text();
+
+                $('.customerdiv, .venderdiv, .staffdiv, .customer-table-section, .vender-table-section').hide();
+                $('#customerId, #venderId, #employeeId').prop('required', false).val('');
+
+                $("#SalesItemBody, #PurchaseItemBody").empty();
+                $(".appointment-checkbox, .purchase-checkbox").prop("checked", false);
+                $("#balanceAmount").val("0.00");
+
+                if (selectedParty === 'Customer') {
+                    $('.customerdiv, .customer-table-section').show();
+                    $('#customerId').prop('required', true);
+                }
+                else if (selectedParty === 'Supplier' || selectedParty === 'Other') {
+                    $('.venderdiv, .vender-table-section').show();
+                    $('#venderId').prop('required', true);
+                    loadSuppliers(selectedParty);
+                }
+                else if (selectedParty === 'Staff') {
+                    $('.staffdiv, .vender-table-section').show();
+                    $('#employeeId').prop('required', true);
+                }
+            });
+
+
+
+           function handleCategoryChange() {
+               let categoryText = $('#voucherCategory option:selected')
+                   .text()
+                   .trim()
+                   .toLowerCase();
+
+               $('.chequediv, .refdiv').hide();
+               $('#chequeno, #chequedate, #refno').prop('required', false).val('');
+                
+
+               if (!categoryText || categoryText === 'select') return;
+
+               if (categoryText.includes('cheque')) {
+                   $('.chequediv').show();
+                   $('#chequeno, #chequedate').prop('required', true);
+               }
+               else if (
+                   categoryText.includes('online') ||
+                   categoryText.includes('upi') ||
+                   categoryText.includes('net') ||
+                   categoryText.includes('neft')
+               ) {
+                   $('.refdiv').show();
+                   $('#refno').prop('required', true);
+               }
+           }
+
+           $('#voucherCategory').on('change', function () {
+              
+               handleCategoryChange();
+           });
+
+            function loadSuppliers(type) {
+
+                $('#venderId').empty().append('<option value="">Loading...</option>');
+            
+                $.ajax({
+                    url: '/ReceiveVoucher/GetSuppliersByGroup',
+                    type: 'GET',
+                    data: { type: type },
+                    success: function (res) {
+            
+                        $('#venderId').empty().append('<option value="">Select</option>');
+            
+                        $.each(res, function (i, item) {
+                            $('#venderId').append(
+                                `<option value="${item.id}">${item.name}</option>`
+                            );
+                        });
+                    }
+                });
+            }
+
+            $(document).on("change", "#customerId", function () {
+               var selectedCustomerId = $(this).val();
+               if (!selectedCustomerId) return;
+
+               $.ajax({
+                   url: '/ReceiveVoucher/GetSaleData',
+                   type: 'GET',
+                   data: { customerId: selectedCustomerId },
+                   success: function (response) {
+                       $("#SalesItemBody").empty();
+
+                       if (response?.success && response.data.length > 0) {
+                           $.each(response.data, function (i, item) {
+                               $("#SalesItemBody").append(`
+                                   <tr>
+                                       <td hidden>${item.id}</td>
+                                       <td>${item.billno}</td>
+                                       <td class="text-center">${item.billdate?.split('T')[0] ?? ''}</td>
+                                       <td class="text-center">${item.customername}</td>
+                                       <td class="text-center">${item.phone}</td>
+                                       <td class="text-center">${item.payableAmount.toFixed(2)}</td>
+                                       <td class="text-center">${item.paidAmount.toFixed(2)}</td>
+                                       <td class="text-center">
+                                           <input type="checkbox"
+                                                  class="sales-checkbox"
+                                                  data-balance="${item.balance}"
+                                                  data-id="${item.id}" />
+                                       </td>
+                                   </tr>
+                               `);
+                           });
+                       } else {
+                           $("#SalesItemBody").html(`
+                               <tr>
+                                   <td colspan="8" class="text-center text-muted">
+                                       No pending balance found
+                                   </td>
+                               </tr>
+                           `);
+                       }
+                   }
+               });
+           });
+
+
+            // 🟢 Load Supplier Purchases
+            $(document).on("change", "#venderId", function () {
+                var selectedVenderId = $(this).val();
+                if (!selectedVenderId) return;
+
+                $.ajax({
+                    url: '/PaymentVoucher/GetPurchaseBySupplierId',
+                    type: 'GET',
+                    data: { venderId: selectedVenderId },
+                    success: function (response) {
+                        $("#PurchaseItemBody").empty();
+
+                        if (response?.success && response.data.length > 0) {
+                            $.each(response.data, function (i, item) {
+                                $("#PurchaseItemBody").append(`
+                                    <tr>
+                                        <td hidden>${item.id}</td>
+                                        <td>${item.purchaseNo}</td>
+                                        <td class="text-center">${item.purchaseDate?.split('T')[0] ?? ''}</td>
+                                        <td class="text-center">${item.supplierName ?? ''}</td>
+                                        <td class="text-center">${item.totalAmount.toFixed(2)}</td>
+                                        <td class="text-center">${item.totalpayable.toFixed(2)}</td>
+                                        <td class="text-center">${item.paidAmount.toFixed(2)}</td>
+                                        <td class="text-center">${item.balance.toFixed(2)}</td>
+                                        <td class="text-center">
+                                            <input type="checkbox" class="purchase-checkbox" data-balance="${item.balance}" data-id="${item.id}" />
+                                        </td>
+                                    </tr>
+                                `);
+                            });
+                        } else {
+                            $("#PurchaseItemBody").html(`<tr><td colspan="8" class="text-center text-muted">No pending purchases found</td></tr>`);
+                        }
+                    },
+                    error: function () {
+                        $("#PurchaseItemBody").html(`<tr><td colspan="8" class="text-center text-danger">Error loading supplier data</td></tr>`);
+                    }
+                });
+            });
+
+             $(document).on('change', '.sales-checkbox, .purchase-checkbox', function () {
+                // ❗ Uncheck opposite type (so only one type can be active)
+                if ($(this).hasClass('sales-checkbox')) {
+                    $('.purchase-checkbox').prop('checked', false);
+                } else if ($(this).hasClass('purchase-checkbox')) {
+                    $('.sales-checkbox').prop('checked', false);
+                }
+
+                // Calculate total
+                let total = 0;
+                $('.sales-checkbox:checked, .purchase-checkbox:checked').each(function () {
+                    total += parseFloat($(this).data('balance'));
+                });
+
+                $("#balanceAmount").val(total.toFixed(2));
+            });
+
+            $('form').submit(function (e) {
+                e.preventDefault();
+
+                let form = $(this);
+                let formData = new FormData(form[0]);
+
+                // Collect checked IDs
+                let selectedsales = [];
+                $('.sales-checkbox:checked').each(function () {
+                    selectedsales.push($(this).data('id'));
+                });
+
+                let selectedPurchases = [];
+                $('.purchase-checkbox:checked').each(function () {
+                    selectedPurchases.push($(this).data('id'));
+                });
+
+                formData.append('selectedsales', JSON.stringify(selectedsales));
+                formData.append('SelectedPurchases', JSON.stringify(selectedPurchases));
+
+                $.ajax({
+                    url: form.attr('action'),
+                    type: form.attr('method'),
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (response) {
+                       if (response && response.success === true) {
+                            Swal.fire("Success", "Voucher saved successfully", "success").then(() => {
+                                window.location.href = '/PaymentVoucher/Index';
+                            });
+                        } else {
+                            Swal.fire("Error", response.message || "Something went wrong", "error");
+                        }
+                    },
+                    error: function (err) {
+                        console.error(err);
+                        Swal.fire("Error", "Something went wrong", "error");
+                    }
+                });
+            });
+
+        });
+    </script>
+}
+
+

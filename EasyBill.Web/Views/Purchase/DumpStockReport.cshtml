@@ -1,0 +1,155 @@
+﻿@model IEnumerable<EasyBill.Models.ViewModels.StockVM>
+
+@{
+    ViewData["Title"] = "Dump Stock Report";
+}
+
+<!-- Page Header -->
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center" style="background: #2b6ac9;">
+        Dump Stock Report
+        <span class="ms-auto">
+            Total Qty:
+            <span class="fw-bold">@ViewBag.TotalQty</span>
+        </span>
+    </div>
+</div>
+<!-- Filter Section -->
+<div class="card shadow-sm p-3 mb-4">
+    <form method="get" asp-action="DumpStockReport">
+        <div class="row g-3 align-items-end">
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">As on Date</label>
+                <input type="text"
+                       name="toDate"
+                       value="@(ViewBag.AsOnDate ?? DateTime.Today.ToString("dd-MM-yyyy"))"
+                       class="form-control form-control-sm datepicker"
+                       placeholder="dd-MM-yyyy" />
+
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Days Not Sold</label>
+                <input type="number"
+                       name="DaysNotSold"
+                       value="@(ViewBag.DaysThreshold ?? 90)"
+                       class="form-control form-control-sm"
+                       min="1" />
+            </div>
+
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-sm w-100 text-white"
+                        style="background-color: #2b6ac9 !important;">
+                    Apply Filter
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Report Header -->
+<div class="row mb-2">
+    <div class="col-md-6">
+        <strong>As on Date:</strong> @ViewBag.AsOnDate
+    </div>
+    <div class="col-md-6">
+        <strong>More than:</strong> @ViewBag.DaysThreshold days from Purchase
+    </div>
+</div>
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="DumpStockReportExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+        <a asp-action="DumpStockReportPdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="card shadow-sm p-3">
+    <div class="table-responsive">
+        <table id="dumpStockTable" class="table table-bordered table-striped">
+            <thead class="table-light">
+                <tr>
+                    <th>S.No</th>
+                    <th>Item Name</th>
+                    <th>Batch</th>
+                    <th>Expiry Date</th>
+                    <th>Qty</th>
+                    <th>Days</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int sr = 1;
+                }
+
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sr</td>
+                            <td>@item.ItemName</td>
+                            <td>@item.Batch</td>
+                            <td>@(item.ExpiryDate.HasValue? item.ExpiryDate.Value.ToString("dd-MM-yyyy") : "-")</td>
+                            <td>@item.Qty</td>
+                            <td>@item.DaysSincePurchase</td>
+                        </tr>
+                        sr++;
+                    }
+                }
+            </tbody>
+            <tfoot class="table-secondary fw-bold">
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td class="text-end">TOTAL</td>
+                    <td class="text-end">@ViewBag.TotalQty</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+ 
+    <script>
+        $(document).ready(function () {
+            $("#dumpStockTable").DataTable({
+                ordering: false
+            });
+
+            $(".datepicker").datepicker({
+                dateFormat: "dd-mm-yy",
+                changeMonth: true,
+                changeYear: true
+            });
+        });
+    </script>
+}
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+        Remove sorting arrows
+        table.dataTable thead th.sorting,
+        table.dataTable thead th.sorting_asc,
+        table.dataTable thead th.sorting_desc {
+            background-image: none !important;
+            cursor: default !important;
+        }
+</style>

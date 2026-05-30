@@ -1,0 +1,157 @@
+﻿@model IEnumerable<EasyBill.Models.ViewModels.PurchaseItemVM>
+
+@{
+    ViewData["Title"] = "Item Wise Purchase Report";
+    int sno = 1;
+}
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center" style="background: #2b6ac9;">
+        Item Wise Purchase Report (Summary)
+        <span class="ms-auto">
+            Total Qty : <span class="fw-bold">@ViewBag.TotalQty</span> |
+            Total Free : <span class="fw-bold">@ViewBag.TotalFree</span> |
+            Total Amount : <span class="fw-bold">@Convert.ToDecimal(ViewBag.TotalAmount).ToString("0.00")</span>
+        </span>
+    </div>
+</div>
+
+<!-- Date Filter -->
+<div class="card shadow-sm p-3 mb-4">
+    <form method="get" asp-action="ItemWisePurchaseReport">
+        <div class="row g-3 align-items-end">
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">From Date</label>
+                <input type="text"
+                       name="fromDate"
+                       value="@ViewBag.FromDate"
+                       class="form-control form-control-sm datepicker"
+                       placeholder="dd-MM-yyyy" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">To Date</label>
+                <input type="text"
+                       name="toDate"
+                       value="@ViewBag.ToDate"
+                       class="form-control form-control-sm datepicker"
+                       placeholder="dd-MM-yyyy" />
+            </div>
+
+            <div class="col-md-2">
+                <button type="submit"
+                        class="btn btn-sm w-100 text-white"
+                        style="background-color: #2b6ac9 !important;">
+                    Apply
+                </button>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+<div class="row mb-2">
+    <div class="col text-end">
+        <a asp-action="ExportItemWisePurchaseExcel"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-excel text-success fs-5"></i>
+        </a>
+        <a asp-action="ExportItemWisePurchasePdf"
+           asp-route-fromDate="@ViewBag.FromDate"
+           asp-route-toDate="@ViewBag.ToDate">
+            <i class="fa-solid fa-file-pdf text-danger fs-5"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="card shadow-sm p-3">
+    <div class="table-responsive">
+        <table id="itemPurchaseTable" class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Item Name</th>
+                    <th>Packing</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Free</th>
+                    <th class="text-end">Rate</th>
+                    <th class="text-end">Amount</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@sno</td>
+                            <td>@item.ItemName</td>
+                            <td>@item.Packing</td>
+
+                            <td class="text-end">@item.Qty</td>          @* ✅ Qty only *@
+                            <td class="text-end">@item.FreeQty</td>         @* ✅ Free column *@
+
+                            <td class="text-end">@item.Rate.ToString("0.00")</td>
+                            <td class="fw-bold text-end">@item.Amount.ToString("0.00")</td>
+                        </tr>
+                        sno++;
+                    }
+                }
+            </tbody>
+
+            <tfoot class="table-secondary fw-bold">
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td class="text-end">TOTAL</td>
+
+                    <td class="text-end">@ViewBag.TotalQty.ToString("0.00")</td>        @* ✅ total Qty only *@
+                    <td class="text-end">@ViewBag.TotalFree.ToString("0.00")</td>       @* ✅ total Free *@
+
+                    <td></td>                                          @* ✅ Total Rate removed *@
+                    <td class="text-end">@Convert.ToDecimal(ViewBag.TotalAmount).ToString("0.00")</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+
+            $("#itemPurchaseTable").DataTable({
+                ordering: false,
+                searching: true,
+                paging: true,
+                info: true,
+                autoWidth: false
+            });
+
+            $(".datepicker").datepicker({
+                dateFormat: "dd-mm-yy",
+                changeMonth: true,
+                changeYear: true
+            });
+
+        });
+    </script>
+}
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+        table.dataTable thead th.sorting,
+        table.dataTable thead th.sorting_asc,
+        table.dataTable thead th.sorting_desc {
+            background-image: none !important;
+            cursor: default !important;
+        }
+</style>

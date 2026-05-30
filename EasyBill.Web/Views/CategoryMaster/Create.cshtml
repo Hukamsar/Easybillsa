@@ -1,0 +1,39 @@
+﻿@model EasyBill.Models.ViewModels.CategoryMasterVM
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+
+        <div class="row mb-3">
+            <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+                Create Division
+            </div>
+        </div>
+        <style>
+            table.dataTable thead th {
+                background-color: #2b6ac9 !important;
+                color: white !important;
+            }
+        </style>
+        <div class="card-body">
+            <form asp-action="Create">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="row">
+                    <div class="col-md-2 d-flex align-items-center mb-1 border-radious mb-1">
+                        <label asp-for="CategoryName" class="me-2 mb-0" style="width: 100px;">
+                            Category Name
+                            <span class="text-danger">*</span>
+                        </label>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious mb-1">
+                        <input asp-for="CategoryName" class="form-control" />
+                        @*   <span asp-validation-for="CategoryName" class="text-danger"></span> *@
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+                    <a asp-controller="CategoryMaster" asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>

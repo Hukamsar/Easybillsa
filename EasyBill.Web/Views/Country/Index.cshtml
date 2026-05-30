@@ -1,0 +1,155 @@
+﻿@using EasyBill.Models.ViewModels
+@model CountryVM
+
+@{
+    ViewData["Title"] = "Index";
+}
+<style>
+    .custom-header,
+    .custom-header tr,
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+        .custom-header th {
+            border-color: #2b6ac9 !important;
+        }
+   
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+    }
+
+    .swal2-confirm,
+    .swal2-cancel {
+        border-radius: 8px !important;
+        padding: 8px 20px !important;
+        font-weight: 500 !important;
+        transition: all 0.25s ease-in-out !important;
+        margin: 0 8px !important;
+    }
+
+        .swal2-confirm:hover {
+            background-color: #157347 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(25, 135, 84, 0.4);
+        }
+
+        .swal2-cancel:hover {
+            background-color: #bb2d3b !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(220, 53, 69, 0.4);
+        }
+
+        .swal2-confirm:focus,
+        .swal2-cancel:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.4) !important;
+        }
+</style>
+
+<div class="card mb-3">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            Add Country
+    </div>
+    <div class="card-body">
+        <form method="post" asp-controller="Country" asp-action="Create" id="Countryfrom">
+            <div class="row">
+
+                <div class="col-md-4 d-flex align-items-center mb-2">
+                    <label asp-for="Name" class="me-2 mb-0" style="width: 100px;">Name
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" asp-for="Name" class="form-control form-control-sm" />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+                </div>
+
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue mt-3">Save</button>
+        </form>
+
+    </div>
+</div>
+<table class="table table-bordered table-striped">
+    <thead class="custom-header">
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Countries)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Name)
+                </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+
+                        <a asp-controller="Country" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="Country" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<script>
+    $(document).ready(function () {
+
+        $("#Countryfrom").on("submit", function (e) {
+
+            e.preventDefault();
+            let form = this;
+
+            Swal.fire({
+                title: 'Confirm Save?',
+                text: 'Do you want to save this Country?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Save',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#dc3545',
+                reverseButtons: true,
+                focusConfirm: true,
+                buttonsStyling: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $("#Countryfrom").off("submit"); // ✅ loop avoid
+                    form.submit();
+                }
+            });
+
+        });
+
+    });
+</script>
+
+@if (TempData["success"] != null)
+{
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: '@TempData["success"]',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#2b6ac9'
+        });
+    </script>
+}

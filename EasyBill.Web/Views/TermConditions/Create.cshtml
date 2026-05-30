@@ -1,0 +1,25 @@
+﻿@using EasyBill.Models.ViewModels
+@model TermConditionsVM
+
+@{
+	ViewData["Title"] = "Index";
+}
+
+<div class="card mb-3">
+	<div class="card-header bg-Cardheader">
+		Add Term & Conditions
+	</div>
+	<div class="card-body">
+        <form method="post" asp-controller="TermConditions" asp-action="Create" id="TermForm">
+			<div class="row">
+
+				<div class="col-md-4 d-flex align-items-center mb-2">
+					<label asp-for="Name" class="me-2 mb-0" style="width: 100px;">Name</label>
+					<input type="text" asp-for="Name" class="form-control form-control-sm" required />
+				</div>
+			</div>
+
+			<button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue mt-3">Save</button>
+		</form>
+	</div>
+</div>

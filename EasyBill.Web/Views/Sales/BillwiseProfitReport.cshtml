@@ -1,0 +1,267 @@
+﻿@using EasyBill.Models.ViewModels
+@model IEnumerable<BillwiseProfitVM>
+
+@{
+    decimal totalSales = ViewBag.TotalSalesValue ?? 0;
+    decimal totalCost = ViewBag.TotalCostValue ?? 0;
+    decimal totalProfit = ViewBag.TotalProfit ?? 0;
+    decimal totalGst = ViewBag.TotalGst ?? 0;
+    decimal totalAmount = ViewBag.TotalAmount ?? 0;
+    decimal totalDisc = ViewBag.TotalDiscount ?? 0;
+    decimal avgProfitPct = ViewBag.AvgProfitPct ?? 0;
+    string gstMode = ViewBag.GstMode ?? "with";
+}
+
+<style>
+    .table-primary {
+        --bs-table-color: #ffffff;
+        --bs-table-bg: #2b6ac9;
+    }
+
+    .profit-positive {
+        color: #16a34a;
+        font-weight: 700;
+    }
+
+    .profit-negative {
+        color: #dc2626;
+        font-weight: 700;
+    }
+
+    .summary-pill {
+        background: rgba(255,255,255,0.15);
+        border-radius: 8px;
+        padding: 4px 12px;
+        font-size: 0.8rem;
+    }
+</style>
+
+<!-- ✅ Summary Header Card -->
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex flex-wrap align-items-center gap-2"
+         style="background:#2b6ac9">
+        <span class="fw-bold">📊 Bill Wise Profit Report</span>
+        <span class="ms-auto d-flex flex-wrap gap-2">
+            <span class="summary-pill">
+                💰 Sales: <strong>₹ @totalSales.ToString("N0")</strong>
+            </span>
+            <span class="summary-pill">
+                🏭 Cost: <strong>₹ @totalCost.ToString("N0")</strong>
+            </span>
+            <span class="summary-pill">
+                📈 Profit: <strong>₹ @totalProfit.ToString("N0")</strong>
+            </span>
+            <span class="summary-pill">
+                % Avg: <strong>@avgProfitPct %</strong>
+            </span>
+            @if (gstMode == "with")
+            {
+                <span class="summary-pill">
+                    🧾 GST: <strong>₹ @totalGst.ToString("N0")</strong>
+                </span>
+            }
+        </span>
+    </div>
+</div>
+
+<!-- ✅ Filter Form -->
+<form method="get" class="card p-3 mb-3 shadow-sm">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold">Date From</label>
+            <input type="date" id="fromDate" name="fromDate"
+                   class="form-control form-control-sm"
+                   value="@ViewBag.FromDate" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold">Date To</label>
+            <input type="date" id="toDate" name="toDate"
+                   class="form-control form-control-sm"
+                   value="@ViewBag.ToDate" />
+        </div>
+
+        <!-- ✅ GST Mode Dropdown -->
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold">GST Mode</label>
+            <select name="gstMode" class="form-select form-select-sm">
+                <option value="with" selected="@(gstMode == "with" ? "selected" : null)">
+                    With GST
+                </option>
+                <option value="without" selected="@(gstMode == "without" ? "selected" : null)">
+                    Without GST
+                </option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-sm text-light w-100"
+                    style="background:#2b6ac9;">
+                🔍 Search
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- ✅ Export Buttons -->
+<div class="row mb-2">
+    <div class="col text-end">
+        <i class="fa-solid fa-file-excel text-success fs-5 me-2"
+           style="cursor:pointer;" onclick="exportExcel()" title="Export Excel"></i>
+        <i class="fa-solid fa-file-pdf text-danger fs-5"
+           style="cursor:pointer;" onclick="exportPdf()" title="Export PDF"></i>
+    </div>
+</div>
+
+<!-- ✅ Table -->
+<table id="billwiseTbl" class="table table-bordered table-striped table-sm">
+    <thead class="table-primary">
+        <tr>
+            <th>SNo</th>
+            <th>Bill No</th>
+            <th>Bill Date</th>
+            <th>Customer</th>
+            <th>Mobile</th>
+          @*   <th class="text-end">Sales Value</th> *@
+            <th class="text-end">Cost Value</th>
+    @*         @if (gstMode == "with")
+            {
+                <th class="text-end">GST Amt</th>
+            } *@
+            @* <th class="text-end">Discount</th> *@
+            <th class="text-end">Bill Amount</th>
+            <th class="text-end">Gross Profit</th>
+            <th class="text-end">Profit %</th>
+            <th class="text-end">Items</th>
+            <th class="text-end">Qty</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            int sr = 1;
+        }
+        @foreach (var bill in Model)
+        {
+            <tr>
+                <td>@sr</td>
+                <td>@bill.BillNo</td>
+                <td style="white-space:nowrap;">@bill.BillDate?.ToString("dd-MM-yyyy")</td>
+                <td>@bill.CustomerName</td>
+                <td>@bill.MobileNo</td>
+              @*   <td class="text-end">₹ @bill.TotalSalesValue.ToString("N0")</td> *@
+                <td class="text-end">₹ @bill.TotalCostValue.ToString("N0")</td>
+         @*        @if (gstMode == "with")
+                {
+                    <td class="text-end">₹ @bill.TotalGstAmt.ToString("N0")</td>
+                } *@
+               @*  <td class="text-end">₹ @bill.Discount.ToString("N0")</td> *@
+                <td class="text-end">₹ @bill.BillAmount.ToString("N0")</td>
+                <td class="text-end @(bill.GrossProfit >= 0 ? "profit-positive" : "profit-negative")">
+                    ₹ @bill.GrossProfit.ToString("N0")
+                </td>
+                <td class="text-end fw-bold"
+                    style="color:@(bill.ProfitPct >= 15 ? "#16a34a"
+                                     : bill.ProfitPct >= 5 ? "Green"
+                                     : "#dc2626");">
+                @bill.ProfitPct %
+            </td>
+            <td class="text-end">@bill.TotalItems</td>
+            <td class="text-end">@bill.TotalQty.ToString("N0")</td>
+            <td>
+                <a href="javascript:void(0)" class="sales-report-edit" data-url="@Url.Action("Edit", "Sales", new { id = bill.Id })" title="Edit">
+                    <i class="bi bi-pencil-square"></i>
+                </a>
+            </td>
+        </tr>
+                sr++;
+        }
+    </tbody>
+    <tfoot class="table-secondary fw-bold">
+        <tr>
+            <td colspan="5" class="text-end">TOTAL</td>
+           @*  <td class="text-end">₹ @totalSales.ToString("N0")</td> *@
+            <td class="text-end">₹ @totalCost.ToString("N0")</td>
+@*             @if (gstMode == "with")
+            {
+                <td class="text-end">₹ @totalGst.ToString("N0")</td>
+            } *@
+            @* <td class="text-end">₹ @totalDisc.ToString("N0")</td> *@
+            <td class="text-end">₹ @totalAmount.ToString("N0")</td>
+            <td class="text-end profit-positive">₹ @totalProfit.ToString("N0")</td>
+            <td class="text-end">@avgProfitPct %</td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+    </tfoot>
+</table>
+
+<div class="modal fade" id="salesEditReportModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header text-white py-2" style="background:#2b6ac9">
+                <h6 class="modal-title mb-0">Edit Sales</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="salesEditFrame" style="width:100%;height:calc(100vh - 50px);border:0;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var t = $("#billwiseTbl").DataTable({
+                "order": [[2, "desc"]],
+                "pageLength": 25,
+                "columnDefs": [
+                    { "orderable": false, "targets": "_all" }
+                ]
+            });
+
+            t.on('order.dt search.dt', function () {
+                t.column(0, { search: 'applied', order: 'applied' }).nodes()
+                    .each(function (cell, i) {
+                        cell.innerHTML = i + 1;
+                    });
+            }).draw();
+
+            $(document).on("click", ".sales-report-edit", function () {
+                $("#salesEditFrame").attr("src", $(this).data("url"));
+                $("#salesEditReportModal").modal("show");
+            });
+
+            $("#salesEditReportModal").on("hidden.bs.modal", function () {
+                $("#salesEditFrame").attr("src", "");
+            });
+        });
+
+        window.addEventListener("message", function (e) {
+            if (e.data && e.data.salesEditSaved) {
+                $("#salesEditReportModal").modal("hide");
+                window.location.reload();
+            }
+            if (e.data && e.data.salesEditCancel) {
+                $("#salesEditReportModal").modal("hide");
+            }
+        });
+
+        function exportExcel() {
+            var fromDate = document.getElementById("fromDate")?.value || "";
+            var toDate   = document.getElementById("toDate")?.value   || "";
+            var gstMode  = document.querySelector("select[name='gstMode']")?.value || "with";
+            window.location.href =
+                `/Sales/BillwiseProfitReportExcel?fromDate=${fromDate}&toDate=${toDate}&gstMode=${gstMode}`;
+        }
+
+        function exportPdf() {
+            var fromDate = document.getElementById("fromDate")?.value || "";
+            var toDate   = document.getElementById("toDate")?.value   || "";
+            var gstMode  = document.querySelector("select[name='gstMode']")?.value || "with";
+            window.location.href =
+                `/Sales/BillwiseProfitReportPdf?fromDate=${fromDate}&toDate=${toDate}&gstMode=${gstMode}`;
+        }
+    </script>
+}
