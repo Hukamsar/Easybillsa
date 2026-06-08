@@ -1,4 +1,4 @@
-﻿@model EasyBill.Models.Entity.Sales
+@model EasyBill.Models.Entity.Sales
 @using System.Globalization
 @using System.Linq
 @using System.Reflection
@@ -234,6 +234,22 @@
     var modelTaxable = D(Model, "Total", "TaxableAmount", "TotalTaxable");
 
     var totalTax = D(Model, "TotalGstAmt", "TotalTax");
+
+    var loyaltyPayment = Model?.SalsePaymentDetails?.FirstOrDefault(x =>
+        x.Description != null &&
+        x.Description.Contains("Adjusted from loyalty points", StringComparison.OrdinalIgnoreCase));
+    decimal loyaltyDiscount = loyaltyPayment?.Amount ?? 0m;
+    string pointsUsedText = "";
+    if (loyaltyPayment != null && !string.IsNullOrEmpty(loyaltyPayment.Description))
+    {
+        var desc = loyaltyPayment.Description;
+        var openBrace = desc.IndexOf('(');
+        var closeBrace = desc.IndexOf(')');
+        if (openBrace >= 0 && closeBrace > openBrace)
+        {
+            pointsUsedText = desc.Substring(openBrace + 1, closeBrace - openBrace - 1);
+        }
+    }
     if (totalTax <= 0m) totalTax = gstTotal;
 
     if (modelSubTotal <= 0m) modelSubTotal = taxableTotal + discountTotal;
@@ -770,7 +786,7 @@
 
         @@media print {
             @@page {
-                size: 210mm 297mm portrait !important;
+                size: A5 landscape !important;
                 margin: 0 !important;
             }
 
@@ -779,7 +795,7 @@
                 padding: 0 !important;
                 background: #fff !important;
                 width: 210mm !important;
-                height: 297mm !important;
+                height: 100% !important;
                 display: block !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
@@ -788,9 +804,8 @@
             .paper-container {
                 width: 210mm !important;
                 max-width: 210mm !important;
-                /* 🟢 148.5mm (पूरी A5 हाइट) रखी है ताकि 15 आइटम न छिपें */
-                height: 148.5mm !important;
-                max-height: 148.5mm !important;
+                height: 100% !important;
+                max-height: 100% !important;
                 margin: 0 !important;
                 /* चारों तरफ equal safe spacing for clean A5 print layout. */
                 padding: 8mm !important;
@@ -861,7 +876,6 @@
 
                 <div class="doc-head">
                     <h1 class="doc-title txtTitleClass">@themeTitle</h1>
-                    <div class="doc-sub">Invoice No: <span class="txtInvoiceNoClass">@invoiceNo</span></div>
                     @if (totalPages > 1)
                     {
                         <div class="doc-sub" style="margin-top:2px;">Page @(pIndex + 1) of @totalPages</div>
@@ -873,6 +887,7 @@
                 <section class="meta-grid">
                     <div class="meta-card">
                         <div class="meta-title">Invoice Details</div>
+                        <div class="meta-row"><span>Invoice No</span><strong class="txtInvoiceNoClass">@invoiceNo</strong></div>
                         <div class="meta-row"><span>Invoice Date</span><strong class="txtInvoiceDateClass">@invoiceDate.ToString("dd-MMM-yyyy")</strong></div>
                         <div class="meta-row"><span>Due Date</span><strong class="txtDueDateClass">@dueDate.ToString("dd-MMM-yyyy")</strong></div>
                         <div class="meta-row"><span>Payment Mode</span><strong class="txtPaymentModeClass">@paymentMode</strong></div>
@@ -977,6 +992,25 @@
                 <div class="footer-wrapper">
                     <section class="bottom-grid">
                         <div class="note-card">
+                            @if (Model?.CustomerId.HasValue == true && (ViewBag.CustomerPointsBalance != null || ViewBag.PointsEarned != null || ViewBag.PointsRedeemed != null))
+                            {
+                                var earned = ViewBag.PointsEarned as int? ?? 0;
+                                var redeemed = ViewBag.PointsRedeemed as int? ?? 0;
+                                var balance = ViewBag.CustomerPointsBalance as int? ?? 0;
+
+                                <div class="note-title" style="color: var(--primary) !important; display: flex; align-items: center; gap: 4px; border-bottom: 1px dashed var(--line); padding-bottom: 1px; margin-bottom: 2px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M3 2.5a2.5 2.5 0 0 1 5 0 2.5 2.5 0 0 1 5 0v.006c0 .07 0 .27-.038.494H15a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H1v-2a1 1 0 0 1 1-1h2.038A2.5 2.5 0 0 1 3 2.506zm1.068.5H7v-.5a1.5 1.5 0 1 0-3 0c0 .085.002.274.045.43zM9 3h2.932l.045-.43a1.5 1.5 0 1 0-3 0zM1 12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5H1z"/>
+                                    </svg>
+                                    Loyalty Points Summary
+                                </div>
+                                <div style="display: flex; gap: 15px; font-size: 7.5px; margin-bottom: 4px; font-weight: bold; color: var(--text);">
+                                    <span>Earned: <span style="color: #16a34a;">+@earned</span></span>
+                                    <span>Redeemed: <span style="color: #dc2626;">-@redeemed</span></span>
+                                    <span>Rest Points: <span style="color: var(--primary);">@balance</span></span>
+                                </div>
+                            }
+
                             <div class="note-title">Terms & Conditions</div>
                             <div class="note-text txtTncClass">@termsText</div>
 
@@ -995,6 +1029,10 @@
                                 @if (showDiscountCol)
                                 {
                                     <tr class="col-disc"><td>Total Discount</td><td>- @Money(modelDiscount)</td></tr>
+                                }
+                                @if (loyaltyDiscount > 0m)
+                                {
+                                    <tr style="background-color: #fffbeb; font-weight: bold; border-left: 3px solid #f59e0b; color: #b45309;"><td style="color: #b45309 !important; padding-left: 5px;">Points Discount @(!string.IsNullOrEmpty(pointsUsedText) ? $"({pointsUsedText})" : "")</td><td style="color: #b45309 !important;">- @Money(loyaltyDiscount)</td></tr>
                                 }
                                 <tr><td>Total Taxable</td><td>@Money(modelTaxable)</td></tr>
 
@@ -1015,8 +1053,8 @@
                                     <tr class="col-gsta"><td>Total GST</td><td>@Money(totalTax)</td></tr>
                                 }
 
-                                <tr class="grand"><td>Grand Total</td><td class="txtTotalClass">@Money(grandTotal)</td></tr>
-                                <tr><td>Paid</td><td>@Money(paidAmount)</td></tr>
+                                <tr class="grand"><td>Grand Total</td><td class="txtTotalClass">@Money(grandTotal - loyaltyDiscount)</td></tr>
+                                <tr><td>Paid</td><td>@Money(paidAmount - loyaltyDiscount)</td></tr>
                                 <tr><td>Balance</td><td>@Money(balanceAmount)</td></tr>
                             </table>
 

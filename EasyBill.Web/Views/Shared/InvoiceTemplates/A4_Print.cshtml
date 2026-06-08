@@ -1,4 +1,4 @@
-﻿@model EasyBill.Models.Entity.Sales
+@model EasyBill.Models.Entity.Sales
 @{
     // BTR FIX: Layout = null ensures no old broken Master Layouts interfere.
     Layout = null;
@@ -67,9 +67,26 @@
     decimal displayDiscount = (Model?.Totaldiscount ?? 0m) > 0m ? (Model?.Totaldiscount ?? 0m) : lineDiscount;
     decimal displayGst = (Model?.TotalGstAmt ?? 0m) > 0m ? (Model?.TotalGstAmt ?? 0m) : lineGst;
     decimal displayCess = Model?.TotalCessAmount ?? 0m;
-    decimal displayGrandTotal = (Model?.TotalPayable ?? 0m) > 0m
+
+    var loyaltyPayment = Model?.SalsePaymentDetails?.FirstOrDefault(x =>
+        x.Description != null &&
+        x.Description.Contains("Adjusted from loyalty points", StringComparison.OrdinalIgnoreCase));
+    decimal loyaltyDiscount = loyaltyPayment?.Amount ?? 0m;
+    string pointsUsedText = "";
+    if (loyaltyPayment != null && !string.IsNullOrEmpty(loyaltyPayment.Description))
+    {
+        var desc = loyaltyPayment.Description;
+        var openBrace = desc.IndexOf('(');
+        var closeBrace = desc.IndexOf(')');
+        if (openBrace >= 0 && closeBrace > openBrace)
+        {
+            pointsUsedText = desc.Substring(openBrace + 1, closeBrace - openBrace - 1);
+        }
+    }
+
+    decimal displayGrandTotal = ((Model?.TotalPayable ?? 0m) > 0m
         ? (Model?.TotalPayable ?? 0m)
-        : Math.Round(displaySubTotal + displayGst + displayCess, 2, MidpointRounding.AwayFromZero);
+        : Math.Round(displaySubTotal - displayDiscount + displayGst + displayCess, 2, MidpointRounding.AwayFromZero)) - loyaltyDiscount;
 }
 
 <!DOCTYPE html>
@@ -302,6 +319,36 @@
 
         <div class="footer-grid">
             <div class="footer-left">
+                @if (Model?.CustomerId.HasValue == true && (ViewBag.CustomerPointsBalance != null || ViewBag.PointsEarned != null || ViewBag.PointsRedeemed != null))
+                {
+                    var earned = ViewBag.PointsEarned as int? ?? 0;
+                    var redeemed = ViewBag.PointsRedeemed as int? ?? 0;
+                    var balance = ViewBag.CustomerPointsBalance as int? ?? 0;
+
+                    <div style="margin-bottom: 15px; padding: 10px; background: var(--bg-light); border-radius: 6px; border: 1px solid var(--border); font-size: 0.9em;">
+                        <div class="footer-label" style="color: var(--primary); margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="color: var(--primary);">
+                                <path d="M3 2.5a2.5 2.5 0 0 1 5 0 2.5 2.5 0 0 1 5 0v.006c0 .07 0 .27-.038.494H15a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H1v-2a1 1 0 0 1 1-1h2.038A2.5 2.5 0 0 1 3 2.506zm1.068.5H7v-.5a1.5 1.5 0 1 0-3 0c0 .085.002.274.045.43zM9 3h2.932l.045-.43a1.5 1.5 0 1 0-3 0zM1 12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5H1z"/>
+                            </svg>
+                            Loyalty Points Summary
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+                            <div>
+                                <div style="font-size: 0.8em; color: #64748b; text-transform: uppercase;">Points Earned</div>
+                                <div style="font-weight: 700; font-size: 1.1em; color: #16a34a;">+@earned</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.8em; color: #64748b; text-transform: uppercase;">Points Redeemed</div>
+                                <div style="font-weight: 700; font-size: 1.1em; color: #dc2626;">-@redeemed</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.8em; color: #64748b; text-transform: uppercase; font-weight: 600;">Rest Points</div>
+                                <div style="font-weight: 800; font-size: 1.1em; color: var(--primary);">@balance</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
                 @if(!string.IsNullOrWhiteSpace(bank))
                 {
                     <div style="margin-bottom: 15px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border);">
@@ -355,6 +402,13 @@
                             <td class="totals-label">Total GST:</td>
                             <td class="totals-value">+ ₹ @displayGst.ToString("0.00")</td>
                         </tr>
+                        @if (loyaltyDiscount > 0m)
+                        {
+                            <tr style="background-color: #fffbeb; font-weight: bold; border-left: 3px solid #f59e0b;">
+                                <td class="totals-label totals-discount" style="color: #b45309; padding-left: 5px; padding-top: 4px; padding-bottom: 4px;">Points Discount @(!string.IsNullOrEmpty(pointsUsedText) ? $"({pointsUsedText})" : ""):</td>
+                                <td class="totals-value totals-discount" style="color: #b45309; padding-top: 4px; padding-bottom: 4px;">- ₹ @loyaltyDiscount.ToString("0.00")</td>
+                            </tr>
+                        }
                     </table>
                 </div>
                 

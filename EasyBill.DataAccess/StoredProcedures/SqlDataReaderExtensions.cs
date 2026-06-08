@@ -62,6 +62,16 @@ namespace EasyBill.DataAccess.StoredProcedures
             };
         }
 
+        public static decimal? ReadNullableDecimal(this DbDataReader reader, string columnName)
+        {
+            var ordinal = GetOrdinal(reader, columnName);
+            if (ordinal < 0 || reader.IsDBNull(ordinal))
+            {
+                return null;
+            }
+            return reader.ReadDecimal(columnName);
+        }
+
         public static DateTime? ReadNullableDateTime(this DbDataReader reader, string columnName)
         {
             var ordinal = GetOrdinal(reader, columnName);

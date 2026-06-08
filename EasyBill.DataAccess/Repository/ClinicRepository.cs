@@ -153,7 +153,7 @@ namespace EasyBill.DataAccess.Repository
             try
             {
                 var repository = _unitofwork.GetRepository<ApplicationUsers>();
-                IList<ApplicationUsers> results = await repository.Query().ToListAsync();
+                IList<ApplicationUsers> results = await repository.Query().Include(x => x.Employee).ToListAsync();
                 return results;
             }
             catch (Exception ex)

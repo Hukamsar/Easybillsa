@@ -89,6 +89,7 @@ namespace AOne.DataAccess.Data
         public DbSet<PurchaseChallanItem> PurchaseChallanItems { get; set; }
         public DbSet<POWithAI> POWithAIs { get; set; }
         public DbSet<CurrentStock> CurrentStocks { get; set; }
+        public DbSet<StockConversion> StockConversions { get; set; }
         public DbSet<CustomerAdvance> CustomerAdvances { get; set; }
         public DbSet<SupplierAdvance> SupplierAdvances { get; set; }
         public DbSet<TenantWalletHistory> TenantWalletHistories { get; set; }

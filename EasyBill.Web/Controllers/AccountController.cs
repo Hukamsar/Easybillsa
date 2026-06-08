@@ -544,6 +544,28 @@ namespace EasyBill.UI.Controllers
 
             if (updateResult.Succeeded && ModelState.IsValid)
             {
+                if (user.EmployeeId.HasValue)
+                {
+                    try
+                    {
+                        var employeeRepo = _unitOfWork.GetRepository<EasyBill.Models.Entity.Employee>();
+                        if (employeeRepo != null)
+                        {
+                            var employee = employeeRepo.GetSingle(x => x.Id == user.EmployeeId.Value);
+                            if (employee != null)
+                            {
+                                employee.Email = viewModel.Email?.Trim();
+                                employee.Phone = viewModel.MobileNo?.Trim();
+                                employeeRepo.Update(employee);
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Safe catch block to prevent blocking the successful redirect in case employee repo fails
+                    }
+                }
+
                 TempData["Success"] = "User updated successfully.";
                 return RedirectToAction("UsersAccount", "Account");
             }

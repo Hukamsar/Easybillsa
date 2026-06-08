@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Global Settings";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
@@ -1050,6 +1050,9 @@
         <div class="gs-nav-item" onclick="switchTab('inventory', this)">
             <i class="bi bi-box-seam"></i> Inventory
         </div>
+        <div class="gs-nav-item" onclick="switchTab('loyalty', this)">
+            <i class="bi bi-gift"></i> Loyalty Program
+        </div>
     </aside>
 
     <main class="gs-main" id="gsMainContent">
@@ -1568,6 +1571,114 @@
             <div class="gs-page-title"><i class="bi bi-box-seam"></i> Inventory Settings</div>
             <div class="settings-card" style="margin-top:16px"><div class="setting-row"><div class="setting-name" style="color:var(--text-muted)">Coming soon...</div></div></div>
         </div>
+
+        <div class="settings-panel" id="panel-loyalty">
+            <div class="gs-breadcrumb"><i class="bi bi-house"></i> <span>Settings</span> <i class="bi bi-chevron-right"></i> <span>Loyalty Program</span></div>
+            <div class="gs-page-header">
+                <div>
+                    <div class="gs-page-title"><i class="bi bi-gift"></i> Loyalty Program Settings</div>
+                    <div class="gs-page-desc">Configure customer loyalty points earning, redemption thresholds, and campaigns.</div>
+                </div>
+            </div>
+            
+            <input type="hidden" id="loyaltySettingId" value="0">
+
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-toggle-on"></i><span>Loyalty Status</span></div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-name">Enable Loyalty Program</div>
+                        <div class="setting-hint">Activate customer loyalty points collection and usage</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle">
+                            <input type="checkbox" id="loyaltyIsActive">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-plus-circle"></i><span>Earning Rules</span></div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-name">Points Earning Interval (₹ Amount)</div>
+                        <div class="setting-hint">Configure spent money equivalent to 1 point (e.g. ₹100 spend = 1 point)</div>
+                    </div>
+                    <div class="setting-control">
+                        <input type="number" class="num-input" style="width: 120px;" placeholder="e.g. 100" min="1" id="loyaltyEarnPerAmount">
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-name">Minimum Amount to Earn</div>
+                        <div class="setting-hint">Minimum bill value required to start earning points</div>
+                    </div>
+                    <div class="setting-control">
+                        <input type="number" class="num-input" style="width: 120px;" placeholder="e.g. 100" min="0" id="loyaltyMinAmountToEarn">
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-dash-circle"></i><span>Redemption Rules</span></div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-name">Allow Point Redemption</div>
+                        <div class="setting-hint">Allow customers to pay using their accumulated loyalty points</div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle">
+                            <input type="checkbox" id="loyaltyAllowRedemption">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-name">Point Cash Value (₹)</div>
+                        <div class="setting-hint">Cash value of a single point in rupees (e.g., 1 point = ₹1)</div>
+                    </div>
+                    <div class="setting-control">
+                        <input type="number" class="num-input" style="width: 120px;" placeholder="e.g. 1.0" min="0.01" step="0.01" id="loyaltyPointValueInRs">
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-name">Minimum Points to Redeem</div>
+                        <div class="setting-hint">Minimum points accumulated before customer is eligible to redeem (e.g. 50 points)</div>
+                    </div>
+                    <div class="setting-control">
+                        <input type="number" class="num-input" style="width: 120px;" placeholder="e.g. 50" min="0" id="loyaltyMinPointsToRedeem">
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-lightning-charge"></i><span>Campaign & Multipliers</span></div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-name">Points Earning Multiplier</div>
+                        <div class="setting-hint">Boost points earned (e.g. 2.0 for Double Points festivals). Set 1.0 for standard.</div>
+                    </div>
+                    <div class="setting-control">
+                        <input type="number" class="num-input" style="width: 120px;" placeholder="e.g. 1.0" min="1.0" step="0.1" id="loyaltyEarningMultiplier">
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-name">Campaign Duration</div>
+                        <div class="setting-hint">Start and end dates for the active loyalty settings campaign</div>
+                    </div>
+                    <div class="setting-control d-flex gap-2">
+                        <input type="date" class="form-control form-control-sm" id="loyaltyStartDate" style="width: 140px;">
+                        <span class="align-self-center text-muted">to</span>
+                        <input type="date" class="form-control form-control-sm" id="loyaltyEndDate" style="width: 140px;">
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -1719,6 +1830,7 @@
             if (activePanel === 'panel-sales') saveSalesSettings();
             else if (activePanel === 'panel-purchase') savePurchaseSettings();
             else if (activePanel === 'panel-invoicethemes') saveInvoiceTheme();
+            else if (activePanel === 'panel-loyalty') saveLoyaltySettings();
             else showToast('Nothing to save here.');
         }
 
@@ -1758,6 +1870,52 @@
                 body: JSON.stringify(payload)
             })
             .then(res => res.ok ? showToast('Purchase settings saved!') : showToast('Error saving purchase settings!', true))
+            .catch(() => showToast('Something went wrong!', true));
+        }
+
+        function loadLoyaltySettings() {
+            fetch('/LoyaltySetting/GetSettings')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('loyaltySettingId').value = data.id || 0;
+                    document.getElementById('loyaltyIsActive').checked = !!data.isActive;
+                    document.getElementById('loyaltyEarnPerAmount').value = data.earnPerAmount || '';
+                    document.getElementById('loyaltyMinAmountToEarn').value = data.minAmountToEarn || '';
+                    document.getElementById('loyaltyAllowRedemption').checked = !!data.allowRedemption;
+                    document.getElementById('loyaltyPointValueInRs').value = data.pointValueInRs || '';
+                    document.getElementById('loyaltyMinPointsToRedeem').value = data.minPointsToRedeem || '';
+                    document.getElementById('loyaltyEarningMultiplier').value = data.earningMultiplier || '1.0';
+                    
+                    if (data.startDate) {
+                        document.getElementById('loyaltyStartDate').value = data.startDate.split('T')[0];
+                    }
+                    if (data.endDate) {
+                        document.getElementById('loyaltyEndDate').value = data.endDate.split('T')[0];
+                    }
+                })
+                .catch(() => showToast('Loyalty settings load error', true));
+        }
+
+        function saveLoyaltySettings() {
+            const payload = {
+                id: parseInt(document.getElementById('loyaltySettingId').value) || 0,
+                isActive: document.getElementById('loyaltyIsActive').checked,
+                earnPerAmount: parseFloat(document.getElementById('loyaltyEarnPerAmount').value) || 100,
+                minAmountToEarn: parseFloat(document.getElementById('loyaltyMinAmountToEarn').value) || 0,
+                allowRedemption: document.getElementById('loyaltyAllowRedemption').checked,
+                pointValueInRs: parseFloat(document.getElementById('loyaltyPointValueInRs').value) || 1.0,
+                minPointsToRedeem: parseInt(document.getElementById('loyaltyMinPointsToRedeem').value) || 0,
+                earningMultiplier: parseFloat(document.getElementById('loyaltyEarningMultiplier').value) || 1.0,
+                startDate: document.getElementById('loyaltyStartDate').value ? new Date(document.getElementById('loyaltyStartDate').value) : new Date(),
+                endDate: document.getElementById('loyaltyEndDate').value ? new Date(document.getElementById('loyaltyEndDate').value) : new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+            };
+
+            fetch('/LoyaltySetting/SaveSettings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.ok ? showToast('Loyalty settings saved!') : showToast('Error saving loyalty settings!', true))
             .catch(() => showToast('Something went wrong!', true));
         }
 
@@ -1808,10 +1966,12 @@
 
             thermalRow.style.display = size === 'Thermal' ? 'flex' : 'none';
 
-            orientation.disabled = size === 'Thermal';
+            orientation.disabled = (size === 'Thermal' || size === 'A5');
             if (size === 'Thermal') {
                 orientation.value = 'Portrait';
                 if (force || !fontFamily.value) fontFamily.value = "'Courier New', monospace";
+            } else if (size === 'A5') {
+                orientation.value = 'Landscape';
             }
 
             if (!margin.value) margin.value = 'Normal';
@@ -2028,6 +2188,7 @@
             formData.set('ShowAmountInWords', document.getElementById('themeShowAmountInWords').checked);
             formData.set('ShowPaymentQR', document.getElementById('themeShowPaymentQR').checked);
             formData.set('PaperSize', paperSize);
+            formData.set('Orientation', document.getElementById('themeOrientation').value);
 
             if (paperSize === 'Thermal') {
                 formData.set('ThermalPaperSize', document.getElementById('themeThermalPaperSize').value || '80');
@@ -2398,6 +2559,7 @@
             loadSalesSettings();
             loadPurchaseSettings();
             loadInvoiceTheme('A4');
+            loadLoyaltySettings();
 
             initLivePreview();
             toggleThermalOptions();

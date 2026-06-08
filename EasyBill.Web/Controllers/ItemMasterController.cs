@@ -124,6 +124,12 @@ namespace EasyBill.UI.Controllers
             IList<Company> company = await _companyservice.GetAll();
             company.Insert(0, new Company { Id = 0, Name = "Select company" });
             ViewBag.company = new SelectList(company, "Id", "Name");
+
+            var allItems = await _itemmasterrepository.GetAll();
+            var parentItems = allItems.Where(x => x.ItemType == "Bulk" && x.IsActive == true).ToList();
+            parentItems.Insert(0, new ItemMaster { Id = 0, Name = "Select Parent Bulk Item" });
+            ViewBag.ParentItems = new SelectList(parentItems, "Id", "Name");
+
             var viewModel = new ItemMasterVM
             {
                 Code = await GenerateNxtNumber(), 
@@ -175,7 +181,10 @@ namespace EasyBill.UI.Controllers
                     Narcotics = itemMasterVM.Narcotics,
                     ScheduleH = itemMasterVM.ScheduleH,
                     ScheduleH1 = itemMasterVM.ScheduleH1,
-                    Salt = itemMasterVM.Salt
+                    Salt = itemMasterVM.Salt,
+                    ItemType = itemMasterVM.ItemType,
+                    ParentItemId = itemMasterVM.ParentItemId == 0 ? null : itemMasterVM.ParentItemId,
+                    ConversionFactor = itemMasterVM.ConversionFactor
                 };
 
                 await _itemmasterrepository.Create(model);
@@ -729,6 +738,11 @@ namespace EasyBill.UI.Controllers
             IList<Company> companies = await _companyservice.GetAll();
             companies.Insert(0, new Company { Id = 0, Name = "Select Company" });
             ViewBag.company = new SelectList(companies, "Id", "Name");
+
+            var allItems = await _itemmasterrepository.GetAll();
+            var parentItems = allItems.Where(x => x.ItemType == "Bulk" && x.IsActive == true).ToList();
+            parentItems.Insert(0, new ItemMaster { Id = 0, Name = "Select Parent Bulk Item" });
+            ViewBag.ParentItems = new SelectList(parentItems, "Id", "Name");
         }
 
         private static ItemMasterVM BuildEmbeddedItemMasterVm(ItemMaster model)
@@ -762,7 +776,10 @@ namespace EasyBill.UI.Controllers
                 Narcotics = model.Narcotics,
                 ScheduleH = model.ScheduleH,
                 ScheduleH1 = model.ScheduleH1,
-                Salt = model.Salt
+                Salt = model.Salt,
+                ItemType = model.ItemType,
+                ParentItemId = model.ParentItemId,
+                ConversionFactor = model.ConversionFactor
             };
         }
 
@@ -806,6 +823,9 @@ namespace EasyBill.UI.Controllers
             model.ScheduleH = vm.ScheduleH;
             model.ScheduleH1 = vm.ScheduleH1;
             model.Salt = vm.Salt;
+            model.ItemType = vm.ItemType;
+            model.ParentItemId = vm.ParentItemId == 0 ? null : vm.ParentItemId;
+            model.ConversionFactor = vm.ConversionFactor;
         }
 
         private async Task<Hsn?> GetEmbeddedItemHsnAsync(int? hsnId)
@@ -1299,6 +1319,11 @@ namespace EasyBill.UI.Controllers
             var company = await _companyservice.GetAll();
             company.Insert(0, new Company { Id = 0, Name = "Select Company" });
             ViewBag.company = new SelectList(company, "Id", "Name");
+
+            var allItems = await _itemmasterrepository.GetAll();
+            var parentItems = allItems.Where(x => x.ItemType == "Bulk" && x.IsActive == true).ToList();
+            parentItems.Insert(0, new ItemMaster { Id = 0, Name = "Select Parent Bulk Item" });
+            ViewBag.ParentItems = new SelectList(parentItems, "Id", "Name");
         }
 
         [HttpGet]
@@ -1367,6 +1392,9 @@ namespace EasyBill.UI.Controllers
                 ScheduleH = model.ScheduleH,
                 ScheduleH1 = model.ScheduleH1,
                 Salt = model.Salt,
+                ItemType = model.ItemType,
+                ParentItemId = model.ParentItemId,
+                ConversionFactor = model.ConversionFactor,
 
                 ExistingImages = model.ItemImages
                 .OrderBy(x => x.SortOrder)
@@ -1438,6 +1466,9 @@ namespace EasyBill.UI.Controllers
             model.ScheduleH = VM.ScheduleH;
             model.ScheduleH1 = VM.ScheduleH1;
             model.Salt = VM.Salt;
+            model.ItemType = VM.ItemType;
+            model.ParentItemId = VM.ParentItemId == 0 ? null : VM.ParentItemId;
+            model.ConversionFactor = VM.ConversionFactor;
 
             await _itemmasterrepository.Update(model);
 

@@ -1,0 +1,367 @@
+@model List<EasyBill.Models.Entity.StockConversion>
+@using System.Text.Encodings.Web
+@{
+    Layout = null;
+    var stocks = ViewBag.Stocks as List<EasyBill.Models.Entity.CurrentStock> ?? new List<EasyBill.Models.Entity.CurrentStock>();
+    var voucherNo = ViewBag.VoucherNo as string ?? "";
+    var parentName = Model.FirstOrDefault()?.BulkItem?.Name ?? "Bulk Product";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Print Barcode Stickers - @voucherNo</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f4f6f9;
+            color: #1f2937;
+            margin: 0;
+            padding: 0;
+        }
+
+        .dashboard-bar {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1.25rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        .main-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .card-custom {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            padding: 1.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff;
+            font-weight: 600;
+            padding: 0.6rem 1.75rem;
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-print:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+            color: #ffffff;
+        }
+
+        .btn-back {
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            font-weight: 600;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-back:hover {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        /* STICKER CONTAINER */
+        .preview-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sticker-sheet {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+            justify-content: center;
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 2rem;
+        }
+
+        /* PROFESSIONAL BARCODE STICKER (MNC STANDARD: 50mm x 25mm / 2" x 1" equivalent) */
+        .barcode-sticker {
+            width: 220px;
+            height: 125px;
+            border: 1px solid #1e293b;
+            border-radius: 4px;
+            background: #ffffff;
+            padding: 6px 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            color: #000000;
+            font-family: Arial, sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .st-brand {
+            font-size: 8px;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            border-bottom: 1px solid #000000;
+            width: 100%;
+            text-align: center;
+            padding-bottom: 2px;
+            margin-bottom: 2px;
+        }
+
+        .st-name {
+            font-size: 10px;
+            font-weight: bold;
+            line-height: 1.1;
+            text-align: center;
+            max-height: 22px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            margin: 2px 0;
+        }
+
+        .st-barcode-img {
+            width: 160px;
+            height: 38px;
+            object-fit: contain;
+        }
+
+        .st-barcode-txt {
+            font-size: 9px;
+            font-family: monospace;
+            letter-spacing: 2px;
+            margin-top: -2px;
+        }
+
+        .st-details {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 8px;
+            font-weight: bold;
+            border-top: 1px dashed #000000;
+            padding-top: 2px;
+            margin-top: 2px;
+        }
+
+        .st-price-block {
+            text-align: left;
+        }
+
+        .st-price {
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+        .st-dates {
+            text-align: right;
+        }
+
+        /* PRINT STYLES - Hides everything except sticker grid */
+        @@media print {
+            body {
+                background: #ffffff;
+                color: #000000;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .main-container {
+                margin: 0;
+                padding: 0;
+                max-width: 100%;
+            }
+
+            .sticker-sheet {
+                border: none;
+                background: transparent;
+                padding: 0;
+                display: block; /* continuous feeds for barcode printer rolls */
+            }
+
+            .barcode-sticker {
+                border: none; /* Thermal printer spacing */
+                margin: 0 auto 12px auto;
+                page-break-after: always;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- DASHBOARD PANEL (HIDDEN ON PRINT) -->
+    <div class="dashboard-bar no-print">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <a href="@Url.Action("Create")" class="btn-back"><i class="bi bi-arrow-left"></i> Create New Conversion</a>
+                <div>
+                    <h5 class="m-0 font-weight-bold" style="font-weight: 700; color: #1e293b;">Sticker Barcode Desk</h5>
+                    <small class="text-muted">Voucher: @voucherNo | Source: @parentName</small>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="@Url.Action("Index")" class="btn-back"><i class="bi bi-journal-text"></i> View Log</a>
+                <button type="button" class="btn-print" onclick="window.print()">
+                    <i class="bi bi-printer-fill"></i> Print Stickers Sheet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONFIGURATION Desk (HIDDEN ON PRINT) -->
+    <div class="main-container">
+        <div class="card-custom no-print">
+            <h5 style="font-weight: 700; color: #334155; margin-bottom: 1.25rem;"><i class="bi bi-sliders text-primary"></i> Sticker Quantities Manager</h5>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr class="table-light">
+                            <th style="width: 8%; text-align: center;">Print?</th>
+                            <th style="width: 42%;">Retail Item (Repacked Size)</th>
+                            <th style="width: 25%;">Produced Qty</th>
+                            <th style="width: 25%;">Stickers to Generate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            var stock = stocks.FirstOrDefault(s => s.ItemId == item.RetailItemId);
+                            var defaultCount = (int)Math.Ceiling(item.RetailQty);
+                            var rate = stock?.SalesRateA ?? item.RetailItem?.SalesRate1 ?? 0;
+                            var expiry = stock?.ExpiryDate.HasValue == true ? stock.ExpiryDate.Value.ToString("dd/MM/yyyy") : "N/A";
+                            var mfg = item.TransactionDate.ToString("dd/MM/yyyy");
+                            var pack = item.RetailItem?.Packing ?? "";
+                            
+                            <tr class="repack-print-row" 
+                                data-name="@item.RetailItem?.Name"
+                                data-barcode="@item.RetailItem?.Barcode"
+                                data-price="Rs. @rate.ToString("0.00")"
+                                data-mfg="@mfg"
+                                data-expiry="@expiry"
+                                data-pack="@pack">
+                                <td style="text-align: center;">
+                                    <input type="checkbox" class="print-row-chk" checked style="width: 18px; height: 18px; cursor: pointer;" />
+                                </td>
+                                <td>
+                                    <strong style="color: #0f172a;">@item.RetailItem?.Name</strong>
+                                    @if (!string.IsNullOrEmpty(item.RetailItem?.Barcode))
+                                    {
+                                        <span class="text-muted d-block" style="font-size: 0.75rem;">Barcode: @item.RetailItem.Barcode</span>
+                                    }
+                                </td>
+                                <td>@item.RetailQty.ToString("0.####") Packets</td>
+                                <td>
+                                    <input type="number" class="form-control print-row-qty" min="0" max="500" value="@defaultCount" style="width: 100px; padding: 0.375rem 0.75rem; border-radius: 6px;" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- STICKER PREVIEW Desk -->
+        <div class="sticker-preview-area">
+            <h6 class="preview-title no-print"><i class="bi bi-eye-fill"></i> Label Preview Sheet</h6>
+            <div class="sticker-sheet" id="stickerContainer">
+                <!-- Javascript populates stickers dynamically here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            function generateStickers() {
+                var container = $("#stickerContainer");
+                container.empty();
+
+                $(".repack-print-row").each(function () {
+                    var row = $(this);
+                    var isChecked = row.find(".print-row-chk").is(":checked");
+                    if (!isChecked) return;
+
+                    var count = parseInt(row.find(".print-row-qty").val()) || 0;
+                    var name = row.data("name") || "";
+                    var barcode = row.data("barcode") || "";
+                    var price = row.data("price") || "";
+                    var mfg = row.data("mfg") || "";
+                    var expiry = row.data("expiry") || "";
+                    var pack = row.data("pack") || "";
+
+                    for (var i = 0; i < count; i++) {
+                        var stickerHtml = `
+                            <div class="barcode-sticker">
+                                <div class="st-brand">Premium Quality</div>
+                                <div class="st-name">${name}</div>
+                                ${barcode ? `<img class="st-barcode-img" src="/Barcode/Generate?code=${barcode}" alt="Barcode" />` : ''}
+                                <span class="st-barcode-txt">${barcode}</span>
+                                <div class="st-details">
+                                    <div class="st-price-block">
+                                        <span>MRP: <strong class="st-price">${price}</strong></span><br/>
+                                        <span>Net Wt: <strong>${pack}</strong></span>
+                                    </div>
+                                    <div class="st-dates">
+                                        <span>MFG: ${mfg}</span><br/>
+                                        <span>EXP: ${expiry}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.append(stickerHtml);
+                    }
+                });
+            }
+
+            // Generate initially
+            generateStickers();
+
+            // Regenerate when print settings are changed
+            $(document).on("input change", ".print-row-qty, .print-row-chk", function () {
+                generateStickers();
+            });
+        });
+    </script>
+</body>
+</html>

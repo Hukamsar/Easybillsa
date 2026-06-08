@@ -47,6 +47,13 @@ namespace EasyBill.UI.Controllers.API
             return extractedApiKey.ToString() == AllowedApiKey;
         }
 
+        private DateTime? ParseSaDate(string? dateStr)
+        {
+            if (string.IsNullOrWhiteSpace(dateStr)) return null;
+            if (DateTime.TryParse(dateStr, out var d)) return d;
+            return null;
+        }
+
         [HttpGet("companies")]
         public async Task<IActionResult> GetCompanies()
         {
@@ -152,9 +159,9 @@ namespace EasyBill.UI.Controllers.API
                 BranchCode = fields.BranchCode ?? fields.TenantCode,
                 IFSSAINo = fields.FssaiNo,
                 DrugLicNo = fields.DrugLic,
-                LicenceExpiryDate = fields.LicExp,
-                YearFrom = fields.FinYearFrom,
-                YearTo = fields.FinYearTo
+                LicenceExpiryDate = ParseSaDate(fields.LicExp),
+                YearFrom = ParseSaDate(fields.FinYearFrom),
+                YearTo = ParseSaDate(fields.FinYearTo)
             };
 
             if (!string.IsNullOrEmpty(fields.CompType) && Enum.TryParse<CompanyType>(fields.CompType, true, out var compType))
@@ -280,9 +287,9 @@ namespace EasyBill.UI.Controllers.API
 
             tenant.IFSSAINo = fields.FssaiNo;
             tenant.DrugLicNo = fields.DrugLic;
-            tenant.LicenceExpiryDate = fields.LicExp;
-            tenant.YearFrom = fields.FinYearFrom;
-            tenant.YearTo = fields.FinYearTo;
+            tenant.LicenceExpiryDate = ParseSaDate(fields.LicExp);
+            tenant.YearFrom = ParseSaDate(fields.FinYearFrom);
+            tenant.YearTo = ParseSaDate(fields.FinYearTo);
 
             if (!string.IsNullOrEmpty(fields.CompType) && Enum.TryParse<CompanyType>(fields.CompType, true, out var compType))
             {
@@ -410,25 +417,192 @@ namespace EasyBill.UI.Controllers.API
                 return NotFound(new { success = false, message = "Company not found." });
             }
 
-            // Calculate cost: INR 500 per block of 5 users monthly
-            var cost = (request.ExtraUsersBlock / 5) * 500;
+            // Enforce guard clauses
+            var hasPendingSa = await _context.TenantWalletHistories.AnyAsync(h => h.TenantId == id && h.ServiceType == "PendingSaUpgrade");
+            if (hasPendingSa)
+            {
+                return BadRequest(new { success = false, message = "A pending upgrade is already awaiting Admin redemption." });
+            }
+
+            var hasPendingAdmin = await _context.TenantWalletHistories.AnyAsync(h => h.TenantId == id && h.ServiceType == "PendingLimitUpgrade");
+            if (hasPendingAdmin)
+            {
+                return BadRequest(new { success = false, message = "A pending request from the Admin is awaiting your approval. Please approve or reject it first." });
+            }
+
+            // Check current active paid users
+            bool currentActive = tenant.ExtraUsersExpiryDate.HasValue && tenant.ExtraUsersExpiryDate.Value > DateTime.Now;
+            int maxPaidUsers = currentActive ? await GetMaxPaidExtraUsersInActivePeriodAsync(tenant.Id, tenant.ExtraUsersExpiryDate.Value) : 0;
+            if (maxPaidUsers == 0 && currentActive)
+            {
+                maxPaidUsers = tenant.ExtraUsers;
+            }
+
+            // Verify license is active
+            if (!tenant.LicenceExpiryDate.HasValue || tenant.LicenceExpiryDate.Value <= DateTime.Now)
+            {
+                return BadRequest(new { success = false, message = "The company license is expired or not active. Please renew/activate the license before purchasing extra staff slots." });
+            }
+
+            double totalDays = (tenant.LicenceExpiryDate.Value - DateTime.Now).TotalDays;
+            int remainingMonths = (int)Math.Max(1, Math.Round(totalDays / 30.4375));
+
+            int targetUsers = request.ExtraUsersBlock;
+            decimal monthlyCost = 0;
+
+            if (targetUsers > maxPaidUsers)
+            {
+                // Charge only for the additional users:
+                decimal newPrice = GetPriceForExtraUsers(targetUsers);
+                decimal oldPrice = GetPriceForExtraUsers(maxPaidUsers);
+                monthlyCost = newPrice - oldPrice;
+            }
+            else
+            {
+                // Downgrade, same count, or restore within active period is free
+                monthlyCost = 0;
+            }
+
+            decimal cost = monthlyCost * remainingMonths;
 
             if (cost > 0 && tenant.WalletBalance < cost)
             {
-                return BadRequest(new { success = false, message = $"Insufficient wallet balance. Upgrading by {request.ExtraUsersBlock} extra users requires INR {cost}. Current balance: INR {tenant.WalletBalance}" });
+                return BadRequest(new { success = false, message = $"Insufficient wallet balance. Upgrading by {targetUsers - maxPaidUsers} extra users for {remainingMonths} months requires INR {cost}. Current balance: INR {tenant.WalletBalance}" });
             }
 
-            if (cost > 0)
+            using (var transaction = await _context.Database.BeginTransactionAsync())
             {
-                tenant.WalletBalance -= cost;
-                await LogTenantWalletHistoryAsync(tenant.Id, cost, isDebit: true, "LimitUpgrade", $"Upgraded user limit by +{request.ExtraUsersBlock} extra users", tenant.WalletBalance);
-            }
+                try
+                {
+                    if (cost > 0)
+                    {
+                        tenant.WalletBalance -= cost;
+                        await LogTenantWalletHistoryAsync(tenant.Id, cost, isDebit: true, "PendingSaUpgrade", $"SA Upgrade Demand: {targetUsers} Extra Users (Pending Admin Redemption) for {remainingMonths} months", tenant.WalletBalance);
+                    }
+                    else
+                    {
+                        await LogTenantWalletHistoryAsync(tenant.Id, 0, isDebit: true, "PendingSaUpgrade", $"SA Upgrade Demand: {targetUsers} Extra Users (No Charge) (Pending Admin Redemption)", tenant.WalletBalance);
+                    }
 
-            tenant.ExtraUsers = request.ExtraUsersBlock;
-            _context.Tenants.Update(tenant);
-            await _context.SaveChangesAsync();
+                    // Do NOT update tenant.ExtraUsers and tenant.ExtraUsersExpiryDate immediately.
+                    // The Admin must redeem it.
+                    _context.Tenants.Update(tenant);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return StatusCode(500, new { success = false, message = "Database error: " + ex.Message });
+                }
+            }
 
             return Ok(new { company = MapToSaCompany(tenant) });
+        }
+
+        [HttpPost("companies/{id}/approve-user-limits")]
+        public async Task<IActionResult> ApproveUserLimits(string id)
+        {
+            if (!IsAuthorized()) return Unauthorized(new { success = false, message = "Unauthorized key." });
+
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(x => x.Id == id);
+            if (tenant == null)
+            {
+                return NotFound(new { success = false, message = "Company not found." });
+            }
+
+            var tx = await _context.TenantWalletHistories
+                .FirstOrDefaultAsync(h => h.TenantId == id && h.ServiceType == "PendingLimitUpgrade");
+            if (tx == null)
+            {
+                return BadRequest(new { success = false, message = "No pending limit upgrade request found for this company." });
+            }
+
+            int count = ParseExtraUsersFromRemarks(tx.Remarks);
+
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    tx.ServiceType = "LimitUpgrade";
+                    tx.Remarks = $"Purchased {count} Extra Users (Approved by SA) via {tx.PaymentMode}";
+                    _context.TenantWalletHistories.Update(tx);
+
+                    tenant.ExtraUsers = count;
+                    tenant.ExtraUsersExpiryDate = tenant.LicenceExpiryDate;
+
+                    _context.Tenants.Update(tenant);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return StatusCode(500, new { success = false, message = "Database error: " + ex.Message });
+                }
+            }
+
+            return Ok(new { success = true, company = MapToSaCompany(tenant) });
+        }
+
+        [HttpPost("companies/{id}/reject-user-limits")]
+        public async Task<IActionResult> RejectUserLimits(string id)
+        {
+            if (!IsAuthorized()) return Unauthorized(new { success = false, message = "Unauthorized key." });
+
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(x => x.Id == id);
+            if (tenant == null)
+            {
+                return NotFound(new { success = false, message = "Company not found." });
+            }
+
+            var tx = await _context.TenantWalletHistories
+                .FirstOrDefaultAsync(h => h.TenantId == id && h.ServiceType == "PendingLimitUpgrade");
+            if (tx == null)
+            {
+                return BadRequest(new { success = false, message = "No pending limit upgrade request found for this company." });
+            }
+
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    if (string.Equals(tx.PaymentMode, "Wallet", StringComparison.OrdinalIgnoreCase) && tx.Debit > 0)
+                    {
+                        tenant.WalletBalance += tx.Debit;
+                        
+                        var refundEntry = new TenantWalletHistory
+                        {
+                            TenantId = tenant.Id,
+                            TransactionDateTime = DateTime.Now,
+                            Credit = tx.Debit,
+                            Debit = 0,
+                            PaymentMode = "Wallet",
+                            ReferenceNo = $"RFD-{tx.ReferenceNo}",
+                            ServiceType = "Wallet Recharge",
+                            ServiceCharge = 0,
+                            Remarks = $"Refund for rejected user limit upgrade request ({tx.Remarks})",
+                            ClosingBalance = tenant.WalletBalance
+                        };
+                        _context.TenantWalletHistories.Add(refundEntry);
+                    }
+
+                    tx.ServiceType = "RejectedLimitUpgrade";
+                    tx.Remarks = $"Rejected by SA: {tx.Remarks}";
+                    _context.TenantWalletHistories.Update(tx);
+
+                    _context.Tenants.Update(tenant);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return StatusCode(500, new { success = false, message = "Database error: " + ex.Message });
+                }
+            }
+
+            return Ok(new { success = true, company = MapToSaCompany(tenant) });
         }
 
         [HttpPost("companies/{id}/rollback")]
@@ -768,7 +942,7 @@ namespace EasyBill.UI.Controllers.API
                     amount = planPrice,
                     nextBillingDate = DateTime.UtcNow.AddDays(15).ToString("yyyy-MM-dd"),
                     autoRenew = true,
-                    includedUsers = 15 + tenant.ExtraUsers,
+                    includedUsers = (tenant.SubscriptionPlan?.MaxDesktopLogins ?? 0) + tenant.ExtraUsers,
                     rollbackPackage = tenant.RollbackDurationMonths > 0 ? new
                     {
                         durationMonths = tenant.RollbackDurationMonths,
@@ -789,6 +963,9 @@ namespace EasyBill.UI.Controllers.API
                     lastTopUpOn = DateTime.UtcNow.AddDays(-5).ToString("o"),
                     lastChargeOn = DateTime.UtcNow.AddDays(-1).ToString("o"),
                     extraUsers = tenant.ExtraUsers,
+                    extraUsersExpiryDate = tenant.ExtraUsersExpiryDate?.ToString("yyyy-MM-dd") ?? "",
+                    pendingUpgradeDemand = GetPendingUpgradeDemand(tenant.Id),
+                    pendingSaUpgrade = GetPendingSaUpgrade(tenant.Id),
                     transactions = GetTenantTransactions(tenant.Id)
                 },
                 permissions = new
@@ -908,97 +1085,101 @@ namespace EasyBill.UI.Controllers.API
 
             return Ok(new { company = MapToSaCompany(tenant) });
         }
-    }
 
-    public class SaCompanyPayload
-    {
-        public SaCompanyFields? Fields { get; set; }
-        public SaSubscriptionPayload? Subscription { get; set; }
-    }
+        private decimal GetPriceForExtraUsers(int count)
+        {
+            if (count <= 0) return 0;
+            
+            // Standard bundle prices:
+            if (count == 5) return 500;
+            if (count == 10) return 900;
+            if (count == 15) return 1300;
+            if (count == 20) return 1600;
+            
+            // Multiple of 5 pricing combination
+            int twenties = count / 20;
+            int remainder = count % 20;
+            
+            decimal price = twenties * 1600;
+            price += remainder switch
+            {
+                5 => 500,
+                10 => 900,
+                15 => 1300,
+                _ => (remainder / 5) * 500
+            };
+            
+            return price;
+        }
 
-    public class SaSubscriptionPayload
-    {
-        public string? PlanName { get; set; }
-        public string? Status { get; set; }
-        public string? BillingCycle { get; set; }
-        public decimal Amount { get; set; }
-        public bool AutoRenew { get; set; }
-    }
+        private int ParseExtraUsersFromRemarks(string? remarks)
+        {
+            if (string.IsNullOrEmpty(remarks)) return 0;
 
-    public class SaCompanyFields
-    {
-        public string? TenantCode { get; set; }
-        public string? LegalName { get; set; }
-        public string? DisplayName { get; set; }
-        public string? PrimaryContactName { get; set; }
-        public string? PrimaryEmail { get; set; }
-        public string? PrimaryPhone { get; set; }
-        public string? AddressLine1 { get; set; }
-        public string? AddressLine2 { get; set; }
-        public string? City { get; set; }
-        public string? State { get; set; }
-        public string? Country { get; set; }
-        public string? PostalCode { get; set; }
-        public string? Notes { get; set; }
-        public string? GstNo { get; set; }
-        public string? BillingModel { get; set; }
-        public string? InventoryMode { get; set; }
-        public int OutletCount { get; set; }
-        public string? SupportTier { get; set; }
+            // 1. "Purchased X Extra Users"
+            var m1 = System.Text.RegularExpressions.Regex.Match(remarks, @"Purchased\s+(\d+)\s+Extra\s+Users", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (m1.Success) return int.Parse(m1.Groups[1].Value);
 
-        // Compliance and statutory properties
-        public string? CompType { get; set; }
-        public string? StateCode { get; set; }
-        public string? BusinessType { get; set; }
-        public string? Calendar { get; set; }
-        public DateTime? FinYearFrom { get; set; }
-        public DateTime? FinYearTo { get; set; }
-        public string? TaxType { get; set; }
-        public string? FssaiNo { get; set; }
-        public string? DrugLic { get; set; }
-        public DateTime? LicExp { get; set; }
-        public string? BranchCode { get; set; }
-    }
+            // 2. "Adjusted Extra Users [count] to X"
+            var m2 = System.Text.RegularExpressions.Regex.Match(remarks, @"Adjusted\s+Extra\s+Users(?:\s+count)?\s+to\s+(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (m2.Success) return int.Parse(m2.Groups[1].Value);
 
-    public class RechargeRequest
-    {
-        public decimal Amount { get; set; }
-        public string? Remarks { get; set; }
-    }
+            // 3. "to X (+..." or "to X (No Charge)" or "to X" in "extra users from Y to X"
+            var m3 = System.Text.RegularExpressions.Regex.Match(remarks, @"extra\s+users\s+from\s+\d+\s+to\s+(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (m3.Success) return int.Parse(m3.Groups[1].Value);
 
-    public class UserLimitsRequest
-    {
-        public int ExtraUsersBlock { get; set; }
-    }
+            return 0;
+        }
 
-    public class RollbackRequest
-    {
-        public int DurationMonths { get; set; }
-    }
+        private async Task<int> GetMaxPaidExtraUsersInActivePeriodAsync(string tenantId, DateTime expiryDate)
+        {
+            DateTime periodStart = expiryDate.AddMonths(-1);
+            var txs = await _context.TenantWalletHistories
+                .Where(h => h.TenantId == tenantId && h.ServiceType == "LimitUpgrade" && h.TransactionDateTime >= periodStart)
+                .ToListAsync();
+            
+            int maxPaid = 0;
+            foreach (var tx in txs)
+            {
+                int countFromRemarks = ParseExtraUsersFromRemarks(tx.Remarks);
+                if (countFromRemarks > maxPaid)
+                {
+                    maxPaid = countFromRemarks;
+                }
+            }
+            return maxPaid;
+        }
 
-    public class ModuleAccessRequest
-    {
-        public List<string>? AllowedModules { get; set; }
-    }
+        private object? GetPendingUpgradeDemand(string tenantId)
+        {
+            var tx = _context.TenantWalletHistories
+                .FirstOrDefault(h => h.TenantId == tenantId && h.ServiceType == "PendingLimitUpgrade");
+            if (tx == null) return null;
 
-    public class PoliciesRequest
-    {
-        public bool? LoginEnabled { get; set; }
-        public bool? AuditLocked { get; set; }
-        public bool? AllowNegativeBalance { get; set; }
-        public string? SupportPriority { get; set; }
-        public string? Status { get; set; }
-    }
+            int count = ParseExtraUsersFromRemarks(tx.Remarks);
+            return new
+            {
+                id = tx.Id,
+                count = count,
+                cost = tx.Debit,
+                remarks = tx.Remarks
+            };
+        }
 
-    public class PlanPayload
-    {
-        public string? PlanName { get; set; }
-        public decimal MonthlyPrice { get; set; }
-        public decimal YearlyPrice { get; set; }
-        public int DailyCustomerLimit { get; set; }
-        public int MaxDesktopLogins { get; set; }
-        public int MaxMobileLogins { get; set; }
-        public bool IsActive { get; set; }
-        public List<int>? SelectedFeatures { get; set; }
+        private object? GetPendingSaUpgrade(string tenantId)
+        {
+            var tx = _context.TenantWalletHistories
+                .FirstOrDefault(h => h.TenantId == tenantId && h.ServiceType == "PendingSaUpgrade");
+            if (tx == null) return null;
+
+            int count = ParseExtraUsersFromRemarks(tx.Remarks);
+            return new
+            {
+                id = tx.Id,
+                count = count,
+                cost = tx.Debit,
+                remarks = tx.Remarks
+            };
+        }
     }
 }

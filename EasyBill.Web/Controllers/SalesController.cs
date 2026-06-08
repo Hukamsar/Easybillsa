@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.ProfileService;
+using AOne.DataAccess.ProfileService;
 using AOne.Models.Entity;
 using ClosedXML.Excel;
 using EasyBill.DataAccess.Repository;
@@ -27,6 +27,8 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
+
+using EasyBill.UI.Service.Loyalty;
 
 namespace EasyBill.UI.Controllers
 {
@@ -59,6 +61,8 @@ namespace EasyBill.UI.Controllers
         private readonly ISupplierAdvanceRepository _supplierAdvanceRepo;
         private readonly WhatsAppService _whatsappservice;
         private readonly IRazorViewEngine _viewEngine;
+        private readonly CustomerLoyaltyService _loyaltyService;
+
         public SalesController(
             ISalesRepository salesservice,
             IProfileService profileService,
@@ -86,7 +90,8 @@ namespace EasyBill.UI.Controllers
             ICustomerAdvanceRepository customerAdvanceRepo,
             ISupplierAdvanceRepository supplierAdvanceRepo,
             WhatsAppService whatsappservice,
-            IRazorViewEngine viewEngine)
+            IRazorViewEngine viewEngine,
+            CustomerLoyaltyService loyaltyService)
         {
             _salesservice = salesservice;
             _profileService = profileService;
@@ -115,6 +120,7 @@ namespace EasyBill.UI.Controllers
             _supplierAdvanceRepo = supplierAdvanceRepo;
             _whatsappservice = whatsappservice;
             _viewEngine = viewEngine;
+            _loyaltyService = loyaltyService;
         }
 
         public async Task<IActionResult> Index()
@@ -343,6 +349,11 @@ namespace EasyBill.UI.Controllers
 
                     var createdSale = await _salesservice.Create(model);
 
+                    if (createdSale != null)
+                    {
+                        await _loyaltyService.ApplyPointsForSaleAsync(createdSale, Vm.billingType == "registered" ? Vm.RedeemPoints : 0);
+                    }
+
                     if (isShare)
                     {
                         var tenantId = User?.FindFirst("TenantId")?.Value;
@@ -558,8 +569,14 @@ namespace EasyBill.UI.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
+            // Set Loyalty Program Activation Date for historical sale exclusion
+            var pointSettings = await _unitofwork.GetRepository<PointSetting>().Query().ToListAsync();
+            var earliestSetting = pointSettings.OrderBy(x => x.Created).FirstOrDefault();
+            ViewBag.LoyaltyActivationDate = earliestSetting?.Created?.ToString("yyyy-MM-ddTHH:mm:ss") ?? "";
+
             var setting = await _salsesettingservice.GetByUserId(userId);
             Models.Entity.Sales model = await _salesservice.GetById(Id);
+            ViewBag.CreatedDate = model?.Created?.ToString("yyyy-MM-ddTHH:mm:ss") ?? model?.BillDate?.ToString("yyyy-MM-ddTHH:mm:ss") ?? "";
             SalesVM VM = new SalesVM();
 
             if (model != null)
@@ -661,15 +678,27 @@ namespace EasyBill.UI.Controllers
                 }).ToList()
                 : new List<SalesItemVM>();
 
-                VM.SalsePaymentDetails = model.SalsePaymentDetails?.Select(pd => new SalsePaymentDetailsVM
+                VM.SalsePaymentDetails = model.SalsePaymentDetails?
+                    .Where(pd => pd.Description == null || !pd.Description.Contains("Adjusted from loyalty points", StringComparison.OrdinalIgnoreCase))
+                    .Select(pd => new SalsePaymentDetailsVM
+                    {
+                        Id = pd.Id,
+                        PaymentModeId = pd.PaymentModeId,
+                        Amount = pd.Amount,
+                        ReferenceNo = pd.ReferenceNo,
+                        Description = pd.Description,
+                        CustomerId = pd.CustomerId,
+                    }).ToList() ?? new List<SalsePaymentDetailsVM>();
+
+                if (model.CustomerId.HasValue)
                 {
-                    Id = pd.Id,
-                    PaymentModeId = pd.PaymentModeId,
-                    Amount = pd.Amount,
-                    ReferenceNo = pd.ReferenceNo,
-                    Description = pd.Description,
-                    CustomerId = pd.CustomerId,
-                }).ToList() ?? new List<SalsePaymentDetailsVM>();
+                    var pointTx = await _unitofwork.GetRepository<PointTransaction>().Query()
+                        .FirstOrDefaultAsync(x => x.SaleId == model.Id && x.CustomerId == model.CustomerId.Value);
+                    if (pointTx != null)
+                    {
+                        VM.RedeemPoints = pointTx.RedeemedPoints;
+                    }
+                }
             }
             ViewBag.Customer = new SelectList(await _customerservice.GetAll(), "Id", "Name");
             ViewBag.Items = new SelectList(await _itemmasterservice.GetAll(), "Id", "Name");
@@ -930,7 +959,9 @@ namespace EasyBill.UI.Controllers
                     VM.SalsePaymentDetails = new List<SalsePaymentDetailsVM>();
 
                 var removedPaymentDetails = model.SalsePaymentDetails
-                   .Where(dbPayment => !VM.SalsePaymentDetails.Any(vmItem => vmItem.Id == dbPayment.Id))
+                   .Where(dbPayment => 
+                       !VM.SalsePaymentDetails.Any(vmItem => vmItem.Id == dbPayment.Id) &&
+                       (dbPayment.Description == null || !dbPayment.Description.Contains("Adjusted from loyalty points", StringComparison.OrdinalIgnoreCase)))
                    .ToList();
 
                 foreach (var payment in removedPaymentDetails)
@@ -971,6 +1002,11 @@ namespace EasyBill.UI.Controllers
                 //return RedirectToAction("Index");
 
                 await _salesservice.Update(model);
+
+                if (model != null)
+                {
+                    await _loyaltyService.ApplyPointsForSaleAsync(model, VM.billingType == "registered" ? VM.RedeemPoints : 0);
+                }
 
                 if (isShare)
                 {
@@ -1096,6 +1132,17 @@ namespace EasyBill.UI.Controllers
                         item.Rate
                     );
                 }
+
+                // Clean up loyalty points transaction if any
+                var pointRepo = _unitofwork.GetRepository<PointTransaction>();
+                var existingPointTx = await pointRepo.Query()
+                    .FirstOrDefaultAsync(x => x.SaleId == model.Id);
+                if (existingPointTx != null)
+                {
+                    pointRepo.Delete(existingPointTx);
+                    await _unitofwork.SaveAsync();
+                }
+
                 await _salesservice.Delete(model);
 
                 return Json(new { success = true, message = "Item deleted successfully." });
@@ -4850,7 +4897,7 @@ namespace EasyBill.UI.Controllers
         public async Task<IActionResult> GetItemByBarcode(string? barcode)
         {
             var item = await _itemmasterservice.GetByBarcode(barcode);
-            if (item == null)
+            if (item == null || item.ItemType == "Bulk")
                 return Json(new { error = "Item not found" });
 
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -4874,7 +4921,7 @@ namespace EasyBill.UI.Controllers
         public async Task<IActionResult> GetItemById(int id)
         {
             var item = await _itemmasterservice.GetByItemMasterId(id);
-            if (item == null)
+            if (item == null || item.ItemType == "Bulk")
                 return Json(new { error = "Item not found" });
 
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -5018,7 +5065,7 @@ namespace EasyBill.UI.Controllers
 
             var setting = await _salsesettingservice.GetByUserId(userId);
             var itemMasters = (await _itemmasterservice.GetAll())
-                .Where(x => x.IsActive)
+                .Where(x => x.IsActive && x.ItemType != "Bulk")
                 .OrderBy(x => x.Name)
                 .ToList();
             var currentStocks = await _currenstockService.GetAll();
@@ -5084,7 +5131,7 @@ namespace EasyBill.UI.Controllers
 
             var setting = await _salsesettingservice.GetByUserId(userId);
             var itemMasters = (await _itemmasterservice.GetAll())
-                .Where(x => x.IsActive)
+                .Where(x => x.IsActive && x.ItemType != "Bulk")
                 .OrderBy(x => x.Name)
                 .ToList();
             var currentStocks = await _currenstockService.GetAll();
@@ -8762,6 +8809,44 @@ namespace EasyBill.UI.Controllers
             // 1. Fetch Actual Sales Data
             var salesData = await _salesService.GetById(id);
 
+            if (salesData != null && salesData.CustomerId.HasValue)
+            {
+                var pointSettings = await _unitofwork.GetRepository<PointSetting>().Query()
+                    .Where(x => x.TenantId == salesData.TenantId)
+                    .ToListAsync();
+                var earliestSetting = pointSettings.OrderBy(x => x.Created).FirstOrDefault();
+                var earliestCreated = earliestSetting?.Created ?? DateTime.MaxValue;
+                var saleCompareDate = salesData.Created ?? salesData.BillDate ?? DateTime.Now;
+
+                if (saleCompareDate >= earliestCreated)
+                {
+                    var pointRepo = _unitofwork.GetRepository<PointTransaction>();
+                    var currentPointsBalance = await pointRepo.Query()
+                        .Where(x => x.CustomerId == salesData.CustomerId.Value)
+                        .SumAsync(x => x.EarnedPoints - x.RedeemedPoints);
+                    ViewBag.CustomerPointsBalance = currentPointsBalance;
+
+                    var pointTxForSale = await pointRepo.Query()
+                        .FirstOrDefaultAsync(x => x.SaleId == salesData.Id);
+                    if (pointTxForSale != null)
+                    {
+                        ViewBag.PointsEarned = pointTxForSale.EarnedPoints;
+                        ViewBag.PointsRedeemed = pointTxForSale.RedeemedPoints;
+                    }
+                    else
+                    {
+                        ViewBag.PointsEarned = 0;
+                        ViewBag.PointsRedeemed = 0;
+                    }
+                }
+                else
+                {
+                    ViewBag.CustomerPointsBalance = null;
+                    ViewBag.PointsEarned = null;
+                    ViewBag.PointsRedeemed = null;
+                }
+            }
+
             if (salesData == null)
             {
                 return NotFound();
@@ -10164,6 +10249,44 @@ namespace EasyBill.UI.Controllers
             {
                 var saleData = await _salesService.GetById(id);
 
+                if (saleData != null && saleData.CustomerId.HasValue)
+                {
+                    var pointSettings = await _unitofwork.GetRepository<PointSetting>().Query()
+                        .Where(x => x.TenantId == saleData.TenantId)
+                        .ToListAsync();
+                    var earliestSetting = pointSettings.OrderBy(x => x.Created).FirstOrDefault();
+                    var earliestCreated = earliestSetting?.Created ?? DateTime.MaxValue;
+                    var saleCompareDate = saleData.Created ?? saleData.BillDate ?? DateTime.Now;
+
+                    if (saleCompareDate >= earliestCreated)
+                    {
+                        var pointRepo = _unitofwork.GetRepository<PointTransaction>();
+                        var currentPointsBalance = await pointRepo.Query()
+                            .Where(x => x.CustomerId == saleData.CustomerId.Value)
+                            .SumAsync(x => x.EarnedPoints - x.RedeemedPoints);
+                        ViewBag.CustomerPointsBalance = currentPointsBalance;
+
+                        var pointTxForSale = await pointRepo.Query()
+                            .FirstOrDefaultAsync(x => x.SaleId == saleData.Id);
+                        if (pointTxForSale != null)
+                        {
+                            ViewBag.PointsEarned = pointTxForSale.EarnedPoints;
+                            ViewBag.PointsRedeemed = pointTxForSale.RedeemedPoints;
+                        }
+                        else
+                        {
+                            ViewBag.PointsEarned = 0;
+                            ViewBag.PointsRedeemed = 0;
+                        }
+                    }
+                    else
+                    {
+                        ViewBag.CustomerPointsBalance = null;
+                        ViewBag.PointsEarned = null;
+                        ViewBag.PointsRedeemed = null;
+                    }
+                }
+
                 if (saleData == null) return NotFound("Invoice data not found.");
 
                 var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -11295,6 +11418,44 @@ namespace EasyBill.UI.Controllers
 
             if (saleData == null)
                 throw new Exception("Invoice data not found");
+
+            if (saleData.CustomerId.HasValue)
+            {
+                var pointSettings = await _unitofwork.GetRepository<PointSetting>().Query()
+                    .Where(x => x.TenantId == saleData.TenantId)
+                    .ToListAsync();
+                var earliestSetting = pointSettings.OrderBy(x => x.Created).FirstOrDefault();
+                var earliestCreated = earliestSetting?.Created ?? DateTime.MaxValue;
+                var saleCompareDate = saleData.Created ?? saleData.BillDate ?? DateTime.Now;
+
+                if (saleCompareDate >= earliestCreated)
+                {
+                    var pointRepo = _unitofwork.GetRepository<PointTransaction>();
+                    var currentPointsBalance = await pointRepo.Query()
+                        .Where(x => x.CustomerId == saleData.CustomerId.Value)
+                        .SumAsync(x => x.EarnedPoints - x.RedeemedPoints);
+                    ViewBag.CustomerPointsBalance = currentPointsBalance;
+
+                    var pointTxForSale = await pointRepo.Query()
+                        .FirstOrDefaultAsync(x => x.SaleId == saleData.Id);
+                    if (pointTxForSale != null)
+                    {
+                        ViewBag.PointsEarned = pointTxForSale.EarnedPoints;
+                        ViewBag.PointsRedeemed = pointTxForSale.RedeemedPoints;
+                    }
+                    else
+                    {
+                        ViewBag.PointsEarned = 0;
+                        ViewBag.PointsRedeemed = 0;
+                    }
+                }
+                else
+                {
+                    ViewBag.CustomerPointsBalance = null;
+                    ViewBag.PointsEarned = null;
+                    ViewBag.PointsRedeemed = null;
+                }
+            }
 
             var userId =
                 User.FindFirst(

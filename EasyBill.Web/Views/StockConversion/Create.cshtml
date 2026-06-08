@@ -1,0 +1,927 @@
+@{
+    ViewData["Title"] = "New Stock Conversion";
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<style>
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #f4f6f9;
+        color: #1f2937;
+    }
+
+    .form-container {
+        padding: 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        letter-spacing: -0.025em;
+    }
+
+    .card-glass {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(229, 231, 235, 0.7);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        padding: 2.5rem;
+    }
+
+    .section-header {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: #4f46e5;
+        border-bottom: 2px solid rgba(79, 70, 229, 0.1);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .form-group-label {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .tooltip-icon {
+        color: #9ca3af;
+        cursor: help;
+        font-size: 0.85rem;
+        transition: color 0.2s;
+    }
+
+    .tooltip-icon:hover {
+        color: #4f46e5;
+    }
+
+    .form-control-custom {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 0.6rem 1rem;
+        font-size: 0.95rem;
+        width: 100%;
+        background-color: #ffffff;
+        transition: all 0.2s;
+    }
+
+    .form-control-custom:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        outline: none;
+    }
+
+    .form-control-custom[readonly] {
+        background-color: #f3f4f6;
+        cursor: not-allowed;
+        color: #6b7280;
+    }
+
+    .table-repack {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-bottom: 1.5rem;
+    }
+
+    .table-repack th {
+        background-color: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+        padding: 0.75rem 1rem;
+        border-bottom: 2px solid #e2e8f0;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .table-repack td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: middle;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding: 0.75rem 2.25rem;
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+    }
+
+    .btn-submit:disabled {
+        background: #cbd5e1;
+        box-shadow: none;
+        cursor: not-allowed;
+    }
+
+    .btn-cancel {
+        background-color: #ffffff;
+        border: 1px solid #d1d5db;
+        color: #4b5563;
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding: 0.75rem 2rem;
+        border-radius: 10px;
+        text-decoration: none;
+        transition: all 0.2s;
+        text-align: center;
+        display: inline-block;
+    }
+
+    .btn-cancel:hover {
+        background-color: #f9fafb;
+        color: #1f2937;
+    }
+
+    .btn-add-row {
+        background-color: #e0e7ff;
+        color: #4338ca;
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 0.5rem 1.25rem;
+        border-radius: 8px;
+        border: none;
+        transition: all 0.2s;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-add-row:hover:not(:disabled) {
+        background-color: #c7d2fe;
+    }
+
+    .btn-add-row:disabled {
+        background-color: #f1f5f9;
+        color: #94a3b8;
+        cursor: not-allowed;
+    }
+
+    .btn-delete-row {
+        background-color: #fee2e2;
+        color: #b91c1c;
+        border: none;
+        border-radius: 6px;
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .btn-delete-row:hover {
+        background-color: #fca5a5;
+    }
+
+    .summary-card {
+        background: linear-gradient(145deg, #fafafa, #f5f5f5);
+        border: 1px solid #e5e5e5;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.925rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .summary-item-bold {
+        font-weight: 700;
+        color: #1f2937;
+        font-size: 1.05rem;
+        border-top: 1px dashed #d1d5db;
+        padding-top: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
+    .badge-alert {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .badge-success-soft {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-danger-soft {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+</style>
+
+<div class="form-container">
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Create Stock Conversion</h1>
+            <p class="text-muted mb-0" style="font-size: 0.9rem;">Deduct from bulk items stock, repackage, and produce retail item stocks in a single voucher.</p>
+        </div>
+        <div>
+            <a href="@Url.Action("Index")" class="btn-cancel" style="padding: 0.5rem 1.25rem; font-size: 0.875rem;"><i class="bi bi-arrow-left"></i> Back to List</a>
+        </div>
+    </div>
+
+    <div class="card-glass">
+        <form id="stockConversionForm" method="post">
+            <div class="row">
+                <!-- Voucher Details -->
+                <div class="col-md-6 mb-3">
+                    <label class="form-group-label">
+                        Voucher No *
+                        <i class="bi bi-question-circle tooltip-icon" title="Auto-generated sequential conversion voucher number."></i>
+                    </label>
+                    <input type="text" class="form-control-custom" value="@ViewBag.VoucherNo" readonly />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-group-label">
+                        Transaction Date *
+                        <i class="bi bi-question-circle tooltip-icon" title="System timestamp for stock balance updates."></i>
+                    </label>
+                    <input type="text" class="form-control-custom" value="@DateTime.Now.ToString("dd-MMM-yyyy hh:mm tt")" readonly />
+                </div>
+            </div>
+
+            <!-- SOURCE BULK ITEM -->
+            <div class="section-header">1. Source Bulk Item</div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-group-label">
+                        Bulk Item *
+                        <i class="bi bi-question-circle tooltip-icon" title="Select the bulk raw item you want to repackage (e.g. Sugar Bulk, Rice Bag 50kg)."></i>
+                    </label>
+                    <div class="search-box-wrapper" style="position: relative; margin-bottom: 0.5rem;">
+                        <i class="bi bi-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 0.85rem;"></i>
+                        <input type="text" id="bulkItemSearch" class="form-control-custom" placeholder="Type to search bulk item..." style="padding-left: 2.25rem; font-size: 0.9rem;" />
+                    </div>
+                    <select id="bulkItemId" name="bulkItemId" class="form-control-custom" asp-items="ViewBag.BulkItems" required>
+                        <option value="">Select Bulk Item</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-group-label">
+                        Batch Code *
+                        <i class="bi bi-question-circle tooltip-icon" title="Select the specific inventory batch code containing the bulk stock."></i>
+                    </label>
+                    <select id="batch" name="batch" class="form-control-custom" required disabled>
+                        <option value="">Select Batch</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-group-label">
+                        Available Stock Qty
+                        <i class="bi bi-question-circle tooltip-icon" title="Current stock quantity in selected batch."></i>
+                    </label>
+                    <input type="text" id="lblAvailableQty" class="form-control-custom" readonly value="0.00" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-group-label">
+                        Expiry Date
+                        <i class="bi bi-question-circle tooltip-icon" title="Expiry date associated with selected batch."></i>
+                    </label>
+                    <input type="text" id="lblExpiry" class="form-control-custom" readonly />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-group-label">
+                        Bulk MRP
+                        <i class="bi bi-question-circle tooltip-icon" title="Maximum retail price of the selected bulk item batch."></i>
+                    </label>
+                    <input type="text" id="lblMrp" class="form-control-custom" readonly />
+                </div>
+            </div>
+
+            <!-- TARGET RETAIL GRID -->
+            <div class="section-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span>2. Repackaged Packets List</span>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn-add-row" id="btnQuickAddChild" disabled style="background-color: #ecfdf5; color: #047857;">
+                        <i class="bi bi-plus-lg"></i> Quick Create Size
+                    </button>
+                    <button type="button" class="btn-add-row" id="btnAddRow" disabled>
+                        <i class="bi bi-plus-circle-fill"></i> Add Repack Row
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table-repack" id="repackTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">
+                                Repack Size / Unit *
+                                <i class="bi bi-question-circle tooltip-icon" title="Target package size (e.g. 500g packet). Use 'Quick Create Size' to add new ones."></i>
+                            </th>
+                            <th style="width: 15%;">
+                                Conv. Factor
+                                <i class="bi bi-question-circle tooltip-icon" title="Number of packets that make up 1 bulk unit (e.g. 2 packets of 500g = 1 kg bulk)."></i>
+                            </th>
+                            <th style="width: 15%;">
+                                Produced Qty (Pkt) *
+                                <i class="bi bi-question-circle tooltip-icon" title="Number of sealed packets produced in this size."></i>
+                            </th>
+                            <th style="width: 12%;">
+                                Wastage (Pkt)
+                                <i class="bi bi-question-circle tooltip-icon" title="Optional: Quantity of packets' worth of bulk item wasted/spilled."></i>
+                            </th>
+                            <th style="width: 13%;">
+                                Bulk Qty Used
+                                <i class="bi bi-question-circle tooltip-icon" title="Auto-calculated bulk quantity used: (Produced Qty + Wastage) / Conversion Factor."></i>
+                            </th>
+                            <th style="width: 5%; text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dynamic rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- MATHEMATICS & BALANCING SUMMARY -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-group-label">Remarks / Description</label>
+                    <textarea name="remarks" id="remarks" rows="4" class="form-control-custom" placeholder="e.g. Repacking bulk sugar batch into 500g and 1kg sizes."></textarea>
+                </div>
+                <div class="col-md-6">
+                    <div class="summary-card">
+                        <div class="summary-item">
+                            <span>Available Bulk Stock:</span>
+                            <span><strong id="summaryAvailable">0.00</strong> <span class="bulk-unit"></span></span>
+                        </div>
+                        <div class="summary-item">
+                            <span>Total Bulk Qty to Consume:</span>
+                            <span><strong id="summaryConsumed">0.00</strong> <span class="bulk-unit"></span></span>
+                        </div>
+                        <div class="summary-item">
+                            <span>Bulk Stock Balance Remaining:</span>
+                            <span><strong id="summaryRemaining">0.00</strong> <span class="bulk-unit"></span></span>
+                        </div>
+                        <div class="summary-item-bold">
+                            <span>Validation Status:</span>
+                            <span id="validationStatus"><span class="badge-alert badge-danger-soft">Select Active Batch</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-3 mt-4">
+                <a href="@Url.Action("Index")" class="btn-cancel">Cancel</a>
+                <button type="submit" class="btn-submit" id="btnSubmit" disabled>Save & Post Stock</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal for Quick Create Repacked Item -->
+<div class="modal fade" id="quickAddChildModal" tabindex="-1" aria-labelledby="quickAddChildModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: 1px solid rgba(229, 231, 235, 0.7); box-shadow: 0 20px 40px rgba(0,0,0,0.1); background: rgba(255,255,255,0.98); backdrop-filter: blur(10px);">
+            <div class="modal-header" style="border-bottom: 1px solid #e2e8f0; padding: 1.5rem;">
+                <h5 class="modal-title" id="quickAddChildModalLabel" style="font-weight: 700; color: #1e293b;"><i class="bi bi-plus-circle-fill text-primary"></i> Quick Add Repack Size</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.8rem; border:none; background:transparent;"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-group-label">Pack Weight / Size *</label>
+                        <input type="number" step="0.0001" min="0.0001" id="quickPackSize" class="form-control-custom" placeholder="e.g. 500, 2, 3, 5" required />
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-group-label">Weight / Size Unit *</label>
+                        <select id="quickPackWeightUnit" class="form-control-custom" required>
+                            <option value="g">Grams (g)</option>
+                            <option value="kg" selected>Kilograms (kg)</option>
+                            <option value="ml">Milliliters (ml)</option>
+                            <option value="l">Liters (l)</option>
+                            <option value="pcs">Pieces (pcs)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-group-label">Unit Type Label (Name) *</label>
+                    <input type="text" id="quickUnit" class="form-control-custom" placeholder="e.g. Pkt, Bag, Bottle" value="Pkt" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-group-label">
+                        Auto-Calculated Conversion Factor
+                        <i class="bi bi-question-circle tooltip-icon" title="Calculated automatically: Packets produced per 1 bulk unit (Kg/Ltr)."></i>
+                    </label>
+                    <input type="text" id="quickFactor" class="form-control-custom" readonly value="1.0000" />
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-group-label">MRP (Retail)</label>
+                        <input type="number" step="0.01" min="0" id="quickMrp" class="form-control-custom" placeholder="e.g. 45.00" />
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-group-label">Retail Sales Rate</label>
+                        <input type="number" step="0.01" min="0" id="quickSalesRate" class="form-control-custom" placeholder="e.g. 42.00" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 1.25rem 1.5rem;">
+                <button type="button" class="btn-cancel" data-bs-dismiss="modal" style="padding: 0.5rem 1.5rem; font-size: 0.875rem;">Cancel</button>
+                <button type="button" class="btn-submit" id="btnSaveQuickChild" style="padding: 0.5rem 1.5rem; font-size: 0.875rem;">Create Size</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        // Search and filter for Bulk Items dropdown
+        var originalBulkItems = [];
+        $("#bulkItemId option").each(function () {
+            originalBulkItems.push({
+                value: $(this).val(),
+                text: $(this).text()
+            });
+        });
+
+        $("#bulkItemSearch").on("input", function () {
+            var query = $(this).val().toLowerCase().trim();
+            var words = query.split(/\s+/).filter(Boolean);
+            var currentSelected = $("#bulkItemId").val();
+            var $dropdown = $("#bulkItemId");
+            
+            $dropdown.empty();
+            
+            var matches = [];
+            originalBulkItems.forEach(function (item) {
+                if (item.value === "") {
+                    $dropdown.append($("<option>", {
+                        value: item.value,
+                        text: item.text
+                    }));
+                    return;
+                }
+                
+                var itemTextLower = item.text.toLowerCase();
+                var isMatch = true;
+                
+                for (var i = 0; i < words.length; i++) {
+                    if (itemTextLower.indexOf(words[i]) === -1) {
+                        isMatch = false;
+                        break;
+                    }
+                }
+                
+                if (isMatch) {
+                    $dropdown.append($("<option>", {
+                        value: item.value,
+                        text: item.text
+                    }));
+                    matches.push(item.value);
+                }
+            });
+
+            // Auto-select if there is exactly one match and a query is active
+            if (words.length > 0 && matches.length === 1) {
+                $dropdown.val(matches[0]);
+                if (currentSelected !== matches[0]) {
+                    $dropdown.trigger("change");
+                }
+            } else if (currentSelected && matches.indexOf(currentSelected) > -1) {
+                $dropdown.val(currentSelected);
+            } else {
+                $dropdown.val("");
+                if (currentSelected !== "") {
+                    $dropdown.trigger("change");
+                }
+            }
+        });
+
+        var childItemsList = [];
+        var bulkUnitName = "";
+
+        // Auto-calculate Conversion Factor in the Quick Create Modal
+        function updateModalFactor() {
+            var size = parseFloat($("#quickPackSize").val()) || 0;
+            var unit = $("#quickPackWeightUnit").val();
+            var factor = 1.0000;
+
+            if (size > 0) {
+                if (unit === "g" || unit === "ml") {
+                    factor = 1000.0 / size;
+                } else if (unit === "kg" || unit === "l") {
+                    factor = 1.0 / size;
+                } else {
+                    factor = 1.0 / size;
+                }
+            }
+            $("#quickFactor").val(factor.toFixed(4));
+        }
+
+        $("#quickPackSize, #quickPackWeightUnit").on("input change", function () {
+            updateModalFactor();
+        });
+
+        // When Bulk Item is selected
+        $("#bulkItemId").change(function () {
+            var bulkId = $(this).val();
+            resetForm();
+
+            if (!bulkId) return;
+
+            // Load Batches
+            $.getJSON('@Url.Action("GetBatches")', { itemId: bulkId }, function (data) {
+                var ddlBatch = $("#batch");
+                ddlBatch.empty().append('<option value="">Select Batch</option>');
+                
+                if (data && data.length > 0) {
+                    data.forEach(function (b) {
+                        ddlBatch.append($('<option>', {
+                            value: b.batch,
+                            text: b.batch + " (Stock: " + b.qty + ", MRP: Rs. " + b.mrp + ")"
+                        }).data("detail", b));
+                    });
+                    ddlBatch.prop("disabled", false);
+                    toastr.info("Active batches loaded");
+                } else {
+                    toastr.warning("No active stock batches found for this bulk item.");
+                }
+            });
+
+            // Load Child Items
+            $.getJSON('@Url.Action("GetChildItems")', { parentItemId: bulkId }, function (data) {
+                childItemsList = data;
+                
+                // Always enable both buttons when a bulk item is selected so user can either repack or add sizes
+                $("#btnAddRow").prop("disabled", false);
+                $("#btnQuickAddChild").prop("disabled", false);
+
+                bulkUnitName = "Qty";
+                $(".bulk-unit").text(bulkUnitName);
+
+                if (data && data.length > 0) {
+                    // Add first initial row automatically
+                    addRepackRow();
+                } else {
+                    toastr.info("No repack sizes configured for this bulk item yet. Click 'Quick Create Size' to add one!");
+                }
+            });
+        });
+
+        // When Batch is selected
+        $("#batch").change(function () {
+            var opt = $(this).find('option:selected');
+            var detail = opt.data("detail");
+
+            if (detail) {
+                $("#lblAvailableQty").val(detail.qty);
+                $("#lblExpiry").val(detail.expiry || "No Expiry");
+                $("#lblMrp").val("Rs. " + detail.mrp);
+                $("#summaryAvailable").text(parseFloat(detail.qty).toFixed(4));
+                calculateTotals();
+            } else {
+                $("#lblAvailableQty").val("0.00");
+                $("#lblExpiry").val("");
+                $("#lblMrp").val("");
+                $("#summaryAvailable").text("0.00");
+                calculateTotals();
+            }
+        });
+
+        // Add Repack row
+        $("#btnAddRow").click(function () {
+            if (childItemsList.length === 0) {
+                toastr.warning("Please create at least one repack size using 'Quick Create Size' first!");
+                return;
+            }
+            addRepackRow();
+        });
+
+        // Function to dynamically append a row to table
+        function addRepackRow() {
+            if (childItemsList.length === 0) return;
+
+            var rowId = "row_" + new Date().getTime();
+            var optionsHtml = '<option value="">Select Pack Size</option>';
+            childItemsList.forEach(function (c) {
+                var displayText = (c.packing || "") + " " + (c.unit1 || "") + " (Factor: " + c.conversionFactor + ")";
+                optionsHtml += `<option value="${c.id}" data-factor="${c.conversionFactor}">${displayText}</option>`;
+            });
+
+            var trHtml = `
+                <tr id="${rowId}">
+                    <td>
+                        <select class="form-control-custom row-item-id" required>
+                            ${optionsHtml}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control-custom row-factor" readonly value="1" />
+                    </td>
+                    <td>
+                        <input type="number" class="form-control-custom row-qty" min="0.0001" step="0.0001" value="" required placeholder="e.g. 100" />
+                    </td>
+                    <td>
+                        <input type="number" class="form-control-custom row-wastage" min="0" step="0.0001" value="0.0000" placeholder="e.g. 0" />
+                    </td>
+                    <td>
+                        <input type="text" class="form-control-custom row-bulk-used" readonly value="0.0000" />
+                    </td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn-delete-row"><i class="bi bi-trash-fill"></i></button>
+                    </td>
+                </tr>
+            `;
+
+            $("#repackTable tbody").append(trHtml);
+            
+            // Set up event listeners on new row fields
+            var row = $("#" + rowId);
+            row.find(".row-item-id").change(function () {
+                var factor = $(this).find("option:selected").data("factor") || 1;
+                row.find(".row-factor").val(factor);
+                calculateRowBulk(row);
+            });
+
+            row.find(".row-qty, .row-wastage").on("input", function () {
+                calculateRowBulk(row);
+            });
+
+            row.find(".btn-delete-row").click(function () {
+                row.remove();
+                calculateTotals();
+            });
+
+            calculateTotals();
+        }
+
+        // Calculate single row bulk quantity
+        function calculateRowBulk(row) {
+            var factor = parseFloat(row.find(".row-factor").val()) || 1;
+            var qty = parseFloat(row.find(".row-qty").val()) || 0;
+            var wastage = parseFloat(row.find(".row-wastage").val()) || 0;
+
+            var bulkUsed = (qty + wastage) / factor;
+            row.find(".row-bulk-used").val(bulkUsed.toFixed(4));
+
+            calculateTotals();
+        }
+
+        // Calculate all rows total and validate
+        function calculateTotals() {
+            var totalBulkUsed = 0;
+            var availableQty = parseFloat($("#lblAvailableQty").val()) || 0;
+            var valid = true;
+            var rowsCount = 0;
+
+            $("#repackTable tbody tr").each(function () {
+                rowsCount++;
+                var bulkVal = parseFloat($(this).find(".row-bulk-used").val()) || 0;
+                var itemId = $(this).find(".row-item-id").val();
+                var qty = parseFloat($(this).find(".row-qty").val()) || 0;
+
+                totalBulkUsed += bulkVal;
+
+                if (!itemId || qty <= 0) {
+                    valid = false;
+                }
+            });
+
+            $("#summaryConsumed").text(totalBulkUsed.toFixed(4));
+            
+            var remaining = availableQty - totalBulkUsed;
+            $("#summaryRemaining").text(remaining.toFixed(4));
+
+            // Status message
+            var statusDiv = $("#validationStatus");
+            if (availableQty <= 0) {
+                statusDiv.html('<span class="badge-alert badge-danger-soft">Select Active Batch</span>');
+                valid = false;
+            } else if (totalBulkUsed > availableQty) {
+                statusDiv.html('<span class="badge-alert badge-danger-soft">Bulk Qty Exceeds Available Stock</span>');
+                valid = false;
+            } else if (rowsCount === 0) {
+                statusDiv.html('<span class="badge-alert badge-danger-soft">Add repack row</span>');
+                valid = false;
+            } else if (!valid) {
+                statusDiv.html('<span class="badge-alert badge-danger-soft">Fill all row quantities</span>');
+            } else {
+                statusDiv.html('<span class="badge-alert badge-success-soft">Ready to Post</span>');
+            }
+
+            // Enable or disable save
+            var batchSelected = $("#batch").val();
+            var bulkSelected = $("#bulkItemId").val();
+
+            if (valid && batchSelected && bulkSelected && rowsCount > 0 && totalBulkUsed <= availableQty) {
+                $("#btnSubmit").prop("disabled", false);
+            } else {
+                $("#btnSubmit").prop("disabled", true);
+            }
+        }
+
+        function resetForm() {
+            $("#batch").empty().append('<option value="">Select Batch</option>').prop("disabled", true);
+            $("#repackTable tbody").empty();
+            $("#lblAvailableQty").val("0.00");
+            $("#lblExpiry").val("");
+            $("#lblMrp").val("");
+            $("#summaryAvailable").text("0.00");
+            $("#summaryConsumed").text("0.00");
+            $("#summaryRemaining").text("0.00");
+            $("#validationStatus").html('<span class="badge-alert badge-danger-soft">Select Active Batch</span>');
+            $("#btnAddRow").prop("disabled", true);
+            $("#btnQuickAddChild").prop("disabled", true);
+            $("#btnSubmit").prop("disabled", true);
+        }
+
+        // Quick add child item modal trigger
+        $("#btnQuickAddChild").click(function () {
+            var modalEl = document.getElementById('quickAddChildModal');
+            if (window.bootstrap && bootstrap.Modal) {
+                var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.show();
+            } else {
+                $(modalEl).modal('show');
+            }
+        });
+
+        // Save Quick Child Item via AJAX
+        $("#btnSaveQuickChild").click(function () {
+            var parentId = $("#bulkItemId").val();
+            var sizeVal = $("#quickPackSize").val();
+            var sizeUnit = $("#quickPackWeightUnit").val();
+            var unit = $("#quickUnit").val().trim();
+            var factor = parseFloat($("#quickFactor").val());
+            var mrp = parseFloat($("#quickMrp").val()) || 0;
+            var salesRate = parseFloat($("#quickSalesRate").val()) || 0;
+
+            if (!parentId || !sizeVal || !unit || isNaN(factor) || factor <= 0) {
+                toastr.error("Please fill in all required fields correctly.");
+                return;
+            }
+
+            var packing = sizeVal + sizeUnit; // e.g. "500g", "2kg"
+
+            $("#btnSaveQuickChild").prop("disabled", true).text("Creating...");
+
+            $.post('@Url.Action("QuickCreateChild")', {
+                parentItemId: parseInt(parentId),
+                packing: packing,
+                unit: unit,
+                conversionFactor: factor,
+                mrp: mrp,
+                salesRate: salesRate
+            }).done(function (res) {
+                $("#btnSaveQuickChild").prop("disabled", false).text("Create Size");
+                if (res.success) {
+                    toastr.success(res.message);
+                    
+                    // Add newly created item to our child items list
+                    childItemsList.push(res.item);
+
+                    // Update dropdowns on existing rows
+                    $(".row-item-id").each(function () {
+                        var select = $(this);
+                        var currentVal = select.val();
+                        select.empty().append('<option value="">Select Pack Size</option>');
+                        childItemsList.forEach(function (c) {
+                            var displayText = (c.packing || "") + " " + (c.unit1 || "") + " (Factor: " + c.conversionFactor + ")";
+                            select.append($('<option>', {
+                                value: c.id,
+                                text: displayText
+                            }).attr("data-factor", c.conversionFactor));
+                        });
+                        select.val(currentVal);
+                    });
+
+                    // Add a new row to the table automatically and select the new size
+                    addRepackRow();
+                    var lastRow = $("#repackTable tbody tr").last();
+                    lastRow.find(".row-item-id").val(res.item.id).trigger("change");
+
+                    // Close modal
+                    var modalEl = document.getElementById('quickAddChildModal');
+                    if (window.bootstrap && bootstrap.Modal) {
+                        var modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    } else {
+                        $(modalEl).modal('hide');
+                    }
+
+                    // Clear fields
+                    $("#quickPackSize").val("");
+                    $("#quickFactor").val("1.0000");
+                    $("#quickMrp").val("");
+                    $("#quickSalesRate").val("");
+                } else {
+                    toastr.error(res.message);
+                }
+            }).fail(function () {
+                $("#btnSaveQuickChild").prop("disabled", false).text("Create Size");
+                toastr.error("An error occurred while creating the repack size.");
+            });
+        });
+
+        // Form submission via AJAX
+        $("#stockConversionForm").submit(function (e) {
+            e.preventDefault();
+
+            var bulkId = $("#bulkItemId").val();
+            var batchCode = $("#batch").val();
+            var remarksText = $("#remarks").val();
+
+            var targets = [];
+            var hasError = false;
+
+            $("#repackTable tbody tr").each(function () {
+                var itemId = parseInt($(this).find(".row-item-id").val());
+                var qty = parseFloat($(this).find(".row-qty").val()) || 0;
+                var wastage = parseFloat($(this).find(".row-wastage").val()) || 0;
+                var bulkUsed = parseFloat($(this).find(".row-bulk-used").val()) || 0;
+
+                if (!itemId || qty <= 0) {
+                    hasError = true;
+                    return false; // Break each
+                }
+
+                targets.push({
+                    retailItemId: itemId,
+                    retailQty: qty,
+                    wastageQty: wastage,
+                    bulkQtyUsed: bulkUsed
+                });
+            });
+
+            if (hasError || targets.length === 0) {
+                toastr.error("Please ensure all repack rows are filled in correctly.");
+                return;
+            }
+
+            var payload = {
+                bulkItemId: parseInt(bulkId),
+                batch: batchCode,
+                remarks: remarksText,
+                targets: targets
+            };
+
+            $("#btnSubmit").prop("disabled", true).text("Processing Conversion...");
+
+            $.ajax({
+                url: '@Url.Action("Create")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                success: function (res) {
+                    if (res.success) {
+                        toastr.success(res.message);
+                        setTimeout(function () {
+                            window.location.href = '@Url.Action("PrintStickers")?voucherNo=' + res.voucherNo;
+                        }, 1000);
+                    } else {
+                        toastr.error(res.message);
+                        $("#btnSubmit").prop("disabled", false).text("Save & Post Stock");
+                    }
+                },
+                error: function () {
+                    toastr.error("An error occurred during submission.");
+                    $("#btnSubmit").prop("disabled", false).text("Save & Post Stock");
+                }
+            });
+        });
+    });
+</script>

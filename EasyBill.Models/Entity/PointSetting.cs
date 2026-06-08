@@ -1,4 +1,4 @@
-﻿using AOne.Models;
+using AOne.Models;
 using AOne.Models.Entity;
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,8 @@ namespace EasyBill.Models.Entity
         public decimal EarnPerAmount { get; set; }  
         public decimal PointValueInRs { get; set; }  
         public bool AllowRedemption { get; set; }
+        public int MinPointsToRedeem { get; set; }
+        public decimal EarningMultiplier { get; set; } = 1.0m;
 
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }

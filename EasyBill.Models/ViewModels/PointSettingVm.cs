@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,6 +13,8 @@ namespace EasyBill.Models.ViewModels
         public decimal EarnPerAmount { get; set; }
         public decimal PointValueInRs { get; set; }
         public bool AllowRedemption { get; set; }
+        public int MinPointsToRedeem { get; set; }
+        public decimal EarningMultiplier { get; set; } = 1.0m;
 
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }

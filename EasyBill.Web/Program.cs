@@ -3,6 +3,7 @@ global using AOne.DataAccess.Repository;
 global using AOne.DataAccess.Repository.IRepository;
 global using AOne.Models;
 global using AOne.Models.ViewModels;
+global using EasyBill.Models.ViewModels;
 global using AOne.Utility.Enums;
 global using AOneWeb.Service.Report;
 global using EasyBill.Models.Entity;
@@ -188,100 +189,6 @@ BEGIN
 
     CREATE NONCLUSTERED INDEX [IX_AuthTicketCache_ExpiresAtTime]
         ON [dbo].[AuthTicketCache]([ExpiresAtTime]);
-END
-
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'AllowedModulesJson')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [AllowedModulesJson] NVARCHAR(MAX) NULL;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'ExtraUsers')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [ExtraUsers] INT NOT NULL DEFAULT 0;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'RollbackDurationMonths')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [RollbackDurationMonths] INT NOT NULL DEFAULT 0;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'RollbackExpiryDate')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [RollbackExpiryDate] DATETIME2 NULL;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'BillingModel')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [BillingModel] NVARCHAR(100) NULL;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'InventoryMode')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [InventoryMode] NVARCHAR(100) NULL;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'OutletCount')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [OutletCount] INT NOT NULL DEFAULT 0;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'SupportTier')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [SupportTier] NVARCHAR(100) NULL;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'TenantCode')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [TenantCode] NVARCHAR(100) NULL;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'IsAuditLocked')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [IsAuditLocked] BIT NOT NULL DEFAULT 0;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'AllowNegativeBalance')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [AllowNegativeBalance] BIT NOT NULL DEFAULT 0;
-END
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'Status')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [Status] NVARCHAR(50) NULL;
-END
-
-IF OBJECT_ID(N'[dbo].[SubscriptionPlans]', N'U') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[SubscriptionPlans] (
-        [Id] INT IDENTITY(1,1) NOT NULL,
-        [PlanName] NVARCHAR(150) NOT NULL,
-        [MonthlyPrice] DECIMAL(18,2) NOT NULL,
-        [YearlyPrice] DECIMAL(18,2) NOT NULL,
-        [DailyCustomerLimit] INT NOT NULL DEFAULT 0,
-        [MaxDesktopLogins] INT NOT NULL DEFAULT 0,
-        [MaxMobileLogins] INT NOT NULL DEFAULT 0,
-        [IsActive] BIT NOT NULL DEFAULT 1,
-        CONSTRAINT [PK_SubscriptionPlans] PRIMARY KEY CLUSTERED ([Id] ASC)
-    );
-END
-
-IF OBJECT_ID(N'[dbo].[Features]', N'U') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[Features] (
-        [Id] INT IDENTITY(1,1) NOT NULL,
-        [FeatureKey] NVARCHAR(150) NOT NULL,
-        [DisplayName] NVARCHAR(150) NOT NULL,
-        [ParentFeatureId] INT NULL,
-        [IsActive] BIT NOT NULL DEFAULT 1,
-        CONSTRAINT [PK_Features] PRIMARY KEY CLUSTERED ([Id] ASC),
-        CONSTRAINT [FK_Features_Features_ParentFeatureId] FOREIGN KEY ([ParentFeatureId]) REFERENCES [dbo].[Features] ([Id])
-    );
-END
-
-IF OBJECT_ID(N'[dbo].[PlanFeatures]', N'U') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[PlanFeatures] (
-        [PlanId] INT NOT NULL,
-        [FeatureId] INT NOT NULL,
-        CONSTRAINT [PK_PlanFeatures] PRIMARY KEY CLUSTERED ([PlanId], [FeatureId]),
-        CONSTRAINT [FK_PlanFeatures_SubscriptionPlans_PlanId] FOREIGN KEY ([PlanId]) REFERENCES [dbo].[SubscriptionPlans] ([Id]) ON DELETE CASCADE,
-        CONSTRAINT [FK_PlanFeatures_Features_FeatureId] FOREIGN KEY ([FeatureId]) REFERENCES [dbo].[Features] ([Id]) ON DELETE CASCADE
-    );
-END
-
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Tenants]') AND name = 'SubscriptionPlanId')
-BEGIN
-    ALTER TABLE [dbo].[Tenants] ADD [SubscriptionPlanId] INT NULL;
-    ALTER TABLE [dbo].[Tenants] ADD CONSTRAINT [FK_Tenants_SubscriptionPlans_SubscriptionPlanId] FOREIGN KEY ([SubscriptionPlanId]) REFERENCES [dbo].[SubscriptionPlans] ([Id]);
 END");
         await ItemMasterModuleStoredProcedureInstaller.EnsureInstalledAsync(context);
         await PurchaseModuleStoredProcedureInstaller.EnsureInstalledAsync(context);

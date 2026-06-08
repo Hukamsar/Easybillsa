@@ -157,6 +157,7 @@ namespace EasyBill.UI.Service.Loyalty
                 IsPointProgramActive = pointSetting != null,
                 AllowPointRedemption = pointSetting?.AllowRedemption ?? false,
                 IsCustomerGettingPoints = pointsEarned > 0,
+                MinPointsToRedeem = pointSetting?.MinPointsToRedeem ?? 0,
                 CashbackLedger = cashbackLedger,
                 PointLedger = pointLedger
             };
@@ -180,7 +181,8 @@ namespace EasyBill.UI.Service.Loyalty
                 PointValueInRs = pointValueInRs,
                 PointsBalanceValueInRs = pointsBalance * pointValueInRs,
                 IsPointProgramActive = pointSetting != null,
-                AllowPointRedemption = pointSetting?.AllowRedemption ?? false
+                AllowPointRedemption = pointSetting?.AllowRedemption ?? false,
+                MinPointsToRedeem = pointSetting?.MinPointsToRedeem ?? 0
             };
         }
 
@@ -196,9 +198,25 @@ namespace EasyBill.UI.Service.Loyalty
 
             try
             {
-                if (sale == null || !sale.CustomerId.HasValue || sale.TotalPayable <= 0)
+                if (sale == null || sale.TotalPayable <= 0)
                 {
-                    result.Message = "Loyalty skipped: invalid sale/customer.";
+                    result.Message = "Loyalty skipped: invalid sale.";
+                    return result;
+                }
+
+                // If customer is null, clean up any existing loyalty data for this sale
+                if (!sale.CustomerId.HasValue)
+                {
+                    var pointRepo = _unitOfWork.GetRepository<PointTransaction>();
+                    var existing = await pointRepo.Query()
+                        .FirstOrDefaultAsync(x => x.SaleId == sale.Id);
+                    if (existing != null)
+                    {
+                        pointRepo.Delete(existing);
+                        await _unitOfWork.SaveAsync();
+                    }
+                    result.Success = true;
+                    result.Message = "Loyalty cleared: walk-in sale.";
                     return result;
                 }
 
@@ -206,18 +224,37 @@ namespace EasyBill.UI.Service.Loyalty
                 var billDate = (sale.BillDate ?? DateTime.Now).Date;
                 var pointSetting = GetApplicablePointSetting(settings, billDate);
 
+                // Exempt historical sales created before the loyalty program activation
+                var tenantSettings = settings.Where(x => x.TenantId == sale.TenantId).ToList();
+                if (tenantSettings.Count > 0)
+                {
+                    var earliestCreated = tenantSettings.Min(x => x.Created) ?? DateTime.MaxValue;
+                    var saleCompareDate = sale.Created ?? sale.BillDate ?? DateTime.Now;
+                    if (saleCompareDate < earliestCreated)
+                    {
+                        // Exclude historical sale from loyalty points processing
+                        pointSetting = null;
+                        requestedRedeemPoints = 0;
+                    }
+                }
+
                 var earnedPoints = 0;
                 if (pointSetting != null &&
                     pointSetting.EarnPerAmount > 0 &&
                     sale.TotalPayable >= pointSetting.MinAmountToEarn)
                 {
-                    earnedPoints = (int)Math.Floor(sale.TotalPayable / pointSetting.EarnPerAmount);
+                    var multiplier = pointSetting.EarningMultiplier > 0m ? pointSetting.EarningMultiplier : 1.0m;
+                    earnedPoints = (int)Math.Floor((sale.TotalPayable / pointSetting.EarnPerAmount) * multiplier);
                 }
 
                 var redeemedPoints = 0;
                 var redeemedAmount = 0m;
                 var saleUpdated = false;
                 var redeemMessage = string.Empty;
+
+                var existingPayment = sale.SalsePaymentDetails?.FirstOrDefault(x =>
+                    x.Description != null &&
+                    x.Description.Contains("Adjusted from loyalty points", StringComparison.OrdinalIgnoreCase));
 
                 if (requestedRedeemPoints > 0)
                 {
@@ -232,57 +269,117 @@ namespace EasyBill.UI.Service.Loyalty
                     else
                     {
                         var pointRepo = _unitOfWork.GetRepository<PointTransaction>();
+                        
+                        // For edit/update logic: fetch existing transaction to calculate effective balance correctly
+                        var existingTx = await pointRepo.Query()
+                            .FirstOrDefaultAsync(x => x.SaleId == sale.Id && x.CustomerId == sale.CustomerId.Value);
+                        var currentRedeemedOnThisSale = existingTx?.RedeemedPoints ?? 0;
+
                         var availablePoints = await pointRepo.Query()
                             .Where(x => x.CustomerId == sale.CustomerId.Value && x.SaleId != sale.Id)
                             .SumAsync(x => x.EarnedPoints - x.RedeemedPoints);
 
-                        var currentBalance = Math.Max(sale.Balance, 0m);
-                        if (currentBalance <= 0m)
-                        {
-                            currentBalance = Math.Max(sale.TotalPayable - sale.PaidAmount, 0m);
-                        }
+                        var effectivePointsBalance = availablePoints + currentRedeemedOnThisSale;
 
-                        var maxByBalance = (int)Math.Floor(currentBalance / pointSetting.PointValueInRs);
-                        var maxRedeemablePoints = Math.Max(
-                            0,
-                            Math.Min(requestedRedeemPoints, Math.Min(availablePoints, maxByBalance)));
-
-                        if (maxRedeemablePoints <= 0)
+                        if (effectivePointsBalance < pointSetting.MinPointsToRedeem)
                         {
-                            redeemMessage = "No redeemable points available for this bill.";
+                            redeemMessage = $"Minimum {pointSetting.MinPointsToRedeem} points are required to redeem (Current balance: {effectivePointsBalance}).";
                         }
                         else
                         {
-                            redeemedPoints = maxRedeemablePoints;
-                            redeemedAmount = Math.Round(
-                                redeemedPoints * pointSetting.PointValueInRs,
-                                2,
-                                MidpointRounding.AwayFromZero);
-
-                            sale.SalsePaymentDetails ??= new List<SalsePaymentDetails>();
-                            sale.SalsePaymentDetails.Add(new SalsePaymentDetails
+                            var currentBalance = Math.Max(sale.Balance, 0m);
+                            
+                            // If this payment already exists, add its amount back to the current balance to get the actual outstanding balance before point redemption
+                            if (existingPayment != null)
                             {
-                                PaymentModeId = 1,
-                                Amount = redeemedAmount,
-                                Description = $"Adjusted from loyalty points ({redeemedPoints} pts)",
-                                CustomerId = sale.CustomerId,
-                                Date = DateTime.Now
-                            });
+                                currentBalance += existingPayment.Amount;
+                            }
+                            else if (currentBalance <= 0m)
+                            {
+                                currentBalance = Math.Max(sale.TotalPayable - sale.PaidAmount, 0m);
+                            }
 
-                            sale.PaidAmount += redeemedAmount;
-                            sale.Balance = Math.Max(currentBalance - redeemedAmount, 0m);
-                            sale.PaymentStatus = sale.Balance <= 0
-                                ? "Paid"
-                                : sale.PaidAmount > 0 ? "Partial" : "Unpaid";
-                            saleUpdated = true;
+                            var maxByBalance = (int)Math.Floor(currentBalance / pointSetting.PointValueInRs);
+                            var maxRedeemablePoints = Math.Max(
+                                0,
+                                Math.Min(requestedRedeemPoints, Math.Min(effectivePointsBalance, maxByBalance)));
+
+                            if (maxRedeemablePoints <= 0)
+                            {
+                                redeemMessage = "No redeemable points available for this bill.";
+                            }
+                            else
+                            {
+                                redeemedPoints = maxRedeemablePoints;
+                                redeemedAmount = Math.Round(
+                                    redeemedPoints * pointSetting.PointValueInRs,
+                                    2,
+                                    MidpointRounding.AwayFromZero);
+
+                                if (existingPayment != null)
+                                {
+                                    var diff = redeemedAmount - existingPayment.Amount;
+                                    existingPayment.Amount = redeemedAmount;
+                                    existingPayment.Description = $"Adjusted from loyalty points ({redeemedPoints} pts)";
+                                    existingPayment.Date = DateTime.Now;
+
+                                    if (diff != 0m)
+                                    {
+                                        sale.PaidAmount += diff;
+                                        sale.Balance = Math.Max(sale.TotalPayable - sale.PaidAmount, 0m);
+                                        sale.PaymentStatus = sale.Balance <= 0
+                                            ? "Paid"
+                                            : sale.PaidAmount > 0 ? "Partial" : "Unpaid";
+                                        saleUpdated = true;
+                                    }
+                                }
+                                else
+                                {
+                                    sale.SalsePaymentDetails ??= new List<SalsePaymentDetails>();
+                                    sale.SalsePaymentDetails.Add(new SalsePaymentDetails
+                                    {
+                                        PaymentModeId = 1,
+                                        Amount = redeemedAmount,
+                                        Description = $"Adjusted from loyalty points ({redeemedPoints} pts)",
+                                        CustomerId = sale.CustomerId,
+                                        Date = DateTime.Now
+                                    });
+
+                                    sale.PaidAmount += redeemedAmount;
+                                    sale.Balance = Math.Max(sale.TotalPayable - sale.PaidAmount, 0m);
+                                    sale.PaymentStatus = sale.Balance <= 0
+                                        ? "Paid"
+                                        : sale.PaidAmount > 0 ? "Partial" : "Unpaid";
+                                    saleUpdated = true;
+                                }
+                            }
                         }
                     }
+                }
+
+                // If points redeemed is 0, but a loyalty payment was previously added, clean it up
+                if (redeemedPoints <= 0 && existingPayment != null)
+                {
+                    sale.SalsePaymentDetails?.Remove(existingPayment);
+                    sale.PaidAmount -= existingPayment.Amount;
+                    sale.Balance = Math.Max(sale.TotalPayable - sale.PaidAmount, 0m);
+                    sale.PaymentStatus = sale.Balance <= 0
+                        ? "Paid"
+                        : sale.PaidAmount > 0 ? "Partial" : "Unpaid";
+                    saleUpdated = true;
                 }
 
                 await UpsertPointTransactionAsync(
                     sale,
                     earnedPoints,
                     redeemedPoints);
+
+                if (saleUpdated)
+                {
+                    await _salesRepository.Update(sale);
+                }
+
+                await _unitOfWork.SaveAsync();
 
                 result.Success = true;
                 result.EarnedPoints = earnedPoints;
@@ -403,32 +500,40 @@ namespace EasyBill.UI.Service.Loyalty
                 return;
             }
 
-            if (earnedPoints <= 0 && redeemedPoints <= 0)
-            {
-                return;
-            }
-
             var pointRepo = _unitOfWork.GetRepository<PointTransaction>();
             var existing = await pointRepo.Query()
-                .FirstOrDefaultAsync(x =>
-                    x.SaleId == sale.Id &&
-                    x.CustomerId == sale.CustomerId.Value);
+                .FirstOrDefaultAsync(x => x.SaleId == sale.Id);
 
             if (existing == null)
             {
-                pointRepo.Add(new PointTransaction
+                if (earnedPoints > 0 || redeemedPoints > 0)
                 {
-                    CustomerId = sale.CustomerId.Value,
-                    EarnedPoints = earnedPoints,
-                    RedeemedPoints = redeemedPoints,
-                    SaleAmount = sale.TotalPayable,
-                    SaleId = sale.Id,
-                    TransactionDate = sale.BillDate ?? DateTime.Now
-                });
+                    pointRepo.Add(new PointTransaction
+                    {
+                        CustomerId = sale.CustomerId.Value,
+                        EarnedPoints = earnedPoints,
+                        RedeemedPoints = redeemedPoints,
+                        SaleAmount = sale.TotalPayable,
+                        SaleId = sale.Id,
+                        TransactionDate = sale.BillDate ?? DateTime.Now
+                    });
+                }
+                return;
+            }
+
+            if (earnedPoints <= 0 && redeemedPoints <= 0)
+            {
+                pointRepo.Delete(existing);
                 return;
             }
 
             var hasChanges = false;
+            if (existing.CustomerId != sale.CustomerId.Value)
+            {
+                existing.CustomerId = sale.CustomerId.Value;
+                hasChanges = true;
+            }
+
             if (existing.EarnedPoints != earnedPoints)
             {
                 existing.EarnedPoints = earnedPoints;

@@ -90,5 +90,8 @@ namespace EasyBill.Models.ViewModels
         public List<ItemImageVM> ExistingImages { get; set; } = new();
         public int? PrimaryImageId { get; set; }
         public List<int> DeletedImageIds { get; set; } = new();
+        public string? ItemType { get; set; } // Standard, Bulk, Repacked
+        public int? ParentItemId { get; set; }
+        public decimal? ConversionFactor { get; set; }
     }
 }

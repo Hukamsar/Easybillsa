@@ -4,6 +4,7 @@ using AOne.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EasyBill.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260603092940_AddTenantExtraUsersExpiryDate")]
+    partial class AddTenantExtraUsersExpiryDate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2373,9 +2376,6 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<decimal>("EarnPerAmount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("EarningMultiplier")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2");
 
@@ -2390,9 +2390,6 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<decimal>("MinAmountToEarn")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("MinPointsToRedeem")
-                        .HasColumnType("int");
 
                     b.Property<decimal>("PointValueInRs")
                         .HasColumnType("decimal(18,2)");

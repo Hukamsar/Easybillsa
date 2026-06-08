@@ -93,6 +93,7 @@ namespace AOne.Models.Entity
         // SuperAdmin Control Plane Properties
         public string? AllowedModulesJson { get; set; }
         public int ExtraUsers { get; set; }
+        public DateTime? ExtraUsersExpiryDate { get; set; }
         public int RollbackDurationMonths { get; set; }
         public DateTime? RollbackExpiryDate { get; set; }
         public string? BillingModel { get; set; }

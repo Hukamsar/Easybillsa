@@ -972,6 +972,13 @@ namespace AOne.DataAccess.Repository
                         });
                     
                 }
+                SalesSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
+                {
+                    Title = "Stock Conversion",
+                    ControllerName = "StockConversion",
+                    ActionName = "Index",
+                    PageStatus = PageStatus.Completed
+                });
                 //if (IsExist("Permissions.Sales.View", role))
                 //{
                      

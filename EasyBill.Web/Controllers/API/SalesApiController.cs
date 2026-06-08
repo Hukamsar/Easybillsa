@@ -1192,7 +1192,7 @@ namespace EasyBill.UI.Controllers.API
         public async Task<IActionResult> GetItemByBarcode(string barcode)
         {
             var item = await _itemmasterservice.GetByBarcode(barcode);
-            if (item == null)
+            if (item == null || item.ItemType == "Bulk")
                 return NotFound(new { success = false, message = "Item not found" });
 
             return Ok(new { success = true, itemId = item.Id, itemname = item.Name });
@@ -1203,7 +1203,7 @@ namespace EasyBill.UI.Controllers.API
         public async Task<IActionResult> GetItemById(int id)
         {
             var item = await _itemmasterservice.GetByItemMasterId(id);
-            if (item == null)
+            if (item == null || item.ItemType == "Bulk")
                 return NotFound(new { success = false, message = "Item not found" });
 
             return Ok(new { success = true, itemId = item.Id, itemname = item.Name });
@@ -1213,7 +1213,7 @@ namespace EasyBill.UI.Controllers.API
         [HttpGet("AllItems")]
         public async Task<IActionResult> GetAllItems()
         {
-            var itemMasters = (await _itemmasterservice.GetAll()).OrderBy(x => x.Name);
+            var itemMasters = (await _itemmasterservice.GetAll()).Where(x => x.ItemType != "Bulk").OrderBy(x => x.Name);
             var purchases = await _purchaseservice.GetAll();
             var purchasereturns = await _purchasereturnservice.GetAll();
             var sales = await _salesservice.GetAll();

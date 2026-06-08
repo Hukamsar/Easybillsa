@@ -2,6 +2,7 @@ using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,21 +17,62 @@ namespace EasyBill.UI.Controllers
         private readonly ISalesRepository _salesService;
         private readonly IInvoiceThemeSettingRepository _themeRepo;
         private readonly ITenantRegistrationRepository _tenantRepository;
+        private readonly IUnitOfWork _unitofwork;
 
         public ThermalReceiptController(
             ISalesRepository salesService,
             IInvoiceThemeSettingRepository themeRepo,
-            ITenantRegistrationRepository tenantRepository)
+            ITenantRegistrationRepository tenantRepository,
+            IUnitOfWork unitofwork)
         {
             _salesService = salesService;
             _themeRepo = themeRepo;
             _tenantRepository = tenantRepository;
+            _unitofwork = unitofwork;
         }
 
         public async Task<IActionResult> Index(int saleId, string paperSize = "80mm")
         {
             var sale = await _salesService.GetById(saleId);
             if (sale == null) return NotFound();
+
+            if (sale.CustomerId.HasValue)
+            {
+                var pointSettings = await _unitofwork.GetRepository<PointSetting>().Query()
+                    .Where(x => x.TenantId == sale.TenantId)
+                    .ToListAsync();
+                var earliestSetting = pointSettings.OrderBy(x => x.Created).FirstOrDefault();
+                var earliestCreated = earliestSetting?.Created ?? DateTime.MaxValue;
+                var saleCompareDate = sale.Created ?? sale.BillDate ?? DateTime.Now;
+
+                if (saleCompareDate >= earliestCreated)
+                {
+                    var pointRepo = _unitofwork.GetRepository<PointTransaction>();
+                    var currentPointsBalance = await pointRepo.Query()
+                        .Where(x => x.CustomerId == sale.CustomerId.Value)
+                        .SumAsync(x => x.EarnedPoints - x.RedeemedPoints);
+                    ViewBag.CustomerPointsBalance = currentPointsBalance;
+
+                    var pointTxForSale = await pointRepo.Query()
+                        .FirstOrDefaultAsync(x => x.SaleId == sale.Id);
+                    if (pointTxForSale != null)
+                    {
+                        ViewBag.PointsEarned = pointTxForSale.EarnedPoints;
+                        ViewBag.PointsRedeemed = pointTxForSale.RedeemedPoints;
+                    }
+                    else
+                    {
+                        ViewBag.PointsEarned = 0;
+                        ViewBag.PointsRedeemed = 0;
+                    }
+                }
+                else
+                {
+                    ViewBag.CustomerPointsBalance = null;
+                    ViewBag.PointsEarned = null;
+                    ViewBag.PointsRedeemed = null;
+                }
+            }
 
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             InvoiceThemeSetting? theme = null;

@@ -1,6 +1,11 @@
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using AOne.DataAccess.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Identity;
+using EasyBill.Models.Entity;
 
 namespace EasyBill.UI.Controllers
 {
@@ -11,13 +16,15 @@ namespace EasyBill.UI.Controllers
         private readonly IDesignationRepository _designationService;
         private readonly RoleManager<IdentityRole> roleManager;
         private readonly UserManager<ApplicationUsers> userManager;
+        private readonly ApplicationDbContext _context;
       //  private readonly IMailService _mailService;
 
         public EmployeeController(IEmployeeRepository employeeservice,
             IDepartmentRepository departmentservice,
             IDesignationRepository designationService,
             RoleManager<IdentityRole> roleManager,
-            UserManager<ApplicationUsers> userManager
+            UserManager<ApplicationUsers> userManager,
+            ApplicationDbContext context
            // IMailService mailService
             )
         {
@@ -26,6 +33,7 @@ namespace EasyBill.UI.Controllers
             _designationService = designationService;
             this.roleManager = roleManager;
             this.userManager = userManager;
+            _context = context;
            // _mailService = mailService;
         }
         public async Task<IActionResult> Index()
@@ -78,8 +86,51 @@ namespace EasyBill.UI.Controllers
             }
             if (EmpVM != null)
             {
-                var employeeData = await _employeeservice.GetAll();
+                var tenantId = User.FindFirst("TenantId")?.Value;
+                if (EmpVM.RequiredCreditional)
+                {
+                    if (!string.IsNullOrEmpty(tenantId))
+                    {
+                        var tenant = await _context.Tenants.Include(t => t.SubscriptionPlan).FirstOrDefaultAsync(t => t.Id == tenantId);
+                        if (tenant != null)
+                        {
+                            bool extraUsersActive = tenant.ExtraUsersExpiryDate != null && tenant.ExtraUsersExpiryDate > DateTime.Now;
+                            int maxAllowed = (tenant.SubscriptionPlan?.MaxDesktopLogins ?? 0) + (extraUsersActive ? tenant.ExtraUsers : 0);
+                            
+                            var currentUsers = await _context.Users.CountAsync(u => u.TenantId == tenantId);
+                            if (currentUsers >= maxAllowed)
+                            {
+                                TempData["error"] = $"User limit reached (allowed: {maxAllowed}, current: {currentUsers}). Please purchase more user slots on the Home page.";
+                                ViewBag.Department = new SelectList(await _departmentservice.GetAll(), "Id", "Name");
+                                ViewBag.Designation = new SelectList(await _designationService.GetAll(), "Id", "Name");
 
+                                var isSuperAdmin = User.IsInRole("SuperAdmin");
+                                List<IdentityRole> roles;
+                                if (isSuperAdmin)
+                                {
+                                    roles = await roleManager.Roles.AsNoTracking().ToListAsync();
+                                }
+                                else
+                                {
+                                    roles = await roleManager.Roles.AsNoTracking()
+                                        .Where(r => r.Name == "Admin" || r.Name == "User" || (!string.IsNullOrEmpty(tenantId) && r.Name.StartsWith(tenantId + "_")))
+                                        .ToListAsync();
+                                }
+                                EmpVM.RoleList = roles.Select(role => new SelectListItem
+                                {
+                                    Value = role.Id,
+                                    Text = (!isSuperAdmin && !string.IsNullOrEmpty(tenantId) && role.Name.StartsWith(tenantId + "_"))
+                                           ? role.Name.Substring(tenantId.Length + 1)
+                                           : role.Name
+                                }).ToList();
+
+                                return View(EmpVM);
+                            }
+                        }
+                    }
+                }
+                var employeeData = await _employeeservice.GetAll();
+ 
                 // Phone Duplicate check
                 if (!string.IsNullOrEmpty(EmpVM.Phone))
                 {
@@ -93,17 +144,17 @@ namespace EasyBill.UI.Controllers
                                      StringComparison.OrdinalIgnoreCase
                                  )
                              );
-
+ 
                     if (isExist)
                     {
                         TempData["error"] = "PhoneNo already exists.";
-
+ 
                         ViewBag.Department = new SelectList(await _departmentservice.GetAll(), "Id", "Name");
                         ViewBag.Designation = new SelectList(await _designationService.GetAll(), "Id", "Name");
                         return View(EmpVM);
                     }
                 }
-
+ 
                 var model = new Employee
                 {
                     Name = EmpVM.Name.Trim(),
@@ -114,43 +165,70 @@ namespace EasyBill.UI.Controllers
                     RequiredCreditional = EmpVM.RequiredCreditional,
                     Initials = EmpVM.Initials
                 };
-                await _employeeservice.Create(model);
-                var employeeId = model.Id;
-                string password = "Hospicarx@123";
-             //   string encryptedPassword = CustomEncryptionHelper.Encrypt(password);
-                if (EmpVM.RequiredCreditional)
+
+                try
                 {
-                    var user = new ApplicationUsers
+                    await _employeeservice.Create(model);
+                    var employeeId = model.Id;
+                    string password = "Hospicarx@123";
+                    if (EmpVM.RequiredCreditional)
                     {
-                        UserName = model.Email?.Trim(),
-                        NormalizedUserName = model.Email?.ToUpper(),
-                        Email = model.Email,
-                        NormalizedEmail = model.Email?.ToUpper(),
-                        EmailConfirmed = true,
-                        SecurityStamp = Guid.NewGuid().ToString(),
-                        TenantId = model.TenantId,
-                        PhoneNumber = model.Phone?.Trim(),
-                        PhoneNumberConfirmed = true,
-                      //  Custom = encryptedPassword,
-                      //  Login = DateTime.Now,
-                        EmployeeId = employeeId,
-                    };
-                    var result = await userManager.CreateAsync(user, password);
-                    if (result.Succeeded)
-                    {
-                        var role = await roleManager.FindByIdAsync(EmpVM.RoleId);
-                        await userManager.AddToRoleAsync(user, role.Name);
-                        //if (!string.IsNullOrEmpty(model.Email))
-                        //{
-                        //    var mailRequest = new MailRequest
-                        //    {
-                        //        To = model.Email,
-                        //        Subject = "Login creditionals.",
-                        //        Body = $"Your UserName is {model.Email} and  password is {password}"
-                        //    };
-                        //    await _mailService.SendAsync(mailRequest);
-                        //}
+                        var user = new ApplicationUsers
+                        {
+                            UserName = model.Email?.Trim(),
+                            NormalizedUserName = model.Email?.ToUpper(),
+                            Email = model.Email,
+                            NormalizedEmail = model.Email?.ToUpper(),
+                            EmailConfirmed = true,
+                            SecurityStamp = Guid.NewGuid().ToString(),
+                            TenantId = model.TenantId,
+                            PhoneNumber = model.Phone?.Trim(),
+                            PhoneNumberConfirmed = true,
+                            EmployeeId = employeeId,
+                        };
+                        var result = await userManager.CreateAsync(user, password);
+                        if (result.Succeeded)
+                        {
+                            var role = await roleManager.FindByIdAsync(EmpVM.RoleId);
+                            await userManager.AddToRoleAsync(user, role.Name);
+                        }
+                        else
+                        {
+                            // Delete the employee to prevent orphan entry
+                            await _employeeservice.Delete(model);
+
+                            TempData["error"] = "Failed to create login credentials: " + string.Join(", ", result.Errors.Select(e => e.Description));
+                            ViewBag.Department = new SelectList(await _departmentservice.GetAll(), "Id", "Name");
+                            ViewBag.Designation = new SelectList(await _designationService.GetAll(), "Id", "Name");
+
+                            var isSuperAdmin = User.IsInRole("SuperAdmin");
+                            List<IdentityRole> roles;
+                            if (isSuperAdmin)
+                            {
+                                roles = await roleManager.Roles.AsNoTracking().ToListAsync();
+                            }
+                            else
+                            {
+                                roles = await roleManager.Roles.AsNoTracking()
+                                    .Where(r => r.Name == "Admin" || r.Name == "User" || (!string.IsNullOrEmpty(tenantId) && r.Name.StartsWith(tenantId + "_")))
+                                    .ToListAsync();
+                            }
+                            EmpVM.RoleList = roles.Select(role => new SelectListItem
+                            {
+                                Value = role.Id,
+                                Text = (!isSuperAdmin && !string.IsNullOrEmpty(tenantId) && role.Name.StartsWith(tenantId + "_"))
+                                       ? role.Name.Substring(tenantId.Length + 1)
+                                       : role.Name
+                            }).ToList();
+
+                            return View(EmpVM);
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    TempData["error"] = "Error creating employee: " + ex.Message;
+                    return RedirectToAction("Index");
                 }
             }
             TempData["success"] = "Employee created successfully!";
@@ -205,12 +283,53 @@ namespace EasyBill.UI.Controllers
             Employee model = await _employeeservice.GetById(VM.Id);
             if (model != null)
             {
-                model.Id = VM.Id;
+                string oldEmail = model.Email ?? string.Empty;
+                string newEmail = VM.Email?.Trim() ?? string.Empty;
+                string oldPhone = model.Phone ?? string.Empty;
+                string newPhone = VM.Phone?.Trim() ?? string.Empty;
+
+                if (model.RequiredCreditional)
+                {
+                    var user = await userManager.Users.FirstOrDefaultAsync(u => u.EmployeeId == model.Id);
+                    if (user != null)
+                    {
+                        if (!string.Equals(oldEmail, newEmail, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var existingByEmail = await userManager.FindByEmailAsync(newEmail);
+                            if (existingByEmail != null && existingByEmail.Id != user.Id)
+                            {
+                                TempData["error"] = "Failed to update employee: Email is already taken by another user.";
+                                ViewBag.Department = new SelectList(await _departmentservice.GetAll(), "Id", "Name");
+                                ViewBag.Designation = new SelectList(await _designationService.GetAll(), "Id", "Name");
+                                return View(VM);
+                            }
+                            user.Email = newEmail;
+                            user.UserName = newEmail;
+                            user.NormalizedEmail = newEmail.ToUpper();
+                            user.NormalizedUserName = newEmail.ToUpper();
+                        }
+
+                        if (!string.Equals(oldPhone, newPhone, StringComparison.OrdinalIgnoreCase))
+                        {
+                            user.PhoneNumber = newPhone;
+                        }
+
+                        var userResult = await userManager.UpdateAsync(user);
+                        if (!userResult.Succeeded)
+                        {
+                            TempData["error"] = "Failed to update user credentials: " + string.Join(", ", userResult.Errors.Select(e => e.Description));
+                            ViewBag.Department = new SelectList(await _departmentservice.GetAll(), "Id", "Name");
+                            ViewBag.Designation = new SelectList(await _designationService.GetAll(), "Id", "Name");
+                            return View(VM);
+                        }
+                    }
+                }
+
                 model.Name = VM.Name.Trim();
                 model.DepartMentId = VM.DepartMentId;
                 model.DesignationId = VM.DesignationId;
-                model.Email = VM.Email?.Trim();
-                model.Phone = VM.Phone?.Trim();
+                model.Email = newEmail;
+                model.Phone = newPhone;
                 model.RequiredCreditional = VM.RequiredCreditional;
                 model.Initials = VM.Initials;
                 await _employeeservice.Update(model);

@@ -25,6 +25,7 @@ namespace EasyBill.Models.ViewModels
         public bool IsPointProgramActive { get; set; }
         public bool AllowPointRedemption { get; set; }
         public bool IsCustomerGettingPoints { get; set; }
+        public int MinPointsToRedeem { get; set; }
 
         public List<CashbackLedgerItemVM> CashbackLedger { get; set; } = new();
         public List<PointLedgerItemVM> PointLedger { get; set; } = new();
@@ -62,6 +63,7 @@ namespace EasyBill.Models.ViewModels
         public decimal PointsBalanceValueInRs { get; set; }
         public bool IsPointProgramActive { get; set; }
         public bool AllowPointRedemption { get; set; }
+        public int MinPointsToRedeem { get; set; }
     }
 
     public class PointApplicationResultVM

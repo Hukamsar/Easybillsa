@@ -1,4 +1,4 @@
-﻿@using EasyBill.Models.ViewModels
+@using EasyBill.Models.ViewModels
 @model SalesVM
 @{
     ViewData["Title"] = "Edit Sales";
@@ -275,6 +275,7 @@
     <input type="hidden" asp-for="PharmacyDoctorId" id="DoctorId" />
     <input type="hidden" asp-for="OfferId" />
     <input type="hidden" id="isShare" name="isShare" value="false" />
+    <input type="hidden" asp-for="RedeemPoints" id="RedeemPoints" />
 
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
@@ -358,6 +359,30 @@
                     <input type="hidden" asp-for="PaymentType" id="paymentTypeHidden" value="cash" />
                 </div>
 
+            </div>
+        </div>
+
+        <!-- Loyalty Program Panel -->
+        <div class="row d-none" id="loyaltyPointsPanel">
+            <div class="col-12 mb-3">
+                <div class="card border-info" style="border-radius: 8px; background-color: #f0f8ff;">
+                    <div class="card-body py-2 px-3 d-flex flex-wrap align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-gift-fill text-info" style="font-size: 1.2rem;"></i>
+                            <div>
+                                <span class="fw-bold text-dark">Customer Loyalty Program:</span>
+                                <span class="badge bg-primary text-white ms-2" style="font-size: 0.9rem;" id="loyaltyBalanceBadge">0 Points</span>
+                                <span class="text-muted ms-2 small">Available Value: <strong class="text-success">₹<span id="loyaltyValueSpan">0.00</span></strong></span>
+                                <span class="ms-3 text-secondary small" id="loyaltyMinRedeemSpan"></span>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mt-2 mt-md-0" id="loyaltyRedeemSection">
+                            <label for="loyaltyRedeemInput" class="small fw-bold text-dark mb-0">Redeem Points:</label>
+                            <input type="number" id="loyaltyRedeemInput" class="form-control form-control-sm text-end" style="width: 100px; display: inline-block;" value="0" min="0">
+                            <button type="button" class="btn btn-sm btn-info text-white" id="btnApplyLoyaltyPoints">Apply Discount</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -526,17 +551,34 @@
                             </div>
                         </div>
                         <div class="row mb-2">
+                            <label asp-for="TotalPayable" class="col-md-3 col-form-label text-start small fw-bold">Total Amount</label>
+                            <div class="col-md-4"></div>
+                            <div class="col-md-5">
+                                <input asp-for="TotalPayable" id="totalPayable" class="form-control form-control-sm total-amount" readonly />
+                            </div>
+                        </div>
+                        <div class="row mb-2">
                             <label asp-for="RoundOffAmount" class="col-md-3 col-form-label text-start small"></label>
                             <div class="col-md-4"></div>
                             <div class="col-md-5">
                                 <input asp-for="RoundOffAmount" id="roundOffAmount" class="form-control form-control-sm" readonly />
                             </div>
                         </div>
-                        <div class="row mb-2">
-                            <label asp-for="TotalPayable" class="col-md-3 col-form-label text-start small fw-bold">Total Amount</label>
-                            <div class="col-md-4"></div>
-                            <div class="col-md-5">
-                                <input asp-for="TotalPayable" id="totalPayable" class="form-control form-control-sm total-amount" readonly />
+                        <!-- Loyalty Points Highlights Container -->
+                        <div id="loyaltySummaryContainer" style="display: none; background-color: #fffbeb !important; border: 2px solid #fbbf24 !important; border-radius: 8px !important; padding: 12px !important; margin-bottom: 12px !important; margin-top: 5px !important; box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.1) !important;">
+                            <div class="row mb-2" id="loyaltyDiscountRow" style="margin-bottom: 8px !important;">
+                                <label id="loyaltyPointsDiscountLabel" class="col-md-5 col-form-label text-start small fw-bold" style="color: #b45309 !important;">Points Discount</label>
+                                <div class="col-md-2"></div>
+                                <div class="col-md-5">
+                                    <input id="loyaltyPointsDiscountInput" class="form-control form-control-sm fw-bold" style="background-color: #fff !important; border-color: #fbbf24 !important; color: #b45309 !important;" readonly value="0.00" />
+                                </div>
+                            </div>
+                            <div class="row" id="netPayableRow" style="margin-bottom: 0px !important;">
+                                <label class="col-md-5 col-form-label text-start small fw-bold" style="color: #92400e !important;">Net Payable</label>
+                                <div class="col-md-2"></div>
+                                <div class="col-md-5">
+                                    <input id="netPayableInput" class="form-control form-control-sm fw-bold" style="background-color: #fff !important; border-color: #fbbf24 !important; color: #92400e !important;" readonly value="0.00" />
+                                </div>
                             </div>
                         </div>
                         <div class="row mb-2" hidden>
@@ -1160,7 +1202,7 @@
                     success: function (res) {
                         if (res.found) {
                             $('#customer').val(res.data.name);
-                            $('#CustomerId').val(res.data.id);
+                            $('#CustomerId').val(res.data.id).trigger('change');
                             $('#customeraddress').val(res.data.address);
 
                             originalCustomerData.mobile = mobileNo;
@@ -1254,7 +1296,7 @@
                         if (res.success) {
                             var customer = res.data || res.Data || {};
                             $('#mobilenumber').val(customer.phoneNo || customer.PhoneNo);
-                            $('#CustomerId').val(customer.id || customer.Id);
+                            $('#CustomerId').val(customer.id || customer.Id).trigger('change');
                             $('#customer').val(customer.name || customer.Name);
                             $('#customeraddress').val(customer.address || customer.Address);
 
@@ -1487,7 +1529,7 @@
 
             $("#billingType").val("registered");
             $("#mobilenumber, #customer, #customeraddress").prop("disabled", false);
-            $("#CustomerId").val(customerId);
+            $("#CustomerId").val(customerId).trigger('change');
             $("#mobilenumber").val(mobileNo);
             $("#customer").val(customerName);
             $("#customeraddress").val(address);
@@ -3376,11 +3418,33 @@
             var totalPayable = parseFloat($("#totalPayable").val()) || 0;
             var paidAmt = parseFloat($("#paidAmout").val()) || 0;
 
-            if (paidAmt > totalPayable && paidAmt > 0) {
-                returnAmt = paidAmt - totalPayable;
+            // Subtract loyalty points discount from the payable amount for cash/card calculation
+            var redeemPoints = parseInt($("#RedeemPoints").val()) || 0;
+            var valInRs = loyaltyInfo ? loyaltyInfo.pointValueInRs : 0;
+            var pointsValue = redeemPoints * valInRs;
+            var netPayable = Math.max(0, totalPayable - pointsValue);
+
+            if (pointsValue > 0) {
+                $("#loyaltyPointsDiscountInput").val(pointsValue.toFixed(2));
+                $("#netPayableInput").val(netPayable.toFixed(2));
+                $("#loyaltyPointsDiscountLabel").text(`Points Discount (${redeemPoints} pts)`);
+                $("#loyaltyDiscountRow").show();
+                $("#netPayableRow").show();
+                $("#loyaltySummaryContainer").show();
+            } else {
+                $("#loyaltyPointsDiscountInput").val("0.00");
+                $("#netPayableInput").val("0.00");
+                $("#loyaltyPointsDiscountLabel").text("Points Discount");
+                $("#loyaltyDiscountRow").hide();
+                $("#netPayableRow").hide();
+                $("#loyaltySummaryContainer").hide();
+            }
+
+            if (paidAmt > netPayable && paidAmt > 0) {
+                returnAmt = paidAmt - netPayable;
                 balance = 0;
             } else {
-                balance = totalPayable - paidAmt;
+                balance = netPayable - paidAmt;
             }
 
             $("#returnAmount").val(returnAmt.toFixed(2));
@@ -4365,6 +4429,7 @@
                         .addClass("bg-light");
 
                     $("#mobilenumber, #customer, #customeraddress").val("");
+                    $("#CustomerId").val("").trigger('change');
                 } else if (type === "registered") {
                     $("#mobilenumber, #customer, #customeraddress")
                         .prop("disabled", false)
@@ -5546,6 +5611,188 @@
                     window.location.href = $("#btnCancel").attr("href");
                 }
             });
+        });
+    </script>
+    <script>
+        // ================================================================
+        // 🔹 CUSTOMER LOYALTY POINTS INTEGRATION
+        // ================================================================
+        var loyaltyInfo = null;
+
+        function loadCustomerLoyaltyInfo(customerId, isInitialLoad) {
+            // Skip loyalty program panels for historical bills created before the loyalty program was configured
+            var billCreatedStr = "@ViewBag.CreatedDate";
+            var activationDateStr = "@ViewBag.LoyaltyActivationDate";
+            if (billCreatedStr && activationDateStr) {
+                var billCreated = new Date(billCreatedStr);
+                var activationDate = new Date(activationDateStr);
+                if (billCreated < activationDate) {
+                    resetLoyaltyUI();
+                    return;
+                }
+            }
+
+            if (!customerId) {
+                resetLoyaltyUI();
+                return;
+            }
+
+            $.get('/Customer/GetLoyaltyData', { id: customerId }, function (res) {
+                if (res.success && res.data && res.data.isPointProgramActive) {
+                    loyaltyInfo = res.data;
+
+                    // For Edit screen: add currently redeemed points to pointsBalance
+                    var currentlyRedeemed = parseInt("@Model.RedeemPoints") || 0;
+                    var effectiveBalance = loyaltyInfo.pointsBalance;
+                    
+                    var isOriginalCustomer = (customerId == "@Model.CustomerId");
+                    if (isOriginalCustomer) {
+                        effectiveBalance += currentlyRedeemed;
+                    }
+
+                    var valInRs = loyaltyInfo.pointValueInRs;
+                    var effectiveValue = effectiveBalance * valInRs;
+                    
+                    $("#loyaltyBalanceBadge").text(effectiveBalance + " Points");
+                    $("#loyaltyValueSpan").text(effectiveValue.toFixed(2));
+                    
+                    if (loyaltyInfo.minPointsToRedeem > 0) {
+                        $("#loyaltyMinRedeemSpan").text(`(Min points to redeem: ${loyaltyInfo.minPointsToRedeem})`);
+                    } else {
+                        $("#loyaltyMinRedeemSpan").text('');
+                    }
+
+                    $("#loyaltyPointsPanel").removeClass("d-none");
+                    
+                    $("#loyaltyRedeemInput")
+                        .attr("max", effectiveBalance)
+                        .data("valinrs", valInRs);
+
+                    if (isInitialLoad && isOriginalCustomer) {
+                        $("#loyaltyRedeemInput").val(currentlyRedeemed);
+                        $("#RedeemPoints").val(currentlyRedeemed);
+                    } else {
+                        $("#loyaltyRedeemInput").val("0");
+                        $("#RedeemPoints").val("0");
+                    }
+
+                    if (!loyaltyInfo.allowPointRedemption) {
+                        $("#loyaltyRedeemSection").addClass("d-none");
+                        $("#loyaltyMinRedeemSpan").text("(Redemption is currently disabled)");
+                    } else if (effectiveBalance < loyaltyInfo.minPointsToRedeem) {
+                        $("#loyaltyRedeemSection").addClass("d-none");
+                        $("#loyaltyMinRedeemSpan").append(" - Insufficient points balance to redeem.");
+                    } else {
+                        $("#loyaltyRedeemSection").removeClass("d-none");
+                    }
+
+                    if (isInitialLoad && currentlyRedeemed > 0 && isOriginalCustomer) {
+                        calculateTotalPaymentSummary();
+                    }
+                } else {
+                    resetLoyaltyUI();
+                }
+            }).fail(function () {
+                resetLoyaltyUI();
+            });
+        }
+
+        function resetLoyaltyUI() {
+            loyaltyInfo = null;
+            $("#loyaltyPointsPanel").addClass("d-none");
+            $("#loyaltyRedeemInput").val("0").removeAttr("max").removeData("valinrs");
+            $("#RedeemPoints").val("0");
+            calculateTotalPaymentSummary();
+        }
+
+        $(document).on("click", "#btnApplyLoyaltyPoints", function () {
+            applyLoyaltyPointsRedemption();
+        });
+
+        $(document).on("keypress", "#loyaltyRedeemInput", function (e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                applyLoyaltyPointsRedemption();
+            }
+        });
+
+        function applyLoyaltyPointsRedemption() {
+            if (!loyaltyInfo) return;
+
+            let points = parseInt($("#loyaltyRedeemInput").val()) || 0;
+
+            if (points < 0) {
+                toastr.error("Redemption points cannot be negative.");
+                $("#loyaltyRedeemInput").val("0");
+                $("#RedeemPoints").val("0");
+                calculateTotalPaymentSummary();
+                return;
+            }
+
+            if (points === 0) {
+                $("#RedeemPoints").val("0");
+                calculateTotalPaymentSummary();
+                toastr.info("Loyalty points discount removed.");
+                return;
+            }
+
+            var currentlyRedeemed = parseInt("@Model.RedeemPoints") || 0;
+            var isOriginalCustomer = ($("#CustomerId").val() == "@Model.CustomerId");
+            var maxPoints = loyaltyInfo.pointsBalance;
+            if (isOriginalCustomer) {
+                maxPoints += currentlyRedeemed;
+            }
+
+            if (points > maxPoints) {
+                toastr.error(`Cannot redeem more than available balance of ${maxPoints} points.`);
+                $("#loyaltyRedeemInput").val("0");
+                $("#RedeemPoints").val("0");
+                calculateTotalPaymentSummary();
+                return;
+            }
+
+            if (points < loyaltyInfo.minPointsToRedeem) {
+                toastr.error(`Minimum ${loyaltyInfo.minPointsToRedeem} points are required to redeem.`);
+                $("#loyaltyRedeemInput").val("0");
+                $("#RedeemPoints").val("0");
+                calculateTotalPaymentSummary();
+                return;
+            }
+
+            let pointValue = points * loyaltyInfo.pointValueInRs;
+            let totalPayable = parseFloat($("#totalPayable").val()) || 0;
+
+            if (pointValue > totalPayable) {
+                toastr.error(`Redemption value (₹${pointValue.toFixed(2)}) cannot exceed total bill amount (₹${totalPayable.toFixed(2)}).`);
+                $("#loyaltyRedeemInput").val("0");
+                $("#RedeemPoints").val("0");
+                calculateTotalPaymentSummary();
+                return;
+            }
+
+            $("#RedeemPoints").val(points);
+            calculateTotalPaymentSummary();
+
+            let remaining = Math.max(0, totalPayable - pointValue);
+            let firstRowPayment = $("#PaymentDetailsBody tr:first .paymentAmount");
+            if (firstRowPayment.length) {
+                firstRowPayment.val(remaining.toFixed(2));
+                calculateTotalPaid();
+            }
+
+            toastr.success(`Successfully applied ₹${pointValue.toFixed(2)} discount using ${points} loyalty points.`);
+        }
+
+        $(document).ready(function() {
+            $("#CustomerId").on("change", function() {
+                var customerId = $(this).val();
+                loadCustomerLoyaltyInfo(customerId, false);
+            });
+
+            var initialCustomerId = $("#CustomerId").val();
+            if (initialCustomerId) {
+                loadCustomerLoyaltyInfo(initialCustomerId, true);
+            }
         });
     </script>
 }

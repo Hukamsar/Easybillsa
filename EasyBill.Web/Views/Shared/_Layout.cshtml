@@ -535,44 +535,73 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <!-- SECTION 1: PLANS LIST -->
-                    <div id="plansListSection">
-                        <!-- Current Plan & Balance Alert -->
-                        <div class="card border-0 shadow-sm p-3 mb-4 d-flex flex-row align-items-center justify-content-between" style="border-radius: 12px; background: white;">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-primary bg-opacity-10 p-2.5 rounded-3 me-3 text-primary">
-                                    <i class="bi bi-wallet2 fs-4"></i>
-                                </div>
-                                <div>
-                                    <div class="text-muted small fw-semibold">Wallet Account Balance</div>
-                                    <div class="fw-bold text-dark fs-5" id="lblWalletBalance">₹0.00</div>
-                                </div>
+                    <!-- Global/Shared Tenant & Balance Panel -->
+                    <div class="card border-0 shadow-sm p-3 mb-4 d-flex flex-row align-items-center justify-content-between" id="sharedTenantBalancePanel" style="border-radius: 12px; background: white;">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 p-2.5 rounded-3 me-3 text-primary">
+                                <i class="bi bi-wallet2 fs-4"></i>
                             </div>
-                            <div class="text-end">
-                                <div class="text-muted small fw-semibold">Current Active Plan</div>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 fw-bold" id="lblCurrentPlanName" style="font-size: 0.85rem;">Free Trial</span>
+                            <div>
+                                <div class="text-muted small fw-semibold">Wallet Account Balance</div>
+                                <div class="fw-bold text-dark fs-5" id="lblWalletBalance">₹0.00</div>
                             </div>
                         </div>
-
-                        <!-- Billing Cycle Toggle -->
-                        <div class="d-flex justify-content-center align-items-center gap-3 mb-4">
-                            <span class="fw-semibold text-muted" id="billingCycleLabelMonthly">Monthly Billing</span>
-                            <div class="form-check form-switch form-switch-lg m-0">
-                                <input class="form-check-input" type="checkbox" role="switch" id="switchBillingCycle" style="cursor: pointer;">
-                            </div>
-                            <span class="fw-semibold text-primary d-flex align-items-center" id="billingCycleLabelYearly">
-                                Yearly Billing <span class="badge bg-success text-white ms-2" style="font-size: 0.65rem;">Save ~16%</span>
-                            </span>
+                        <div class="text-end">
+                            <div class="text-muted small fw-semibold">Current Active Plan</div>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 fw-bold" id="lblCurrentPlanName" style="font-size: 0.85rem;">Free Trial</span>
                         </div>
+                    </div>
 
-                        <!-- Upgrade Cards Container -->
-                        <div class="row row-cols-1 row-cols-md-3 g-4" id="plansContainer">
-                            <!-- Plans will be rendered here dynamically -->
-                            <div class="col-12 text-center py-5" id="plansLoader">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
+                    <!-- Pending Upgrade Alert / Redeem Panel -->
+                    <div id="pendingUpgradeAlertSection" style="display: none;" class="mb-4"></div>
+
+                    <!-- Main Selection Section (Plans vs Staff bundles) -->
+                    <div id="mainSelectionSection">
+                        <!-- Tabs -->
+                        <ul class="nav nav-tabs border-bottom mb-4" id="modalUpgradeTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active fw-bold px-4 py-2 border-0" id="tab-upgrade-plans-nav" data-bs-toggle="tab" data-bs-target="#tab-upgrade-plans" type="button" role="tab" aria-selected="true" style="border-bottom: 3px solid #1d4ed8 !important; color: #1d4ed8; background: transparent;">
+                                    <i class="bi bi-rocket-takeoff-fill me-1"></i> Upgrade Plans
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link fw-bold px-4 py-2 border-0" id="tab-add-staff-nav" data-bs-toggle="tab" data-bs-target="#tab-add-staff" type="button" role="tab" aria-selected="false" style="color: #64748b; background: transparent; border-bottom: none !important;">
+                                    <i class="bi bi-people-fill me-1"></i> Add Extra Staff
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="modalUpgradeTabsContent">
+                            <!-- Tab 1: Upgrade Plans -->
+                            <div class="tab-pane fade show active" id="tab-upgrade-plans" role="tabpanel" aria-labelledby="tab-upgrade-plans-nav">
+                                <!-- Billing Cycle Toggle -->
+                                <div class="d-flex justify-content-center align-items-center gap-3 mb-4">
+                                    <span class="fw-semibold text-muted" id="billingCycleLabelMonthly">Monthly Billing</span>
+                                    <div class="form-check form-switch form-switch-lg m-0">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="switchBillingCycle" style="cursor: pointer;">
+                                    </div>
+                                    <span class="fw-semibold text-primary d-flex align-items-center" id="billingCycleLabelYearly">
+                                        Yearly Billing <span class="badge bg-success text-white ms-2" style="font-size: 0.65rem;">Save ~16%</span>
+                                    </span>
                                 </div>
-                                <p class="mt-2 text-muted fw-semibold">Fetching available upgrade plans...</p>
+
+                                <!-- Upgrade Cards Container -->
+                                <div class="row row-cols-1 row-cols-md-3 g-4" id="plansContainer">
+                                    <!-- Plans will be rendered here dynamically -->
+                                    <div class="col-12 text-center py-5" id="plansLoader">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p class="mt-2 text-muted fw-semibold">Fetching available upgrade plans...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tab 2: Add Extra Staff -->
+                            <div class="tab-pane fade" id="tab-add-staff" role="tabpanel" aria-labelledby="tab-add-staff-nav">
+                                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4 mt-1" id="extraStaffCardsContainer">
+                                    <!-- Dynamic Extra Staff Cards will be rendered here -->
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -580,7 +609,7 @@
                     <!-- SECTION 2: CHECKOUT & PAYMENT OPTIONS -->
                     <div id="checkoutSection" style="display: none;">
                         <button type="button" class="btn btn-link text-secondary fw-bold p-0 mb-3 text-decoration-none d-flex align-items-center gap-1" id="btnBackToPlans">
-                            <i class="bi bi-arrow-left"></i> Back to Plans
+                            <i class="bi bi-arrow-left"></i> Back
                         </button>
 
                         <div class="row g-4">
@@ -743,6 +772,10 @@
             let selectedPlanId = 0;
             let selectedPlanName = '';
             let selectedPlanPrice = 0;
+            let checkoutType = 'plan'; // 'plan' or 'users'
+            let selectedUsersCount = 0;
+            let remainingMonths = 1;
+            let licenceExpiryDate = '';
 
             $('#btnUpgradePlanHeader').on('click', function () {
                 openUpgradeModal();
@@ -753,10 +786,21 @@
                 renderUpgradePlans();
             });
 
+            // Toggle tab active styling manually to keep UI ultra premium
+            $('#tab-upgrade-plans-nav').on('click', function () {
+                $(this).css({'border-bottom': '3px solid #1d4ed8', 'color': '#1d4ed8'});
+                $('#tab-add-staff-nav').css({'border-bottom': 'none', 'color': '#64748b'});
+            });
+            $('#tab-add-staff-nav').on('click', function () {
+                $(this).css({'border-bottom': '3px solid #1d4ed8', 'color': '#1d4ed8'});
+                $('#tab-upgrade-plans-nav').css({'border-bottom': 'none', 'color': '#64748b'});
+            });
+
             // Back to Plans Button click
             $('#btnBackToPlans').on('click', function () {
                 $('#checkoutSection').slideUp(200, function () {
-                    $('#plansListSection').slideDown(200);
+                    $('#mainSelectionSection').slideDown(200);
+                    $('#sharedTenantBalancePanel').slideDown(200);
                 });
             });
 
@@ -781,7 +825,13 @@
             function openUpgradeModal() {
                 // Reset views
                 $('#checkoutSection').hide();
-                $('#plansListSection').show();
+                $('#mainSelectionSection').show();
+                $('#sharedTenantBalancePanel').show();
+                $('#pendingUpgradeAlertSection').hide().empty();
+
+                // Select default tab
+                $('#tab-upgrade-plans-nav').trigger('click');
+                bootstrap.Tab.getInstance(document.getElementById('tab-upgrade-plans-nav'))?.show();
 
                 $('#plansContainer').html(`
                     <div class="col-12 text-center py-5">
@@ -791,23 +841,128 @@
                 `);
                 $('#upgradePlanModal').modal('show');
 
+                // Check pending upgrade/redemption status first
                 $.ajax({
-                    url: '/Subscription/GetUpgradePlans',
+                    url: '/Subscription/GetPendingUpgradeStatus',
                     type: 'GET',
-                    success: function (res) {
-                        if (res.success) {
-                            activePlans = res.plans;
-                            walletBalance = res.walletBalance;
-                            $('#lblWalletBalance').text('₹' + walletBalance.toFixed(2));
-                            $('#lblCurrentPlanName').text(res.currentPlan ? res.currentPlan.planName : 'Free Trial');
-                            renderUpgradePlans();
+                    success: function (statusRes) {
+                        if (statusRes.success) {
+                            remainingMonths = statusRes.remainingMonths || 1;
+                            licenceExpiryDate = statusRes.licenceExpiryDate || '';
+                            walletBalance = statusRes.walletBalance || 0;
+
+                            if (statusRes.pendingAdminRequest) {
+                                // Show Pending Admin Request Alert
+                                $('#mainSelectionSection').hide();
+                                $('#sharedTenantBalancePanel').hide();
+                                $('#pendingUpgradeAlertSection').html(`
+                                    <div class="card border-0 shadow-sm" style="border-radius: 16px; background: #fffbeb; border: 1.5px solid #fde68a !important;">
+                                        <div class="card-body p-4 text-center">
+                                            <div class="bg-warning bg-opacity-10 p-3 rounded-circle mx-auto mb-3 text-warning d-flex align-items-center justify-content-center" style="width: 65px; height: 65px;">
+                                                <i class="bi bi-hourglass-split fs-2"></i>
+                                            </div>
+                                            <h5 class="fw-bold text-dark mb-2">Upgrade Awaiting Approval</h5>
+                                            <p class="text-muted small px-3">
+                                                You have requested <strong>${statusRes.pendingAdminRequestCount} Extra Staff</strong> slots. 
+                                                This request is currently awaiting approval from the SuperAdmin. 
+                                                Please check back once the SuperAdmin approves or rejects the purchase.
+                                            </p>
+                                            <div class="mt-4">
+                                                <button type="button" class="btn btn-outline-secondary px-4 fw-bold" data-bs-dismiss="modal" style="border-radius: 8px;">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).slideDown(200);
+                            } else if (statusRes.pendingSaUpgrade) {
+                                // Show Pending SA Upgrade Redemption Panel
+                                $('#mainSelectionSection').hide();
+                                $('#sharedTenantBalancePanel').hide();
+                                $('#pendingUpgradeAlertSection').html(`
+                                    <div class="card border-0 shadow-sm" style="border-radius: 16px; background: #f0fdf4; border: 1.5px solid #bbf7d0 !important;">
+                                        <div class="card-body p-4 text-center">
+                                            <div class="bg-success bg-opacity-10 p-3 rounded-circle mx-auto mb-3 text-success d-flex align-items-center justify-content-center" style="width: 65px; height: 65px;">
+                                                <i class="bi bi-gift fs-2"></i>
+                                            </div>
+                                            <h5 class="fw-bold text-dark mb-2">Extra Staff Slots Ready!</h5>
+                                            <p class="text-muted small px-3">
+                                                SuperAdmin has assigned <strong>${statusRes.pendingSaUpgradeCount} Extra Staff</strong> slots to your workspace. 
+                                                Click below to redeem and activate these slots immediately.
+                                            </p>
+                                            <div class="mt-4 d-flex justify-content-center gap-3">
+                                                <button type="button" class="btn btn-outline-secondary px-4 fw-bold" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                                                <button type="button" class="btn btn-success px-5 fw-bold" id="btnRedeemSaUpgrade" style="border-radius: 8px;">
+                                                    Redeem Extra Staff
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).slideDown(200);
+
+                                // Bind Redeem Click Handler
+                                $('#btnRedeemSaUpgrade').on('click', function () {
+                                    $('#upgradePlanModal').modal('hide');
+                                    showLoader("Activating your staff slots...");
+                                    $.ajax({
+                                        url: '/Subscription/RedeemSaUpgrade',
+                                        type: 'POST',
+                                        success: function (redeemRes) {
+                                            hideLoader();
+                                            if (redeemRes.success) {
+                                                Swal.fire({
+                                                    icon: 'success',
+                                                    title: 'Redeemed Successfully!',
+                                                    text: redeemRes.message + ' Logging out to apply updates...',
+                                                    timer: 3000,
+                                                    showConfirmButton: false
+                                                }).then(() => {
+                                                    let form = document.querySelector('form[action*="/Account/Logout"]');
+                                                    if (form) {
+                                                        form.submit();
+                                                    } else {
+                                                        window.location.reload();
+                                                    }
+                                                });
+                                            } else {
+                                                Swal.fire("Redemption Failed", redeemRes.message, "error");
+                                            }
+                                        },
+                                        error: function () {
+                                            hideLoader();
+                                            Swal.fire("Error", "Could not complete the redemption request.", "error");
+                                        }
+                                    });
+                                });
+                            } else {
+                                // No pending actions, fetch available plans
+                                $.ajax({
+                                    url: '/Subscription/GetUpgradePlans',
+                                    type: 'GET',
+                                    success: function (res) {
+                                        if (res.success) {
+                                            activePlans = res.plans;
+                                            walletBalance = res.walletBalance;
+                                            $('#lblWalletBalance').text('₹' + walletBalance.toFixed(2));
+                                            $('#lblCurrentPlanName').text(res.currentPlan ? res.currentPlan.planName : 'Free Trial');
+                                            renderUpgradePlans();
+                                            renderExtraStaffCards();
+                                        } else {
+                                            Swal.fire("Error", res.message, "error");
+                                            $('#upgradePlanModal').modal('hide');
+                                        }
+                                    },
+                                    error: function () {
+                                        Swal.fire("Error", "Could not fetch subscription plans. Please try again.", "error");
+                                        $('#upgradePlanModal').modal('hide');
+                                    }
+                                });
+                            }
                         } else {
-                            Swal.fire("Error", res.message, "error");
+                            Swal.fire("Error", statusRes.message, "error");
                             $('#upgradePlanModal').modal('hide');
                         }
                     },
                     error: function () {
-                        Swal.fire("Error", "Could not fetch subscription plans. Please try again.", "error");
+                        Swal.fire("Error", "Could not check account subscription status.", "error");
                         $('#upgradePlanModal').modal('hide');
                     }
                 });
@@ -909,7 +1064,7 @@
                 });
 
                 // Bind features toggle
-                $('.btn-toggle-features').on('click', function () {
+                $('.btn-toggle-features').off('click').on('click', function () {
                     let wrapper = $(this).next('.features-list-wrapper');
                     let icon = $(this).find('i');
                     wrapper.slideToggle(200);
@@ -921,7 +1076,8 @@
                 });
 
                 // Bind upgrade submit -> Opens Checkout View
-                $('.btn-upgrade-submit').on('click', function () {
+                $('.btn-upgrade-submit').off('click').on('click', function () {
+                    checkoutType = 'plan';
                     selectedPlanId = $(this).data('plan-id');
                     selectedPlanName = $(this).data('plan-name');
                     selectedPlanPrice = parseFloat($(this).data('price'));
@@ -955,11 +1111,52 @@
                     }
 
                     // Toggle Section Views
-                    $('#plansListSection').slideUp(200, function () {
-                        $('#checkoutSection').slideDown(200);
-                    });
+                    $('#mainSelectionSection').slideUp(200);
+                    $('#sharedTenantBalancePanel').slideUp(200);
+                    $('#checkoutSection').slideDown(200);
                 });
             }
+
+            // Bind Add Extra Staff Bundle Click -> Opens Checkout View
+            $(document).on('click', '.btn-purchase-users-submit', function () {
+                checkoutType = 'users';
+                selectedUsersCount = parseInt($(this).data('count'));
+                selectedPlanName = selectedUsersCount + " Extra Staff (Users)";
+                selectedPlanPrice = parseFloat($(this).data('cost'));
+
+                // Setup Checkout Summary
+                $('#summaryPlanName').text(selectedPlanName);
+                $('#summaryBillingCycle').text(remainingMonths + (remainingMonths === 1 ? ' Month' : ' Months') + ' (Aligns with License)');
+                $('#summaryTotalPrice').text('₹' + selectedPlanPrice.toFixed(2));
+                $('#lblManualPayAmount').text('₹' + selectedPlanPrice.toFixed(2));
+
+                // Reset manual ref
+                $('#txtManualRefNo').val('');
+
+                // Evaluate Wallet Option Availability
+                if (walletBalance < selectedPlanPrice) {
+                    // Disable Wallet
+                    $('#payOptWallet').prop('disabled', true);
+                    $('#payCardWallet').addClass('disabled-card').removeClass('active border-primary bg-primary-subtle bg-opacity-10 shadow-sm');
+                    $('#payWalletBalanceLabel').text('Available Balance: ₹' + walletBalance.toFixed(2) + ' (Insufficient)');
+                    
+                    // Select and trigger Gateway
+                    $('#payOptGateway').prop('checked', true).trigger('change');
+                } else {
+                    // Enable Wallet
+                    $('#payOptWallet').prop('disabled', false);
+                    $('#payCardWallet').removeClass('disabled-card');
+                    $('#payWalletBalanceLabel').text('Available Balance: ₹' + walletBalance.toFixed(2));
+                    
+                    // Select Wallet
+                    $('#payOptWallet').prop('checked', true).trigger('change');
+                }
+
+                // Toggle Section Views
+                $('#mainSelectionSection').slideUp(200);
+                $('#sharedTenantBalancePanel').slideUp(200);
+                $('#checkoutSection').slideDown(200);
+            });
 
             // Handle Complete Payment Button
             $('#btnSubmitPayment').on('click', function () {
@@ -969,7 +1166,9 @@
                     // Pay via Wallet
                     Swal.fire({
                         title: 'Confirm Wallet Payment',
-                        text: `Upgrade to ${selectedPlanName} (${currentBillingCycle})? An amount of ₹${selectedPlanPrice.toFixed(2)} will be deducted from your wallet balance.`,
+                        text: checkoutType === 'plan'
+                            ? `Upgrade to ${selectedPlanName} (${currentBillingCycle})? An amount of ₹${selectedPlanPrice.toFixed(2)} will be deducted from your wallet balance.`
+                            : `Purchase ${selectedPlanName}? An amount of ₹${selectedPlanPrice.toFixed(2)} will be deducted from your wallet balance.`,
                         icon: 'question',
                         showCancelButton: true,
                         confirmButtonText: 'Yes, Pay Now',
@@ -979,7 +1178,11 @@
                         reverseButtons: true
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            performUpgrade(selectedPlanId, currentBillingCycle, 'Wallet');
+                            if (checkoutType === 'plan') {
+                                performUpgrade(selectedPlanId, currentBillingCycle, 'Wallet');
+                            } else {
+                                performPurchaseExtraUsers(selectedUsersCount, 'Wallet');
+                            }
                         }
                     });
                 }
@@ -993,17 +1196,23 @@
 
                     Swal.fire({
                         title: 'Confirm Manual Payment',
-                        html: `Upgrade to <b>${selectedPlanName}</b> (${currentBillingCycle})?<br>Your payment reference <b>${refNo}</b> will be submitted for validation.`,
+                        html: checkoutType === 'plan'
+                            ? `Upgrade to <b>${selectedPlanName}</b> (${currentBillingCycle})?<br>Your payment reference <b>${refNo}</b> will be submitted for validation.`
+                            : `Purchase <b>${selectedPlanName}</b>?<br>Your payment reference <b>${refNo}</b> will be submitted for validation.`,
                         icon: 'question',
                         showCancelButton: true,
-                        confirmButtonText: 'Submit & Upgrade',
+                        confirmButtonText: 'Submit & Complete',
                         cancelButtonText: 'Cancel',
                         confirmButtonColor: '#1d4ed8',
                         cancelButtonColor: '#dc3545',
                         reverseButtons: true
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            performUpgrade(selectedPlanId, currentBillingCycle, 'Manual', refNo);
+                            if (checkoutType === 'plan') {
+                                performUpgrade(selectedPlanId, currentBillingCycle, 'Manual', refNo);
+                            } else {
+                                performPurchaseExtraUsers(selectedUsersCount, 'Manual', refNo);
+                            }
                         }
                     });
                 }
@@ -1048,7 +1257,11 @@
                             }).then(() => {
                                 // Trigger actual controller upgrade request
                                 let simulatedRef = 'SIM-GW-' + Date.now();
-                                performUpgrade(selectedPlanId, currentBillingCycle, 'Gateway', simulatedRef);
+                                if (checkoutType === 'plan') {
+                                    performUpgrade(selectedPlanId, currentBillingCycle, 'Gateway', simulatedRef);
+                                } else {
+                                    performPurchaseExtraUsers(selectedUsersCount, 'Gateway', simulatedRef);
+                                }
                             });
                         });
                     });
@@ -1098,6 +1311,107 @@
                         hideLoader();
                         Swal.fire("Error", "Could not complete the upgrade request. Please try again.", "error");
                     }
+                });
+            }
+
+            function performPurchaseExtraUsers(count, paymentMode, referenceNo) {
+                $('#upgradePlanModal').modal('hide');
+                showLoader("Processing staff bundle purchase...");
+
+                $.ajax({
+                    url: '/Subscription/PurchaseExtraUsers',
+                    type: 'POST',
+                    data: { 
+                        count: count, 
+                        paymentMode: paymentMode,
+                        referenceNo: referenceNo
+                    },
+                    success: function (res) {
+                        hideLoader();
+                        if (res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Purchase Successful!',
+                                text: res.message + ' Logging out to apply updates...',
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                // Submit logout form to refresh security cookies/claims
+                                let form = document.querySelector('form[action*="/Account/Logout"]');
+                                if (form) {
+                                    form.submit();
+                                } else {
+                                    window.location.reload();
+                                }
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Purchase Failed',
+                                text: res.message
+                            });
+                        }
+                    },
+                    error: function () {
+                        hideLoader();
+                        Swal.fire("Error", "Could not complete the purchase request. Please try again.", "error");
+                    }
+                });
+            }
+
+            function renderExtraStaffCards() {
+                let container = $('#extraStaffCardsContainer');
+                if (!container.length) return;
+
+                let bundles = [
+                    { count: 5, price: 500, desc: 'Suitable for small teams', color: 'primary', isBest: false },
+                    { count: 10, price: 900, desc: 'Suitable for growing teams', color: 'success', isBest: false },
+                    { count: 15, price: 1300, desc: 'Mid-sized organization', color: 'warning', isBest: false },
+                    { count: 20, price: 1600, desc: 'Suitable for large teams', color: 'primary', isBest: true }
+                ];
+
+                container.empty();
+
+                let isLicenseExpired = !licenceExpiryDate || new Date(licenceExpiryDate) <= new Date();
+
+                bundles.forEach(b => {
+                    let totalCost = b.price * remainingMonths;
+                    let btnClass = b.isBest ? `btn-${b.color}` : `btn-outline-${b.color}`;
+                    let badgeHtml = b.isBest ? `<span class="badge bg-primary text-white position-absolute top-0 start-50 translate-middle px-3 py-1 fw-bold rounded-pill" style="font-size: 0.7rem; transform: translate(-50%, -50%) !important;">BEST VALUE</span>` : '';
+                    let disabledAttr = isLicenseExpired ? 'disabled' : '';
+
+                    let expiryText = licenceExpiryDate ? `Expires: ${licenceExpiryDate}` : 'No active license';
+
+                    let cardHtml = `
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm transition-hover card-plan position-relative" style="border-radius: 14px; background: white; ${b.isBest ? 'border: 1.5px solid rgba(29, 78, 216, 0.2) !important;' : ''}">
+                                ${badgeHtml}
+                                <div class="card-body p-4 d-flex flex-column text-center">
+                                    <div class="bg-${b.color} bg-opacity-10 p-3 rounded-circle mx-auto mb-3 text-${b.color} d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                        <i class="bi bi-people-fill fs-3"></i>
+                                    </div>
+                                    <h5 class="fw-bold text-dark mb-1">${b.count} Extra Staff</h5>
+                                    <div class="text-muted small mb-3">${b.desc}</div>
+                                    <div class="my-3">
+                                        <div class="fs-4 fw-extrabold text-${b.color}">₹${totalCost}</div>
+                                        <div class="text-muted small">₹${b.price} / mo × ${remainingMonths} ${remainingMonths === 1 ? 'month' : 'months'}</div>
+                                    </div>
+                                    <div class="bg-light p-2 rounded-3 mb-3" style="font-size: 0.78rem;">
+                                        <div class="text-dark fw-semibold text-truncate">
+                                            <i class="bi bi-info-circle me-1"></i> ${expiryText}
+                                        </div>
+                                    </div>
+                                    <div class="mt-auto pt-3">
+                                        <button type="button" class="btn ${btnClass} w-100 fw-bold py-2 btn-purchase-users-submit" 
+                                                data-count="${b.count}" data-cost="${totalCost}" ${disabledAttr} style="border-radius: 8px;">
+                                            ${isLicenseExpired ? 'License Expired' : 'Buy Bundle'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.append(cardHtml);
                 });
             }
         });

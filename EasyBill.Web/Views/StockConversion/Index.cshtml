@@ -1,0 +1,299 @@
+﻿@model IEnumerable<EasyBill.Models.Entity.StockConversion>
+@{
+    ViewData["Title"] = "Stock Conversions";
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #f4f6f9;
+        color: #1f2937;
+    }
+
+    .page-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        letter-spacing: -0.025em;
+    }
+
+    .btn-create {
+        background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+        color: #ffffff;
+    }
+
+    .card-glass {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(229, 231, 235, 0.5);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .search-input {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.6rem 1rem;
+        font-size: 0.95rem;
+        width: 300px;
+        transition: all 0.2s;
+    }
+
+    .search-input:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        outline: none;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .custom-table th {
+        background-color: #f9fafb;
+        color: #4b5563;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .custom-table td {
+        padding: 1.2rem 1.5rem;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 0.95rem;
+        color: #374151;
+    }
+
+    .custom-table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+    .custom-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .badge-voucher {
+        background-color: #e0e7ff;
+        color: #4338ca;
+        font-weight: 600;
+        padding: 0.25rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+
+    .badge-qty {
+        font-weight: 600;
+        color: #10b981;
+    }
+
+    .badge-wastage {
+        color: #ef4444;
+        font-weight: 500;
+    }
+
+    .btn-action-print {
+        color: #4f46e5;
+        border: 1px solid #4f46e5;
+        background: transparent;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .btn-action-print:hover {
+        background: #4f46e5;
+        color: #ffffff;
+    }
+
+    .pagination-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.5rem;
+    }
+
+    .pagination-btn {
+        background-color: #ffffff;
+        border: 1px solid #e5e7eb;
+        color: #374151;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .pagination-btn:hover:not(.disabled) {
+        border-color: #4f46e5;
+        color: #4f46e5;
+    }
+
+    .pagination-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+</style>
+
+<div class="page-container">
+    <div class="header-section">
+        <div>
+            <h1 class="page-title">Stock Conversion Transactions</h1>
+            <p class="text-muted mb-0" style="font-size: 0.9rem;">Process bulk item stock splits and track repackage history.</p>
+        </div>
+        <a href="@Url.Action("Create")" class="btn-create">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            New Stock Split
+        </a>
+    </div>
+
+    <div class="card-glass">
+        <form method="get" action="@Url.Action("Index")" class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+            <div class="position-relative">
+                <input type="text" name="search" value="@ViewBag.Search" placeholder="Search Voucher, Item Name..." class="search-input" />
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm" style="border-radius: 8px; padding: 0.6rem 1.2rem; font-weight: 600;">Apply Filters</button>
+        </form>
+
+        <div class="table-container">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Voucher No</th>
+                        <th>Transaction Date</th>
+                        <th>Bulk Item Source</th>
+                        <th>Bulk Qty Used</th>
+                        <th>Retail/Repacked Item</th>
+                        <th>Retail Qty Produced</th>
+                        <th>Wastage/Loss</th>
+                        <th>Remarks</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="badge-voucher">@item.VoucherNo</span>
+                                </td>
+                                <td>@item.TransactionDate.ToString("dd-MMM-yyyy hh:mm tt")</td>
+                                <td>
+                                    <div style="font-weight: 600; color: #111827;">@(item.BulkItem?.Name ?? "Unknown Item")</div>
+                                    <div style="font-size: 0.8rem; color: #6b7280;">Code: @(item.BulkItem?.Code ?? "N/A")</div>
+                                </td>
+                                <td>
+                                    <span class="badge-wastage">-@item.BulkQty.ToString("0.####")</span>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; color: #111827;">@(item.RetailItem?.Name ?? "Unknown Item")</div>
+                                    <div style="font-size: 0.8rem; color: #6b7280;">Code: @(item.RetailItem?.Code ?? "N/A")</div>
+                                </td>
+                                <td>
+                                    <span class="badge-qty">+@item.RetailQty.ToString("0.####")</span>
+                                </td>
+                                <td>
+                                    @if (item.WastageQty > 0)
+                                    {
+                                        <span class="badge-wastage">@item.WastageQty.ToString("0.####")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@item.Remarks</td>
+                                <td>
+                                    <a href="@Url.Action("PrintStickers", new { id = item.Id })" class="btn-action-print">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        Sticker Labels
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <div style="font-size: 1.2rem; font-weight: 500;">No transactions found</div>
+                                <div style="font-size: 0.85rem;">Click "New Stock Split" to record a de-bulking session.</div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-wrapper">
+            <span class="text-muted" style="font-size: 0.9rem;">Page @ViewBag.CurrentPage of @ViewBag.TotalPages</span>
+            <div class="d-flex gap-2">
+                <a href="@Url.Action("Index", new { search = ViewBag.Search, page = ViewBag.CurrentPage - 1 })" 
+                   class="pagination-btn @(ViewBag.CurrentPage <= 1 ? "disabled" : "")">Previous</a>
+                <a href="@Url.Action("Index", new { search = ViewBag.Search, page = ViewBag.CurrentPage + 1 })" 
+                   class="pagination-btn @(ViewBag.CurrentPage >= ViewBag.TotalPages ? "disabled" : "")">Next</a>
+            </div>
+        </div>
+    </div>
+</div>

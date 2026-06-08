@@ -1,4 +1,4 @@
-﻿using EasyBill.Models.Entity;
+using EasyBill.Models.Entity;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System;
 using System.Collections.Generic;
@@ -57,6 +57,7 @@ namespace EasyBill.Models.ViewModels
         // Add this property for SalesOrder relationship
         public int? SalesOrderId { get; set; }
         public int? OfferId { get; set; }
+        public int RedeemPoints { get; set; }
         public string? billingType { get; set; }
         public string? PaymentType { get; set; }
         public int HoldId { get; set; }        // Resume ke time use hoga

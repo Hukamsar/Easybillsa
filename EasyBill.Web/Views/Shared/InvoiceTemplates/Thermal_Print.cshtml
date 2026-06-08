@@ -150,10 +150,27 @@
 
     var totalDiscount = (Model?.Totaldiscount ?? 0m) > 0 ? (Model?.Totaldiscount ?? 0m) : computedDiscount;
     var totalTax = (Model?.TotalGstAmt ?? 0m) > 0 ? (Model?.TotalGstAmt ?? 0m) : computedTax;
-    var grandTotal = Model?.TotalPayable ?? 0m;
-    if (grandTotal <= 0)
+
+    var loyaltyPayment = Model?.SalsePaymentDetails?.FirstOrDefault(x =>
+        x.Description != null &&
+        x.Description.Contains("Adjusted from loyalty points", StringComparison.OrdinalIgnoreCase));
+    decimal loyaltyDiscount = loyaltyPayment?.Amount ?? 0m;
+    string pointsUsedText = "";
+    if (loyaltyPayment != null && !string.IsNullOrEmpty(loyaltyPayment.Description))
     {
-        grandTotal = subTotal - totalDiscount + totalTax;
+        var desc = loyaltyPayment.Description;
+        var openBrace = desc.IndexOf('(');
+        var closeBrace = desc.IndexOf(')');
+        if (openBrace >= 0 && closeBrace > openBrace)
+        {
+            pointsUsedText = desc.Substring(openBrace + 1, closeBrace - openBrace - 1);
+        }
+    }
+
+    var grandTotal = (Model?.TotalPayable ?? 0m) - loyaltyDiscount;
+    if (grandTotal <= 0 && (Model?.TotalPayable ?? 0m) <= 0)
+    {
+        grandTotal = subTotal - totalDiscount + totalTax - loyaltyDiscount;
     }
     var cgst = totalTax > 0 ? Math.Round(totalTax / 2, 2) : 0m;
     var sgst = cgst;
@@ -260,6 +277,7 @@
         th {
             font-weight: 800;
             color: #111827;
+            text-align: left;
         }
 
         .col-item {
@@ -656,7 +674,38 @@
             {
                 <div class="summary-row"><span>GST</span><span>Rs @Money(totalTax)</span></div>
             }
+            @if (loyaltyDiscount > 0m)
+            {
+                <div class="summary-row"><span>Points Discount @(!string.IsNullOrEmpty(pointsUsedText) ? $"({pointsUsedText})" : "")</span><span>- Rs @Money(loyaltyDiscount)</span></div>
+            }
             <div class="summary-row total"><span>TOTAL</span><span>Rs @Money(grandTotal)</span></div>
+
+            @if (Model?.CustomerId.HasValue == true && (loyaltyDiscount > 0m || ViewBag.CustomerPointsBalance != null || ViewBag.PointsEarned != null || ViewBag.PointsRedeemed != null))
+            {
+                var earned = ViewBag.PointsEarned as int? ?? 0;
+                var redeemed = ViewBag.PointsRedeemed as int? ?? 0;
+                var balance = ViewBag.CustomerPointsBalance as int? ?? 0;
+
+                <div class="line" style="margin: 4px 0;"></div>
+                <div style="font-size: 10px; line-height: 1.3;">
+                    <div class="t-center" style="font-weight: 800; text-transform: uppercase; margin-bottom: 2px;">Loyalty Points Summary</div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Points Earned:</span>
+                        <span>+@earned</span>
+                    </div>
+                    @if (redeemed > 0)
+                    {
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Points Redeemed:</span>
+                            <span>-@redeemed</span>
+                        </div>
+                    }
+                    <div style="display: flex; justify-content: space-between; font-weight: 800;">
+                        <span>Rest Points:</span>
+                        <span>@balance</span>
+                    </div>
+                </div>
+            }
 
             @if (showTaxSummary && totalTax > 0)
             {

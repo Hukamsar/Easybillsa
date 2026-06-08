@@ -1,4 +1,4 @@
-﻿@using EasyBill.Models.ViewModels
+@using EasyBill.Models.ViewModels
 @model ItemMasterVM
 @{
     ViewData["Title"] = "Edit Item";
@@ -367,6 +367,34 @@
                                        class="form-control form-control-sm"
                                        readonly="@lockConversion"
                                        title="Item already sold. Conversion cannot be changed." />
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <label class="col-md-4 col-form-label text-start">Item Type</label>
+                            <div class="col-md-6">
+                                <select asp-for="ItemType" id="ddlItemType" class="form-control form-control-sm">
+                                    <option value="Standard">Standard</option>
+                                    <option value="Bulk">Bulk</option>
+                                    <option value="Repacked">Repacked/Retail Item</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2" id="divParentItem" style="display:none;">
+                            <label class="col-md-4 col-form-label text-start">Parent Bulk Item</label>
+                            <div class="col-md-6">
+                                <select asp-for="ParentItemId" asp-items="ViewBag.ParentItems" id="ddlParentItem" class="form-control form-control-sm">
+                                </select>
+                                <span asp-validation-for="ParentItemId" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2" id="divConversionFactor" style="display:none;">
+                            <label class="col-md-4 col-form-label text-start">Conversion Factor</label>
+                            <div class="col-md-6">
+                                <input asp-for="ConversionFactor" type="number" step="0.0001" id="txtConversionFactor" class="form-control form-control-sm" placeholder="e.g. 50" />
+                                <span asp-validation-for="ConversionFactor" class="text-danger"></span>
                             </div>
                         </div>
 
@@ -1556,6 +1584,21 @@
             });
         }
         $(document).ready(function () {
+            function toggleConversionFields() {
+                var itemType = $("#ddlItemType").val();
+                if (itemType === "Repacked") {
+                    $("#divParentItem").show();
+                    $("#divConversionFactor").show();
+                } else {
+                    $("#divParentItem").hide();
+                    $("#divConversionFactor").hide();
+                    $("#ddlParentItem").val("");
+                    $("#txtConversionFactor").val("");
+                }
+            }
+
+            $("#ddlItemType").on("change", toggleConversionFields);
+            toggleConversionFields();
 
             $("#ItemMasterForm").on("submit", function (e) {
                 e.preventDefault();

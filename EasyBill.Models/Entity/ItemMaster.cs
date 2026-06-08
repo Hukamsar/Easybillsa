@@ -53,6 +53,11 @@ namespace AOne.Models.Entity
         public bool ScheduleH { get; set; }
         public bool ScheduleH1 { get; set; }
         public string? Salt { get; set; }
+        public string? ItemType { get; set; } // Standard, Bulk, Repacked
+        public int? ParentItemId { get; set; }
+        [ForeignKey(nameof(ParentItemId))]
+        public ItemMaster? ParentItem { get; set; }
+        public decimal? ConversionFactor { get; set; }
         public ICollection<ItemImage> ItemImages { get; set; } = new List<ItemImage>();
     }
 }
