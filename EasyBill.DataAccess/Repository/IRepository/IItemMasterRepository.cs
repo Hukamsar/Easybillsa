@@ -33,5 +33,6 @@ namespace EasyBill.DataAccess.Repository.IRepository
         Task<List<OrderResponse>> GetOrdersByCustomer(int customerId);
 
         Task<ItemMaster> GetProductById(int Id);
+        Task<bool> IsReferenced(int id);
     }
 }

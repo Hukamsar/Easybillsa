@@ -563,6 +563,11 @@ namespace EasyBill.DataAccess.Repository
             var value = reader.ReadNullableInt32(columnName);
             return value.HasValue ? (TEnum?)Enum.ToObject(typeof(TEnum), value.Value) : null;
         }
+
+        public Task<bool> IsReferenced(int id)
+        {
+            return _unitofwork.IsRecordReferencedAsync<ItemMaster>(id);
+        }
     }
 }
 

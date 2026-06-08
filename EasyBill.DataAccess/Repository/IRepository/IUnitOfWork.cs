@@ -13,5 +13,6 @@ namespace AOne.DataAccess.Repository.IRepository
         void Save();
         Task SaveAsync();
         IRepository<T> GetRepository<T>() where T : class;
+        Task<bool> IsRecordReferencedAsync<T>(int id) where T : class;
     }
 }

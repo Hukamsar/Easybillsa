@@ -17,5 +17,6 @@ namespace EasyBill.DataAccess.Repository.IRepository
         Task Delete(ItemImage img);
         Task UpdateRange(List<ItemImage> images);
         Task DeleteByItemId(int itemMasterId);
+        Task<bool> IsReferenced(int id);
     }
 }
