@@ -1,0 +1,11 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/EasyBilling
+/.vs/EasyBillSuperAdmin
+/EasyBill.DataAccess/obj
+/EasyBill.Models/obj
+/EasyBill.Utilites/obj
+/EasyBill.Web/obj/Debug/net8.0
+/EasyBill.Web/obj

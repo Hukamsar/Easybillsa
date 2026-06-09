@@ -1,4 +1,5 @@
-﻿using AOne.DataAccess.Repository.IRepository;
+﻿using AOne.DataAccess.Repository;
+using AOne.DataAccess.Repository.IRepository;
 using AOne.Models.Entity;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
@@ -84,6 +85,10 @@ namespace EasyBill.DataAccess.Repository
         {
             var repo = _unitOfWork.GetRepository<ItemImage>();
             repo.DeleteWhere(x => x.ItemMasterId == itemMasterId);
+        }
+        public Task<bool> IsReferenced(int id)
+        {
+            return _unitOfWork.IsRecordReferencedAsync<ItemMaster>(id);
         }
     }
 }
