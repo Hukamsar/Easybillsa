@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.Data;
+using AOne.DataAccess.Data;
 using AOne.DataAccess.Repository.IRepository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.DataAccess.StoredProcedures;
@@ -137,7 +137,16 @@ namespace EasyBill.DataAccess.Repository
         /// <param name="mrp">The adjusted MRP.</param>
         /// <param name="qty">The absolute physical quantity to set in the database.</param>
         /// <param name="purchaseRate">The adjusted purchase rate.</param>
-        public async Task OverwriteStock(int stockId, string batch, DateTime? expiry, decimal mrp, decimal qty, decimal purchaseRate)
+        public async Task OverwriteStock(
+            int stockId,
+            string batch,
+            DateTime? expiry,
+            decimal mrp,
+            decimal qty,
+            decimal purchaseRate,
+            decimal? salesRateA = null,
+            decimal? salesRateB = null,
+            string? barcode = null) // MERGED FROM TL
         {
             batch = NormalizeBatch(batch);
 
@@ -149,6 +158,9 @@ namespace EasyBill.DataAccess.Repository
                 AddParameter(command, "@Mrp", mrp, DbType.Decimal);
                 AddParameter(command, "@Qty", qty, DbType.Decimal);
                 AddParameter(command, "@PurchaseRate", purchaseRate, DbType.Decimal);
+                AddParameter(command, "@SalesRateA", salesRateA, DbType.Decimal);
+                AddParameter(command, "@SalesRateB", salesRateB, DbType.Decimal);
+                AddParameter(command, "@Barcode", barcode);
 
                 AddFilterParameters(command);
                 AddParameter(command, "@Now", DateTime.Now, DbType.DateTime2);

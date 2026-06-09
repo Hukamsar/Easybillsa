@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.ProfileService;
+using AOne.DataAccess.ProfileService;
 using AOne.Models.Entity;
 using DocumentFormat.OpenXml.Drawing.Diagrams;
 using DocumentFormat.OpenXml.Presentation;
@@ -1575,6 +1575,17 @@ namespace EasyBill.UI.Controllers
                 if (id <= 0)
                     return Json(new { success = false, message = "Invalid Id for deletion." });
 
+                // MERGED FROM TL: Check references in other tables before deletion
+                bool isUsed = await _itemmasterrepository.IsReferenced(id);
+                if (isUsed)
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = "This record is used in another table. Cannot delete."
+                    });
+                }
+
                 var model = await _itemmasterrepository.GetByItemMasterId(id);
                 if (model == null)
                     return Json(new { success = false, message = "Item not found." });
@@ -2103,6 +2114,28 @@ namespace EasyBill.UI.Controllers
                 message = "HSN updated successfully!",
                 hsn = new { Id = existing.Id, HsnCode = existing.HsnCode }
             });
+        }
+
+        // MERGED FROM TL: Action to display and query soft-deleted items for restoration
+        public async Task<IActionResult> RestoreItem(string search = "", int page = 1, int pageSize = 10)
+        {
+            var allData = await _itemmasterrepository.GetAll();
+
+            // Filter
+            if (!string.IsNullOrEmpty(search))
+            {
+                allData = allData.Where(x => x.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || x.Code.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            // Pagination
+            int totalItems = allData.Count;
+            var paginatedData = allData.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+            ViewBag.Search = search;
+
+            return View(paginatedData);
         }
     }
 }

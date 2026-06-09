@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
@@ -17,8 +17,8 @@ namespace EasyBill.Models.ViewModels
         public string? ItemName { get; set; }
         public string? Batch { get; set; }
         public DateTime? ExpiryDate { get; set; }
-        public int FreeQty { get; set; }
-        public int Qty { get; set; }
+        public decimal FreeQty { get; set; } // MERGED FROM TL
+        public decimal Qty { get; set; } // MERGED FROM TL
         public string? Unit { get; set; }
         public decimal Rate { get; set; }
         public int? HsnId { get; set; }

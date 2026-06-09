@@ -1,0 +1,172 @@
+@using EasyBill.Models.ViewModels
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model List<LedgerDetailVM>
+
+@{
+    ViewData["Title"] = "Payment Details Report";
+
+    var customerList = ViewBag.CustomerList as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var supplierList = ViewBag.SupplierList as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+
+    var selectedPartyType = (ViewBag.PartyType as string ?? "customer").ToLowerInvariant();
+    var selectedEntryType = (ViewBag.EntryType as string ?? "all").ToLowerInvariant();
+    var selectedPartyName = ViewBag.SelectedPartyName as string ?? string.Empty;
+
+    int selectedPartyId = 0;
+    if (ViewBag.PartyId != null)
+    {
+        int.TryParse(ViewBag.PartyId.ToString(), out selectedPartyId);
+    }
+
+    decimal totalDebit = Model?.Sum(x => x.Debit) ?? 0;
+    decimal totalCredit = Model?.Sum(x => x.Credit) ?? 0;
+}
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: #fff !important;
+    }
+</style>
+
+<div class="card mb-3 shadow-sm">
+    <div class="card-header text-white py-2 d-flex align-items-center" style="background:#2b6ac9">
+        <span class="fw-bold">Payment / Collection Details Report</span>
+        @if (!string.IsNullOrWhiteSpace(selectedPartyName))
+        {
+            <span class="ms-auto fw-semibold">@selectedPartyName</span>
+        }
+    </div>
+</div>
+
+<div class="card shadow-sm p-3 mb-4">
+    <form method="get" asp-action="PaymentDetailsReport">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="fw-bold">Party Type</label>
+                <select name="partyType" id="partyType" class="form-control form-control-sm">
+                    <option value="customer" selected="@(selectedPartyType == "customer" ? "selected" : null)">Customer</option>
+                    <option value="supplier" selected="@(selectedPartyType == "supplier" ? "selected" : null)">Supplier</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="fw-bold">Entry Type</label>
+                <select name="entryType" id="entryType" class="form-control form-control-sm">
+                    <option value="all" selected="@(selectedEntryType == "all" ? "selected" : null)">All</option>
+                    <option value="payment" selected="@(selectedEntryType == "payment" ? "selected" : null)">Payment</option>
+                    <option value="collection" selected="@(selectedEntryType == "collection" ? "selected" : null)">Collection</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="fw-bold">Party</label>
+                <select name="partyId" id="partyId" class="form-control form-control-sm"></select>
+            </div>
+
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-sm w-100 text-white" style="background:#2b6ac9">
+                    Search
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<select id="customerSource" class="d-none">
+    <option value="">Select Customer</option>
+    @foreach (var customer in customerList)
+    {
+        <option value="@customer.Value">@customer.Text</option>
+    }
+</select>
+
+<select id="supplierSource" class="d-none">
+    <option value="">Select Supplier</option>
+    @foreach (var supplier in supplierList)
+    {
+        <option value="@supplier.Value">@supplier.Text</option>
+    }
+</select>
+
+<div class="card shadow-sm p-3">
+    <div class="table-responsive">
+        <table id="paymentDetailsTable" class="table table-bordered table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>Sr</th>
+                    <th>Date</th>
+                    <th>Particulars</th>
+                    <th>Type</th>
+                    <th class="text-end">Debit (Payment)</th>
+                    <th class="text-end">Credit (Collection)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td></td>
+                            <td>@item.Date.ToString("dd-MM-yyyy")</td>
+                            <td>@item.Particular</td>
+                            <td>@item.Type</td>
+                            <td class="text-end">@(item.Debit > 0 ? item.Debit.ToString("0.00") : "0.00")</td>
+                            <td class="text-end">@(item.Credit > 0 ? item.Credit.ToString("0.00") : "0.00")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+            <tfoot class="table-secondary fw-bold">
+                <tr>
+                    <td></td>
+                    <td colspan="3" class="text-end">TOTAL</td>
+                    <td class="text-end">@totalDebit.ToString("0.00")</td>
+                    <td class="text-end">@totalCredit.ToString("0.00")</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            const partyType = document.getElementById("partyType");
+            const partySelect = document.getElementById("partyId");
+            const selectedPartyId = "@selectedPartyId";
+
+            function loadPartyOptions(keepSelected) {
+                const sourceId = partyType.value === "supplier"
+                    ? "supplierSource"
+                    : "customerSource";
+
+                const source = document.getElementById(sourceId);
+                partySelect.innerHTML = source.innerHTML;
+
+                if (keepSelected && selectedPartyId) {
+                    partySelect.value = selectedPartyId;
+                }
+            }
+
+            loadPartyOptions(true);
+
+            partyType.addEventListener("change", function () {
+                loadPartyOptions(false);
+            });
+
+            const table = $("#paymentDetailsTable").DataTable({
+                "order": [[1, "desc"]],
+                "columnDefs": [{ "orderable": false, "targets": 0 }]
+            });
+
+            table.on("order.dt search.dt", function () {
+                table.column(0, { search: "applied", order: "applied" }).nodes()
+                    .each(function (cell, i) {
+                        cell.innerHTML = i + 1;
+                    });
+            }).draw();
+        });
+    </script>
+}

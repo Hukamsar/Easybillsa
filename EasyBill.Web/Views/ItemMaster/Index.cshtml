@@ -1,4 +1,4 @@
-﻿@using AOne.Models.Entity 
+@using AOne.Models.Entity 
  @model IEnumerable<ItemMaster>
 
 @{
@@ -51,6 +51,9 @@
             <th>Bar Code</th>
             <th>Category Name</th> 
             <th>Hsn</th>
+            <th>Gst</th>
+            <th>Unit</th>
+            <th>Packing</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -64,6 +67,9 @@
                 <td>@item.Barcode</td>
                 <td>@item.Category?.CategoryName</td> 
                 <td>@item.Hsn?.HsnCode</td>
+                <td>@item.Hsn?.IGST</td>
+                <td>@item.Unit1</td>
+                <td>@item.Packing</td>
                 <td>
                     <div class="btn-group" role="group" style="float:right">
                         @if (User.HasPermission(Permissions.ItemMaster.Edit))

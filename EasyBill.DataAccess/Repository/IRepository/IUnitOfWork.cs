@@ -1,4 +1,4 @@
-﻿using EasyBill.DataAccess.Repository.IRepository;
+using EasyBill.DataAccess.Repository.IRepository;
 using Microsoft.EntityFrameworkCore.Storage;
 using System;
 using System.Collections.Generic;
@@ -13,5 +13,6 @@ namespace AOne.DataAccess.Repository.IRepository
         void Save();
         Task SaveAsync();
         IRepository<T> GetRepository<T>() where T : class;
+        Task<bool> IsRecordReferencedAsync<T>(int id) where T : class; // MERGED FROM TL
     }
 }

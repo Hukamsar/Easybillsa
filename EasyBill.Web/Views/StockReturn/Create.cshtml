@@ -277,7 +277,7 @@
                 {
                     <label class="col-md-2 col-form-label small">Doctor Mobile No <i class="redColor">*</i></label>
                     <div class="col-md-2">
-                        <input type="text" asp-for="DoctorMobileNumber" class="form-control form-control-sm" id="doctorMobile" />
+                        <input type="text" asp-for="DoctorMobileNumber" class="form-control form-control-sm" id="doctorMobile" maxlength="10"/>
                     </div>
 
                     <label class="col-md-2 col-form-label small">Doctor <i class="redColor"></i></label>
@@ -435,6 +435,9 @@
         </div>
     </div>
 </form>
+
+<!-- New Customer Modal -->
+@await Html.PartialAsync("~/Views/Customer/_SalesCustomerModal.cshtml")
 
 <!-- Customer List Modal -->
 <div class="modal fade" id="customerListModal" tabindex="-1" aria-labelledby="customerListModalLabel" aria-hidden="true">
@@ -750,6 +753,7 @@
         let itemConversionMap = {};
 
         let isEnterNavigation = false;
+        let isCustomerModalOpen = false;
 
         // ==========================================================
         // 🔹 VALIDATION HELPERS (GLOBAL)
@@ -771,6 +775,14 @@
         function hidePhoneError() {
             $("#mobilenumber").removeClass("is-invalid");
             $("#phoneError").addClass("d-none");
+        }
+
+        function isValidCustomerName(name) {
+            if (!name) return false;
+            name = name.trim();
+            if (name.length < 3 || name.length > 150) return false;
+            const regex = /^(?!\s)(?!.*\s$).+$/;
+            return regex.test(name);
         }
 
         // ==========================================================
@@ -2853,6 +2865,41 @@
                 }
             });
 
+            $("#newCustomerMobile").on("input", function () {
+                let value = $(this).val().replace(/\D/g, '');
+                $(this).val(value);
+
+                if (!isValidIndianMobile(value)) {
+                    $(this).addClass("is-invalid");
+                    $(".field-error[data-field='PhoneNo']")
+                        .text("Enter valid mobile number")
+                        .removeClass("d-none");
+                } else {
+                    $(this).removeClass("is-invalid");
+                    $(".field-error[data-field='PhoneNo']").addClass("d-none");
+                }
+            });
+
+            $("#newCustomerMobile").on("keypress", function (e) {
+                if (this.value.length >= 10) e.preventDefault();
+            });
+
+            $("#newCustomerMobile").on("paste", function (e) {
+                let pastedData = e.originalEvent.clipboardData.getData('text');
+                let digitsOnly = pastedData.replace(/\D/g, '');
+                if ((this.value.length + digitsOnly.length) > 10) {
+                    e.preventDefault();
+                }
+            });
+
+            $(document).on("input", "input[name='Name']", function () {
+                const value = $(this).val();
+                if (isValidCustomerName(value)) {
+                    $(this).removeClass("is-invalid");
+                    $(".field-error[data-field='Name']").addClass("d-none").text("");
+                }
+            });
+
             $(document).on("keydown", "#mobilenumber", function (e) {
                 if (e.key === "Enter") {
                     e.preventDefault();
@@ -2901,6 +2948,230 @@
 
                 proceedCustomerSearch(mobileNo);
                 previousMobile = mobileNo;
+            });
+
+            $('#newCustomerForm').submit(function (e) {
+                e.preventDefault();
+
+                const customerName = $('#newCustomerForm input[name="Name"]').val().trim();
+                const customerMobileNo = $('#newCustomerForm input[name="CustomerMobileNo"]').val().trim();
+                const accountGroupId = $('#newCustomerForm [name="AccountGroupId"]').val();
+                const stateCode = $('#StateCodeHidden').val();
+                const category = $('#newCustomerForm [name="Category"]').val();
+
+                if (!isValidCustomerName(customerName)) {
+                    $('#newCustomerForm input[name="Name"]').addClass("is-invalid").focus();
+                    $(".field-error[data-field='Name']")
+                        .text("Customer Name must be at least 3 characters and valid.")
+                        .removeClass("d-none");
+                    return;
+                }
+
+                if (!isValidIndianMobile(customerMobileNo)) {
+                    $('#newCustomerMobile').addClass("is-invalid").focus();
+                    $(".field-error[data-field='PhoneNo']")
+                        .text("Enter a valid 10-digit mobile number")
+                        .removeClass("d-none");
+                    return;
+                }
+
+                const customerData = {
+                    Name: customerName,
+                    PhoneNo: customerMobileNo,
+                    Address: $('#newCustomerForm [name="Address"]').val(),
+                    Email: $('#newCustomerForm [name="Email"]').val(),
+                    PaymentDays: parseInt($('#newCustomerForm [name="PaymentDays"]').val() || "0"),
+                    Status: parseInt($('#newCustomerForm [name="Status"]').val() || "1"),
+                    AccountGroupId: accountGroupId ? parseInt(accountGroupId) : null,
+                    GSTNo: $('#newCustomerForm [name="GSTNo"]').val(),
+                    StateCode: stateCode ? parseInt(stateCode) : null,
+                    GSTType: parseInt($('#GSTTypeHidden').val() || "2"),
+                    Category: category ? parseInt(category) : null
+                };
+
+                showLoader("Creating customer...");
+
+                $.ajax({
+                    url: '/Sales/CreateCustomer',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(customerData),
+                    success: function (res) {
+                        hideLoader();
+
+                        if (res.success) {
+                            const createdCustomerId = res.data.id || res.data.Id;
+                            const createdCustomerName = res.data.name || res.data.Name || customerData.Name;
+                            const createdPhoneNo = res.data.phoneNo || res.data.PhoneNo || customerData.PhoneNo;
+                            const createdAddress = res.data.address || res.data.Address || customerData.Address;
+
+                            $("#billingType").val("registered");
+                            $("#mobilenumber, #customer, #customeraddress").prop("disabled", false);
+                            $('#mobilenumber').val(createdPhoneNo);
+                            $('#CustomerId').val(createdCustomerId);
+                            $('#customer').val(createdCustomerName);
+                            $('#customeraddress').val(createdAddress);
+
+                            selectedCustomerId = createdCustomerId;
+                            previousMobile = createdPhoneNo;
+
+                            loadReturnedQtyData(createdCustomerId);
+                            fetchItemsByCustomerId(createdCustomerId);
+                            hidePhoneError();
+
+                            $('#createCustomerModal').modal('hide');
+                            toastr.success("Customer created and auto-filled.");
+                            setTimeout(function () {
+                                $('#customeraddress').focus();
+                            }, 300);
+                        } else {
+                            toastr.error("Customer not created.");
+                        }
+                    },
+                    error: function (xhr) {
+                        hideLoader();
+
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.errors) {
+                                Object.keys(xhr.responseJSON.errors).forEach(key => {
+                                    $(`.field-error[data-field="${key}"]`)
+                                        .text(xhr.responseJSON.errors[key][0])
+                                        .removeClass("d-none");
+                                });
+                            } else if (xhr.responseJSON.message) {
+                                toastr.error(xhr.responseJSON.message);
+                            }
+                        } else {
+                            toastr.error("Something went wrong.");
+                        }
+                    }
+                });
+            });
+
+            $('#createCustomerModal').on('shown.bs.modal', function () {
+                isCustomerModalOpen = true;
+                $(this).find("input[name='Name']").focus();
+            });
+
+            $('#createCustomerModal').on('hidden.bs.modal', function () {
+                isCustomerModalOpen = false;
+            });
+
+            $(document).on("keydown", ".modal-body input", function (e) {
+                if (!isCustomerModalOpen) return;
+                if (!$("#createCustomerModal").hasClass("show")) return;
+                if (e.key !== "Enter") return;
+
+                e.preventDefault();
+
+                const $current = $(this);
+                const currentId = $current.attr("id");
+                const currentName = $current.attr("name");
+                const value = $current.val();
+
+                if (currentName === "Name") {
+                    if (!isValidCustomerName(value)) {
+                        $current.addClass("is-invalid");
+                        $(".field-error[data-field='Name']")
+                            .text("Customer Name must be at least 3 characters and valid.")
+                            .removeClass("d-none");
+                        $current.focus();
+                        return;
+                    } else {
+                        $current.removeClass("is-invalid");
+                        $(".field-error[data-field='Name']").addClass("d-none").text("");
+                    }
+                }
+
+                if (currentId === "newCustomerMobile") {
+                    if (!isValidIndianMobile(value)) {
+                        $current.addClass("is-invalid");
+                        $(".field-error[data-field='PhoneNo']")
+                            .text("Enter a valid 10-digit mobile number")
+                            .removeClass("d-none");
+                        $current.focus();
+                        return;
+                    } else {
+                        $current.removeClass("is-invalid");
+                        $(".field-error[data-field='PhoneNo']").addClass("d-none").text("");
+                    }
+                }
+
+                let inputs = $current
+                    .closest(".modal-body")
+                    .find("input:visible:not([readonly]):not([disabled])");
+
+                let index = inputs.index(this);
+
+                if (index === inputs.length - 1) {
+                    $("#newCustomerForm").trigger("submit");
+                    return;
+                }
+
+                inputs.eq(index + 1).focus();
+            });
+
+            $("#btnF2AccGrp").click(() => openAccGrpModal("new"));
+            $("#btnF3AccGrp").click(() => openAccGrpModal("edit"));
+
+            function openAccGrpModal(mode) {
+                $("#accGrpError").text("");
+                if (mode === "new") {
+                    $("#modalAccGrpId").val(0);
+                    $("#modalAccGrpName").val("");
+                    $("#modalAccGrpParentId").val("");
+                    $("#modalAccGrpActive").prop("checked", true);
+                    $("#accGrpModalTitle").text("Add Account Group");
+                } else {
+                    let id = $("#AccountGroupId").val();
+                    let text = $("#AccountGroupId option:selected").text();
+                    if (!id) { Swal.fire("Error", "Select Account Group first!", "error"); return; }
+                    $("#modalAccGrpId").val(id);
+                    $("#modalAccGrpName").val(text);
+                    $.get('/Customer/GetAccountGroups', function (data) {
+                        let item = data.find(x => x.value == id);
+                        if (item) {
+                            $("#modalAccGrpParentId").val(item.parentId || "");
+                            $("#modalAccGrpActive").prop("checked", item.isActive === true);
+                        }
+                    });
+                    $("#accGrpModalTitle").text("Modify Account Group");
+                }
+                $("#accGrpModal").modal("show");
+                setTimeout(() => { $("#modalAccGrpName").focus(); }, 200);
+            }
+            window.openAccGrpModal = openAccGrpModal;
+
+            $("#btnSaveAccGrp").click(function () {
+                let id = $("#modalAccGrpId").val();
+                let name = $("#modalAccGrpName").val().trim();
+                let parentId = $("#modalAccGrpParentId").val();
+                let isActive = $("#modalAccGrpActive").is(":checked");
+                if (!name) { $("#accGrpError").text("Name required!"); return; }
+
+                $.post('/Customer/QuickSaveAccountGroup', { id: id, name: name, parentId: parentId, isActive: isActive }, function (res) {
+                    if (res.success) {
+                        $("#accGrpModal").modal('hide');
+                        $.get('/Customer/GetAccountGroups', function (data) {
+                            let ddl = $("#AccountGroupId");
+                            ddl.empty();
+                            ddl.append('<option value="">-- Select Group --</option>');
+                            $.each(data, function (i, item) {
+                                let opt = $('<option>', { value: item.value, text: item.text });
+                                opt.attr('data-parentid', item.parentId || '');
+                                opt.attr('data-isactive', item.isActive);
+                                if (item.value == res.newId) opt.attr('selected', 'selected');
+                                ddl.append(opt);
+                            });
+                        });
+                    } else {
+                        $("#accGrpError").text(res.message);
+                    }
+                });
+            });
+
+            $("#modalAccGrpName").keypress(function (e) {
+                if (e.which === 13) { e.preventDefault(); $("#btnSaveAccGrp").click(); }
             });
 
             // ================================================================
@@ -3983,12 +4254,30 @@
                         $('#customer').val("");
                         $('#customeraddress').val("");
 
-                        toastr.error("Customer not found! Please enter a registered customer's mobile number.");
-
-                        // FOCUS BACK TO MOBILE
-                        setTimeout(() => {
-                            $("#mobilenumber").focus().select();
-                        }, 100);
+                        Swal.fire({
+                            title: 'Customer Not Found',
+                            text: 'Do you want to create a new customer?',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'Yes, Create',
+                            cancelButtonText: 'No',
+                            confirmButtonColor: '#198754',
+                            cancelButtonColor: '#dc3545',
+                            reverseButtons: true,
+                            allowEnterKey: true,
+                            focusConfirm: true,
+                            didOpen: () => {
+                                const confirmBtn = document.querySelector('.swal2-confirm');
+                                if (confirmBtn) confirmBtn.focus();
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                setTimeout(() => {
+                                    $('#createCustomerModal').modal('show');
+                                    $('#newCustomerMobile').val(mobileNo);
+                                }, 0);
+                            }
+                        });
                     }
                 },
                 error: function () {

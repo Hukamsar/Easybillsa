@@ -6,6 +6,7 @@ using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using EasyBill.Models.ViewModels;
 using EasyBill.UI.Service.Whatsapp;
+using EasyBill.UI.Service.Sms;
 using iText.Html2pdf;
 using iText.IO.Font.Constants;
 using iText.Kernel.Colors;
@@ -60,6 +61,7 @@ namespace EasyBill.UI.Controllers
         private readonly ICustomerAdvanceRepository _customerAdvanceRepo;
         private readonly ISupplierAdvanceRepository _supplierAdvanceRepo;
         private readonly WhatsAppService _whatsappservice;
+        private readonly SmsService _smsService;
         private readonly IRazorViewEngine _viewEngine;
         private readonly CustomerLoyaltyService _loyaltyService;
 
@@ -90,6 +92,7 @@ namespace EasyBill.UI.Controllers
             ICustomerAdvanceRepository customerAdvanceRepo,
             ISupplierAdvanceRepository supplierAdvanceRepo,
             WhatsAppService whatsappservice,
+            SmsService smsService,
             IRazorViewEngine viewEngine,
             CustomerLoyaltyService loyaltyService)
         {
@@ -119,6 +122,7 @@ namespace EasyBill.UI.Controllers
             _customerAdvanceRepo = customerAdvanceRepo;
             _supplierAdvanceRepo = supplierAdvanceRepo;
             _whatsappservice = whatsappservice;
+            _smsService = smsService;
             _viewEngine = viewEngine;
             _loyaltyService = loyaltyService;
         }
@@ -356,96 +360,11 @@ namespace EasyBill.UI.Controllers
 
                     if (isShare)
                     {
-                        var tenantId = User?.FindFirst("TenantId")?.Value;
-                        var tenant = !string.IsNullOrWhiteSpace(tenantId)
-                            ? await _tenantRepository.GetById(tenantId)
-                            : null;
-
-                        var whatsappCharge = tenant == null
-                            ? 0m
-                            : decimal.Round(Math.Max(tenant.WhatsAppMessageCharge, 0m), 2, MidpointRounding.AwayFromZero);
-
-                        var destinationMobileNo = await ResolveWhatsAppMobileNoAsync(model.MobileNo, model.CustomerId);
-
-                        if (string.IsNullOrWhiteSpace(destinationMobileNo))
-                        {
-                            walletMessage = "WhatsApp not sent. Customer mobile number not available.";
-                        }
-                        else if (tenant != null && !tenant.IsWalletActive)
-                        {
-                            walletMessage = "WhatsApp not sent because wallet is inactive.";
-                        }
-                        else if (tenant != null && !tenant.IsWhatsAppChargeActive)
-                        {
-                            walletMessage = "WhatsApp sending is disabled.";
-                        }
-                        else if (tenant != null && whatsappCharge > 0m && tenant.WalletBalance < whatsappCharge)
-                        {
-                            walletMessage = "WhatsApp not sent due to low wallet balance.";
-                        }
-                        else
-                        {
-                            string pdfFileName = await GenerateInvoicePdf(createdSale.Id);
-                            string baseUrl = $"{Request.Scheme}://{Request.Host}";
-                            string pdfUrl = $"{baseUrl}/Invoices/{pdfFileName}";
-                            //string message = "Dear";
-                            string customerName = "Customer";
-
-                            if (model.CustomerId.HasValue)
-                            {
-                                var customer = await _customerservice.GetById(model.CustomerId.Value);
-
-                                if (customer != null && !string.IsNullOrWhiteSpace(customer.Name))
-                                {
-                                    customerName = customer.Name;
-                                }
-                            }
-
-
-                            string message = $"Dear {customerName}," +
-                                             $"Your invoice {createdSale.BillNo} is attached." +
-                                             $"Thank you!";
-                            var sendResult = await _whatsappservice.SendWhatsAppMessageWithStatusAsync(
-                                destinationMobileNo,
-                                message,
-                                pdfUrl);
-
-                            if (!sendResult.IsSuccess)
-                            {
-                                walletMessage = sendResult.Message;
-                            }
-                            else
-                            {
-                                ScheduleGeneratedInvoiceDeletion(pdfFileName);
-                                walletMessage = "WhatsApp sent successfully.";
-
-                                if (tenant != null && whatsappCharge > 0m)
-                                {
-                                    try
-                                    {
-                                        tenant.WalletBalance = decimal.Round(
-                                            Math.Max(tenant.WalletBalance - whatsappCharge, 0m),
-                                            2,
-                                            MidpointRounding.AwayFromZero);
-
-                                        await _tenantRepository.Update(tenant);
-                                        await LogTenantWalletHistoryAsync(
-                                            tenant.Id,
-                                            whatsappCharge,
-                                            paymentMode: "Auto",
-                                            referenceNo: createdSale.BillNo,
-                                            remarks: "WhatsApp share charge deducted.",
-                                            closingBalance: tenant.WalletBalance,
-                                            referenceSaleId: createdSale.Id);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        walletMessage =
-                                            $"WhatsApp sent successfully, but wallet update/history failed. Error: {ex.Message}"; 
-                                    }
-                                }
-                            }
-                        }
+                        walletMessage = await ShareInvoiceViaWhatsAppAndSmsAsync(
+                            createdSale.Id,
+                            createdSale.BillNo ?? model.BillNo ?? string.Empty,
+                            model.MobileNo,
+                            model.CustomerId);
                     }
 
                     return Json(new
@@ -485,11 +404,184 @@ namespace EasyBill.UI.Controllers
             return customer.PhoneNo.Trim();
         }
 
+        // MERGED FROM TL: Invoice sharing via WhatsApp and SMS
+        private async Task<string?> ShareInvoiceViaWhatsAppAndSmsAsync(
+            int saleId,
+            string billNo,
+            string? saleMobileNo,
+            int? customerId)
+        {
+            var tenantId = User?.FindFirst("TenantId")?.Value;
+            var tenant = !string.IsNullOrWhiteSpace(tenantId)
+                ? await _tenantRepository.GetById(tenantId)
+                : null;
+
+            var destinationMobileNo = await ResolveWhatsAppMobileNoAsync(saleMobileNo, customerId);
+            if (string.IsNullOrWhiteSpace(destinationMobileNo))
+            {
+                return "WhatsApp/SMS not sent. Customer mobile number not available.";
+            }
+
+            if (tenant != null && !tenant.IsWalletActive)
+            {
+                return "WhatsApp/SMS not sent because wallet is inactive.";
+            }
+
+            var messages = new List<string>();
+            string pdfFileName = await GenerateInvoicePdf(saleId);
+            string baseUrl = $"{Request.Scheme}://{Request.Host}";
+            string pdfUrl = $"{baseUrl}/Invoices/{pdfFileName}";
+            string customerName = await ResolveCustomerNameAsync(customerId);
+
+            var whatsappCharge = tenant == null
+                ? 0m
+                : decimal.Round(Math.Max(tenant.WhatsAppMessageCharge, 0m), 2, MidpointRounding.AwayFromZero);
+
+            if (tenant != null && !tenant.IsWhatsAppChargeActive)
+            {
+                messages.Add("WhatsApp sending is disabled.");
+            }
+            else if (tenant != null && whatsappCharge > 0m && tenant.WalletBalance < whatsappCharge)
+            {
+                messages.Add("WhatsApp not sent due to low wallet balance.");
+            }
+            else
+            {
+                string whatsappMessage = $"Dear {customerName},Your invoice {billNo} is attached.Thank you!";
+                var whatsAppResult = await _whatsappservice.SendWhatsAppMessageWithStatusAsync(
+                    destinationMobileNo,
+                    whatsappMessage,
+                    pdfUrl);
+
+                if (!whatsAppResult.IsSuccess)
+                {
+                    messages.Add(whatsAppResult.Message);
+                }
+                else
+                {
+                    messages.Add("WhatsApp sent successfully.");
+
+                    if (tenant != null && whatsappCharge > 0m)
+                    {
+                        var chargeError = await DeductShareChargeAsync(
+                            tenant,
+                            whatsappCharge,
+                            billNo,
+                            saleId,
+                            serviceType: "WhatsApp",
+                            remarks: "WhatsApp share charge deducted.",
+                            successPrefix: "WhatsApp");
+                        if (!string.IsNullOrWhiteSpace(chargeError))
+                        {
+                            messages.Add(chargeError);
+                        }
+                    }
+                }
+            }
+
+            //var smsCharge = tenant == null
+            //    ? 0m
+            //    : decimal.Round(Math.Max(tenant.SmsMessageCharge, 0m), 2, MidpointRounding.AwayFromZero);
+
+            //if (tenant != null && !tenant.IsSmsChargeActive)
+            //{
+            //    messages.Add("SMS sending is disabled.");
+            //}
+            //else if (tenant != null && smsCharge > 0m && tenant.WalletBalance < smsCharge)
+            //{
+            //    messages.Add("SMS not sent due to low wallet balance.");
+            //}
+            //else
+            //{
+            //    string smsMessage = $"Dear {customerName}, your invoice {billNo} is ready. View link: {pdfUrl}";
+            //    var smsResult = await _smsService.SendSmsAsync(destinationMobileNo, smsMessage);
+
+            //    if (!smsResult.IsSuccess)
+            //    {
+            //        messages.Add(smsResult.Message);
+            //    }
+            //    else
+            //    {
+            //        messages.Add("SMS sent successfully.");
+
+            //        if (tenant != null && smsCharge > 0m)
+            //        {
+            //            var chargeError = await DeductShareChargeAsync(
+            //                tenant,
+            //                smsCharge,
+            //                billNo,
+            //                saleId,
+            //                serviceType: "SMS",
+            //                remarks: "SMS share charge deducted.",
+            //                successPrefix: "SMS");
+            //            if (!string.IsNullOrWhiteSpace(chargeError))
+            //            {
+            //                messages.Add(chargeError);
+            //            }
+            //        }
+            //    }
+            //}
+
+            ScheduleGeneratedInvoiceDeletion(pdfFileName);
+            return messages.Count > 0 ? string.Join(" ", messages) : null;
+        }
+
+        private async Task<string> ResolveCustomerNameAsync(int? customerId)
+        {
+            if (!customerId.HasValue || customerId.Value <= 0)
+            {
+                return "Customer";
+            }
+
+            var customer = await _customerservice.GetById(customerId.Value);
+            if (customer == null || string.IsNullOrWhiteSpace(customer.Name))
+            {
+                return "Customer";
+            }
+
+            return customer.Name.Trim();
+        }
+
+        private async Task<string?> DeductShareChargeAsync(
+            Tenant registration, // Matches TL's Tenant parameter
+            decimal charge,
+            string billNo,
+            int saleId,
+            string serviceType,
+            string remarks,
+            string successPrefix)
+        {
+            try
+            {
+                registration.WalletBalance = decimal.Round(
+                    Math.Max(registration.WalletBalance - charge, 0m),
+                    2,
+                    MidpointRounding.AwayFromZero);
+
+                await _tenantRepository.Update(registration);
+                await LogTenantWalletHistoryAsync(
+                    registration.Id,
+                    charge,
+                    paymentMode: "Auto",
+                    referenceNo: billNo,
+                    serviceType: serviceType,
+                    remarks: remarks,
+                    closingBalance: registration.WalletBalance,
+                    referenceSaleId: saleId);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return $"{successPrefix} sent successfully, but wallet update/history failed. Error: {ex.Message}";
+            }
+        }
+
         private async Task LogTenantWalletHistoryAsync(
             string tenantId,
             decimal amount,
             string paymentMode,
             string? referenceNo,
+            string serviceType,
             string? remarks,
             decimal closingBalance,
             int? referenceSaleId)
@@ -509,7 +601,7 @@ namespace EasyBill.UI.Controllers
                 PaymentMode = paymentMode,
                 ReferenceNo = string.IsNullOrWhiteSpace(referenceNo) ? null : referenceNo.Trim(),
                 ReferenceSaleId = referenceSaleId,
-                ServiceType = "WhatsApp",
+                ServiceType = string.IsNullOrWhiteSpace(serviceType) ? "WhatsApp" : serviceType.Trim(),
                 ServiceCharge = decimal.Round(Math.Max(amount, 0m), 2, MidpointRounding.AwayFromZero),
                 Remarks = string.IsNullOrWhiteSpace(remarks) ? null : remarks.Trim(),
                 ClosingBalance = decimal.Round(Math.Max(closingBalance, 0m), 2, MidpointRounding.AwayFromZero)
@@ -851,7 +943,7 @@ namespace EasyBill.UI.Controllers
                             item.Qty, // 🔥 reverse (add back)
                             item.Expirydate,
                             item.Mrp,
-                            item.Rate
+                            item.StripRate
                         );
                     model.SalesItems.Remove(item);
                 }
@@ -861,15 +953,6 @@ namespace EasyBill.UI.Controllers
                 {
                     // GET ITEM MASTER FOR CONVERSION
                     var itemMaster = itemMasters.FirstOrDefault(i => i.Id == item.ItemMasterId);
-
-                    //// CALCULATE FINAL QTY (SAME LOGIC AS CREATE)
-                    //decimal finalQty = item.Qty;
-                    //if (isTabletWise && itemMaster != null && itemMaster.Conversion > 0)
-                    //{
-                    //    // Convert: (Strips × Conversion) + Tablets = Total Tablets
-                    //    finalQty = (item.Qty * itemMaster.Conversion) + item.TabletQty;
-                    //}
-
 
                     // CALCULATE FINAL QTY (STRIP-BASED, SAME AS CREATE)
                     decimal finalQty = item.Qty;
@@ -894,7 +977,7 @@ namespace EasyBill.UI.Controllers
                                 oldQty,
                                 existingItem.Expirydate,
                                 existingItem.Mrp,
-                                existingItem.Rate
+                                existingItem.StripRate
                             );
 
                             // 🟢 Step 2: new stock minus karo
@@ -904,7 +987,7 @@ namespace EasyBill.UI.Controllers
                                 -newQty,
                                 item.Expirydate,
                                 item.Mrp,
-                                item.Rate
+                                item.StripRate
                             );
 
                             existingItem.ItemMasterId = item.ItemMasterId;
@@ -930,7 +1013,7 @@ namespace EasyBill.UI.Controllers
                             -finalQty, // 🔥 minus
                             item.Expirydate,
                             item.Mrp,
-                            item.Rate
+                            item.StripRate
                         );
                         model.SalesItems.Add(new SalesItem
                         {
@@ -1010,94 +1093,11 @@ namespace EasyBill.UI.Controllers
 
                 if (isShare)
                 {
-                    var tenantId = User?.FindFirst("TenantId")?.Value;
-                    var tenant = !string.IsNullOrWhiteSpace(tenantId)
-                        ? await _tenantRepository.GetById(tenantId)
-                        : null;
-
-                    var whatsappCharge = tenant == null
-                        ? 0m
-                        : decimal.Round(Math.Max(tenant.WhatsAppMessageCharge, 0m), 2, MidpointRounding.AwayFromZero);
-
-                    var destinationMobileNo = await ResolveWhatsAppMobileNoAsync(model.MobileNo, model.CustomerId);
-
-                    if (string.IsNullOrWhiteSpace(destinationMobileNo))
-                    {
-                        walletMessage = "WhatsApp not sent. Customer mobile number not available.";
-                    }
-                    else if (tenant != null && !tenant.IsWalletActive)
-                    {
-                        walletMessage = "WhatsApp not sent because wallet is inactive.";
-                    }
-                    else if (tenant != null && !tenant.IsWhatsAppChargeActive)
-                    {
-                        walletMessage = "WhatsApp sending is disabled.";
-                    }
-                    else if (tenant != null && whatsappCharge > 0m && tenant.WalletBalance < whatsappCharge)
-                    {
-                        walletMessage = "WhatsApp not sent due to low wallet balance.";
-                    }
-                    else
-                    {
-                        string pdfFileName = await GenerateInvoicePdf(model.Id);
-                        string baseUrl = $"{Request.Scheme}://{Request.Host}";
-                        string pdfUrl = $"{baseUrl}/Invoices/{pdfFileName}";
-
-                        string customerName = "Customer";
-                        if (model.CustomerId.HasValue)
-                        {
-                            var customer = await _customerservice.GetById(model.CustomerId.Value);
-
-                            if (customer != null && !string.IsNullOrWhiteSpace(customer.Name))
-                            {
-                                customerName = customer.Name;
-                            }
-                        }
-
-                        string message = $"Dear {customerName}," +
-                                         $"Your invoice {model.BillNo} is attached." +
-                                         $"Thank you!";
-                        var sendResult = await _whatsappservice.SendWhatsAppMessageWithStatusAsync(
-                            destinationMobileNo,
-                            message,
-                            pdfUrl);
-
-                        if (!sendResult.IsSuccess)
-                        {
-                            walletMessage = sendResult.Message;
-                        }
-                        else
-                        {
-                            ScheduleGeneratedInvoiceDeletion(pdfFileName);
-                            walletMessage = "WhatsApp sent successfully.";
-
-                            if (tenant != null && whatsappCharge > 0m)
-                            {
-                                try
-                                {
-                                    tenant.WalletBalance = decimal.Round(
-                                        Math.Max(tenant.WalletBalance - whatsappCharge, 0m),
-                                        2,
-                                        MidpointRounding.AwayFromZero);
-
-                                    await _tenantRepository.Update(tenant);
-                                    await LogTenantWalletHistoryAsync(
-                                        tenant.Id,
-                                        whatsappCharge,
-                                        paymentMode: "Auto",
-                                        referenceNo: model.BillNo,
-                                        remarks: "WhatsApp share charge deducted.",
-                                        closingBalance: tenant.WalletBalance,
-                                        referenceSaleId: model.Id);
-                                }
-                                catch (Exception ex)
-                                {
-                                    walletMessage =
-                                        $"WhatsApp sent successfully, but wallet update/history failed. Error: {ex.Message}";
-                                }
-                            }
-                        }
-                    }
+                    walletMessage = await ShareInvoiceViaWhatsAppAndSmsAsync(
+                        model.Id,
+                        model.BillNo ?? string.Empty,
+                        model.MobileNo,
+                        model.CustomerId);
                 }
 
                 return Json(new { success = true, saleId = model.Id, walletMessage });
@@ -1129,7 +1129,7 @@ namespace EasyBill.UI.Controllers
                         item.Qty, // 🔺 SALE delete = add back
                         item.Expirydate,
                         item.Mrp,
-                        item.Rate
+                        item.StripRate
                     );
                 }
 
@@ -4897,7 +4897,7 @@ namespace EasyBill.UI.Controllers
         public async Task<IActionResult> GetItemByBarcode(string? barcode)
         {
             var item = await _itemmasterservice.GetByBarcode(barcode);
-            if (item == null || item.ItemType == "Bulk")
+            if (item == null)
                 return Json(new { error = "Item not found" });
 
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -4921,7 +4921,7 @@ namespace EasyBill.UI.Controllers
         public async Task<IActionResult> GetItemById(int id)
         {
             var item = await _itemmasterservice.GetByItemMasterId(id);
-            if (item == null || item.ItemType == "Bulk")
+            if (item == null)
                 return Json(new { error = "Item not found" });
 
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -5065,7 +5065,7 @@ namespace EasyBill.UI.Controllers
 
             var setting = await _salsesettingservice.GetByUserId(userId);
             var itemMasters = (await _itemmasterservice.GetAll())
-                .Where(x => x.IsActive && x.ItemType != "Bulk")
+                .Where(x => x.IsActive)
                 .OrderBy(x => x.Name)
                 .ToList();
             var currentStocks = await _currenstockService.GetAll();
@@ -5131,7 +5131,7 @@ namespace EasyBill.UI.Controllers
 
             var setting = await _salsesettingservice.GetByUserId(userId);
             var itemMasters = (await _itemmasterservice.GetAll())
-                .Where(x => x.IsActive && x.ItemType != "Bulk")
+                .Where(x => x.IsActive)
                 .OrderBy(x => x.Name)
                 .ToList();
             var currentStocks = await _currenstockService.GetAll();
@@ -9517,6 +9517,17 @@ namespace EasyBill.UI.Controllers
                 decimal pendingAmount =
                     sales.Sum(x => x.TotalPayable - x.PaidAmount);
 
+                var stockReturns =
+                    await _stockrturnservice.GetByCustomerId(c.Id);
+
+                pendingAmount -=
+                    stockReturns.Sum(x => x.TotalPayable);
+
+                if (pendingAmount < 0)
+                {
+                    pendingAmount = 0;
+                }
+
                 // CUSTOMER ADVANCE
 
                 var customerAdvance =
@@ -9574,6 +9585,17 @@ namespace EasyBill.UI.Controllers
                 decimal pendingAmount =
                     purchases.Sum(x =>
                         x.TotalPayable - x.PaidAmount);
+
+                var purchaseReturns =
+                    await _purchasereturnservice.GetBySupplierId(s.Id);
+
+                pendingAmount -=
+                    purchaseReturns.Sum(x => x.TotalPayable);
+
+                if (pendingAmount < 0)
+                {
+                    pendingAmount = 0;
+                }
 
                 // SUPPLIER ADVANCE
 
@@ -9664,6 +9686,16 @@ namespace EasyBill.UI.Controllers
 
                 var debit = sales.Sum(x => x.TotalPayable - x.PaidAmount);
 
+                var stockReturns =
+                    await _stockrturnservice.GetByCustomerId(c.Id);
+
+                debit -= stockReturns.Sum(x => x.TotalPayable);
+
+                if (debit < 0)
+                {
+                    debit = 0;
+                }
+
                 // ✅ ONLY IF PENDING
                 if (debit > 0)
                 {
@@ -9685,6 +9717,16 @@ namespace EasyBill.UI.Controllers
 
                 // CHANGE: PaidAmount ki jagah PaymentAmt use karein
                 var credit = purchases.Sum(x => x.TotalPayable - x.PaymentAmt);
+
+                var purchaseReturns =
+                    await _purchasereturnservice.GetBySupplierId(s.Id);
+
+                credit -= purchaseReturns.Sum(x => x.TotalPayable);
+
+                if (credit < 0)
+                {
+                    credit = 0;
+                }
 
                 // ✅ ONLY IF PENDING
                 if (credit > 0)
@@ -9838,21 +9880,25 @@ namespace EasyBill.UI.Controllers
             ViewBag.Type = normalizedType;
 
             string phoneNo = "";
+            string partyName = "";
 
             if (normalizedType == "customer")
             {
                 var customer = (await _customerservice.GetAll())
                                .FirstOrDefault(x => x.Id == id);
                 phoneNo = customer?.PhoneNo ?? string.Empty;
+                partyName = customer?.Name ?? string.Empty;
             }
             else if (normalizedType == "supplier")
             {
                 var supplier = (await _supplierRepo.GetALL())
                                .FirstOrDefault(x => x.Id == id);
                 phoneNo = supplier?.PhoneNO ?? string.Empty;
+                partyName = supplier?.FirstName ?? string.Empty;
             }
 
             ViewBag.Phone = phoneNo;
+            ViewBag.PartyName = partyName;
 
             var list = await GetLedgerData(id, normalizedType);
             return View(list);
@@ -9933,9 +9979,30 @@ namespace EasyBill.UI.Controllers
                     }
                 }
 
+                // MERGED FROM TL: Purchase Returns in Supplier Ledger
+                var purchaseReturns = (await _purchasereturnservice.GetBySupplierId(id))
+                    .OrderBy(x => x.BillDate)
+                    .ToList();
+
+                foreach (var ret in purchaseReturns)
+                {
+                    if (ret.TotalPayable <= 0)
+                    {
+                        continue;
+                    }
+
+                    list.Add(new LedgerDetailVM
+                    {
+                        Date = ret.BillDate ?? DateTime.Now,
+                        Type = "PurchaseReturn",
+                        Particular = "Return Bill No. " + ret.BillNo,
+                        Debit = ret.TotalPayable,
+                        Credit = 0
+                    });
+                }
+
                 list = list
                     .OrderBy(x => x.Date)
-                    .ThenBy(x => x.Type == "Purchase" ? 0 : 1)
                     .ToList();
 
                 decimal balance = 0;
@@ -9984,9 +10051,30 @@ namespace EasyBill.UI.Controllers
                     }
                 }
 
+                // MERGED FROM TL: Stock Returns in Customer Ledger
+                var stockReturns = (await _stockrturnservice.GetByCustomerId(id))
+                    .OrderBy(x => x.ChallanDate)
+                    .ToList();
+
+                foreach (var ret in stockReturns)
+                {
+                    if (ret.TotalPayable <= 0)
+                    {
+                        continue;
+                    }
+
+                    list.Add(new LedgerDetailVM
+                    {
+                        Date = ret.ChallanDate ?? DateTime.Now,
+                        Type = "StockReturn",
+                        Particular = "Credit Note No. " + ret.ChallanNo,
+                        Debit = 0,
+                        Credit = ret.TotalPayable
+                    });
+                }
+
                 list = list
                     .OrderBy(x => x.Date)
-                    .ThenBy(x => x.Type == "Sale" ? 0 : 1)
                     .ToList();
 
                 decimal balance = 0;

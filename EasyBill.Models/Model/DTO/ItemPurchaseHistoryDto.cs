@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,8 +11,8 @@ namespace EasyBill.Models.Model.DTO
         public string Supplier { get; set; }
         public string BillNo { get; set; }
         public DateTime? BillDate { get; set; }
-        public int Qty { get; set; }
-        public int FreeQty { get; set; }
+        public decimal Qty { get; set; }
+        public decimal FreeQty { get; set; }
         public string Batch { get; set; }
         public decimal Mrp { get; set; }
         public decimal Rate { get; set; }

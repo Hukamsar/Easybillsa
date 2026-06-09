@@ -58,12 +58,16 @@ namespace EasyBill.UI.Controllers.API
                     paymentGatewayKey = tenant.PaymentGatewayKey,
                     paymentGatewaySecret = tenant.PaymentGatewaySecret,
                     isPaymentGatewayActive = tenant.IsPaymentGatewayActive,
-                    isWalletActive = tenant.IsWalletActive
+                    isWalletActive = tenant.IsWalletActive,
+                    isSmsChargeActive = tenant.IsSmsChargeActive,
+                    isEmailChargeActive = tenant.IsEmailChargeActive,
+                    isWhatsAppChargeActive = tenant.IsWhatsAppChargeActive
                 }
             });
         }
 
         [HttpPost("SaveWallet")]
+        [HttpPost("SaveSettings")]
         public async Task<IActionResult> SaveWallet([FromBody] WalletSettingsRequest request)
         {
             await _profileService.Set(User);
@@ -78,6 +82,26 @@ namespace EasyBill.UI.Controllers.API
             if (tenant == null)
             {
                 return NotFound(new { success = false, message = "Tenant not found." });
+            }
+
+            if (request.WhatsAppMessageCharge.HasValue && request.WhatsAppMessageCharge.Value < 0)
+            {
+                return BadRequest(new { success = false, message = "WhatsApp charge cannot be negative." });
+            }
+
+            if (request.SmsMessageCharge.HasValue && request.SmsMessageCharge.Value < 0)
+            {
+                return BadRequest(new { success = false, message = "SMS charge cannot be negative." });
+            }
+
+            if (request.EmailMessageCharge.HasValue && request.EmailMessageCharge.Value < 0)
+            {
+                return BadRequest(new { success = false, message = "Email charge cannot be negative." });
+            }
+
+            if (request.WalletBalance.HasValue && request.WalletBalance.Value < 0)
+            {
+                return BadRequest(new { success = false, message = "Wallet balance cannot be negative." });
             }
 
             if (request.WalletBalance.HasValue)
@@ -125,6 +149,21 @@ namespace EasyBill.UI.Controllers.API
                 tenant.IsWalletActive = request.IsWalletActive.Value;
             }
 
+            if (request.IsSmsChargeActive.HasValue)
+            {
+                tenant.IsSmsChargeActive = request.IsSmsChargeActive.Value;
+            }
+
+            if (request.IsEmailChargeActive.HasValue)
+            {
+                tenant.IsEmailChargeActive = request.IsEmailChargeActive.Value;
+            }
+
+            if (request.IsWhatsAppChargeActive.HasValue)
+            {
+                tenant.IsWhatsAppChargeActive = request.IsWhatsAppChargeActive.Value;
+            }
+
             await _tenantRepo.Update(tenant);
 
             return Ok(new
@@ -168,21 +207,33 @@ namespace EasyBill.UI.Controllers.API
                 return BadRequest(new { success = false, message = "Wallet is inactive. Please activate wallet first." });
             }
 
+            var generatedReferenceNo = string.IsNullOrWhiteSpace(request.ReferenceNo)
+                ? $"RCG-{DateTime.UtcNow:yyyyMMddHHmmssfff}-{System.Security.Cryptography.RandomNumberGenerator.GetInt32(1000, 9999)}"
+                : request.ReferenceNo.Trim();
+
             tenant.WalletBalance += request.Amount;
             await _tenantRepo.Update(tenant);
 
-            await LogTenantWalletHistoryAsync(
-                tenant.Id,
-                request.Amount,
-                isDebit: false,
-                paymentMode: "Manual",
-                referenceNo: request.ReferenceNo,
-                gatewayTransactionId: null,
-                serviceType: "WhatsApp",
-                serviceCharge: 0m,
-                remarks: request.Remarks,
-                closingBalance: tenant.WalletBalance,
-                referenceSaleId: null);
+            string? historyWarning = null;
+            try
+            {
+                await LogTenantWalletHistoryAsync(
+                    tenant.Id,
+                    request.Amount,
+                    isDebit: false,
+                    paymentMode: "Manual",
+                    referenceNo: generatedReferenceNo,
+                    gatewayTransactionId: null,
+                    serviceType: request.ServiceType,
+                    serviceCharge: request.ServiceCharge,
+                    remarks: request.Remarks,
+                    closingBalance: tenant.WalletBalance,
+                    referenceSaleId: null);
+            }
+            catch
+            {
+                historyWarning = "Recharge completed, but history logging failed.";
+            }
 
             return Ok(new
             {
@@ -190,8 +241,9 @@ namespace EasyBill.UI.Controllers.API
                 message = "Wallet recharged successfully.",
                 rechargeAmount = request.Amount,
                 balance = tenant.WalletBalance,
-                referenceNo = request.ReferenceNo,
-                remarks = request.Remarks
+                referenceNo = generatedReferenceNo,
+                remarks = request.Remarks,
+                historyWarning
             });
         }
 
@@ -319,6 +371,9 @@ namespace EasyBill.UI.Controllers.API
             public string? PaymentGatewaySecret { get; set; }
             public bool? IsPaymentGatewayActive { get; set; }
             public bool? IsWalletActive { get; set; }
+            public bool? IsSmsChargeActive { get; set; }
+            public bool? IsEmailChargeActive { get; set; }
+            public bool? IsWhatsAppChargeActive { get; set; }
         }
 
         public class WalletRechargeRequest
@@ -326,6 +381,8 @@ namespace EasyBill.UI.Controllers.API
             public decimal Amount { get; set; }
             public string? ReferenceNo { get; set; }
             public string? Remarks { get; set; }
+            public string? ServiceType { get; set; }
+            public decimal? ServiceCharge { get; set; }
         }
 
         public class GatewayRechargeConfirmRequest

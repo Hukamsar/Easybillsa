@@ -155,15 +155,19 @@
         x.Description != null &&
         x.Description.Contains("Adjusted from loyalty points", StringComparison.OrdinalIgnoreCase));
     decimal loyaltyDiscount = loyaltyPayment?.Amount ?? 0m;
-    string pointsUsedText = "";
-    if (loyaltyPayment != null && !string.IsNullOrEmpty(loyaltyPayment.Description))
+    int pointsRedeemed = ViewBag.PointsRedeemed as int? ?? 0;
+    if (pointsRedeemed <= 0 && loyaltyPayment != null && !string.IsNullOrEmpty(loyaltyPayment.Description))
     {
         var desc = loyaltyPayment.Description;
-        var openBrace = desc.IndexOf('(');
-        var closeBrace = desc.IndexOf(')');
-        if (openBrace >= 0 && closeBrace > openBrace)
+        var redeemedIndex = desc.IndexOf("Redeemed ", StringComparison.OrdinalIgnoreCase);
+        if (redeemedIndex >= 0)
         {
-            pointsUsedText = desc.Substring(openBrace + 1, closeBrace - openBrace - 1);
+            var pointsIndex = desc.IndexOf(" points", redeemedIndex, StringComparison.OrdinalIgnoreCase);
+            if (pointsIndex > redeemedIndex)
+            {
+                var numStr = desc.Substring(redeemedIndex + 9, pointsIndex - (redeemedIndex + 9)).Trim();
+                int.TryParse(numStr, out pointsRedeemed);
+            }
         }
     }
 
@@ -676,14 +680,14 @@
             }
             @if (loyaltyDiscount > 0m)
             {
-                <div class="summary-row"><span>Points Discount @(!string.IsNullOrEmpty(pointsUsedText) ? $"({pointsUsedText})" : "")</span><span>- Rs @Money(loyaltyDiscount)</span></div>
+                <div class="summary-row"><span>Points Discount @(pointsRedeemed > 0 ? $"({pointsRedeemed} Pts)" : "")</span><span>- Rs @Money(loyaltyDiscount)</span></div>
             }
             <div class="summary-row total"><span>TOTAL</span><span>Rs @Money(grandTotal)</span></div>
 
             @if (Model?.CustomerId.HasValue == true && (loyaltyDiscount > 0m || ViewBag.CustomerPointsBalance != null || ViewBag.PointsEarned != null || ViewBag.PointsRedeemed != null))
             {
                 var earned = ViewBag.PointsEarned as int? ?? 0;
-                var redeemed = ViewBag.PointsRedeemed as int? ?? 0;
+                var redeemed = pointsRedeemed > 0 ? pointsRedeemed : (ViewBag.PointsRedeemed as int? ?? 0);
                 var balance = ViewBag.CustomerPointsBalance as int? ?? 0;
 
                 <div class="line" style="margin: 4px 0;"></div>
@@ -701,7 +705,7 @@
                         </div>
                     }
                     <div style="display: flex; justify-content: space-between; font-weight: 800;">
-                        <span>Rest Points:</span>
+                        <span>Balance Points:</span>
                         <span>@balance</span>
                     </div>
                 </div>

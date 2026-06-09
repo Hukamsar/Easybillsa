@@ -1,4 +1,29 @@
-﻿IF TYPE_ID(N'dbo.PurchaseItemTvp') IS NULL
+-- MERGED FROM TL: Drop and recreate PurchaseItemTvp if column types are int
+IF TYPE_ID(N'dbo.PurchaseItemTvp') IS NOT NULL
+   AND EXISTS
+   (
+       SELECT 1
+       FROM sys.table_types tt
+       JOIN sys.columns c
+           ON c.object_id = tt.type_table_object_id
+       JOIN sys.types ty
+           ON ty.user_type_id = c.user_type_id
+       WHERE tt.name = 'PurchaseItemTvp'
+         AND c.name IN ('Qty', 'FreeQty')
+       GROUP BY tt.name
+       HAVING SUM(CASE WHEN ty.name = 'decimal' AND c.precision = 18 AND c.scale = 2 THEN 1 ELSE 0 END) < 2
+   )
+BEGIN
+    IF OBJECT_ID(N'dbo.usp_Purchase_Save', N'P') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE dbo.usp_Purchase_Save;
+    END
+
+    DROP TYPE dbo.PurchaseItemTvp;
+END
+GO
+
+IF TYPE_ID(N'dbo.PurchaseItemTvp') IS NULL
 BEGIN
     EXEC(N'
         CREATE TYPE dbo.PurchaseItemTvp AS TABLE
@@ -8,8 +33,8 @@ BEGIN
             Batch NVARCHAR(100) NULL,
             ExpiryDate DATETIME2 NULL,
             Mrp DECIMAL(18,2) NOT NULL,
-            Qty INT NOT NULL,
-            FreeQty INT NOT NULL,
+            Qty DECIMAL(18,2) NOT NULL, -- MERGED FROM TL
+            FreeQty DECIMAL(18,2) NOT NULL, -- MERGED FROM TL
             Unit NVARCHAR(50) NULL,
             Rate DECIMAL(18,2) NOT NULL,
             HsnId INT NULL,
@@ -33,7 +58,6 @@ BEGIN
     ');
 END
 GO
-
 IF TYPE_ID(N'dbo.PurchasePaymentDetailTvp') IS NULL
 BEGIN
     EXEC(N'
@@ -1120,6 +1144,7 @@ BEGIN
 END
 GO
 
+-- MERGED FROM TL: Updated usp_CurrentStock_Overwrite parameters
 ALTER PROCEDURE dbo.usp_CurrentStock_Overwrite
     @Id INT,
     @Batch NVARCHAR(100) = NULL,
@@ -1127,6 +1152,9 @@ ALTER PROCEDURE dbo.usp_CurrentStock_Overwrite
     @Mrp DECIMAL(18,2),
     @Qty DECIMAL(18,2),
     @PurchaseRate DECIMAL(18,2),
+    @SalesRateA DECIMAL(18,2) = NULL,
+    @SalesRateB DECIMAL(18,2) = NULL,
+    @Barcode NVARCHAR(100) = NULL,
     @FilterMode NVARCHAR(20),
     @TenantId NVARCHAR(450) = NULL,
     @UserId NVARCHAR(450),
@@ -1142,6 +1170,9 @@ BEGIN
         Mrp = @Mrp,
         Qty = ROUND(@Qty, 2),
         PurchaseRate = @PurchaseRate,
+        SalesRateA = ISNULL(@SalesRateA, SalesRateA),
+        SalesRateB = ISNULL(@SalesRateB, SalesRateB),
+        Barcode = COALESCE(NULLIF(@Barcode, ''), Barcode),
         TenantId = COALESCE(cs.TenantId, @TenantId),
         LastModified = @Now,
         LastModifiedBy = @UserId

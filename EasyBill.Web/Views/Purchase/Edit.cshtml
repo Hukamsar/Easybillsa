@@ -495,6 +495,7 @@
                                         <td style="min-width:250px;">
                                             <input type="hidden" name="PurchaseItemVms[@i].ItemId" class="item-id" value="@item.ItemId" />
                                             <input type="hidden" name="PurchaseItemVms[@i].Id" value="@item.Id" />
+                                            <input type="hidden" name="PurchaseItemVms[@i].SourcePurchaseChallanId" class="source-purchase-challan-id" value="@item.SourcePurchaseChallanId" />
                                             <input type="text"
                                                    name="PurchaseItemVms[@i].ItemName"
                                                    class="form-control form-control-sm item-input"
@@ -503,7 +504,7 @@
                                         </td>
 
                                         <td><input name="PurchaseItemVms[@i].Batch" value="@item.Batch" class="form-control form-control-sm batch" /></td>
-                                        <td hidden><input name="PurchaseItemVms[@i].ExpiryDate" value="@item.ExpiryDate?.ToString("MM/yyyy")" class="form-control form-control-sm expirydate" placeholder="MM/YYYY" maxlength="7" /></td>
+                                        <td hidden><input name="PurchaseItemVms[@i].ExpiryDate" value="@item.ExpiryDate?.ToString("MM/yy")" class="form-control form-control-sm expirydate" placeholder="MM/YY" maxlength="5" /></td>
                                         <td hidden><input name="PurchaseItemVms[@i].Mrp" value="@item.Mrp" class="form-control form-control-sm mrp" /></td>
                                         <td><input name="PurchaseItemVms[@i].Qty" value="@item.Qty" class="form-control form-control-sm qty" /></td>
                                         <td><input name="PurchaseItemVms[@i].FreeQty" value="@item.FreeQty" class="form-control form-control-sm freeqty" /></td>
@@ -721,7 +722,7 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label>Expiry Date</label>
-                    <input type="text" class="form-control expirydate" id="popupExpiry" placeholder="MM/YYYY" maxlength="7" />
+                    <input type="text" class="form-control expirydate" id="popupExpiry" placeholder="MM/YY" maxlength="5" />
                     <span class="text-danger field-error" data-field="popupExpiry"></span>
                 </div>
                 <div class="form-group">
@@ -919,6 +920,7 @@
 
 
         let minPurchaseExpiryDays = 0;
+        const isPharmacyTenant = @(((int?)ViewBag.BusinessType ?? 0) == 2 ? "true" : "false");
     </script>
 
     <script>
@@ -1001,6 +1003,16 @@
             return !isNaN(rate) && rate > 0;
         }
 
+        function getRequiredFreeQtyForDecimalQty(qtyValue) {
+            const qty = parseFloat(qtyValue);
+            if (isNaN(qty) || qty <= 0) {
+                return 0;
+            }
+
+            const required = Math.ceil(qty) - qty;
+            return required > 0 ? parseFloat(required.toFixed(6)) : 0;
+        }
+
         function validateHeaderFields() {
             if (!isValidSupplier()) {
                 toastr.error("Please select a supplier", "Validation Error");
@@ -1027,7 +1039,9 @@
             debugger;
             const itemId = row.find(".item-id").val();
             const batch = row.find(".batch").val().trim();
+            const expiry = row.find(".expirydate").val().trim();
             const qty = row.find(".qty").val();
+            const freeQty = row.find(".freeqty").val();
             const rate = row.find(".rate").val();
 
             if (!itemId || itemId === "") {
@@ -1042,10 +1056,26 @@
                 return false;
             }
 
+            if (isPharmacyTenant && !expiry) {
+                toastr.error("Expiry is required", "Validation Error");
+                row.find(".expirydate").focus().select();
+                return false;
+            }
+
             if (!isValidQty(qty)) {
                 toastr.error("Quantity must be greater than 0", "Validation Error");
                 row.find(".qty").focus().select();
                 return false;
+            }
+
+            const requiredFreeQty = getRequiredFreeQtyForDecimalQty(qty);
+            if (requiredFreeQty > 0) {
+                const freeQtyValue = parseFloat(freeQty);
+                if (isNaN(freeQtyValue) || Math.abs(freeQtyValue - requiredFreeQty) > 0.000001) {
+                    toastr.error(`For decimal qty ${parseFloat(qty).toFixed(2)}, Free Qty must be ${requiredFreeQty}`, "Validation Error");
+                    row.find(".freeqty").focus().select();
+                    return false;
+                }
             }
 
             if (!isValidRate(rate)) {
@@ -1145,12 +1175,12 @@
         }
 
         function validateExpiry(showError = true) {
-            const expiry = $("#popupExpiry").val().trim();
+            let expiry = $("#popupExpiry").val().trim();
             const errorSpan = $("[data-field='popupExpiry']");
             errorSpan.text("");
 
             if (!expiry) {
-                if (showError) errorSpan.text("Expiry Date is required");
+                if (showError) errorSpan.text("Expiry is required");
                 return false;
             }
 
@@ -1293,9 +1323,9 @@
             $(input).on("input", function () {
                 let value = $(this).val().replace(/[^0-9]/g, "");
                 if (value.length >= 2) {
-                    value = value.substring(0, 2) + "/" + value.substring(2, 6);
+                    value = value.substring(0, 2) + "/" + value.substring(2, 4);
                 }
-                $(this).val(value.substring(0, 7));
+                $(this).val(value.substring(0, 5));
             });
         }
 
@@ -2599,13 +2629,15 @@
                 <tr data-itemdetail-valid="false">
                     <td style="min-width:250px;">
                        <input type="hidden" name="PurchaseItemVms[${rowIndex}].ItemId" class="item-id" />
+                       <input type="hidden" name="PurchaseItemVms[${rowIndex}].Id" value="0" />
+                       <input type="hidden" name="PurchaseItemVms[${rowIndex}].SourcePurchaseChallanId" class="source-purchase-challan-id" />
                        <input type="text" name="PurchaseItemVms[${rowIndex}].ItemName" class="form-control form-control-sm item-input" placeholder="Press Enter to select item" />
                     </td>
                     <td>
                       <input name="PurchaseItemVms[${rowIndex}].Batch" class="form-control form-control-sm batch" />
                     </td>
                     <td hidden>
-                      <input type="text" name="PurchaseItemVms[${rowIndex}].ExpiryDate" class="form-control form-control-sm expirydate" placeholder="MM/YYYY" maxlength="7" />
+                      <input type="text" name="PurchaseItemVms[${rowIndex}].ExpiryDate" class="form-control form-control-sm expirydate" placeholder="MM/YY" maxlength="5" />
                     </td>
                     <td hidden><input name="PurchaseItemVms[${rowIndex}].Mrp" class="form-control form-control-sm mrp" /></td>
                     <td><input name="PurchaseItemVms[${rowIndex}].Qty" class="form-control form-control-sm qty" value="1" /></td>
@@ -2684,6 +2716,7 @@
 
         $(document).on("click", ".remove-row-btn", function() {
             $(this).closest("tr").remove();
+            updatePurchaseItemRowIndices();
             calculateTotalSummary();
         });
     </script>
@@ -2716,6 +2749,7 @@
 
             e.preventDefault();
             row.remove();
+            updatePurchaseItemRowIndices();
 
             setTimeout(() => {
                 $("#discountPercent").focus().select();
@@ -2986,6 +3020,8 @@
             const purchaseTypeForSubmit = $("#purchasetype").val() || $("#purchasetypeHidden").val() || "Local";
             $("#purchasetype").val(purchaseTypeForSubmit);
             $("#purchasetypeHidden").val(purchaseTypeForSubmit);
+            updatePurchaseItemRowIndices();
+            updatePaymentRowIndices();
 
             // confirmSave(function (ok) {
             //     if (!ok) return;
@@ -3298,11 +3334,11 @@
                             // Match batch name
                             const batchMatch = b.batch.toLowerCase() === existingBatch;
 
-                            // Match expiry (MM/YYYY format)
+                            // Match expiry (MM/YY format)
                             let expiryMatch = true;
                             if (existingExpiry && b.expiry) {
                                 const batchDate = new Date(b.expiry);
-                                const batchExpiry = ("0" + (batchDate.getMonth() + 1)).slice(-2) + "/" + batchDate.getFullYear();
+                                const batchExpiry = ("0" + (batchDate.getMonth() + 1)).slice(-2) + "/" + batchDate.getFullYear().toString().slice(-2);
                                 expiryMatch = batchExpiry === existingExpiry;
                             }
 
@@ -3395,9 +3431,26 @@
                     // GET CURRENT ROW VALUES FIRST (ye line missing thi)
                     const currentBatchValue = currentRow.find(".batch").val().trim();
                     const currentQtyValue = currentRow.find(".qty").val();
+                    const currentRateValue = currentRow.find(".rate").val();
+                    const currentExpiryValue = currentRow.find(".expirydate").val()?.trim() || "";
+                    const currentMrpValue = parseFloat(currentRow.find(".mrp").val()) || 0;
+
+                    let selectedExpiryValue = "";
+                    if (batch.expiry) {
+                        const selectedDate = new Date(batch.expiry);
+                        selectedExpiryValue =
+                            ("0" + (selectedDate.getMonth() + 1)).slice(-2) +
+                            "/" +
+                            selectedDate.getFullYear().toString().slice(-2);
+                    }
+
+                    const isSameStockLayer =
+                        currentBatchValue.toLowerCase() === batch.batch.toLowerCase() &&
+                        (!currentExpiryValue || currentExpiryValue === selectedExpiryValue) &&
+                        Math.abs((parseFloat(batch.mrp) || 0) - currentMrpValue) < 0.01;
 
                     currentRow.find(".batch").val(batch.batch);
-                    currentRow.find(".rate").val(batch.rate || 0);
+                    currentRow.find(".rate").val(isSameStockLayer ? currentRateValue : (batch.rate || 0));
                     currentRow.find(".mrp").val(batch.mrp || 0);
 
                     // QTY LOGIC FOR EDIT PAGE
@@ -4262,33 +4315,26 @@
     <script>
         function validateExpiry(showError = true) {
             // ✅ EXPIRY VALIDATION ALWAYS RUNS (independent of ENABLE_ITEM_DETAIL_VALIDATION)
-            const expiry = $("#popupExpiry").val().trim();
+            let expiry = $("#popupExpiry").val().trim();
             const errorSpan = $("[data-field='popupExpiry']");
             errorSpan.text("");
 
             if (!expiry) {
-                if (showError) errorSpan.text("Expiry Date is required");
+                if (showError) errorSpan.text("Expiry is required");
                 return false;
             }
 
-            // ✅ Support both MM/YYYY and MM/YY formats
-            const regex4Digit = /^(0[1-9]|1[0-2])\/\d{4}$/;
-            const regex2Digit = /^(0[1-9]|1[0-2])\/\d{2}$/;
+            // ✅ Only MM/YY allowed
+            const regex = /^(0[1-9]|1[0-2])\/\d{2}$/;
 
-            let normalizedExpiry = expiry;
-
-            if (regex2Digit.test(expiry)) {
-                const [month, yy] = expiry.split("/");
-                const fullYear = "20" + yy;
-                normalizedExpiry = `${month}/${fullYear}`;
-                $("#popupExpiry").val(normalizedExpiry);
-            } else if (!regex4Digit.test(expiry)) {
-                if (showError) errorSpan.text("Format should be MM/YYYY or MM/YY");
+            if (!regex.test(expiry)) {
+                if (showError) errorSpan.text("Format should be MM/YY");
                 return false;
             }
 
             // ✅ Parse expiry date (first day of month, as in DB)
-            const [month, year] = normalizedExpiry.split("/");
+            const [month, yy] = expiry.split("/");
+            const year = `20${yy}`;
             const expiryDate = new Date(parseInt(year), parseInt(month) - 1, 1);
             const currentDate = new Date();
             currentDate.setHours(0, 0, 0, 0);
@@ -4682,6 +4728,20 @@
                     }
                 });
                 subrowIndex++;
+            });
+        }
+
+        function updatePurchaseItemRowIndices() {
+            const rows = document.querySelectorAll('#PurchaseItemBody tr');
+            rowIndex = 0;
+            rows.forEach(row => {
+                row.querySelectorAll('input, select, textarea').forEach(input => {
+                    const name = input.name;
+                    if (name && name.startsWith('PurchaseItemVms[')) {
+                        input.name = name.replace(/PurchaseItemVms\[\d+\]/, `PurchaseItemVms[${rowIndex}]`);
+                    }
+                });
+                rowIndex++;
             });
         }
 

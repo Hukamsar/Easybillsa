@@ -393,8 +393,8 @@ namespace EasyBill.DataAccess.Repository
                         Supplier = reader.ReadNullableString("Supplier") ?? string.Empty,
                         BillNo = reader.ReadNullableString("BillNo") ?? string.Empty,
                         BillDate = reader.ReadNullableDateTime("BillDate"),
-                        Qty = reader.ReadInt32("Qty"),
-                        FreeQty = reader.ReadInt32("FreeQty"),
+                        Qty = reader.ReadDecimal("Qty"), // MERGED FROM TL
+                        FreeQty = reader.ReadDecimal("FreeQty"), // MERGED FROM TL
                         Batch = reader.ReadNullableString("Batch") ?? string.Empty,
                         Mrp = reader.ReadDecimal("Mrp"),
                         Rate = reader.ReadDecimal("Rate"),
@@ -572,8 +572,8 @@ namespace EasyBill.DataAccess.Repository
                 Batch = reader.ReadNullableString("Batch"),
                 ExpiryDate = reader.ReadNullableDateTime("ExpiryDate"),
                 Mrp = reader.ReadDecimal("Mrp"),
-                Qty = reader.ReadInt32("Qty"),
-                FreeQty = reader.ReadInt32("FreeQty"),
+                Qty = reader.ReadDecimal("Qty"), // MERGED FROM TL
+                FreeQty = reader.ReadDecimal("FreeQty"), // MERGED FROM TL
                 Unit = reader.ReadNullableString("Unit"),
                 Rate = reader.ReadDecimal("Rate"),
                 HsnId = reader.ReadNullableInt32("HsnId"),

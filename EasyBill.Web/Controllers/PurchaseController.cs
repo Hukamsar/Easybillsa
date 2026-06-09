@@ -1,5 +1,6 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Office.CustomUI;
+using AOne.Utility.Enums;
 using EasyBill.DataAccess.Migrations;
 using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
@@ -107,7 +108,7 @@ namespace EasyBill.UI.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var data = await _purchaseservice.GetAll();
+            var data = (await _purchaseservice.GetAll()).OrderBy(x => x.BillDate).ThenBy(x => x.Id);
             return View(data);
         }
         [HttpGet]
@@ -144,6 +145,19 @@ namespace EasyBill.UI.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(PurchaseVM VM)
         {
+            if (HasCollectionIndexGap(nameof(PurchaseVM.PurchaseItemVms)) ||
+                HasCollectionIndexGap(nameof(PurchaseVM.PaymentDetails)))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Purchase rows were not submitted correctly. Please refresh and try again."
+                });
+            }
+
+            VM.PurchaseItemVms ??= new List<PurchaseItemVM>();
+            VM.PaymentDetails ??= new List<SalsePaymentDetailsVM>();
+
             if (!ModelState.IsValid)
             {
                 var errors = ModelState
@@ -161,6 +175,15 @@ namespace EasyBill.UI.Controllers
                     success = false,
                     message = firstError?.Message ?? "Please fill all required fields correctly.",
                     errors = errors
+                });
+            }
+
+            if (!VM.PurchaseItemVms.Any(x => x.ItemId > 0))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Please add at least one valid purchase item."
                 });
             }
 
@@ -233,6 +256,28 @@ namespace EasyBill.UI.Controllers
                 VM.PurchaseOrderId = null;
             }
 
+            // MERGED FROM TL: Decimal Qty and Expiry validations
+            if (!TryValidateDecimalQtyFreeQtyRule(VM.PurchaseItemVms, out var qtyRuleMessage))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = qtyRuleMessage
+                });
+            }
+
+            if (await IsCurrentTenantPharmacyAsync() &&
+                !TryValidateRequiredExpiry(VM.PurchaseItemVms, out var expiryRuleMessage))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = expiryRuleMessage
+                });
+            }
+
+            ApplyDefaultExpiryIfMissing(VM.PurchaseItemVms, DateTime.Today.AddYears(1));
+
             if (VM != null)
             {
                 var model = new Purchase
@@ -259,7 +304,7 @@ namespace EasyBill.UI.Controllers
                     Balance = VM.Balance,
                     PurchaseOrderId = VM.PurchaseOrderId,
                     TotalCessAmt = VM.TotalCessAmt,
-                    PurchaseItems = VM.PurchaseItemVms.Select(x => new PurchaseItem
+                    PurchaseItems = VM.PurchaseItemVms?.Select(x => new PurchaseItem
                     {
                         ItemId = x.ItemId,
                         Batch = x.Batch,
@@ -773,6 +818,49 @@ namespace EasyBill.UI.Controllers
         [HttpPost]
         public async Task<IActionResult> Edit(PurchaseVM VM)
         {
+            if (HasCollectionIndexGap(nameof(PurchaseVM.PurchaseItemVms)) ||
+                HasCollectionIndexGap(nameof(PurchaseVM.PaymentDetails)))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Purchase rows were not submitted correctly. Please refresh and try again."
+                });
+            }
+
+            VM.PurchaseItemVms ??= new List<PurchaseItemVM>();
+            VM.PaymentDetails ??= new List<SalsePaymentDetailsVM>();
+
+            if (!VM.PurchaseItemVms.Any(x => x.ItemId > 0))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Please add at least one valid purchase item."
+                });
+            }
+
+            if (!TryValidateDecimalQtyFreeQtyRule(VM.PurchaseItemVms, out var qtyRuleMessage))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = qtyRuleMessage
+                });
+            }
+
+            if (await IsCurrentTenantPharmacyAsync() &&
+                !TryValidateRequiredExpiry(VM.PurchaseItemVms, out var expiryRuleMessage))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = expiryRuleMessage
+                });
+            }
+
+            ApplyDefaultExpiryIfMissing(VM.PurchaseItemVms, DateTime.Today.AddYears(1));
+
             Purchase model = await _purchaseservice.GetById(VM.Id);
             if (model != null)
             {
@@ -836,7 +924,8 @@ namespace EasyBill.UI.Controllers
                             decimal oldQty = existingItem.Qty + existingItem.FreeQty;
                             decimal newQty = item.Qty + item.FreeQty;
 
-                            if (oldStock != null && oldStock.Qty == oldQty)
+                            var canUpdateBatchRates = oldStock != null && oldStock.Qty == oldQty;
+                            if (canUpdateBatchRates && oldStock != null)
                             {
                                 await _currenstockService.OverwriteStock(
                                     oldStock.Id,
@@ -844,11 +933,19 @@ namespace EasyBill.UI.Controllers
                                     item.ExpiryDate,
                                     item.Mrp,
                                     newQty,
-                                    item.Rate
+                                    item.Rate,
+                                    item.salserateA,
+                                    item.salserateB,
+                                    item.Barcode
                                 );
                             }
                             else
                             {
+                                var isSameStockLayer = IsSameStockLayer(existingItem, item);
+                                var salesRateAToApply = isSameStockLayer ? existingItem.salserateA : item.salserateA;
+                                var salesRateBToApply = isSameStockLayer ? existingItem.salserateB : item.salserateB;
+                                var barcodeToApply = isSameStockLayer ? existingItem.Barcode : item.Barcode;
+
                                 await _currenstockService.UpdateStock(
                                     existingItem.ItemId,
                                     existingItem.Batch ?? "",
@@ -867,10 +964,10 @@ namespace EasyBill.UI.Controllers
                                     newQty,
                                     item.ExpiryDate,
                                     item.Mrp,
-                                    item.salserateA,
-                                    item.salserateB,
+                                    salesRateAToApply,
+                                    salesRateBToApply,
                                     item.Rate,
-                                    item.Barcode
+                                    barcodeToApply
                                 );
                             }
 
@@ -1011,7 +1108,7 @@ namespace EasyBill.UI.Controllers
                     await _currenstockService.UpdateStock(
                         item.ItemId,
                         item.Batch ?? "",
-                        -item.Qty, // 🔻 PURCHASE delete = minus
+                        -(item.Qty + item.FreeQty), // 🔻 PURCHASE delete = minus (qty + free qty)
                         item.ExpiryDate,
                         item.Mrp,
                         item.salserateA,
@@ -1420,10 +1517,15 @@ namespace EasyBill.UI.Controllers
 
             var batches = currentStocks
                 .Where(x => x.ItemId == id)
-                .GroupBy(x => new { x.Batch, x.ExpiryDate, x.Mrp, x.PurchaseRate })
+                .GroupBy(x => new { x.Batch, x.ExpiryDate })
                 .Select(g =>
                 {
                     var currentStock = g.Sum(x => x.Qty);
+                    var latestStockLayer = g
+                        .OrderByDescending(x => x.LastModified ?? x.Created ?? DateTime.MinValue)
+                        .ThenByDescending(x => x.Id)
+                        .FirstOrDefault();
+
                     //if (currentStock < 0)
                     //    currentStock = 0;
                     string availableQty;
@@ -1447,13 +1549,13 @@ namespace EasyBill.UI.Controllers
                     {
                         batch = g.Key.Batch,
                         expiry = g.Key.ExpiryDate?.ToString("yyyy-MM-dd"),
-                        rate = g.Key.PurchaseRate,
-                        mrp = g.Key.Mrp,
+                        rate = latestStockLayer?.PurchaseRate ?? 0,
+                        mrp = latestStockLayer?.Mrp ?? 0,
                         qty = currentStock,   // ✅ 5:10 format
                         availableQty = availableQty,
-                        salserateA = g.FirstOrDefault()?.SalesRateA ?? 0,
-                        salserateB = g.FirstOrDefault()?.SalesRateB ?? 0,
-                        barcode = g.FirstOrDefault()?.Barcode
+                        salserateA = latestStockLayer?.SalesRateA ?? 0,
+                        salserateB = latestStockLayer?.SalesRateB ?? 0,
+                        barcode = latestStockLayer?.Barcode
                     };
                 })
                 //.Where(x => x.qty != "0:0") // optional
@@ -2112,7 +2214,7 @@ namespace EasyBill.UI.Controllers
             var currentStocks = await _currenstockService.GetAll();
 
             var rows = currentStocks
-                .Where(x => x.ItemId == itemId)
+                .Where(x => x.ItemId == itemId && x.Qty != 0)
                 .Select(x => new CurrentStockBatchDetailsRowVM
                 {
                     Batch = x.Batch,
@@ -6449,7 +6551,7 @@ namespace EasyBill.UI.Controllers
                             BillDate = purchaseInfo?.BillDate,
                             ItemName = item.Name,
                             Batch = batch ?? "-",
-                            Qty = (int)stock.TotalQty,
+                            Qty = stock.TotalQty,
                             CurrentQtyDisplay = qtyDisplay,
                             Rate = Math.Round(stock.AvgRate, 2),
                             Amount = Math.Round(stock.TotalQty * stock.AvgRate, 2)
@@ -6904,8 +7006,8 @@ namespace EasyBill.UI.Controllers
                     {
                         ItemName = g.Key.ItemName,
                         Packing = g.First().Item.ItemMasters?.Packing ?? "-",
-                        Qty = (int)qty,
-                        FreeQty = (int)free,
+                        Qty = qty,
+                        FreeQty = free,
                         Rate = rate,
                         Amount = totalAmount
                     };
@@ -7282,12 +7384,12 @@ namespace EasyBill.UI.Controllers
                 return new PurchaseItemVM
                 {
                     ItemName = item.Name,
-                    Qty = (int)currentStock,
+                    Qty = currentStock,
                     CurrentQtyDisplay = qtyDisplay,
                     ExcessQtyDisplay = excessQtyDisplay,
                     MaximumQty = (int)maxQty,
                     AvgRate = Math.Round(avgRate, 2),
-                    AvgSales = (int)extraQty,
+                    AvgSales = extraQty,
                     AvgAmount = Math.Round(extraAmount, 2)
                 };
             })
@@ -7372,12 +7474,12 @@ namespace EasyBill.UI.Controllers
                 return new PurchaseItemVM
                 {
                     ItemName = item.Name,
-                    Qty = (int)currentStock,
+                    Qty = currentStock,
                     CurrentQtyDisplay = qtyDisplay,
                     ExcessQtyDisplay = excessQtyDisplay,
                     MaximumQty = (int)maxQty,
                     AvgRate = Math.Round(avgRate, 2),
-                    AvgSales = (int)extraQty,
+                    AvgSales = extraQty,
                     AvgAmount = Math.Round(extraAmount, 2)
                 };
             })
@@ -7536,12 +7638,12 @@ namespace EasyBill.UI.Controllers
                 return new PurchaseItemVM
                 {
                     ItemName = item.Name,
-                    Qty = (int)currentStock,
+                    Qty = currentStock,
                     CurrentQtyDisplay = qtyDisplay,
                     ExcessQtyDisplay = excessQtyDisplay,
                     MaximumQty = (int)maxQty,
                     AvgRate = Math.Round(avgRate, 2),
-                    AvgSales = (int)extraQty,
+                    AvgSales = extraQty,
                     AvgAmount = Math.Round(extraAmount, 2)
                 };
             })
@@ -8205,7 +8307,7 @@ namespace EasyBill.UI.Controllers
                         Batch = key.Batch,
                         ExpiryDate = x.Value.ExpiryDate,
                         Mrp = x.Value.Mrp,
-                        Qty = (int)currentStock,
+                        Qty = currentStock,
                         CurrentQtyDisplay = qtyDisplay,
                         Packing = itemMaster.Packing ?? "-",
                         Unit = itemMaster.Unit1 ?? "-"
@@ -8609,6 +8711,151 @@ namespace EasyBill.UI.Controllers
             };
 
             return Json(result);
+        }
+
+        // MERGED FROM TL: Helper validations for decimal qty, index gaps, and expiry
+        private static bool TryValidateDecimalQtyFreeQtyRule(IEnumerable<PurchaseItemVM>? items, out string message)
+        {
+            message = string.Empty;
+
+            if (items == null)
+            {
+                return true;
+            }
+
+            foreach (var item in items)
+            {
+                if (item == null || item.ItemId <= 0 || item.Qty <= 0)
+                {
+                    continue;
+                }
+
+                var requiredFreeQty = Math.Ceiling(item.Qty) - item.Qty;
+                if (requiredFreeQty <= 0)
+                {
+                    continue;
+                }
+
+                var requiredRounded = Math.Round(requiredFreeQty, 6, MidpointRounding.AwayFromZero);
+                var freeQtyRounded = Math.Round(item.FreeQty, 6, MidpointRounding.AwayFromZero);
+
+                if (freeQtyRounded != requiredRounded)
+                {
+                    message = $"For decimal qty {item.Qty:0.######}, Free Qty must be {requiredRounded:0.######} to complete the next whole quantity.";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static void ApplyDefaultExpiryIfMissing(IEnumerable<PurchaseItemVM>? items, DateTime defaultExpiryDate)
+        {
+            if (items == null)
+            {
+                return;
+            }
+
+            foreach (var item in items)
+            {
+                if (item == null)
+                {
+                    continue;
+                }
+
+                var hasRowData = item.ItemId > 0
+                                 || !string.IsNullOrWhiteSpace(item.Batch)
+                                 || item.Qty > 0
+                                 || item.FreeQty > 0
+                                 || item.Rate > 0
+                                 || item.Mrp > 0;
+                if (!hasRowData)
+                {
+                    continue;
+                }
+
+                item.ExpiryDate ??= defaultExpiryDate;
+            }
+        }
+
+        private async Task<bool> IsCurrentTenantPharmacyAsync()
+        {
+            var tenantId = User.FindFirst("TenantId")?.Value;
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                return false;
+            }
+
+            var tenant = await _tenantService.GetById(tenantId);
+            return tenant?.BusinessType == BusinessType.Pharmacy;
+        }
+
+        private static bool TryValidateRequiredExpiry(IEnumerable<PurchaseItemVM>? items, out string message)
+        {
+            message = string.Empty;
+
+            if (items == null)
+            {
+                return true;
+            }
+
+            var rowNumber = 1;
+            foreach (var item in items)
+            {
+                if (item == null || item.ItemId <= 0)
+                {
+                    rowNumber++;
+                    continue;
+                }
+
+                if (!item.ExpiryDate.HasValue)
+                {
+                    message = $"Expiry is required for pharmacy purchase item row {rowNumber}.";
+                    return false;
+                }
+
+                rowNumber++;
+            }
+
+            return true;
+        }
+
+        private bool HasCollectionIndexGap(string collectionName)
+        {
+            if (!Request.HasFormContentType)
+            {
+                return false;
+            }
+
+            var pattern = $"^{Regex.Escape(collectionName)}\\[(\\d+)\\]\\.";
+            var indexes = Request.Form.Keys
+                .Select(key => Regex.Match(key, pattern))
+                .Where(match => match.Success)
+                .Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture))
+                .Distinct()
+                .OrderBy(index => index)
+                .ToList();
+
+            for (var expectedIndex = 0; expectedIndex < indexes.Count; expectedIndex++)
+            {
+                if (indexes[expectedIndex] != expectedIndex)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsSameStockLayer(PurchaseItem existingItem, PurchaseItemVM updatedItem)
+        {
+            var existingBatch = string.IsNullOrWhiteSpace(existingItem.Batch) ? string.Empty : existingItem.Batch.Trim();
+            var updatedBatch = string.IsNullOrWhiteSpace(updatedItem.Batch) ? string.Empty : updatedItem.Batch.Trim();
+
+            return existingItem.ItemId == updatedItem.ItemId
+                   && string.Equals(existingBatch, updatedBatch, StringComparison.OrdinalIgnoreCase)
+                   && existingItem.Mrp == updatedItem.Mrp
+                   && existingItem.ExpiryDate == updatedItem.ExpiryDate;
         }
 
         [HttpGet]

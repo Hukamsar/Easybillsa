@@ -1,4 +1,4 @@
-﻿using AOne.Models.Entity;
+using AOne.Models.Entity;
 using EasyBill.Models.Entity;
 using EasyBill.Models.Model.Response;
 using EasyBill.Models.ViewModels;
@@ -33,5 +33,6 @@ namespace EasyBill.DataAccess.Repository.IRepository
         Task<List<OrderResponse>> GetOrdersByCustomer(int customerId);
 
         Task<ItemMaster> GetProductById(int Id);
+        Task<bool> IsReferenced(int id); // MERGED FROM TL
     }
 }

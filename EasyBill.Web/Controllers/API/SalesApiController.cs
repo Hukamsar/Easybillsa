@@ -10,16 +10,21 @@ using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using EasyBill.UI.Service.Whatsapp;
+using iText.Html2pdf;
 
 namespace EasyBill.UI.Controllers.API
 { 
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [Route("api/[controller]")]
     [ApiController]
-    public class SalesApiController : ControllerBase
+    public class SalesApiController : Controller
     {
         private readonly ISalesRepository _salesservice;
         private readonly IProfileService _profileService;
@@ -38,6 +43,11 @@ namespace EasyBill.UI.Controllers.API
         private readonly ISalesOrderRepository _salesOrderRepo;
         private readonly IStockService _currenstockService;
         private readonly ICustomerAdvanceRepository _customerAdvanceRepo;
+        private readonly ITenantRegistrationRepository _tenantRepository;
+        private readonly IInvoiceThemeSettingRepository _themeRepo;
+        private readonly IUnitOfWork _unitofwork;
+        private readonly WhatsAppService _whatsappservice;
+        private readonly IRazorViewEngine _viewEngine;
         public SalesApiController(
             ISalesRepository salesservice,
             IProfileService profileService,
@@ -55,7 +65,12 @@ namespace EasyBill.UI.Controllers.API
             IOfferRepository offerrepo,
             ISalesOrderRepository salesOrderRepo,
             IStockService currenstockService,
-            ICustomerAdvanceRepository customerAdvanceRepo)
+            ICustomerAdvanceRepository customerAdvanceRepo,
+            ITenantRegistrationRepository tenantRepository,
+            IInvoiceThemeSettingRepository themeRepo,
+            IUnitOfWork unitofwork,
+            WhatsAppService whatsappservice,
+            IRazorViewEngine viewEngine)
         {
             _salesservice = salesservice;
             _profileService = profileService;
@@ -74,6 +89,11 @@ namespace EasyBill.UI.Controllers.API
             _salesOrderRepo = salesOrderRepo;
             _currenstockService=currenstockService;
             _customerAdvanceRepo = customerAdvanceRepo;
+            _tenantRepository = tenantRepository;
+            _themeRepo = themeRepo;
+            _unitofwork = unitofwork;
+            _whatsappservice = whatsappservice;
+            _viewEngine = viewEngine;
         }
 
         // GET: api/Sales
@@ -279,6 +299,393 @@ namespace EasyBill.UI.Controllers.API
             };
         }
 
+        // MERGED FROM TL: PDF generation and WhatsApp helper methods
+        private async Task<string?> ResolveWhatsAppMobileNoAsync(string? saleMobileNo, int? customerId)
+        {
+            if (!string.IsNullOrWhiteSpace(saleMobileNo))
+            {
+                return saleMobileNo.Trim();
+            }
+
+            if (!customerId.HasValue || customerId.Value <= 0)
+            {
+                return null;
+            }
+
+            var customer = await _customerservice.GetById(customerId.Value);
+            if (customer == null || string.IsNullOrWhiteSpace(customer.PhoneNo))
+            {
+                return null;
+            }
+
+            return customer.PhoneNo.Trim();
+        }
+
+        private async Task<string?> ShareInvoiceViaWhatsAppAndSmsAsync(
+            int saleId,
+            string billNo,
+            string? saleMobileNo,
+            int? customerId)
+        {
+            var tenantId = User?.FindFirst("TenantId")?.Value;
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                await _profileService.Set(User);
+                tenantId = _profileService?.Profile?.TenantId;
+            }
+
+            var tenant = !string.IsNullOrWhiteSpace(tenantId)
+                ? await _tenantRepository.GetById(tenantId)
+                : null;
+
+            var destinationMobileNo = await ResolveWhatsAppMobileNoAsync(saleMobileNo, customerId);
+            if (string.IsNullOrWhiteSpace(destinationMobileNo))
+            {
+                return "WhatsApp/SMS not sent. Customer mobile number not available.";
+            }
+
+            if (tenant != null && !tenant.IsWalletActive)
+            {
+                return "WhatsApp/SMS not sent because wallet is inactive.";
+            }
+
+            var messages = new List<string>();
+            string pdfFileName = await GenerateInvoicePdf(saleId);
+            string baseUrl = $"{Request.Scheme}://{Request.Host}";
+            string pdfUrl = $"{baseUrl}/Invoices/{pdfFileName}";
+            string customerName = await ResolveCustomerNameAsync(customerId);
+
+            var whatsappCharge = tenant == null
+                ? 0m
+                : decimal.Round(Math.Max(tenant.WhatsAppMessageCharge, 0m), 2, MidpointRounding.AwayFromZero);
+
+            if (tenant != null && !tenant.IsWhatsAppChargeActive)
+            {
+                messages.Add("WhatsApp sending is disabled.");
+            }
+            else if (tenant != null && whatsappCharge > 0m && tenant.WalletBalance < whatsappCharge)
+            {
+                messages.Add("WhatsApp not sent due to low wallet balance.");
+            }
+            else
+            {
+                string whatsappMessage = $"Dear {customerName},Your invoice {billNo} is attached.Thank you!";
+                var whatsAppResult = await _whatsappservice.SendWhatsAppMessageWithStatusAsync(
+                    destinationMobileNo,
+                    whatsappMessage,
+                    pdfUrl);
+
+                if (!whatsAppResult.IsSuccess)
+                {
+                    messages.Add(whatsAppResult.Message);
+                }
+                else
+                {
+                    messages.Add("WhatsApp sent successfully.");
+
+                    if (tenant != null && whatsappCharge > 0m)
+                    {
+                        var chargeError = await DeductShareChargeAsync(
+                            tenant,
+                            whatsappCharge,
+                            billNo,
+                            saleId,
+                            serviceType: "WhatsApp",
+                            remarks: "WhatsApp share charge deducted.",
+                            successPrefix: "WhatsApp");
+                        if (!string.IsNullOrWhiteSpace(chargeError))
+                        {
+                            messages.Add(chargeError);
+                        }
+                    }
+                }
+            }
+
+            ScheduleGeneratedInvoiceDeletion(pdfFileName);
+            return messages.Count > 0 ? string.Join(" ", messages) : null;
+        }
+
+        private async Task<string> ResolveCustomerNameAsync(int? customerId)
+        {
+            if (!customerId.HasValue || customerId.Value <= 0)
+            {
+                return "Customer";
+            }
+
+            var customer = await _customerservice.GetById(customerId.Value);
+            if (customer == null || string.IsNullOrWhiteSpace(customer.Name))
+            {
+                return "Customer";
+            }
+
+            return customer.Name.Trim();
+        }
+
+        private async Task<string?> DeductShareChargeAsync(
+            Tenant tenant,
+            decimal charge,
+            string billNo,
+            int saleId,
+            string serviceType,
+            string remarks,
+            string successPrefix)
+        {
+            try
+            {
+                tenant.WalletBalance = decimal.Round(
+                    Math.Max(tenant.WalletBalance - charge, 0m),
+                    2,
+                    MidpointRounding.AwayFromZero);
+
+                await _tenantRepository.Update(tenant);
+                await LogTenantWalletHistoryAsync(
+                    tenant.Id,
+                    charge,
+                    paymentMode: "Auto",
+                    referenceNo: billNo,
+                    serviceType: serviceType,
+                    remarks: remarks,
+                    closingBalance: tenant.WalletBalance,
+                    referenceSaleId: saleId);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return $"{successPrefix} sent successfully, but wallet update/history failed. Error: {ex.Message}";
+            }
+        }
+
+        private async Task LogTenantWalletHistoryAsync(
+            string tenantId,
+            decimal amount,
+            string paymentMode,
+            string? referenceNo,
+            string serviceType,
+            string? remarks,
+            decimal closingBalance,
+            int? referenceSaleId)
+        {
+            if (string.IsNullOrWhiteSpace(tenantId) || amount <= 0)
+            {
+                return;
+            }
+
+            var historyRepo = _unitofwork.GetRepository<TenantWalletHistory>();
+            historyRepo.Add(new TenantWalletHistory
+            {
+                TenantId = tenantId,
+                TransactionDateTime = DateTime.Now,
+                Credit = 0m,
+                Debit = amount,
+                PaymentMode = paymentMode,
+                ReferenceNo = string.IsNullOrWhiteSpace(referenceNo) ? null : referenceNo.Trim(),
+                ReferenceSaleId = referenceSaleId,
+                ServiceType = string.IsNullOrWhiteSpace(serviceType) ? "WhatsApp" : serviceType.Trim(),
+                ServiceCharge = decimal.Round(Math.Max(amount, 0m), 2, MidpointRounding.AwayFromZero),
+                Remarks = string.IsNullOrWhiteSpace(remarks) ? null : remarks.Trim(),
+                ClosingBalance = decimal.Round(Math.Max(closingBalance, 0m), 2, MidpointRounding.AwayFromZero)
+            });
+
+            using var transaction = historyRepo.BeginTransaction();
+            await historyRepo.SaveChangesAsync();
+            transaction.Commit();
+        }
+
+        private async Task<string> GenerateInvoicePdf(int saleId)
+        {
+            var saleData = await _salesservice.GetById(saleId);
+
+            if (saleData == null)
+            {
+                throw new Exception("Invoice data not found");
+            }
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var themeSetting = await _themeRepo.GetDefaultThemeAsync(userId);
+
+            if (themeSetting == null)
+            {
+                themeSetting = await _themeRepo.GetThemeSettingAsync(userId, "A4");
+            }
+
+            ViewBag.ThemeSettings = themeSetting;
+
+            var tenantId = User.FindFirstValue("TenantId");
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                await _profileService.Set(User);
+                tenantId = _profileService?.Profile?.TenantId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(tenantId))
+            {
+                var tenant = (await _tenantRepository.GetAll()).FirstOrDefault(x => x.Id == tenantId);
+
+                if (tenant != null)
+                {
+                    var addressParts = new List<string>();
+
+                    if (!string.IsNullOrWhiteSpace(tenant.Address1))
+                        addressParts.Add(tenant.Address1);
+
+                    if (!string.IsNullOrWhiteSpace(tenant.Address2))
+                        addressParts.Add(tenant.Address2);
+
+                    if (!string.IsNullOrWhiteSpace(tenant.Location))
+                        addressParts.Add(tenant.Location);
+
+                    if (tenant.City != null && !string.IsNullOrWhiteSpace(tenant.City.Name))
+                        addressParts.Add(tenant.City.Name);
+
+                    if (tenant.State != null && !string.IsNullOrWhiteSpace(tenant.State.Name))
+                        addressParts.Add(tenant.State.Name);
+
+                    if (!string.IsNullOrWhiteSpace(tenant.PinCode))
+                        addressParts.Add($"Pin: {tenant.PinCode}");
+
+                    var businessPhone = !string.IsNullOrWhiteSpace(tenant.MobileNo)
+                        ? tenant.MobileNo
+                        : tenant.Phone;
+
+                    ViewBag.BusinessName = tenant.Name ?? "";
+                    ViewBag.BusinessAddress = string.Join(", ", addressParts);
+                    ViewBag.BusinessPhone = businessPhone ?? "";
+                    ViewBag.BusinessEmail = tenant.Email ?? "";
+                    ViewBag.BusinessGSTIN = tenant.GstNo ?? "";
+                }
+            }
+
+            string selectedPaperSize = themeSetting?.PaperSize ?? "A4";
+            string viewPath;
+
+            if (string.Equals(selectedPaperSize, "Thermal", StringComparison.OrdinalIgnoreCase))
+            {
+                ViewBag.PaperSize = themeSetting?.ThermalPaperSize == 58 ? "58mm" : "80mm";
+                viewPath = "~/Views/Shared/InvoiceTemplates/Thermal_Print.cshtml";
+            }
+            else if (string.Equals(selectedPaperSize, "A5", StringComparison.OrdinalIgnoreCase))
+            {
+                viewPath = "~/Views/Shared/InvoiceTemplates/A5_Print.cshtml";
+            }
+            else
+            {
+                viewPath = "~/Views/Shared/InvoiceTemplates/A4_Print.cshtml";
+            }
+
+            ViewBag.HidePrintControls = true;
+
+            string html = await RenderViewToStringAsync(viewPath, saleData);
+
+            string folderPath = System.IO.Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "Invoices");
+
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+
+            CleanupOldGeneratedInvoiceFiles(folderPath);
+
+            string fileName = $"Invoice_{saleId}.pdf";
+            string filePath = System.IO.Path.Combine(folderPath, fileName);
+
+            using (FileStream fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                ConverterProperties converterProperties = new ConverterProperties();
+                converterProperties.SetBaseUri($"{Request.Scheme}://{Request.Host}");
+                HtmlConverter.ConvertToPdf(html, fileStream, converterProperties);
+            }
+
+            return fileName;
+        }
+
+        private void ScheduleGeneratedInvoiceDeletion(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return;
+            }
+
+            var fullPath = System.IO.Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "Invoices",
+                fileName);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromDays(1));
+                    if (System.IO.File.Exists(fullPath))
+                    {
+                        System.IO.File.Delete(fullPath);
+                    }
+                }
+                catch
+                {
+                    // keep non-blocking cleanup silent
+                }
+            });
+        }
+
+        private void CleanupOldGeneratedInvoiceFiles(string folderPath)
+        {
+            try
+            {
+                if (!Directory.Exists(folderPath))
+                {
+                    return;
+                }
+
+                var cutoffUtc = DateTime.UtcNow.AddDays(-1);
+                foreach (var filePath in Directory.GetFiles(folderPath, "Invoice_*.pdf"))
+                {
+                    if (System.IO.File.GetLastWriteTimeUtc(filePath) <= cutoffUtc)
+                    {
+                        System.IO.File.Delete(filePath);
+                    }
+                }
+            }
+            catch
+            {
+                // do not interrupt invoice generation
+            }
+        }
+
+        private async Task<string> RenderViewToStringAsync<TModel>(
+            string viewName,
+            TModel model)
+        {
+            ViewData.Model = model;
+
+            using var stringWriter = new StringWriter();
+
+            var viewResult = _viewEngine.GetView(
+                executingFilePath: null,
+                viewPath: viewName,
+                isMainPage: true);
+
+            if (!viewResult.Success)
+            {
+                throw new Exception($"View '{viewName}' not found.");
+            }
+
+            var viewContext = new ViewContext(
+                ControllerContext,
+                viewResult.View,
+                ViewData,
+                TempData,
+                stringWriter,
+                new HtmlHelperOptions()
+            );
+
+            await viewResult.View.RenderAsync(viewContext);
+
+            return stringWriter.ToString();
+        }
 
         [HttpGet("GenerateNextBillNo")]
         public async Task<IActionResult> GenerateNextBillNo()
@@ -432,10 +839,47 @@ namespace EasyBill.UI.Controllers.API
         //}
 
         [HttpPost("Create")]
-        public async Task<IActionResult> Create([FromBody] SalesVM Vm)
+        public async Task<IActionResult> Create([FromBody] SalesVM Vm, bool isShare = false)
         {
             if (Vm == null)
                 return BadRequest(new { success = false, message = "Invalid data." });
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .Select(x => new
+                    {
+                        Field = x.Key,
+                        Message = x.Value.Errors.First().ErrorMessage
+                    })
+                    .ToList();
+
+                var firstError = errors.FirstOrDefault();
+                return BadRequest(new
+                {
+                    success = false,
+                    message = firstError?.Message ?? "Please fill all required fields correctly.",
+                    errors
+                });
+            }
+
+            var data = await _salesservice.GetAll();
+            var billNo = Vm.BillNo?.Trim();
+
+            bool isDuplicate = data.Any(x =>
+                x.BillNo != null &&
+                x.BillNo.Trim().Equals(billNo, StringComparison.OrdinalIgnoreCase)
+            );
+
+            if (isDuplicate)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"{billNo} - This Bill Number already exists."
+                });
+            }
 
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var setting = await _salsesettingservice.GetByUserId(userId);
@@ -444,9 +888,11 @@ namespace EasyBill.UI.Controllers.API
             var itemMasters = (await _itemmasterservice.GetAll())
                 .Where(x => x.IsActive)
                 .ToList();
+            var isRegisteredBilling = string.Equals(Vm.billingType, "registered", StringComparison.OrdinalIgnoreCase)
+                || (string.IsNullOrWhiteSpace(Vm.billingType) && Vm.CustomerId.HasValue);
 
             // ? REGISTERED CUSTOMER VALIDATION
-            if (Vm.billingType == "registered")
+            if (isRegisteredBilling)
             {
                 if (string.IsNullOrWhiteSpace(Vm.MobileNo))
                 {
@@ -469,20 +915,26 @@ namespace EasyBill.UI.Controllers.API
                     return BadRequest(new
                     {
                         success = false,
-                        message = "Customer does not exist."
+                        message = "Customer does not exist. Please create customer first."
                     });
                 }
             }
 
+            Vm.SalesItemVMs ??= new List<SalesItemVM>();
+            Vm.SalsePaymentDetails ??= new List<SalsePaymentDetailsVM>();
+
             var model = new Sales
             {
                 // ? BILLING TYPE FIX
-                CustomerId = Vm.billingType == "registered" ? Vm.CustomerId : null,
-                MobileNo = Vm.billingType == "registered" ? Vm.MobileNo : null,
-                Address = Vm.billingType == "registered" ? Vm.Address : null,
-                billingType = Vm.billingType == "registered" ? "registered" : "Cash",
+                CustomerId = isRegisteredBilling ? Vm.CustomerId : null,
+                MobileNo = isRegisteredBilling ? Vm.MobileNo : null,
+                Address = isRegisteredBilling ? Vm.Address : null,
+                billingType = isRegisteredBilling ? "registered" : "Cash",
+                PaymentType = Vm.PaymentType,
 
-                BillDate = Vm.BillDate,
+                BillDate = Vm.BillDate.HasValue
+                    ? Vm.BillDate.Value.Date.Add(DateTime.Now.TimeOfDay)
+                    : DateTime.Now,
                 BillNo = Vm.BillNo,
                 PharmacyDoctorId = Vm.PharmacyDoctorId,
                 DoctorMobileNumber = Vm.DoctorMobileNumber,
@@ -492,13 +944,18 @@ namespace EasyBill.UI.Controllers.API
                 TotalGstAmt = Vm.TotalGstAmt,
                 TotalPayable = Vm.TotalPayable,
                 TotalCessAmount = Vm.TotalCessAmount,
+                RoundOffAmount = Vm.RoundOffAmount,
 
                 discountPercent = Vm.discountPercent,
                 discountAmount = Vm.discountAmount,
                 Totaldiscount = Vm.Totaldiscount,
 
                 PaidAmount = Vm.PaidAmount,
-                Balance = Vm.TotalPayable - Vm.PaidAmount,
+                ReturnAmount = Math.Max(0, Vm.PaidAmount - Vm.TotalPayable),
+                NetCollection = Vm.PaidAmount - Math.Max(0, Vm.PaidAmount - Vm.TotalPayable),
+                SalesOrderId = Vm.SalesOrderId,
+                OfferId = Vm.OfferId,
+                Balance = Vm.Balance,
 
                 PaymentStatus = Vm.PaidAmount == 0 ? "Unpaid" :
                                 Vm.PaidAmount < Vm.TotalPayable ? "Partial" : "Paid",
@@ -546,12 +1003,14 @@ namespace EasyBill.UI.Controllers.API
                     Amount = pd.Amount,
                     ReferenceNo = pd.ReferenceNo,
                     Description = pd.Description,
-                    CustomerId = Vm.billingType == "registered" ? Vm.CustomerId : null,
+                    CustomerId = isRegisteredBilling ? Vm.CustomerId : null,
                 }).ToList() ?? new List<SalsePaymentDetails>()
             };
 
             try
             {
+                string? walletMessage = null;
+
                 // ? STOCK UPDATE
                 foreach (var item in model.SalesItems)
                 {
@@ -561,17 +1020,27 @@ namespace EasyBill.UI.Controllers.API
                         -(item.Qty),
                         item.Expirydate,
                         item.Mrp,
-                        item.Rate
+                        item.StripRate
                     );
                 }
 
                 var createdSale = await _salesservice.Create(model);
 
+                if (isShare)
+                {
+                    walletMessage = await ShareInvoiceViaWhatsAppAndSmsAsync(
+                        createdSale.Id,
+                        createdSale.BillNo ?? model.BillNo ?? string.Empty,
+                        model.MobileNo,
+                        model.CustomerId);
+                }
+
                 return Ok(new
                 {
                     success = true,
                     saleId = createdSale.Id,
-                    message = "Sale created successfully."
+                    message = "Sale created successfully.",
+                    walletMessage
                 });
             }
             catch (Exception ex)
@@ -845,7 +1314,7 @@ namespace EasyBill.UI.Controllers.API
         //    return Ok(new { success = true, message = "Sale updated successfully." });
         //}
         [HttpPut("Edit")]
-        public async Task<IActionResult> Edit([FromBody] SalesVM VM)
+        public async Task<IActionResult> Edit([FromBody] SalesVM VM, bool isShare = false)
         {
             if (VM == null)
                 return BadRequest(new { success = false, message = "Invalid data." });
@@ -854,16 +1323,52 @@ namespace EasyBill.UI.Controllers.API
             if (model == null)
                 return NotFound(new { success = false, message = "Sale not found." });
 
+            var isRegisteredBilling = string.Equals(VM.billingType, "registered", StringComparison.OrdinalIgnoreCase)
+                || (string.IsNullOrWhiteSpace(VM.billingType) && VM.CustomerId.HasValue);
+
+            if (isRegisteredBilling)
+            {
+                if (string.IsNullOrWhiteSpace(VM.MobileNo))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Mobile number is required for registered customer."
+                    });
+                }
+
+                var customerList = await _customerservice.GetAll();
+                var isExist = customerList.Any(x =>
+                    !string.IsNullOrWhiteSpace(x.PhoneNo) &&
+                    x.PhoneNo.Trim() == VM.MobileNo.Trim()
+                );
+
+                if (!isExist)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Customer does not exist. Please create customer first."
+                    });
+                }
+            }
+
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var setting = await _salsesettingservice.GetByUserId(userId);
+            bool isTabletWise = setting != null && setting.ItemConversion == "TabletWise";
+
             var itemMasters = (await _itemmasterservice.GetAll())
                 .Where(x => x.IsActive)
                 .ToList();
 
             // Update main fields
-            model.CustomerId = VM.CustomerId;
+            model.CustomerId = isRegisteredBilling ? VM.CustomerId : null;
+            model.MobileNo = isRegisteredBilling ? VM.MobileNo : null;
+            model.Address = isRegisteredBilling ? VM.Address : null;
+            model.billingType = isRegisteredBilling ? "registered" : "Cash";
+            model.PaymentType = VM.PaymentType;
             model.BillDate = VM.BillDate;
             model.BillNo = VM.BillNo;
-            model.MobileNo = VM.MobileNo;
-            model.Address = VM.Address;
             model.PharmacyDoctorId = VM.PharmacyDoctorId;
             model.DoctorMobileNumber = VM.DoctorMobileNumber;
             model.DoctorRegNumber = VM.DoctorRegNumber;
@@ -871,23 +1376,63 @@ namespace EasyBill.UI.Controllers.API
             model.TotalGstAmt = VM.TotalGstAmt;
             model.TotalPayable = VM.TotalPayable;
             model.TotalCessAmount = VM.TotalCessAmount;
+            model.RoundOffAmount = VM.RoundOffAmount;
             model.discountPercent = VM.discountPercent;
             model.discountAmount = VM.discountAmount;
             model.Totaldiscount = VM.Totaldiscount;
             model.PaidAmount = VM.PaidAmount;
-            model.Balance = VM.TotalPayable - VM.PaidAmount;
+            model.ReturnAmount = Math.Max(0, VM.PaidAmount - VM.TotalPayable);
+            model.OfferId = VM.OfferId;
+            model.Balance = VM.Balance;
+            model.NetCollection = VM.PaidAmount - model.ReturnAmount;
             model.PaymentStatus = VM.PaidAmount == 0 ? "Unpaid" :
                                   VM.PaidAmount < VM.TotalPayable ? "Partial" : "Paid";
+
+            if (isRegisteredBilling && VM.CustomerId.HasValue)
+            {
+                var customer = await _customerservice.GetById(VM.CustomerId);
+                if (customer != null)
+                {
+                    customer.Name = VM.CustomerName;
+                    customer.PhoneNo = VM.MobileNo;
+                    customer.Address = VM.Address;
+                    await _customerservice.Update(customer);
+                }
+            }
+
+            if (model.SalesItems == null)
+                model.SalesItems = new List<SalesItem>();
+
+            if (VM.SalesItemVMs == null)
+                VM.SalesItemVMs = new List<SalesItemVM>();
 
             // Handle SalesItems
             var removedItems = model.SalesItems
                 .Where(dbItem => !VM.SalesItemVMs.Any(vmItem => vmItem.Id == dbItem.Id))
                 .ToList();
-            removedItems.ForEach(x => model.SalesItems.Remove(x));
+
+            foreach (var item in removedItems)
+            {
+                await _currenstockService.UpdateStock(
+                    item.ItemMasterId,
+                    item.Batch?.Trim() ?? "",
+                    item.Qty,
+                    item.Expirydate,
+                    item.Mrp,
+                    item.Rate
+                );
+                model.SalesItems.Remove(item);
+            }
 
             foreach (var item in VM.SalesItemVMs)
             {
                 var itemMaster = itemMasters.FirstOrDefault(x => x.Id == item.ItemMasterId);
+                decimal finalQty = item.Qty;
+
+                if (isTabletWise && itemMaster != null && itemMaster.Conversion > 0)
+                {
+                    finalQty = item.Qty + ((decimal)item.TabletQty / itemMaster.Conversion);
+                }
 
                 if (item.Id > 0)
                 {
@@ -895,6 +1440,25 @@ namespace EasyBill.UI.Controllers.API
                     if (existingItem != null)
                     {
                         var resolvedTax = ResolveSalesItemTax(item, itemMaster, existingItem);
+                        decimal oldQty = existingItem.Qty;
+
+                        await _currenstockService.UpdateStock(
+                            existingItem.ItemMasterId,
+                            existingItem.Batch?.Trim() ?? "",
+                            oldQty,
+                            existingItem.Expirydate,
+                            existingItem.Mrp,
+                            existingItem.Rate
+                        );
+
+                        await _currenstockService.UpdateStock(
+                            item.ItemMasterId,
+                            item.Batch?.Trim() ?? "",
+                            -finalQty,
+                            item.Expirydate,
+                            item.Mrp,
+                            item.Rate
+                        );
 
                         existingItem.ItemMasterId = item.ItemMasterId;
                         existingItem.HsnId = resolvedTax.HsnId;
@@ -903,7 +1467,7 @@ namespace EasyBill.UI.Controllers.API
                         existingItem.Batch = item.Batch;
                         existingItem.Expirydate = item.Expirydate;
                         existingItem.Mrp = item.Mrp;
-                        existingItem.Qty = item.Qty;
+                        existingItem.Qty = finalQty;
                         existingItem.Rate = item.Rate;
                         existingItem.Gst = resolvedTax.Gst;
                         existingItem.IGst = resolvedTax.IGst;
@@ -913,11 +1477,21 @@ namespace EasyBill.UI.Controllers.API
                         existingItem.Discount = item.Discount;
                         existingItem.Amount = item.Amount;
                         existingItem.StripRate = item.StripRate;
+                        existingItem.IsSoldInTablets = isTabletWise;
                     }
                 }
                 else
                 {
                     var resolvedTax = ResolveSalesItemTax(item, itemMaster);
+
+                    await _currenstockService.UpdateStock(
+                        item.ItemMasterId,
+                        item.Batch?.Trim() ?? "",
+                        -finalQty,
+                        item.Expirydate,
+                        item.Mrp,
+                        item.Rate
+                    );
 
                     model.SalesItems.Add(new SalesItem
                     {
@@ -928,7 +1502,7 @@ namespace EasyBill.UI.Controllers.API
                         Batch = item.Batch,
                         Expirydate = item.Expirydate,
                         Mrp = item.Mrp,
-                        Qty = item.Qty,
+                        Qty = finalQty,
                         Rate = item.Rate,
                         StripRate = item.StripRate,
                         Gst = resolvedTax.Gst,
@@ -938,15 +1512,26 @@ namespace EasyBill.UI.Controllers.API
                         Cess = resolvedTax.Cess,
                         Discount = item.Discount,
                         Amount = item.Amount,
+                        IsSoldInTablets = isTabletWise
                     });
                 }
             }
+
+            if (model.SalsePaymentDetails == null)
+                model.SalsePaymentDetails = new List<SalsePaymentDetails>();
+
+            if (VM.SalsePaymentDetails == null)
+                VM.SalsePaymentDetails = new List<SalsePaymentDetailsVM>();
 
             // Handle Payments
             var removedPaymentDetails = model.SalsePaymentDetails
                 .Where(dbPayment => !VM.SalsePaymentDetails.Any(vmItem => vmItem.Id == dbPayment.Id))
                 .ToList();
-            removedPaymentDetails.ForEach(x => model.SalsePaymentDetails.Remove(x));
+
+            foreach (var payment in removedPaymentDetails)
+            {
+                model.SalsePaymentDetails.Remove(payment);
+            }
 
             foreach (var pd in VM.SalsePaymentDetails)
             {
@@ -959,7 +1544,7 @@ namespace EasyBill.UI.Controllers.API
                         existingPayment.Amount = pd.Amount;
                         existingPayment.ReferenceNo = pd.ReferenceNo;
                         existingPayment.Description = pd.Description;
-                        existingPayment.CustomerId = VM.CustomerId;
+                        existingPayment.CustomerId = isRegisteredBilling ? VM.CustomerId : null;
                     }
                 }
                 else
@@ -970,13 +1555,24 @@ namespace EasyBill.UI.Controllers.API
                         Amount = pd.Amount,
                         ReferenceNo = pd.ReferenceNo,
                         Description = pd.Description,
-                        CustomerId = VM.CustomerId,
+                        CustomerId = isRegisteredBilling ? VM.CustomerId : null,
                     });
                 }
             }
 
             await _salesservice.Update(model);
-            return Ok(new { success = true, message = "Sale updated successfully." });
+
+            string? walletMessage = null;
+            if (isShare)
+            {
+                walletMessage = await ShareInvoiceViaWhatsAppAndSmsAsync(
+                    model.Id,
+                    model.BillNo ?? string.Empty,
+                    model.MobileNo,
+                    model.CustomerId);
+            }
+
+            return Ok(new { success = true, message = "Sale updated successfully.", saleId = model.Id, walletMessage });
         }
         // DELETE: api/Sales/{id}
         [HttpDelete("{id}")]
@@ -988,6 +1584,18 @@ namespace EasyBill.UI.Controllers.API
             var model = await _salesservice.GetById(id);
             if (model == null)
                 return NotFound(new { success = false, message = "Sale not found." });
+
+            foreach (var item in model.SalesItems ?? new List<SalesItem>())
+            {
+                await _currenstockService.UpdateStock(
+                    item.ItemMasterId,
+                    item.Batch ?? "",
+                    item.Qty,
+                    item.Expirydate,
+                    item.Mrp,
+                    item.Rate
+                );
+            }
 
             await _salesservice.Delete(model);
             return Ok(new { success = true, message = "Sale deleted successfully." });
@@ -1192,7 +1800,7 @@ namespace EasyBill.UI.Controllers.API
         public async Task<IActionResult> GetItemByBarcode(string barcode)
         {
             var item = await _itemmasterservice.GetByBarcode(barcode);
-            if (item == null || item.ItemType == "Bulk")
+            if (item == null)
                 return NotFound(new { success = false, message = "Item not found" });
 
             return Ok(new { success = true, itemId = item.Id, itemname = item.Name });
@@ -1203,7 +1811,7 @@ namespace EasyBill.UI.Controllers.API
         public async Task<IActionResult> GetItemById(int id)
         {
             var item = await _itemmasterservice.GetByItemMasterId(id);
-            if (item == null || item.ItemType == "Bulk")
+            if (item == null)
                 return NotFound(new { success = false, message = "Item not found" });
 
             return Ok(new { success = true, itemId = item.Id, itemname = item.Name });
@@ -1213,7 +1821,7 @@ namespace EasyBill.UI.Controllers.API
         [HttpGet("AllItems")]
         public async Task<IActionResult> GetAllItems()
         {
-            var itemMasters = (await _itemmasterservice.GetAll()).Where(x => x.ItemType != "Bulk").OrderBy(x => x.Name);
+            var itemMasters = (await _itemmasterservice.GetAll()).OrderBy(x => x.Name);
             var purchases = await _purchaseservice.GetAll();
             var purchasereturns = await _purchasereturnservice.GetAll();
             var sales = await _salesservice.GetAll();

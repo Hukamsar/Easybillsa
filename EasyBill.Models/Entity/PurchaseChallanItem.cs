@@ -17,8 +17,8 @@ namespace EasyBill.Models.Entity
         public int ItemId { get; set; }
         [ForeignKey(nameof(ItemId))]
         public ItemMaster? ItemMasters { get; set; }
-        public int Qty { get; set; }
-        public int FreeQty { get; set; }
+        public decimal Qty { get; set; } // MERGED FROM TL
+        public decimal FreeQty { get; set; } // MERGED FROM TL
         public string? Unit { get; set; }
         public decimal Rate { get; set; }
         public int? HsnId { get; set; }

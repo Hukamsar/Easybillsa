@@ -13,8 +13,8 @@ namespace EasyBill.DataAccess.StoredProcedures
             table.Columns.Add("Batch", typeof(string));
             table.Columns.Add("ExpiryDate", typeof(DateTime));
             table.Columns.Add("Mrp", typeof(decimal));
-            table.Columns.Add("Qty", typeof(int));
-            table.Columns.Add("FreeQty", typeof(int));
+            table.Columns.Add("Qty", typeof(decimal));
+            table.Columns.Add("FreeQty", typeof(decimal));
             table.Columns.Add("Unit", typeof(string));
             table.Columns.Add("Rate", typeof(decimal));
             table.Columns.Add("HsnId", typeof(int));

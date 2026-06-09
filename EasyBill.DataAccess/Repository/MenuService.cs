@@ -1792,6 +1792,23 @@ namespace AOne.DataAccess.Repository
                 _features.Add(Wallet);
             }
 
+            // MERGED FROM TL: Item Backup menu registration
+            MenuSectionModel ItemBackup = new MenuSectionModel
+            {
+                Title = "",
+                SectionItems = new List<MenuSectionItemModel>
+                    {
+                        new MenuSectionItemModel
+                        {
+                            Title = "Item Backup",
+                            ControllerName = "ItemMaster",
+                            ActionName = "RestoreItem",
+                            PageStatus = PageStatus.Completed
+                        }
+                    }
+            };
+            _features.Add(ItemBackup);
+
             //MenuSectionModel Management = new MenuSectionModel();
             //Management.Title = "";
             //Management.SectionItems = new List<MenuSectionItemModel>();

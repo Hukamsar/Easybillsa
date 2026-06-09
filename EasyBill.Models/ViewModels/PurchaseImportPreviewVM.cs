@@ -26,8 +26,8 @@ namespace EasyBill.Models.ViewModels
         public string ItemName { get; set; } = string.Empty;
         public string Batch { get; set; } = string.Empty;
         public string? ExpiryDate { get; set; }
-        public int Qty { get; set; }
-        public int FreeQty { get; set; }
+        public decimal Qty { get; set; } // MERGED FROM TL
+        public decimal FreeQty { get; set; } // MERGED FROM TL
         public decimal Rate { get; set; }
         public decimal Mrp { get; set; }
         public decimal Discount { get; set; }

@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.Repository;
+using AOne.DataAccess.Repository;
 using AOne.DataAccess.Data;
 using AOne.DataAccess.Repository.IRepository;
 using AOne.Models.Entity;
@@ -562,6 +562,12 @@ namespace EasyBill.DataAccess.Repository
         {
             var value = reader.ReadNullableInt32(columnName);
             return value.HasValue ? (TEnum?)Enum.ToObject(typeof(TEnum), value.Value) : null;
+        }
+
+        // MERGED FROM TL: Checks if item is referenced in other database tables
+        public Task<bool> IsReferenced(int id)
+        {
+            return _unitofwork.IsRecordReferencedAsync<ItemMaster>(id);
         }
     }
 }

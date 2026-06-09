@@ -5,6 +5,7 @@ using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.UI.Service.Auth;
 using EasyBill.UI.Service.ExcelService;
 using EasyBill.UI.Service.Loyalty;
+using EasyBill.UI.Service.Sms;
 using EasyBill.UI.Service.Whatsapp;
 
 namespace EasyBill.UI.Service.Extensions
@@ -75,6 +76,7 @@ namespace EasyBill.UI.Service.Extensions
             services.AddScoped<ICustomerAdvanceRepository, CustomerAdvanceRepository>();
             services.AddScoped<ISupplierAdvanceRepository, SupplierAdvanceRepository>();
             services.AddScoped<WhatsAppService>();
+            services.AddScoped<SmsService>();
             services.AddScoped<CustomerLoyaltyService>();
             return services;
         }
