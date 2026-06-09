@@ -29,16 +29,9 @@
 <table id="purchaseTbl" class="table table-bordered table-striped">
     <thead class="custom-header">
         <tr>
-            <th>
-                Supplier
-            </th>
-
-            <th>
-                @Html.DisplayNameFor(model => model.BillNo)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.BillDate)
-            </th>
+            <th>  @Html.DisplayNameFor(model => model.BillDate) </th>
+            <th>  @Html.DisplayNameFor(model => model.BillNo)  </th>
+            <th>  Supplier </th>
             <th>
                 @Html.DisplayNameFor(model => model.PartyBillNo)
             </th>
@@ -56,17 +49,10 @@
     <tbody>
         @foreach (var item in Model)
         {
-            <tr>  
-                <td> 
-                     @(item.billingType == "walkin" ? "Cash" : item.Suppliers?.FirstName)
-                    
-                </td> 
-                <td>
-                    @Html.DisplayFor(modelItem => item.BillNo)
-                </td>
-                <td>
-                    @item.BillDate?.ToString("dd/MM/yyyy")
-                </td>
+            <tr>
+                <td data-order='@(item.BillDate?.ToString("yyyyMMdd") ?? "")'>  @item.BillDate?.ToString("dd/MM/yyyy")  </td>
+                <td>  @Html.DisplayFor(modelItem => item.BillNo)  </td>
+                <td>   @(item.billingType == "walkin" ? "Cash" : item.Suppliers?.FirstName)  </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.PartyBillNo)
                 </td>
@@ -117,7 +103,7 @@
     <script>
         $(document).ready(function () {
             $("#purchaseTbl").DataTable({
-                "order": [[2, "desc"]]
+                "order": [[0, "asc"]]
             });
         });
     </script>

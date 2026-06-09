@@ -1573,8 +1573,7 @@ namespace EasyBill.UI.Controllers
             try
             {
                 if (id <= 0)
-                    return Json(new { success = false, message = "Invalid Id for deletion." });
-                bool isUsed = await _itemmasterrepository.IsReferenced(id);
+                    return Json(new { success = false, message = "Invalid Id for deletion." }); 
 
                 // MERGED FROM TL: Check references in other tables before deletion
                 bool isUsed = await _itemmasterrepository.IsReferenced(id);

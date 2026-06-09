@@ -4059,12 +4059,21 @@ namespace EasyBill.UI.Controllers
             var latestPurchaseCost = purchase
                 .SelectMany(p => p.PurchaseItems ?? new List<PurchaseItem>())
                 .GroupBy(pi => pi.ItemId)
-                .Select(g => new
+                .Select(g =>
                 {
-                    ItemId = g.Key,
-                    CostRate = g.OrderByDescending(x => x.Id).First().BatchWiseCose
-                })
-                .ToDictionary(x => x.ItemId, x => x.CostRate);
+                    var item = g.OrderByDescending(x => x.Id).First();
+                    var taxPct = (item.Gst > 0 ? item.Gst : item.CGst + item.SGst) + item.Cess;
+                    var costRateWithoutGst = taxPct > 0
+                        ? item.BatchWiseCose / (1 + (taxPct / 100))
+                        : item.BatchWiseCose;
+
+                    return new
+                    {
+                        ItemId = g.Key,
+                        CostRate = item.BatchWiseCose,
+                        CostRateWithoutGst = costRateWithoutGst
+                    };
+                }).ToDictionary(x => x.ItemId);
 
             // Date filter
             var filteredSales = sales
@@ -4204,7 +4213,9 @@ namespace EasyBill.UI.Controllers
                     // 🔹 Cost calculate karo
                     if (latestPurchaseCost.ContainsKey(si.ItemMasterId))
                     {
-                        var purchaseRate = latestPurchaseCost[si.ItemMasterId];
+                        var purchaseRate = gstMode == "without"
+                            ? latestPurchaseCost[si.ItemMasterId].CostRateWithoutGst
+                            : latestPurchaseCost[si.ItemMasterId].CostRate;
 
                         // Purchase rate per base unit nikalo
                         var costPerBaseUnit = purchaseRate / conversion;
@@ -4215,23 +4226,51 @@ namespace EasyBill.UI.Controllers
                     }
                 }
 
+                //decimal displaySales;
+                //decimal displayCost = totalCostValue;
+                //decimal displayProfit;
+
+                //if (gstMode == "without")
+                //{
+                //    displaySales = sale.Total;
+                //}
+                //else
+                //{
+                //    displaySales = sale.TotalPayable;
+                //}
+
+                //displayProfit = displaySales - displayCost;
+
+                //var displayProfitPct = displaySales > 0
+                //    ? Math.Round((displayProfit / displaySales) * 100, 2)
+                //    : 0;
+                //var gpGst = displayProfit - sale.TotalGstAmt;
+
                 decimal displaySales;
                 decimal displayCost = totalCostValue;
                 decimal displayProfit;
+                decimal displayBillAmount;
 
                 if (gstMode == "without")
                 {
-                    displaySales = totalSalesValue;
+                    // GST Exclusive
+                    displaySales = sale.Total;
+                    displayBillAmount = sale.Total;
+
+                    displayProfit = displayBillAmount - displayCost;
+
                 }
                 else
                 {
-                    displaySales = totalSalesValue + sale.TotalGstAmt;
+                    // GST Inclusive
+                    displaySales = sale.TotalPayable;
+                    displayBillAmount = sale.TotalPayable;
+
+                    displayProfit = displayBillAmount - displayCost;
                 }
 
-                displayProfit = displaySales - displayCost;
-
-                var displayProfitPct = displaySales > 0
-                    ? Math.Round((displayProfit / displaySales) * 100, 2)
+                var displayProfitPct = displayBillAmount > 0
+                    ? Math.Round((displayProfit / displayBillAmount) * 100, 2)
                     : 0;
 
                 return new BillwiseProfitVM
@@ -4244,7 +4283,8 @@ namespace EasyBill.UI.Controllers
                     TotalSalesValue = displaySales,
                     TotalCostValue = displayCost,
                     TotalGstAmt = sale.TotalGstAmt,
-                    BillAmount = sale.TotalPayable,
+                    BillAmount = displayBillAmount,
+                    // BillAmount = sale.TotalPayable,
                     Discount = sale.Totaldiscount,
                     GrossProfit = displayProfit,
                     ProfitPct = displayProfitPct,
@@ -4289,7 +4329,21 @@ namespace EasyBill.UI.Controllers
             var latestPurchaseCost = purchase
                 .SelectMany(p => p.PurchaseItems ?? new List<PurchaseItem>())
                 .GroupBy(pi => pi.ItemId)
-                .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.Id).First().BatchWiseCose);
+                .Select(g =>
+                {
+                    var item = g.OrderByDescending(x => x.Id).First();
+                    var taxPct = (item.Gst > 0 ? item.Gst : item.CGst + item.SGst) + item.Cess;
+                    var costRateWithoutGst = taxPct > 0
+                        ? item.BatchWiseCose / (1 + (taxPct / 100))
+                        : item.BatchWiseCose;
+
+                    return new
+                    {
+                        ItemId = g.Key,
+                        CostRate = item.BatchWiseCose,
+                        CostRateWithoutGst = costRateWithoutGst
+                    };
+                }).ToDictionary(x => x.ItemId);
 
             var data = sales.Where(s => s.Deleted == null && s.BillDate >= fromDate && s.BillDate <= toDate).ToList();
 
@@ -4308,12 +4362,15 @@ namespace EasyBill.UI.Controllers
 
                     if (latestPurchaseCost.ContainsKey(si.ItemMasterId))
                     {
-                        var cost = latestPurchaseCost[si.ItemMasterId] / conv;
+                        var purchaseRate = gstMode == "without"
+                            ? latestPurchaseCost[si.ItemMasterId].CostRateWithoutGst
+                            : latestPurchaseCost[si.ItemMasterId].CostRate;
+                        var cost = purchaseRate / conv;
                         costVal += qtyBase * cost;
                     }
                 }
 
-                var displaySales = gstMode == "without" ? salesVal : salesVal + sale.TotalGstAmt;
+                var displaySales = gstMode == "without" ? sale.Total : sale.TotalPayable;
                 var profit = displaySales - costVal;
 
                 return new
@@ -4323,7 +4380,7 @@ namespace EasyBill.UI.Controllers
                     Customer = sale.Customers?.Name ?? "Walk-in Customer",
                     Mobile = sale.MobileNo,
                     Cost = costVal,
-                    Bill = sale.TotalPayable,
+                    Bill = displaySales,
                     Profit = profit,
                     ProfitPct = displaySales > 0 ? Math.Round((profit / displaySales) * 100, 2) : 0,
                     Items = items.Count(),
@@ -4419,12 +4476,22 @@ namespace EasyBill.UI.Controllers
             var latestPurchaseCost = purchase
                 .SelectMany(p => p.PurchaseItems ?? new List<PurchaseItem>())
                 .GroupBy(pi => pi.ItemId)
-                .Select(g => new
+                .Select(g =>
                 {
-                    ItemId = g.Key,
-                    CostRate = g.OrderByDescending(x => x.Id).First().BatchWiseCose
+                    var item = g.OrderByDescending(x => x.Id).First();
+                    var taxPct = (item.Gst > 0 ? item.Gst : item.CGst + item.SGst) + item.Cess;
+                    var costRateWithoutGst = taxPct > 0
+                        ? item.BatchWiseCose / (1 + (taxPct / 100))
+                        : item.BatchWiseCose;
+
+                    return new
+                    {
+                        ItemId = g.Key,
+                        CostRate = item.BatchWiseCose,
+                        CostRateWithoutGst = costRateWithoutGst
+                    };
                 })
-                .ToDictionary(x => x.ItemId, x => x.CostRate);
+                .ToDictionary(x => x.ItemId);
 
             var filteredSales = sales
                 .Where(s => s.Deleted == null
@@ -4453,15 +4520,17 @@ namespace EasyBill.UI.Controllers
 
                     if (latestPurchaseCost.ContainsKey(si.ItemMasterId))
                     {
-                        var purchaseRate = latestPurchaseCost[si.ItemMasterId];
+                        var purchaseRate = gstMode == "without"
+                            ? latestPurchaseCost[si.ItemMasterId].CostRateWithoutGst
+                            : latestPurchaseCost[si.ItemMasterId].CostRate;
                         var costPerBase = purchaseRate / conversion;
                         totalCost += qtyBase * costPerBase;
                     }
                 }
 
                 decimal displaySales = gstMode == "without"
-                    ? totalSales
-                    : totalSales + sale.TotalGstAmt;
+                    ? sale.Total
+                    : sale.TotalPayable;
 
                 decimal profit = displaySales - totalCost;
 
@@ -4477,7 +4546,7 @@ namespace EasyBill.UI.Controllers
                     Customer = sale.Customers?.Name ?? "Walk-in Customer",
                     Mobile = sale.MobileNo ?? "",
                     Cost = totalCost,
-                    BillAmount = sale.TotalPayable,
+                    BillAmount = displaySales,
                     Profit = profit,
                     ProfitPct = profitPct,
                     Items = items.Count(),
