@@ -353,6 +353,17 @@ namespace EasyBill.UI.Controllers
 
                     var createdSale = await _salesservice.Create(model);
 
+                    // UPDATE SALES ORDER STATUS TO BILLED
+                    if (Vm.SalesOrderId.HasValue && Vm.SalesOrderId.Value > 0)
+                    {
+                        var salesOrder = await _salesOrderRepo.GetById(Vm.SalesOrderId.Value);
+                        if (salesOrder != null)
+                        {
+                            salesOrder.OrderStatus = AOne.Utility.Enums.OrderStatus.Billed;
+                            await _salesOrderRepo.Update(salesOrder);
+                        }
+                    }
+
                     if (createdSale != null)
                     {
                         await _loyaltyService.ApplyPointsForSaleAsync(createdSale, Vm.billingType == "registered" ? Vm.RedeemPoints : 0);

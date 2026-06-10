@@ -1,4 +1,4 @@
-﻿@using EasyBill.Models.ViewModels
+@using EasyBill.Models.ViewModels
 @model CustomerVM
 @{
     ViewData["Title"] = "Edit Customer";
@@ -199,6 +199,52 @@
                                             class="form-select form-select-sm">
                                         <option value="">-- Select Category --</option>
                                     </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Multiple Addresses Section -->
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card shadow-sm border-0">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Delivery Addresses</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-1" id="addressTable">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Title</th>
+                                                    <th>Address Line</th>
+                                                    <th>City</th>
+                                                    <th>State</th>
+                                                    <th>Pincode</th>
+                                                    <th>Default</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @if (Model?.Addresses != null && Model.Addresses.Any())
+                                                {
+                                                    for (int i = 0; i < Model.Addresses.Count; i++)
+                                                    {
+                                                        <tr>
+                                                            <td><input type="text" name="Addresses[@i].Title" class="form-control form-control-sm" value="@Model.Addresses[i].Title" required /></td>
+                                                            <td><input type="text" name="Addresses[@i].AddressLine" class="form-control form-control-sm" value="@Model.Addresses[i].AddressLine" required /></td>
+                                                            <td><input type="text" name="Addresses[@i].City" class="form-control form-control-sm" value="@Model.Addresses[i].City" /></td>
+                                                            <td><input type="text" name="Addresses[@i].State" class="form-control form-control-sm" value="@Model.Addresses[i].State" /></td>
+                                                            <td><input type="text" name="Addresses[@i].Pincode" class="form-control form-control-sm" value="@Model.Addresses[i].Pincode" /></td>
+                                                            <td class="text-center"><input type="checkbox" name="Addresses[@i].IsDefault" value="true" class="form-check-input default-cb" @(Model.Addresses[i].IsDefault ? "checked" : "") /></td>
+                                                            <td class="text-center"><button type="button" class="btn btn-sm btn-danger btn-remove-addr">X</button></td>
+                                                        </tr>
+                                                    }
+                                                }
+                                            </tbody>
+                                        </table>
+                                        <button type="button" class="btn btn-sm btn-success" id="btnAddAddress">+ Add Address</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -471,6 +517,42 @@
             if (e.which === 13) {
                 e.preventDefault();
                 $("#btnSaveAccGrp").click();
+            }
+        });
+
+        // ==========================================
+        //          MULTIPLE ADDRESSES
+        // ==========================================
+        let addrIndex = $("#addressTable tbody tr").length;
+        $("#btnAddAddress").click(function () {
+            const row = `<tr>
+                <td><input type="text" name="Addresses[${addrIndex}].Title" class="form-control form-control-sm" value="Branch ${addrIndex + 1}" required /></td>
+                <td><input type="text" name="Addresses[${addrIndex}].AddressLine" class="form-control form-control-sm" required /></td>
+                <td><input type="text" name="Addresses[${addrIndex}].City" class="form-control form-control-sm" /></td>
+                <td><input type="text" name="Addresses[${addrIndex}].State" class="form-control form-control-sm" /></td>
+                <td><input type="text" name="Addresses[${addrIndex}].Pincode" class="form-control form-control-sm" /></td>
+                <td class="text-center"><input type="checkbox" name="Addresses[${addrIndex}].IsDefault" value="true" class="form-check-input default-cb" /></td>
+                <td class="text-center"><button type="button" class="btn btn-sm btn-danger btn-remove-addr">X</button></td>
+            </tr>`;
+            $("#addressTable tbody").append(row);
+            addrIndex++;
+        });
+        $(document).on("click", ".btn-remove-addr", function () {
+            $(this).closest("tr").remove();
+            // Re-index rows
+            addrIndex = 0;
+            $("#addressTable tbody tr").each(function () {
+                $(this).find("input").each(function () {
+                    if ($(this).attr("name")) {
+                        $(this).attr("name", $(this).attr("name").replace(/\[\d+\]/, `[${addrIndex}]`));
+                    }
+                });
+                addrIndex++;
+            });
+        });
+        $(document).on("change", ".default-cb", function () {
+            if (this.checked) {
+                $(".default-cb").not(this).prop("checked", false);
             }
         });
 

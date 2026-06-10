@@ -40,6 +40,7 @@ namespace AOne.DataAccess.Data
         public DbSet<Division> Divisions { get; set; }
         public DbSet<Currency> Currencies { get; set; }
         public DbSet<Customer> Customers { get; set; }
+        public DbSet<CustomerAddress> CustomerAddresses { get; set; }
         public DbSet<CustomerOtp> CustomerOtps { get; set; }
         public DbSet<Invoice> Invoices { get; set; }
         public DbSet<InvoiceItem> InvoiceItems { get; set; }

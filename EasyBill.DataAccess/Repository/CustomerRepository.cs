@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.Repository;
+using AOne.DataAccess.Repository;
 using AOne.DataAccess.Repository.IRepository;
 using Azure.Core;
 using DocumentFormat.OpenXml.Office2016.Excel;
@@ -77,7 +77,10 @@ namespace EasyBill.DataAccess.Repository
             try
             {
                 var repository = _unitofwork.GetRepository<Customer>();
-                var result = await repository.Query().Where(l => l.Id == Id).FirstOrDefaultAsync();
+                var result = await repository.Query()
+                    .Include(c => c.Addresses)
+                    .Where(l => l.Id == Id)
+                    .FirstOrDefaultAsync();
                 return result;
             }
             catch (Exception ex)
@@ -348,10 +351,16 @@ namespace EasyBill.DataAccess.Repository
                 };
             }
 
-            existingCustomer.Name = request.Name;
-            existingCustomer.Address = request.Address;
-            existingCustomer.PhoneNo = request.Phone;
-            existingCustomer.Email = request.Email;
+            existingCustomer.Name = request.Name ?? existingCustomer.Name;
+            existingCustomer.Address = request.Address ?? existingCustomer.Address;
+            existingCustomer.Address2 = request.Address2 ?? existingCustomer.Address2;
+            existingCustomer.Country = request.Country ?? existingCustomer.Country;
+            existingCustomer.State = request.State ?? existingCustomer.State;
+            existingCustomer.City = request.City ?? existingCustomer.City;
+            existingCustomer.PinCode = request.Pin ?? existingCustomer.PinCode;
+            existingCustomer.GSTNo = request.GstNumber ?? existingCustomer.GSTNo;
+            existingCustomer.PhoneNo = request.Phone ?? existingCustomer.PhoneNo;
+            existingCustomer.Email = request.Email ?? existingCustomer.Email;
             existingCustomer.LastModified = DateTime.UtcNow;
             existingCustomer.LastModifiedBy = request.Id.ToString();
             
@@ -380,6 +389,40 @@ namespace EasyBill.DataAccess.Repository
             };
         }
 
+        public async Task<CustomerAddress> AddAddressAsync(CustomerAddress address)
+        {
+            try
+            {
+                // If this is the first address or marked as default, we might want to unset other defaults
+                var addressRepo = _unitofwork.GetRepository<CustomerAddress>();
+                
+                if (address.IsDefault)
+                {
+                    var existingAddresses = await addressRepo.Query()
+                        .Where(a => a.CustomerId == address.CustomerId && a.IsDefault)
+                        .ToListAsync();
+                        
+                    foreach (var addr in existingAddresses)
+                    {
+                        addr.IsDefault = false;
+                        addressRepo.Update(addr);
+                    }
+                }
+
+                addressRepo.Add(address);
+                using (var transaction = addressRepo.BeginTransaction())
+                {
+                    await addressRepo.SaveChangesAsync();
+                    transaction.Commit();
+                }
+
+                return address;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
     }
 
 

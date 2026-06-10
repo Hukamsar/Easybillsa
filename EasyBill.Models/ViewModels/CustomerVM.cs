@@ -1,4 +1,4 @@
-﻿using AOne.Utility.Enums;
+using AOne.Utility.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace EasyBill.Models.ViewModels
@@ -42,5 +42,7 @@ namespace EasyBill.Models.ViewModels
         [Display(Name = "Status")]
         public CustomerStatus Status { get; set; } = CustomerStatus.Active;
         public int PaymentDays { get; set; }
+
+        public List<EasyBill.Models.Entity.CustomerAddress> Addresses { get; set; } = new List<EasyBill.Models.Entity.CustomerAddress>();
     }
 }

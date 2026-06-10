@@ -1026,6 +1026,17 @@ namespace EasyBill.UI.Controllers.API
 
                 var createdSale = await _salesservice.Create(model);
 
+                // UPDATE SALES ORDER STATUS TO BILLED
+                if (Vm.SalesOrderId.HasValue && Vm.SalesOrderId.Value > 0)
+                {
+                    var salesOrder = await _salesOrderRepo.GetById(Vm.SalesOrderId.Value);
+                    if (salesOrder != null)
+                    {
+                        salesOrder.OrderStatus = AOne.Utility.Enums.OrderStatus.Billed;
+                        await _salesOrderRepo.Update(salesOrder);
+                    }
+                }
+
                 if (isShare)
                 {
                     walletMessage = await ShareInvoiceViaWhatsAppAndSmsAsync(

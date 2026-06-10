@@ -1,4 +1,4 @@
-﻿using EasyBill.Models.Entity;
+using EasyBill.Models.Entity;
 using EasyBill.Models.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -22,5 +22,6 @@ namespace EasyBill.DataAccess.Repository.IRepository
         Task<VerifyOtpResponse> VerifyOTP(VerifyOtpRequest verifyOtpRequest);
         Task<CreateCustomerResponse> CreateCustomer(CreateCustomerRequest request);
         Task<CreateCustomerResponse> UpdateProfileAsync(UpdateProfileRequest request);
+        Task<CustomerAddress> AddAddressAsync(CustomerAddress address);
     }
 }

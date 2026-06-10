@@ -1,5 +1,6 @@
-﻿using AOne.Models.Entity;
+using AOne.Models.Entity;
 using AOne.Models;
+using AOne.Utility.Enums;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System;
 using System.Collections.Generic;
@@ -49,5 +50,6 @@ namespace EasyBill.Models.Entity
         public decimal Balance { get; set; }
         public decimal RoundOffAmount { get; set; }
         public decimal TotalCessAmt { get; set; }
+        public OrderStatus OrderStatus { get; set; } = OrderStatus.Ordered;
     }
 }

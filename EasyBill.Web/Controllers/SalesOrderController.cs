@@ -1,4 +1,4 @@
-﻿using EasyBill.DataAccess.Repository;
+using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -623,6 +623,28 @@ namespace EasyBill.UI.Controllers
                 return Json(new { success = false, message = $"An error occurred: {ex.Message}" });
             }
         }
+
+        [HttpPost]
+        public async Task<IActionResult> ChangeStatus(int id, AOne.Utility.Enums.OrderStatus status)
+        {
+            try
+            {
+                var model = await _salesOrderRepo.GetById(id);
+                if (model == null)
+                {
+                    return Json(new { success = false, message = "Order not found." });
+                }
+
+                model.OrderStatus = status;
+                await _salesOrderRepo.Update(model);
+                return Json(new { success = true, message = "Status updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"An error occurred: {ex.Message}" });
+            }
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetNewBillNo()
         {

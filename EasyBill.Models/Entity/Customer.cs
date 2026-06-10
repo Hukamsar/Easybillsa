@@ -1,4 +1,4 @@
-﻿using AOne.Models;
+using AOne.Models;
 using AOne.Models.Entity;
 using AOne.Utility.Enums;
 using System;
@@ -15,6 +15,11 @@ namespace EasyBill.Models.Entity
         public int Id { get; set; }
         public string Name { get; set; }
         public string? Address { get; set; }
+        public string? Address2 { get; set; }
+        public string? Country { get; set; }
+        public string? State { get; set; }
+        public string? City { get; set; }
+        public string? PinCode { get; set; }
         public string? PhoneNo {  get; set; }
         public string? Email { get; set; }
 
@@ -43,5 +48,7 @@ namespace EasyBill.Models.Entity
         public bool IsMobileVerified { get; set; } = false;
 
         public DateTime? LastLogin { get; set; }
+
+        public ICollection<CustomerAddress>? Addresses { get; set; }
     }
 }

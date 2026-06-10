@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.ProfileService;
+using AOne.DataAccess.ProfileService;
 using DocumentFormat.OpenXml.Presentation;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
@@ -247,7 +247,8 @@ namespace EasyBill.UI.Controllers
                 GSTType = Vm.GSTType,
                 Category = Vm.Category,
                 Status = Vm.Status,
-                PaymentDays = Vm.PaymentDays
+                PaymentDays = Vm.PaymentDays,
+                Addresses = Vm.Addresses
             };
 
             await _customerservice.Create(model);
@@ -275,6 +276,10 @@ namespace EasyBill.UI.Controllers
                 VM.Category = model.Category;
                 VM.Status = model.Status;
                 VM.PaymentDays = model.PaymentDays;
+                if (model.Addresses != null)
+                {
+                    VM.Addresses = model.Addresses.ToList();
+                }
             }
 
             // ViewBag populate karo
@@ -398,6 +403,17 @@ namespace EasyBill.UI.Controllers
                 model.Category = VM.Category;
                 model.Status = VM.Status;
                 model.PaymentDays = VM.PaymentDays;
+
+                // Sync Addresses
+                model.Addresses.Clear();
+                if (VM.Addresses != null)
+                {
+                    foreach (var addr in VM.Addresses)
+                    {
+                        addr.Id = 0; // reset ID so EF re-inserts them as new to avoid complex tracking (or keep it if EF merges)
+                        model.Addresses.Add(addr);
+                    }
+                }
 
                 await _customerservice.Update(model);
                 TempData["success"] = "Customer updated successfully.";

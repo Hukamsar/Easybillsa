@@ -1,4 +1,5 @@
-﻿@model IEnumerable<SalesOrder>
+@using AOne.Utility.Enums
+@model IEnumerable<SalesOrder>
 
 @{
     ViewData["Title"] = "Index";
@@ -40,6 +41,9 @@
             <th>
                 @Html.DisplayNameFor(model => model.Address)
             </th>
+            <th>
+                Status
+            </th>
             <th></th>
         </tr>
     </thead>
@@ -64,7 +68,21 @@
                     @Html.DisplayFor(modelItem => item.Address)
                 </td>
                 <td>
+                    <span class="badge" id="badge-@item.Id" style="font-size: 13px; font-weight: 500;
+                        @(item.OrderStatus == OrderStatus.Delivered ? "background-color: green;" : 
+                          item.OrderStatus == OrderStatus.Cancelled ? "background-color: red;" : 
+                          item.OrderStatus == OrderStatus.Dispatched ? "background-color: orange;" : "background-color: #2b6ac9;")">
+                        @item.OrderStatus.ToString()
+                    </span>
+                </td>
+                <td>
                     <div class="btn-group" role="group" style="float:right">
+                        @if (item.OrderStatus == OrderStatus.Ordered || item.OrderStatus == OrderStatus.Billed)
+                        {
+                            <button type="button" class="btn btn-sm btn-warning btn-dispatch text-dark fw-bold me-2" title="Dispatch Order" data-id="@item.Id">
+                                Dispatch <i class="bi bi-truck ms-1"></i>
+                            </button>
+                        }
                         <a asp-controller="Report" asp-action="SalseOrderReport"
                            class="btn-report"
                            title="Generate Report"
@@ -94,7 +112,32 @@
     <script>
         $(document).ready(function () {
             $("#salesOrderTbl").DataTable({
-                "order": [[2, "asc"]]
+                "order": [[1, "desc"]] // Better to sort by Bill Date descending
+            });
+
+            $(".btn-dispatch").click(function () {
+                var orderId = $(this).data("id");
+                var btn = $(this);
+
+                $.ajax({
+                    url: '/SalesOrder/ChangeStatus',
+                    type: 'POST',
+                    data: { id: orderId, status: "Dispatched" },
+                    success: function (response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            var badge = $("#badge-" + orderId);
+                            badge.text("Dispatched");
+                            badge.css("background-color", "orange");
+                            btn.remove(); // Remove the button once dispatched
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    },
+                    error: function () {
+                        toastr.error("An error occurred while updating status.");
+                    }
+                });
             });
         });
     </script>

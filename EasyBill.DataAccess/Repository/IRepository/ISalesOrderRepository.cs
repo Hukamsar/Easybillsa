@@ -1,4 +1,4 @@
-﻿using EasyBill.Models.Entity;
+using EasyBill.Models.Entity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,5 +17,11 @@ namespace EasyBill.DataAccess.Repository.IRepository
         Task Delete(SalesOrder model);
 
         Task<IList<SalesOrder>> GetByCustomerIdWithPayments(int? customerId);
+
+        /// <summary>
+        /// Soft-cancel a SalesOrder by marking Deleted = DateTime.UtcNow and DeletedBy = cancelledBy.
+        /// Order record stays in DB for admin audit — it is NOT hard deleted.
+        /// </summary>
+        Task<bool> CancelOrder(int orderId, string cancelledBy, string reason);
     }
 }

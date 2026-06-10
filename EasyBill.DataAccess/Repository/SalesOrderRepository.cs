@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.Repository.IRepository;
+using AOne.DataAccess.Repository.IRepository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using Microsoft.EntityFrameworkCore;
@@ -126,6 +126,55 @@ namespace EasyBill.DataAccess.Repository
                     .Where(l => l.CustomerId == customerId)
                     .ToListAsync();
                 return result;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        /// <summary>
+        /// CancelOrder — Soft Delete approach
+        ///
+        /// PURPOSE: Customer apna order cancel kar sake.
+        ///          Hard delete nahi karte — admin audit ke liye record DB mein rehta hai.
+        ///          BaseEntity ke Deleted (DateTime?) aur DeletedBy (string) fields set karte hain.
+        ///
+        /// SAFETY:  Sirf "Unpaid" ya "Partial" orders cancel ho sakte hain.
+        ///          Fully paid orders cancel nahi ho sakte (refund logic alag hai).
+        ///
+        /// RETURNS: true agar cancel hua, false agar order nahi mila ya already paid/cancelled hai.
+        /// </summary>
+        public async Task<bool> CancelOrder(int orderId, string cancelledBy, string reason)
+        {
+            try
+            {
+                var repository = _unitofwork.GetRepository<SalesOrder>();
+
+                // Fetch the order
+                var order = await repository.Query()
+                    .Where(o => o.Id == orderId && o.Deleted == null)  // Only non-deleted orders
+                    .FirstOrDefaultAsync();
+
+                if (order == null)
+                    return false;  // Order nahi mila ya pehle se cancelled hai
+
+                // Safety check: Fully paid order cancel nahi hoga
+                if (order.PaidAmount > 0 && order.PaidAmount >= order.TotalPayable)
+                    return false;  // Fully paid — refund required, cancel blocked
+
+                // Soft delete — record DB mein rehta hai for admin audit
+                order.Deleted    = DateTime.UtcNow;
+                order.DeletedBy  = $"CANCELLED_BY:{cancelledBy} | REASON:{reason}";
+
+                repository.Update(order);
+                using (var transaction = repository.BeginTransaction())
+                {
+                    await repository.SaveChangesAsync();
+                    transaction.Commit();
+                }
+
+                return true;
             }
             catch (Exception ex)
             {
