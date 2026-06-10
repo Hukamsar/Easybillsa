@@ -380,7 +380,7 @@
                                 <h6 class="mt-2 mb-0">
                                     @if (user != null && user.TenantId != null)
                                     {
-                                        var companyData = await _companyService.GetById(user.TenantId); 
+                                       @*  var companyData = await _companyService.GetById(user.TenantId);  *@
                                         @user?.UserName
                                     }
                                 </h6>

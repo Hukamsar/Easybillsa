@@ -11,7 +11,7 @@ namespace EasyBill.DataAccess.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            /*
+
             migrationBuilder.AddColumn<bool>(
                 name: "AllowNegativeBalance",
                 table: "Tenants",
@@ -94,7 +94,7 @@ namespace EasyBill.DataAccess.Migrations
                 table: "Tenants",
                 type: "nvarchar(max)",
                 nullable: true);
-            */
+
 
             migrationBuilder.AddColumn<decimal>(
                 name: "ConversionFactor",
@@ -114,7 +114,7 @@ namespace EasyBill.DataAccess.Migrations
                 type: "int",
                 nullable: true);
 
-            /*
+
             migrationBuilder.CreateTable(
                 name: "Features",
                 columns: table => new
@@ -135,7 +135,7 @@ namespace EasyBill.DataAccess.Migrations
                         principalTable: "Features",
                         principalColumn: "Id");
                 });
-            */
+
 
             migrationBuilder.CreateTable(
                 name: "StockConversions",
@@ -181,7 +181,7 @@ namespace EasyBill.DataAccess.Migrations
                         principalColumn: "Id");
                 });
 
-            /*
+
             migrationBuilder.CreateTable(
                 name: "SubscriptionPlans",
                 columns: table => new
@@ -229,14 +229,14 @@ namespace EasyBill.DataAccess.Migrations
                 name: "IX_Tenants_SubscriptionPlanId",
                 table: "Tenants",
                 column: "SubscriptionPlanId");
-            */
+
 
             migrationBuilder.CreateIndex(
                 name: "IX_ItemMasters_ParentItemId",
                 table: "ItemMasters",
                 column: "ParentItemId");
 
-            /*
+
             migrationBuilder.CreateIndex(
                 name: "IX_Features_ParentFeatureId",
                 table: "Features",
@@ -246,7 +246,7 @@ namespace EasyBill.DataAccess.Migrations
                 name: "IX_PlanFeatures_FeatureId",
                 table: "PlanFeatures",
                 column: "FeatureId");
-            */
+
 
             migrationBuilder.CreateIndex(
                 name: "IX_StockConversions_BulkItemId",
@@ -270,14 +270,14 @@ namespace EasyBill.DataAccess.Migrations
                 principalTable: "ItemMasters",
                 principalColumn: "Id");
 
-            /*
+
             migrationBuilder.AddForeignKey(
                 name: "FK_Tenants_SubscriptionPlans_SubscriptionPlanId",
                 table: "Tenants",
                 column: "SubscriptionPlanId",
                 principalTable: "SubscriptionPlans",
                 principalColumn: "Id");
-            */
+
         }
 
         /// <inheritdoc />

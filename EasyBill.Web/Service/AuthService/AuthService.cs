@@ -24,11 +24,11 @@ namespace AOneWeb.Service.AuthService
             var claims = new List<Claim>
              {
                  new Claim(ClaimTypes.NameIdentifier, user.Id),
-                 new Claim(ClaimTypes.Name, user.UserName),
-                 new Claim(ClaimTypes.Email, user.Email),
+                 new Claim(ClaimTypes.Name, user.UserName ?? ""),
+                 new Claim(ClaimTypes.Email, user.Email ?? ""),
                  new Claim(ClaimTypes.Role, role),
-                 new Claim("TenantId", user.TenantId),
-                 new Claim("TenantName", user.TenantName),
+                 new Claim("TenantId", user.TenantId ?? ""),
+                 new Claim("TenantName", user.TenantName ?? ""),
                  new Claim("PhoneNumber", user.PhoneNumber ?? "")
              }; 
             var tokenDescriptor = new SecurityTokenDescriptor
