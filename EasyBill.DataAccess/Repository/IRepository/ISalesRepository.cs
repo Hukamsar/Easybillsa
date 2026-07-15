@@ -28,5 +28,7 @@ namespace EasyBill.DataAccess.Repository.IRepository
         Task<IList<Sales>> GetAllGSTR1Data();
         Task<IList<Sales>> GetB2CLargeInvoices(string tenantId, DateTime? startDate, DateTime? endDate);
         Task<IList<Sales>> GetB2CSmallInvoices(string tenantId, DateTime? startDate, DateTime? endDate);
+        Task<IList<Sales>> GetDeletedSales();
+        Task<bool> RestoreSales(int id);
     }
 }

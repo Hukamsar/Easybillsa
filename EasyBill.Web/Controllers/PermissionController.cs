@@ -212,6 +212,8 @@ namespace AOneWeb.Controllers
                 allowedFeatures.Add("Master");
                 allowedFeatures.Add("Master.Settings");
                 allowedFeatures.Add("Master.Staff");
+                allowedFeatures.Add("Books");
+                allowedFeatures.Add("Contra");
 
                 if (!string.IsNullOrEmpty(tenant.AllowedModulesJson))
                 {
@@ -260,7 +262,8 @@ namespace AOneWeb.Controllers
             }
             if (claimValue.StartsWith("Permissions.Customer.") ||
                 claimValue.StartsWith("Permissions.Suppliers.") ||
-                claimValue.StartsWith("Permissions.AccountGroup."))
+                claimValue.StartsWith("Permissions.AccountGroup.") ||
+                claimValue.StartsWith("Permissions.Bank."))
             {
                 return "Master.Ledger";
             }
@@ -343,6 +346,18 @@ namespace AOneWeb.Controllers
             if (claimValue.StartsWith("Permissions.ReceiveVoucher."))
             {
                 return "ReceiveVoucher";
+            }
+            if (claimValue.StartsWith("Permissions.Contra."))
+            {
+                return "Contra";
+            }
+            if (claimValue.StartsWith("Permissions.CashBook.") ||
+                claimValue.StartsWith("Permissions.BankBook.") ||
+                claimValue.StartsWith("Permissions.DayBook.") ||
+                claimValue.StartsWith("Permissions.SalesBook.") ||
+                claimValue.StartsWith("Permissions.PurchaseBook."))
+            {
+                return "Books";
             }
 
             return string.Empty;

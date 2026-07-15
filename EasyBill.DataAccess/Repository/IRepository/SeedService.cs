@@ -101,6 +101,7 @@ namespace AOneWeb.Service
                 new Feature { FeatureKey = "Purchase", DisplayName = "Purchase", IsActive = true },
                 new Feature { FeatureKey = "PurchaseOrder", DisplayName = "Purchase Order", IsActive = true },
                 new Feature { FeatureKey = "PaymentVoucher", DisplayName = "Payment Voucher", IsActive = true },
+                new Feature { FeatureKey = "Books", DisplayName = "Books", IsActive = true },
                 new Feature { FeatureKey = "ReceiveVoucher", DisplayName = "Receive Voucher", IsActive = true },
                 new Feature { FeatureKey = "Reports", DisplayName = "Reports", IsActive = true },
                 new Feature { FeatureKey = "Inventory", DisplayName = "Inventory Report", IsActive = true },
@@ -142,6 +143,13 @@ namespace AOneWeb.Service
 
                 new Feature { FeatureKey = "PaymentVoucher.Entry", DisplayName = "Voucher Entry", ParentFeatureId = featureDict["PaymentVoucher"].Id, IsActive = true },
                 new Feature { FeatureKey = "PaymentVoucher.Category", DisplayName = "Voucher Category", ParentFeatureId = featureDict["PaymentVoucher"].Id, IsActive = true },
+
+                 new Feature { FeatureKey = "Books.Cashbook", DisplayName = "Cash Book", ParentFeatureId = featureDict["Books"].Id, IsActive = true },
+                 new Feature { FeatureKey = "Books.BankBook", DisplayName = "Bank Book", ParentFeatureId = featureDict["Books"].Id, IsActive = true },
+                 new Feature { FeatureKey = "Books.DayBook", DisplayName = "Day Book", ParentFeatureId = featureDict["Books"].Id, IsActive = true },
+                 new Feature { FeatureKey = "Books.SalesBook", DisplayName = "Sales Book", ParentFeatureId = featureDict["Books"].Id, IsActive = true },
+                 new Feature { FeatureKey = "Books.PurchaseBook", DisplayName = "Purchase Book", ParentFeatureId = featureDict["Books"].Id, IsActive = true },
+                 
 
                 new Feature { FeatureKey = "Reports.Sales", DisplayName = "Sales Reports", ParentFeatureId = featureDict["Reports"].Id, IsActive = true },
                 new Feature { FeatureKey = "Reports.SalesReturn", DisplayName = "Sales Return Reports", ParentFeatureId = featureDict["Reports"].Id, IsActive = true },
@@ -229,7 +237,7 @@ namespace AOneWeb.Service
             {
                 suprimePlan = new SubscriptionPlan
                 {
-                    PlanName = "Suprime Plan",
+                    PlanName = "Supreme Plan",
                     MonthlyPrice = 1200,
                     YearlyPrice = 12000,
                     DailyCustomerLimit = 5000,

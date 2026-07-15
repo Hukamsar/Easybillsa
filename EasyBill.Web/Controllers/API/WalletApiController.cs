@@ -66,6 +66,43 @@ namespace EasyBill.UI.Controllers.API
             });
         }
 
+        [HttpGet("GetTenantWalletHistory")]
+        public async Task<IActionResult> GetTenantWalletHistory()
+        {
+            var tenantId = await GetCurrentTenantIdAsync();
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                return Unauthorized(new { success = false, message = "Tenant not found." });
+            }
+
+            var historyRepo = _unitOfWork.GetRepository<TenantWalletHistory>();
+            var history = await historyRepo.Query()
+                .Where(h => h.TenantId == tenantId)
+                .OrderByDescending(h => h.TransactionDateTime)
+                .Select(h => new
+                {
+                    id = h.Id,
+                    transactionDateTime = h.TransactionDateTime,
+                    credit = h.Credit,
+                    debit = h.Debit,
+                    paymentMode = h.PaymentMode,
+                    referenceNo = h.ReferenceNo,
+                    gatewayTransactionId = h.GatewayTransactionId,
+                    referenceSaleId = h.ReferenceSaleId,
+                    serviceType = h.ServiceType,
+                    serviceCharge = h.ServiceCharge,
+                    remarks = h.Remarks,
+                    closingBalance = h.ClosingBalance
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                success = true,
+                data = history
+            });
+        }
+
         [HttpPost("SaveWallet")]
         [HttpPost("SaveSettings")]
         public async Task<IActionResult> SaveWallet([FromBody] WalletSettingsRequest request)

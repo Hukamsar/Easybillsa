@@ -1,4 +1,4 @@
-﻿using EasyBill.DataAccess.Repository.IRepository;
+using EasyBill.DataAccess.Repository.IRepository;
 using AOne.DataAccess.ProfileService;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -17,16 +17,20 @@ namespace EasyBill.UI.Controllers.API
         private readonly ICustomerRepository _customerservice;
         private readonly IItemMasterRepository _itemmasterservice;
         private readonly IPurchaseItemRepository _purchaseitemservice;
+        private readonly IPurchaseOrderRepository _poRepository;
+        private readonly ITenantRepository _tenantRepository;
 
         public StockIssueApiController(IStockIssueRepository stockissueservice, IProfileService profileService,
             ICustomerRepository customerservice, IItemMasterRepository itemmasterservice,
-            IPurchaseItemRepository purchaseitemservice)
+            IPurchaseItemRepository purchaseitemservice, IPurchaseOrderRepository poRepository, ITenantRepository tenantRepository)
         {
             _stockissueservice = stockissueservice;
             _profileService = profileService;
             _customerservice = customerservice;
             _itemmasterservice = itemmasterservice;
             _purchaseitemservice = purchaseitemservice;
+            _poRepository = poRepository;
+            _tenantRepository = tenantRepository;
         }
 
         [HttpGet("GetAll")]
@@ -347,5 +351,53 @@ namespace EasyBill.UI.Controllers.API
 
             return Ok(billwiseList);
         }
+    
+        [HttpGet("pending-incoming-requests")]
+        public async Task<IActionResult> GetPendingIncomingRequests()
+        {
+            await _profileService.Set(User);
+            var currentTenantId = _profileService.Profile?.TenantId;
+
+            var allOrders = await _poRepository.GetAll();
+            var pendingRequests = allOrders
+                .Where(p => p.OrderType == "SR" 
+                         && p.TargetTenantId == currentTenantId 
+                         && p.WorkflowStatus == "Pending")
+                .ToList();
+
+            var tenants = await _tenantRepository.GetAll();
+            
+            var result = pendingRequests.Select(pr => new {
+                Id = pr.Id,
+                BillNo = pr.BillNo,
+                BillDate = pr.BillDate,
+                RequesterName = tenants.FirstOrDefault(t => t.Id == pr.TenantId)?.Name ?? "Unknown Branch",
+                RequesterTenantId = pr.TenantId,
+                TotalQty = 0 // Removed pr.TotalQty as it doesn't exist
+            }).ToList();
+
+            return Ok(new { success = true, data = result });
+        }
+
+        [HttpGet("request-details/{id}")]
+        public async Task<IActionResult> GetRequestDetails(int id)
+        {
+            await _profileService.Set(User);
+            
+            var order = await _poRepository.GetById(id);
+            if (order == null) return NotFound(new { success = false, message = "Request not found" });
+
+            var result = order.PurchaseOrderItems.Select(item => new {
+                ItemId = item.ItemId,
+                ItemName = item.ItemMasters?.Name,
+                Qty = item.Qty,
+                FreeQty = item.FreeQty,
+                PurchaseRate = item.Rate,
+                Mrp = item.Mrp
+            }).ToList();
+
+            return Ok(new { success = true, data = result });
+        }
     }
 }
+

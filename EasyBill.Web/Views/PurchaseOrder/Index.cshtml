@@ -1,4 +1,4 @@
-﻿@model IEnumerable<PurchaseOrder>
+@model IEnumerable<PurchaseOrder>
 
 @{
     ViewData["Title"] = "List";
@@ -29,8 +29,9 @@
 <table id="purchaseorderTbl" class="table table-bordered table-striped">
     <thead class="custom-header">
         <tr>
+            <th>Type</th>
             <th>
-                Supplier
+                Supplier / Branch
             </th>
 
             <th>
@@ -54,7 +55,24 @@
 
 
                 <td>
-                    @Html.DisplayFor(modelItem => item.Suppliers.FirstName)
+                    @if (item.OrderType == "SR")
+                    {
+                        <span class="badge bg-info">SR</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-primary">PO</span>
+                    }
+                </td>
+                <td>
+                    @if (item.OrderType == "SR")
+                    {
+                        @Html.DisplayFor(modelItem => item.TargetTenant.Name)
+                    }
+                    else
+                    {
+                        @Html.DisplayFor(modelItem => item.Suppliers.FirstName)
+                    }
                 </td>
 
                 <td>
@@ -84,15 +102,17 @@
                 </td>
                 <td>
                     <div class="btn-group" role="group" style="float:right">
-                        <a asp-controller="PurchaseOrder" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-                        <a asp-controller="PurchaseOrder" asp-action="Delete" class="btn-delete" title="Delete" asp-route-id="@item.Id"
-                           data-id="@item.Id"
-                           data-controller="@ViewContext.RouteData.Values["controller"]">
-                            <i class="bi bi-trash-fill text-danger p-1"></i>
-                        </a>
-
+                        @if (item.WorkflowStatus != "Issued")
+                        {
+                            <a asp-controller="PurchaseOrder" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a asp-controller="PurchaseOrder" asp-action="Delete" class="btn-delete" title="Delete" asp-route-id="@item.Id"
+                               data-id="@item.Id"
+                               data-controller="@ViewContext.RouteData.Values["controller"]">
+                                <i class="bi bi-trash-fill text-danger p-1"></i>
+                            </a>
+                        }
                     </div>
                 </td>
             </tr>

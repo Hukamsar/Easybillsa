@@ -1,7 +1,12 @@
-﻿using AOne.Utility;
+using AOne.Utility;
+using AOne.Models;
+using Microsoft.EntityFrameworkCore;
+using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace EasyBill.UI.Controllers
 {
@@ -17,6 +22,13 @@ namespace EasyBill.UI.Controllers
         private readonly ISalesRepository _salesRepo;
         private readonly ICustomerAdvanceRepository _customerAdvanceRepo;
         private readonly ISupplierAdvanceRepository _supplierAdvanceRepo;
+        private readonly IStockReturnRepository _stockReturnRepo;
+        private readonly IPurchaseReturnRepository _purchaseReturnRepo;
+        private readonly IReceiveVoucherRepository _receiveVoucherRepo;
+        private readonly IContraRepository _contraRepo;
+        private readonly IBankRepository _bankRepo;
+        private readonly ISalsePaymentDetailsRepository _salsePaymentDetailsRepo;
+
         public PaymentVoucherController(
             IpaymentVoucherRepository paymentvoucherservice, 
             ISupplierRepository supplierservice,
@@ -27,7 +39,13 @@ namespace EasyBill.UI.Controllers
             IPurchaseRepository purchaseRepo,
             ISalesRepository salesRepo,
             ICustomerAdvanceRepository customerAdvanceRepo,
-            ISupplierAdvanceRepository supplierAdvanceRepo)
+            ISupplierAdvanceRepository supplierAdvanceRepo,
+            IStockReturnRepository stockReturnRepo,
+            IPurchaseReturnRepository purchaseReturnRepo,
+            IReceiveVoucherRepository receiveVoucherRepo,
+            IContraRepository contraRepo,
+            IBankRepository bankRepo,
+            ISalsePaymentDetailsRepository salsePaymentDetailsRepo)
         {
             _paymentvoucherservice = paymentvoucherservice;
             _supplierservice = supplierservice;
@@ -39,11 +57,23 @@ namespace EasyBill.UI.Controllers
             _salesRepo = salesRepo;
             _customerAdvanceRepo = customerAdvanceRepo;
             _supplierAdvanceRepo = supplierAdvanceRepo;
+            _stockReturnRepo = stockReturnRepo;
+            _purchaseReturnRepo = purchaseReturnRepo;
+            _receiveVoucherRepo = receiveVoucherRepo;
+            _contraRepo = contraRepo;
+            _bankRepo = bankRepo;
+            _salsePaymentDetailsRepo = salsePaymentDetailsRepo;
         }
         public async Task<IActionResult> Index()
         {
+            var tenantId = User.FindFirst("TenantId")?.Value;
             var data = await _paymentvoucherservice.GetAll();
-          
+
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                data = data.Where(pv => pv.TenantId == tenantId).ToList();
+            }
+
             return View(data);
         }
         [HttpGet]
@@ -58,7 +88,18 @@ namespace EasyBill.UI.Controllers
             ViewBag.PaymentCategorylist = new SelectList(await _paymentvouchercategoryservice.GetAll(), "Id", "Name");
             ViewBag.CustomerList = new SelectList(await _customerservice.GetAll(), "Id", "Name");
             ViewBag.EmployeeList = new SelectList(await _employeeservice.GetAll(), "Id", "Name");
-            ViewBag.PaymentModeList = new SelectList(await _modeofpaymentservice.GetAll(), "Id", "Name");
+
+            var paymentModes = (await _modeofpaymentservice.GetAll())
+                              .Select(x => new
+                              {
+                                  Id = x.Id,
+                                  BankModeOfPaymentName = $"{x.Name} - {x.Bank?.BankName}"
+                              }).ToList();
+
+            ViewBag.PaymentModeList = new SelectList(paymentModes,
+                "Id",
+                "BankModeOfPaymentName"
+            );
             return View(viewModel);
         }
          
@@ -109,6 +150,22 @@ namespace EasyBill.UI.Controllers
                     }
                     VM.Attachments = fileName;
                 }
+                var paymentMode = await _modeofpaymentservice.GetById(VM.PaymentModeId ?? 1);
+                bool isChequeMode = paymentMode != null && (paymentMode.Name.Contains("Cheque", StringComparison.OrdinalIgnoreCase) || paymentMode.Name.Contains("Check", StringComparison.OrdinalIgnoreCase));
+
+                List<int> selectedAppointments = new List<int>();
+                List<int> selectedPurchases = new List<int>();
+
+                if (!string.IsNullOrEmpty(Request.Form["selectedsales"]))
+                {
+                    selectedAppointments = JsonConvert.DeserializeObject<List<int>>(Request.Form["selectedsales"]);
+                }
+
+                if (!string.IsNullOrEmpty(Request.Form["SelectedPurchases"]))
+                {
+                    selectedPurchases = JsonConvert.DeserializeObject<List<int>>(Request.Form["SelectedPurchases"]);
+                }
+
                 var model = new PaymentVoucher
                 {
                     VouncherNo = VM.VouncherNo,
@@ -124,284 +181,257 @@ namespace EasyBill.UI.Controllers
                     NetAmount = VM.NetAmount,
                     Description = VM.Description,
                     Attachments = VM.Attachments,
-                    ChequeNo = VM.ChequeNo,
                     ChequeDate = VM.ChequeDate,
                     RefNo = VM.RefNo,
                     PaymentModeId = VM.PaymentModeId,
+                    ClearedDate = isChequeMode ? null : (VM.Date ?? DateTime.Now),
+                    SelectedSalesIds = selectedAppointments != null && selectedAppointments.Any() ? string.Join(",", selectedAppointments) : null,
+                    SelectedPurchaseIds = selectedPurchases != null && selectedPurchases.Any() ? string.Join(",", selectedPurchases) : null
                 };
                 await _paymentvoucherservice.Create(model);
-                //var selectedAppointments = JsonConvert.DeserializeObject<List<int>>(Request.Form["selectedsales"]);
-                //var selectedPurchases = JsonConvert.DeserializeObject<List<int>>(Request.Form["SelectedPurchases"]);
-                List<int> selectedAppointments = new List<int>();
-                List<int> selectedPurchases = new List<int>();
 
-                if (!string.IsNullOrEmpty(Request.Form["selectedsales"]))
+                if (!isChequeMode)
                 {
-                    selectedAppointments = JsonConvert.DeserializeObject<List<int>>(Request.Form["selectedsales"]);
-                }
+                    decimal remainingAmount = VM.Amount;
 
-                if (!string.IsNullOrEmpty(Request.Form["SelectedPurchases"]))
-                {
-                    selectedPurchases = JsonConvert.DeserializeObject<List<int>>(Request.Form["SelectedPurchases"]);
-                }
-
-
-                decimal remainingAmount = VM.Amount;
-
-                //if (VM.Party == Party.Customer && selectedAppointments != null && selectedAppointments.Count > 0)
-                //{
-                //    foreach (var bookingId in selectedAppointments)
-                //    {
-                //        if (remainingAmount <= 0) break;
-
-                //        var billing = await _salesRepo.GetById(bookingId);
-                //        //if (billing != null && billing.PaymentStatus != "Refund")
-                //        //{
-                //        //    decimal refundAmt = Math.Min(remainingAmount, billing.PaidAmount);
-                //        //    billing.PaymentStatus = "Refund";
-                //        //    billing.RefundAmount = refundAmt;
-
-                //        //    await _testBookingRepo.Update(billing);
-                //        //    remainingAmount -= refundAmt;
-                //        //}
-                //    }
-                //}
-                if (VM.Party == Party.Customer)
-                {
-                    // ============================================
-                    // GET OLD CUSTOMER ADVANCE
-                    // ============================================
-
-                    var customerAdvance =
-                        (await _customerAdvanceRepo
-                        .GetByCustomerId(VM.CustomerId))
-                        .FirstOrDefault();
-
-                    if (customerAdvance != null &&
-                        customerAdvance.AdvanceAmount > 0)
+                    if (VM.Party == Party.Customer)
                     {
-                        remainingAmount += customerAdvance.AdvanceAmount;
-                    }
+                        // ============================================
+                        // GET OLD CUSTOMER ADVANCE
+                        // ============================================
 
-                    // ============================================
-                    // AUTO LOAD PENDING BILLS
-                    // ============================================
+                        var customerAdvance =
+                            (await _customerAdvanceRepo
+                            .GetByCustomerId(VM.CustomerId))
+                            .FirstOrDefault();
 
-                    if (selectedAppointments == null ||
-                        selectedAppointments.Count == 0)
-                    {
-                        var pendingBills =
-                            await _salesRepo
-                            .GetPendingBillsByCustomerId(
-                                VM.CustomerId);
-
-                        selectedAppointments = pendingBills
-                            .Where(x => x.Balance > 0)
-                            .OrderBy(x => x.BillDate)
-                            .Select(x => x.Id)
-                            .ToList();
-                    }
-
-                    // ============================================
-                    // BILL ADJUSTMENT
-                    // ============================================
-
-                    foreach (var bookingId in selectedAppointments)
-                    {
-                        if (remainingAmount <= 0)
-                            break;
-
-                        var sale = await _salesRepo.GetById(bookingId);
-
-                        if (sale == null)
-                            continue;
-
-                        decimal balance =
-                            sale.TotalPayable - sale.PaidAmount;
-
-                        if (balance <= 0)
-                            continue;
-
-                        decimal paymentToApply =
-                            Math.Min(balance, remainingAmount);
-
-                        if (sale.SalsePaymentDetails == null)
+                        if (customerAdvance != null &&
+                            customerAdvance.AdvanceAmount > 0)
                         {
-                            sale.SalsePaymentDetails = new List<SalsePaymentDetails>();
+                            remainingAmount += customerAdvance.AdvanceAmount;
                         }
 
-                        sale.SalsePaymentDetails.Add(
-                            new SalsePaymentDetails
+                        // ============================================
+                        // AUTO LOAD PENDING BILLS
+                        // ============================================
+
+                        if (selectedAppointments == null ||
+                            selectedAppointments.Count == 0)
+                        {
+                            var pendingBills =
+                                await _salesRepo
+                                .GetPendingBillsByCustomerId(
+                                    VM.CustomerId);
+
+                            selectedAppointments = pendingBills
+                                .Where(x => x.Balance > 0)
+                                .OrderBy(x => x.BillDate)
+                                .Select(x => x.Id)
+                                .ToList();
+                        }
+
+                        // ============================================
+                        // BILL ADJUSTMENT
+                        // ============================================
+
+                        foreach (var bookingId in selectedAppointments)
+                        {
+                            if (remainingAmount <= 0)
+                                break;
+
+                            var sale = await _salesRepo.GetById(bookingId);
+
+                            if (sale == null)
+                                continue;
+
+                            decimal balance =
+                                sale.TotalPayable - sale.PaidAmount;
+
+                            if (balance <= 0)
+                                continue;
+
+                            decimal paymentToApply =
+                                Math.Min(balance, remainingAmount);
+
+                            if (sale.SalsePaymentDetails == null)
                             {
-                                PaymentModeId = VM.PaymentModeId ?? 1,
-                                Amount = paymentToApply,
-                                Description = "Payment paid via Payment Voucher " + VM.VouncherNo,
-                                CustomerId = VM.CustomerId,
-                                Date = VM.Date
-                            });
+                                sale.SalsePaymentDetails = new List<SalsePaymentDetails>();
+                            }
 
-                        sale.PaidAmount += paymentToApply;
+                            sale.SalsePaymentDetails.Add(
+                                new SalsePaymentDetails
+                                {
+                                    PaymentModeId = VM.PaymentModeId ?? 1,
+                                    Amount = paymentToApply,
+                                    Description = "Payment paid via Payment Voucher " + VM.VouncherNo,
+                                    CustomerId = VM.CustomerId,
+                                    Date = VM.Date
+                                });
 
-                        sale.Balance =
-                            sale.TotalPayable - sale.PaidAmount;
+                            sale.PaidAmount += paymentToApply;
 
-                        if (sale.Balance <= 0)
-                        {
-                            sale.PaymentStatus = "Paid";
-                        }
-                        else
-                        {
-                            sale.PaymentStatus = "Partial";
-                        }
+                            sale.Balance =
+                                sale.TotalPayable - sale.PaidAmount;
 
-                        remainingAmount -= paymentToApply;
-
-                        await _salesRepo.Update(sale);
-                    }
-
-                    // ============================================
-                    // SAVE REMAINING AS ADVANCE
-                    // ============================================
-
-                    if (customerAdvance != null)
-                    {
-                        customerAdvance.AdvanceAmount = remainingAmount;
-
-                        await _customerAdvanceRepo
-                            .Update(customerAdvance);
-                    }
-                    else if (remainingAmount > 0)
-                    {
-                        await _customerAdvanceRepo.Create(
-                            new CustomerAdvance
+                            if (sale.Balance <= 0)
                             {
-                                CustomerId = VM.CustomerId ?? 0,
-                                AdvanceAmount = remainingAmount,
-                                Date = DateTime.Now,
-                                Remarks =
-                                    "Advance from Payment Voucher"
-                            });
-                    }
-                }
-                else if (VM.Party == Party.Supplier)
-                {
-                    // ============================================
-                    // GET OLD SUPPLIER ADVANCE
-                    // ============================================
-
-                    var supplierAdvance =
-                        (await _supplierAdvanceRepo
-                        .GetBySupplierId(VM.SupplierId))
-                        .FirstOrDefault();
-
-                    if (supplierAdvance != null &&
-                        supplierAdvance.AdvanceAmount > 0)
-                    {
-                        remainingAmount += supplierAdvance.AdvanceAmount;
-                    }
-
-                    // ============================================
-                    // AUTO LOAD PENDING PURCHASES
-                    // ============================================
-
-                    if (selectedPurchases == null ||
-                        selectedPurchases.Count == 0)
-                    {
-                        var pendingPurchases =
-                            await _purchaseRepo
-                            .GetPendingBillsBySupplierId(
-                                VM.SupplierId);
-
-                        selectedPurchases = pendingPurchases
-                            .Where(x =>
-                                (x.TotalPayable - x.PaymentAmt) > 0)
-                            .OrderBy(x => x.BillDate)
-                            .Select(x => x.Id)
-                            .ToList();
-                    }
-
-                    // ============================================
-                    // PURCHASE ADJUSTMENT
-                    // ============================================
-
-                    foreach (var purchaseId in selectedPurchases)
-                    {
-                        if (remainingAmount <= 0)
-                            break;
-
-                        var purchase =
-                            await _purchaseRepo.GetById(purchaseId);
-
-                        if (purchase == null)
-                            continue;
-
-                        decimal balance =
-                            purchase.TotalPayable -
-                            purchase.PaymentAmt;
-
-                        if (balance <= 0)
-                            continue;
-
-                        decimal paymentToApply =
-                            Math.Min(balance, remainingAmount);
-
-                        if (purchase.PaymentDetails == null)
-                        {
-                            purchase.PaymentDetails = new List<SalsePaymentDetails>();
-                        }
-
-                        purchase.PaymentDetails.Add(
-                            new SalsePaymentDetails
+                                sale.PaymentStatus = "Paid";
+                            }
+                            else
                             {
-                                PaymentModeId = VM.PaymentModeId ?? 1,
-                                Amount = paymentToApply,
-                                Description = "Payment paid via Payment Voucher " + VM.VouncherNo,
-                                Date = VM.Date
-                            });
+                                sale.PaymentStatus = "Partial";
+                            }
 
-                        purchase.PaymentAmt += paymentToApply;
+                            remainingAmount -= paymentToApply;
 
-                        purchase.Balance =
-                            purchase.TotalPayable -
-                            purchase.PaymentAmt;
-
-                        if (purchase.Balance <= 0)
-                        {
-                            purchase.PaymentStatus = "Paid";
-                        }
-                        else
-                        {
-                            purchase.PaymentStatus = "Partial";
+                            await _salesRepo.Update(sale);
                         }
 
-                        remainingAmount -= paymentToApply;
+                        // ============================================
+                        // SAVE REMAINING AS ADVANCE
+                        // ============================================
 
-                        await _purchaseRepo.Update(purchase);
+                        if (customerAdvance != null)
+                        {
+                            customerAdvance.AdvanceAmount = remainingAmount;
+
+                            await _customerAdvanceRepo
+                                .Update(customerAdvance);
+                        }
+                        else if (remainingAmount > 0)
+                        {
+                            await _customerAdvanceRepo.Create(
+                                new CustomerAdvance
+                                {
+                                    CustomerId = VM.CustomerId ?? 0,
+                                    AdvanceAmount = remainingAmount,
+                                    Date = DateTime.Now,
+                                    Remarks =
+                                        "Advance from Payment Voucher"
+                                });
+                        }
                     }
-
-                    // ============================================
-                    // SAVE REMAINING AS ADVANCE
-                    // ============================================
-
-                    if (supplierAdvance != null)
+                    else if (VM.Party == Party.Supplier)
                     {
-                        supplierAdvance.AdvanceAmount =
-                            remainingAmount;
+                        // ============================================
+                        // GET OLD SUPPLIER ADVANCE
+                        // ============================================
 
-                        await _supplierAdvanceRepo
-                            .Update(supplierAdvance);
-                    }
-                    else if (remainingAmount > 0)
-                    {
-                        await _supplierAdvanceRepo.Create(
-                            new SupplierAdvance
+                        var supplierAdvance =
+                            (await _supplierAdvanceRepo
+                            .GetBySupplierId(VM.SupplierId))
+                            .FirstOrDefault();
+
+                        if (supplierAdvance != null &&
+                            supplierAdvance.AdvanceAmount > 0)
+                        {
+                            remainingAmount += supplierAdvance.AdvanceAmount;
+                        }
+
+                        // ============================================
+                        // AUTO LOAD PENDING PURCHASES
+                        // ============================================
+
+                        if (selectedPurchases == null ||
+                            selectedPurchases.Count == 0)
+                        {
+                            var pendingPurchases =
+                                await _purchaseRepo
+                                .GetPendingBillsBySupplierId(
+                                    VM.SupplierId);
+
+                            selectedPurchases = pendingPurchases
+                                .Where(x =>
+                                    (x.TotalPayable - x.PaymentAmt) > 0)
+                                .OrderBy(x => x.BillDate)
+                                .Select(x => x.Id)
+                                .ToList();
+                        }
+
+                        // ============================================
+                        // PURCHASE ADJUSTMENT
+                        // ============================================
+
+                        foreach (var purchaseId in selectedPurchases)
+                        {
+                            if (remainingAmount <= 0)
+                                break;
+
+                            var purchase =
+                                await _purchaseRepo.GetById(purchaseId);
+
+                            if (purchase == null)
+                                continue;
+
+                            decimal balance =
+                                purchase.TotalPayable -
+                                purchase.PaidAmount;
+
+                            if (balance <= 0)
+                                continue;
+
+                            decimal paymentToApply =
+                                Math.Min(balance, remainingAmount);
+
+                            if (purchase.PaymentDetails == null)
                             {
-                                SupplierId = VM.SupplierId ?? 0,
-                                AdvanceAmount = remainingAmount,
-                                Date = DateTime.Now,
-                                Remarks =
-                                    "Advance from Payment Voucher"
-                            });
+                                purchase.PaymentDetails = new List<SalsePaymentDetails>();
+                            }
+
+                            purchase.PaymentDetails.Add(
+                                new SalsePaymentDetails
+                                {
+                                    PaymentModeId = VM.PaymentModeId ?? 1,
+                                    Amount = paymentToApply,
+                                    Description = "Payment paid via Payment Voucher " + VM.VouncherNo,
+                                    Date = VM.Date
+                                });
+
+                            purchase.PaymentAmt += paymentToApply;
+                            purchase.PaidAmount += paymentToApply;
+
+                            purchase.Balance =
+                                purchase.TotalPayable -
+                                purchase.PaidAmount;
+
+                            if (purchase.Balance <= 0)
+                            {
+                                purchase.PaymentStatus = "Paid";
+                            }
+                            else
+                            {
+                                purchase.PaymentStatus = "Partial";
+                            }
+
+                            remainingAmount -= paymentToApply;
+
+                            await _purchaseRepo.Update(purchase);
+                        }
+
+                        // ============================================
+                        // SAVE REMAINING AS ADVANCE
+                        // ============================================
+
+                        if (supplierAdvance != null)
+                        {
+                            supplierAdvance.AdvanceAmount =
+                                remainingAmount;
+
+                            await _supplierAdvanceRepo
+                                .Update(supplierAdvance);
+                        }
+                        else if (remainingAmount > 0)
+                        {
+                            await _supplierAdvanceRepo.Create(
+                                new SupplierAdvance
+                                {
+                                    SupplierId = VM.SupplierId ?? 0,
+                                    AdvanceAmount = remainingAmount,
+                                    Date = DateTime.Now,
+                                    Remarks =
+                                        "Advance from Payment Voucher"
+                                });
+                        }
                     }
                 }
             }
@@ -430,15 +460,25 @@ namespace EasyBill.UI.Controllers
                 VM.NetAmount = model.NetAmount;
                 VM.Description = model.Description;
                 VM.Attachments = model.Attachments;
-                VM.ChequeNo = model.ChequeNo;
                 VM.ChequeDate = model.ChequeDate;
                 VM.RefNo = model.RefNo;
             }
             ViewBag.SupplierList = new SelectList(await _supplierservice.GetALL(), "Id", "FirstName");
             ViewBag.PaymentCategorylist = new SelectList(await _paymentvouchercategoryservice.GetAll(), "Id", "Name");
             ViewBag.CustomerList = new SelectList(await _customerservice.GetAll(), "Id", "Name");
-            ViewBag.EmployeeList = new SelectList(await _employeeservice.GetAll(), "Id", "Name");
-            ViewBag.PaymentModeList = new SelectList(await _modeofpaymentservice.GetAll(), "Id", "Name");
+            ViewBag.EmployeeList = new SelectList(await _employeeservice.GetAll(), "Id", "Name"); 
+
+            var paymentModes = (await _modeofpaymentservice.GetAll())
+                             .Select(x => new
+                             {
+                                 Id = x.Id,
+                                 BankModeOfPaymentName = $"{x.Name} - {x.Bank?.BankName}"
+                             }).ToList();
+
+            ViewBag.PaymentModeList = new SelectList(paymentModes,
+                "Id",
+                "BankModeOfPaymentName"
+            );
             return View(VM);
         }
         [HttpPost]
@@ -478,7 +518,6 @@ namespace EasyBill.UI.Controllers
                 model.NetAmount = VM.NetAmount;
                 model.Description = VM.Description;
                 model.Attachments = VM.Attachments;
-                model.ChequeNo = VM.ChequeNo;
                 model.ChequeDate = VM.ChequeDate;
                 model.RefNo = VM.RefNo;
                 model.PaymentModeId = VM.PaymentModeId;
@@ -516,7 +555,7 @@ namespace EasyBill.UI.Controllers
             var purchases = await _purchaseRepo.GetAll();
 
             var result = purchases
-                .Where(x => x.SupplierId == venderId && (x.TotalPayable - x.PaymentAmt) > 0)
+                .Where(x => x.SupplierId == venderId && (x.TotalPayable - x.PaidAmount) > 0)
                 .Select(x => new
                 {
                     id = x.Id,
@@ -525,14 +564,168 @@ namespace EasyBill.UI.Controllers
                     supplierName = x.Suppliers?.FirstName ?? string.Empty,
                     totalAmount = x.Total,
                     totalpayable = x.TotalPayable,
-                    paidAmount = x.PaymentAmt,
+                    paidAmount = x.PaidAmount,
 
-                    balance = (x.TotalPayable) - (x.PaymentAmt)
+                    balance = (x.TotalPayable) - (x.PaidAmount)
                 })
                 .Where(p => p.balance > 0)
                 .ToList();
 
             return Json(new { success = true, data = result });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetPartyBalance(string type, int id)
+        {
+            decimal balance = 0;
+
+            if (string.IsNullOrEmpty(type))
+                return Json(new { success = false, balance = 0 });
+
+            type = type.Trim().ToLowerInvariant();
+
+            try
+            {
+                if (type == "customer")
+                {
+                    var sales = (await _salesRepo.GetAll())
+                        .Where(x => x.CustomerId == id)
+                        .ToList();
+
+                    var totalDebit = sales.Sum(x => x.TotalPayable);
+                    var totalCredit = sales.Sum(x => x.SalsePaymentDetails?.Sum(p => p.Amount) ?? 0);
+
+                    var stockReturns = (await _stockReturnRepo.GetAll())
+                        .Where(s => s.CustomerId == id)
+                        .ToList();
+                    totalCredit += stockReturns.Sum(x => x.TotalPayable);
+
+                    balance = totalDebit - totalCredit;
+                }
+                else if (type == "supplier")
+                {
+                    var purchases = (await _purchaseRepo.GetAll())
+                        .Where(x => x.SupplierId == id)
+                        .ToList();
+
+                    var totalCredit = purchases.Sum(x => x.TotalPayable);
+                    var totalDebit = purchases.Sum(x => x.PaymentDetails?.Sum(p => p.Amount) ?? 0);
+
+                    var purchaseReturns = (await _purchaseReturnRepo.GetAll())
+                        .Where(p => p.SupplierId == id)
+                        .ToList();
+                    totalDebit += purchaseReturns.Sum(x => x.TotalPayable);
+
+                    balance = totalCredit - totalDebit;
+                }
+                else if (type == "staff" || type == "employee")
+                {
+                    var totalPayments = (await _paymentvoucherservice.GetAll())
+                        .Where(pv => pv.EmployeeId == id)
+                        .Sum(pv => pv.Amount);
+
+                    var totalReceipts = (await _receiveVoucherRepo.GetAll())
+                        .Where(rv => rv.EmployeeId == id)
+                        .Sum(rv => rv.NetAmount);
+
+                    balance = totalPayments - totalReceipts;
+                }
+                else if (type == "bank")
+                {
+                    var bank = await _bankRepo.GetById(id);
+                    if (bank != null)
+                    {
+                        decimal openingBalance = bank.OpeningBalance;
+
+                        var bankPaymentModeIds = (await _modeofpaymentservice.GetAll())
+                            .Where(m => m.BankId == id)
+                            .Select(m => m.Id)
+                            .ToList();
+
+                        var salesDebit = (await _salsePaymentDetailsRepo.GetAll())
+                            .Where(pd => bankPaymentModeIds.Contains(pd.PaymentModeId) && pd.Amount > 0 && pd.SalseId != null 
+                                && (pd.Description == null || !pd.Description.Contains("Voucher", StringComparison.OrdinalIgnoreCase)))
+                            .Sum(pd => pd.Amount);
+
+                        var rvDebit = (await _receiveVoucherRepo.GetAll())
+                            .Where(rv => rv.PaymentModeId.HasValue && bankPaymentModeIds.Contains(rv.PaymentModeId.Value) && rv.NetAmount > 0)
+                            .Sum(rv => rv.NetAmount);
+
+                        var contraDebit = (await _contraRepo.GetAll())
+                            .Where(c => c.BankId == id && c.Category == AOne.Utility.Enums.ContraCategory.Deposit && c.Amount > 0)
+                            .Sum(c => c.Amount);
+
+                        var purchasesCredit = (await _salsePaymentDetailsRepo.GetAll())
+                            .Where(pd => bankPaymentModeIds.Contains(pd.PaymentModeId) && pd.Amount > 0 && pd.PurchaseId != null
+                                && (pd.Description == null || !pd.Description.Contains("Voucher", StringComparison.OrdinalIgnoreCase)))
+                            .Sum(pd => pd.Amount);
+
+                        var pvCredit = (await _paymentvoucherservice.GetAll())
+                            .Where(pv => pv.PaymentModeId.HasValue && bankPaymentModeIds.Contains(pv.PaymentModeId.Value) && pv.Amount > 0)
+                            .Sum(pv => pv.Amount);
+
+                        var contraCredit = (await _contraRepo.GetAll())
+                            .Where(c => c.BankId == id && c.Category == AOne.Utility.Enums.ContraCategory.Withdraw && c.Amount > 0)
+                            .Sum(c => c.Amount);
+
+                        balance = openingBalance + salesDebit + rvDebit + contraDebit - purchasesCredit - pvCredit - contraCredit;
+                    }
+                }
+                else if (type == "cash")
+                {
+                    var cashPaymentModeIds = (await _modeofpaymentservice.GetAll())
+                        .Where(m => m.PaymentType == AOne.Utility.Enums.modeofpayment.Cash)
+                        .Select(m => m.Id)
+                        .ToList();
+
+                    var salesDebit = (await _salsePaymentDetailsRepo.GetAll())
+                        .Where(pd => cashPaymentModeIds.Contains(pd.PaymentModeId) && pd.Amount > 0 && pd.SalseId != null
+                            && (pd.Description == null || !pd.Description.Contains("Voucher", StringComparison.OrdinalIgnoreCase)))
+                        .Sum(pd => pd.Amount);
+
+                    var rvDebit = (await _receiveVoucherRepo.GetAll())
+                        .Where(rv => rv.PaymentModeId.HasValue && cashPaymentModeIds.Contains(rv.PaymentModeId.Value) && rv.NetAmount > 0)
+                        .Sum(rv => rv.NetAmount);
+
+                    var contraDebit = (await _contraRepo.GetAll())
+                        .Where(c => c.Category == AOne.Utility.Enums.ContraCategory.Withdraw && c.Amount > 0)
+                        .Sum(c => c.Amount);
+
+                    var purchasesCredit = (await _salsePaymentDetailsRepo.GetAll())
+                        .Where(pd => cashPaymentModeIds.Contains(pd.PaymentModeId) && pd.Amount > 0 && pd.PurchaseId != null
+                            && (pd.Description == null || !pd.Description.Contains("Voucher", StringComparison.OrdinalIgnoreCase)))
+                        .Sum(pd => pd.Amount);
+
+                    var pvCredit = (await _paymentvoucherservice.GetAll())
+                        .Where(pv => pv.PaymentModeId.HasValue && cashPaymentModeIds.Contains(pv.PaymentModeId.Value) && pv.Amount > 0)
+                        .Sum(pv => pv.Amount);
+
+                    var contraCredit = (await _contraRepo.GetAll())
+                        .Where(c => c.Category == AOne.Utility.Enums.ContraCategory.Deposit && c.Amount > 0)
+                        .Sum(c => c.Amount);
+
+                    balance = salesDebit + rvDebit + contraDebit - purchasesCredit - pvCredit - contraCredit;
+                }
+            }
+            catch
+            {
+                // Safety fallback
+            }
+
+            return Json(new { success = true, balance = balance });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetPaymentModeDetails(int id)
+        {
+            var mode = await _modeofpaymentservice.GetById(id);
+            if (mode == null)
+            {
+                return Json(new { success = false });
+            }
+
+            var typeStr = mode.PaymentType == AOne.Utility.Enums.modeofpayment.Cash ? "cash" : "bank";
+            return Json(new { success = true, type = typeStr, bankId = mode.BankId });
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using EasyBill.Models.Entity;
+using EasyBill.Models.Entity;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -54,5 +54,7 @@ namespace EasyBill.Models.ViewModels
         public int? PurchaseOrderId { get; set; }
         public int? SourcePurchaseChallanId { get; set; }
         public decimal TotalCessAmt { get; set; }
+        public decimal Expense { get; set; }
+        public string? Remarks { get; set; }
     }
 }

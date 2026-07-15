@@ -1,4 +1,4 @@
-﻿using AOne.Models;
+using AOne.Models;
 using AOne.Models.Entity;
 using AOne.Utility.Enums;
 using System;
@@ -32,5 +32,7 @@ namespace EasyBill.Models.Entity
         public int? AccountGroupId { get; set; }
         [ForeignKey("AccountGroupId")]
         public AccountGroup? AccountGroup { get; set; }
+
+        public bool IsHoAdmin { get; set; } = false;
     }
 }

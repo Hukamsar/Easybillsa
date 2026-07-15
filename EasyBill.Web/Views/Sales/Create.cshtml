@@ -1,7 +1,11 @@
 @using EasyBill.Models.ViewModels
 @model SalesVM
+@inject EasyBill.DataAccess.Repository.IRepository.ITenantRegistrationRepository TenantRepo
 @{
     ViewData["Title"] = "Create Sales";
+    var tenantId = User.FindFirst("TenantId")?.Value;
+    var tenant = await TenantRepo.GetById(tenantId);
+    bool isHo = User.IsInRole("SuperAdmin") || string.IsNullOrEmpty(tenant?.ParentTenantId);
 }
 
 <link href="~/css/page.css" rel="stylesheet" />
@@ -10,6 +14,20 @@
      🔹 GLOBAL STYLES
      ================================================================ -->
 <style>
+    .fixed-action-btn {
+        width: 155px !important;
+        height: 38px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        padding: 4px 8px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
     /* ===============================
                            LOADER STYLES
                         =============================== */
@@ -505,6 +523,10 @@
     <input type="hidden" id="RedeemPoints" name="RedeemPoints" value="0" />
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="container-fluid px-3">
+        <!-- Prescription Warning Banner -->
+        <div id="prescriptionWarning" class="alert alert-danger py-2 px-3 mb-3 d-none text-center fw-bold shadow-sm" style="color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; font-size: 1.15rem;">
+            <span class="me-2">⚠️</span> Prescription Required for Bill No: <span id="warningBillNo"></span>
+        </div>
 
         <div class="row">
             <div class="row mb-2">
@@ -626,6 +648,8 @@
             </div>
         </div>
 
+
+
         <!-- Items Table -->
         <div style="overflow-x: auto; width: 100%;">
             <div class="table-responsive">
@@ -668,6 +692,20 @@
                 <!-- Totals -->
                 <div class="row mt-3">
                     <div class="col-md-7">
+                        <!-- Remarks and Total Qty Section -->
+                        <div class="row align-items-center mb-2">
+                            <div class="@(ViewBag.BusinessType != 2 ? "col-md-7" : "col-md-12") d-flex align-items-center">
+                                <label asp-for="Remarks" class="col-form-label fw-bold me-2 small" style="white-space:nowrap;">Remarks:</label>
+                                <input asp-for="Remarks" class="form-control form-control-sm" placeholder="Enter remarks..." />
+                            </div>
+                            @if (ViewBag.BusinessType != 2)
+                            {
+                                <div class="col-md-5 d-flex align-items-center mt-2 mt-md-0">
+                                    <label class="col-form-label fw-bold me-2 small" style="white-space:nowrap;">Total Qty:</label>
+                                    <input type="text" id="totalQtyDisplay" class="form-control form-control-sm fw-bold text-center" style="max-width:100px; background-color:#e9ecef; color:#0d6efd;" value="0" readonly />
+                                </div>
+                            }
+                        </div>
                         <strong>Payment Details</strong>
                         <table class="table table-bordered table-striped">
                             <thead class="table custom-header">
@@ -798,30 +836,30 @@
         <!-- Buttons -->
         <div class="mt-3 d-flex justify-content-between align-items-center">
             <div>
-                <button type="button" id="holdBtn" class="btn btn-sm btn-warning me-2">
+                <button type="button" id="holdBtn" class="btn btn-sm btn-warning me-2 fixed-action-btn">
                     F5 | Hold ⏸
                 </button>
 
-                <button type="button" id="unHoldBtn" class="btn btn-sm btn-info">
+                <button type="button" id="unHoldBtn" class="btn btn-sm btn-info fixed-action-btn">
                     F6 | UnHold ▶
                 </button>
             </div>
             <div>
-                <button type="submit" id="btnSave" class="btn btn-sm btn-primary me-2">
+                <button type="submit" id="btnSave" class="btn btn-sm btn-primary me-2 fixed-action-btn">
                     End | Save 💾
                 </button>
                 <button type="button"
-                        class="btn btn-success"
+                        class="btn btn-success fixed-action-btn me-2"
                         id="btnSaveShare">
                     Save & Share
                 </button>
-                <button id="applyOfferBtn" class="btn btn-sm btn-success applyOffer">
+                <button id="applyOfferBtn" class="btn btn-sm btn-success applyOffer me-2 fixed-action-btn">
                     F7 | Apply Offer 🎁
                 </button>
                 <a asp-controller="Sales"
                    asp-action="Index"
                    id="btnCancel"
-                   class="btn btn-sm btn-secondary">
+                   class="btn btn-sm btn-secondary fixed-action-btn">
                     F11 | Cancel ❌
                 </a>
             </div>
@@ -1013,21 +1051,24 @@
                         </div>
 
                         <!-- F2 / F3 -->
-                        <div class="col-md-2 ps-0">
+                        @if (isHo)
+                        {
+                            <div class="col-md-2 ps-0">
 
-                            <a href="javascript:void(0)"
-                               class="shortcut-link d-block small"
-                               id="btnNewItem">
-                                F2 - New
-                            </a>
+                                <a href="javascript:void(0)"
+                                   class="shortcut-link d-block small"
+                                   id="btnNewItem">
+                                    F2 - New
+                                </a>
 
-                            <a href="javascript:void(0)"
-                               class="shortcut-link text-danger d-block small"
-                               id="btnModifyItem">
-                                F3 - Mod
-                            </a>
+                                <a href="javascript:void(0)"
+                                   class="shortcut-link text-danger d-block small"
+                                   id="btnModifyItem">
+                                    F3 - Mod
+                                </a>
 
-                        </div>
+                            </div>
+                        }
 
                     </div>
 
@@ -2931,9 +2972,27 @@
          🔹 ITEM MODAL - COMPLETE FUNCTIONALITY (IMPROVED)
          ================================================================ -->
     <script>
+        let cachedItemsList = null;
+
+        // Preload items immediately on script load
+        $.get('/Sales/GetAllItems', function (items) {
+            cachedItemsList = items;
+        });
+
         function openItemSearchModal(searchText = "") {
 
             if (window.stopAutoItemOpen === true || $("#itemMasterModal").is(":visible")) {
+                return;
+            }
+
+            const businessType = @ViewBag.BusinessType;
+
+            if (cachedItemsList) {
+                let rows = renderSalesItemRows(cachedItemsList, businessType);
+                $("#itemTableBody").html(rows);
+                $("#itemSearch").val(searchText);
+                $("#itemSearch").trigger("input");
+                $("#itemModal").modal("show");
                 return;
             }
 
@@ -2942,8 +3001,7 @@
             $.get('/Sales/GetAllItems', function (items) {
 
                 hideLoader();
-
-                const businessType = @ViewBag.BusinessType;
+                cachedItemsList = items;
 
                 let rows = renderSalesItemRows(items, businessType);
 
@@ -2980,7 +3038,11 @@
                     data-maxdiscount="${item.maximumdiscount}"
                     data-allownegative="${item.allowNegative}"
                     data-minimumqty="${item.minimumQty}"
-                    data-conversion="${item.conversion || 1}">
+                    data-conversion="${item.conversion || 1}"
+                    data-narcotics="${item.narcotics}"
+                    data-scheduleh="${item.scheduleH}"
+                    data-scheduleh1="${item.scheduleH1}"
+                    data-categoryname="${item.categoryName || ''}">
 
                     <td>${item.name}</td>
                     <td class="salt-col">${item.salt || ''}</td>
@@ -3049,15 +3111,20 @@
                     }
 
                 } else {
-                    // 🔥 Name search (old behavior)
+                    // 🔥 Name or Barcode search
                     const textToSearch = $(this).find("td:first").text().toLowerCase();
+                    const barcode = ($(this).data("barcode") || "").toString().toLowerCase();
 
-                    const searchWords = searchText.split(/\s+/);
-                    const itemWords = textToSearch.split(/\s+/);
+                    if (barcode && barcode.includes(searchText)) {
+                        match = true;
+                    } else {
+                        const searchWords = searchText.split(/\s+/);
+                        const itemWords = textToSearch.split(/\s+/);
 
-                    match = searchWords.every((word, i) =>
-                        itemWords[i] && itemWords[i].startsWith(word)
-                    );
+                        match = searchWords.every((word, i) =>
+                            itemWords[i] && itemWords[i].startsWith(word)
+                        );
+                    }
                 }
 
                 $(this).toggle(match);
@@ -3138,6 +3205,10 @@
             const allowNegative = $(this).data("allownegative") === true || $(this).data("allownegative") === "True";
             const minimumQty = parseFloat($(this).data("minimumqty")) || 0;
             const conversion = parseFloat($(this).data("conversion")) || 1;
+            const narcotics = $(this).data("narcotics");
+            const scheduleh = $(this).data("scheduleh");
+            const scheduleh1 = $(this).data("scheduleh1");
+            const categoryname = $(this).data("categoryname");
 
             if (!itemId || !currentRow) return;
 
@@ -3148,6 +3219,10 @@
             currentRow.attr("data-max-discount", maxDiscount);
             currentRow.attr("data-minimum-qty", minimumQty);
             currentRow.attr("data-conversion", conversion);
+            currentRow.attr("data-narcotics", narcotics);
+            currentRow.attr("data-scheduleh", scheduleh);
+            currentRow.attr("data-scheduleh1", scheduleh1);
+            currentRow.attr("data-categoryname", categoryname || "");
 
             // Store in global object
             itemMaxDiscounts[itemId] = maxDiscount;
@@ -3565,7 +3640,13 @@
                         isEnterNavigation = false;
                         return;
                     }
-                    processBarcode(barcode);
+
+                    const isBarcodeBase = $('#itemBarCodeYes').is(':checked');
+                    if (isBarcodeBase) {
+                        processBarcode(barcode);
+                    } else {
+                        openItemSearchModal(barcode);
+                    }
                 }
             });
 
@@ -3574,6 +3655,9 @@
                     isEnterNavigation = false;
                     return;
                 }
+
+                const isBarcodeBase = $('#itemBarCodeYes').is(':checked');
+                if (!isBarcodeBase) return;
 
                 currentRow = $(this).closest("tr");
                 let barcode = $(this).val().trim();
@@ -3682,6 +3766,7 @@
             $(document).on("click", ".remove-row-btn", function () {
                 $(this).closest("tr").remove();
                 calculateTotalSummary();
+                updateRowIndices();
                 toggleAddRowButton();
             });
 
@@ -3758,18 +3843,76 @@
                 const maxDiscount = parseFloat(itemResponse.maximumDiscount) || 0;
                 const allowNegative = itemResponse.allowNegative === true;
                 const minimumQty = parseFloat(itemResponse.minimumQty) || 0;
+                const conversion = parseFloat(itemResponse.conversion) || 1;
 
                 currentRow.find(".item-id").val(itemId);
                 currentRow.find(".item-barcode").val(itemName);
                 currentRow.attr("data-max-discount", maxDiscount);
                 currentRow.attr("data-minimum-qty", minimumQty);
+                currentRow.attr("data-conversion", conversion);
+                currentRow.attr("data-narcotics", itemResponse.narcotics);
+                currentRow.attr("data-scheduleh", itemResponse.scheduleH);
+                currentRow.attr("data-scheduleh1", itemResponse.scheduleH1);
+                currentRow.attr("data-categoryname", itemResponse.categoryName || "");
 
                 // ✅ Store in global object
                 itemMaxDiscounts[itemId] = maxDiscount;
-
+                itemConversionMap[itemId] = conversion;
                 window.allowNegativeSetting = allowNegative;
 
-                loadBatches(itemId);
+                // Load batches and select last batch automatically
+                showLoader("Loading batches...");
+                $.get('/Sales/GetBatchesByItemId', { id: itemId }, function (data) {
+                    hideLoader();
+                    if (data.error || !data.groupedResult || data.groupedResult.length === 0) {
+                        toastr.warning("No batch available for this item.", "Batch Not Found");
+                        setTimeout(() => {
+                            currentRow.find(".item-barcode").focus().select();
+                        }, 200);
+                        return;
+                    }
+
+                    // Select the last batch (latest batch)
+                    const lastBatch = data.groupedResult[data.groupedResult.length - 1];
+
+                    // Populate row with lastBatch data
+                    currentRow.find(".batch").val(lastBatch.batch);
+                    currentRow.find(".rate").val(lastBatch.rate.toFixed(4) || 0);
+                    currentRow.find(".stripe-rate").val(lastBatch.striprate.toFixed(2) || 0);
+                    currentRow.find(".mrp").val(lastBatch.mrp || 0);
+                    currentRow.attr("data-available-qty", lastBatch.qty);
+
+                    if (lastBatch.expiry) {
+                        let date = new Date(lastBatch.expiry);
+                        let formatted = ("0" + (date.getMonth() + 1)).slice(-2) + "/" + date.getFullYear();
+                        currentRow.find(".expirydate").val(formatted);
+                    }
+
+                    // Set default qty = 1 (For pharmacy Shop/BusinessType === 2, set qty = 1 and tablet-qty = 0)
+                    if (@ViewBag.BusinessType === 2) {
+                        currentRow.find(".qty").val(1);
+                        currentRow.find(".tablet-qty").val(0);
+                    } else {
+                        if (isTabletWiseMode) {
+                            currentRow.find(".tablet-qty").val(1);
+                        } else {
+                            currentRow.find(".qty").val(1);
+                        }
+                    }
+
+                    calculateRow(currentRow);
+
+                    // Add a new row and focus on its barcode field
+                    addNewRow();
+                    setTimeout(() => {
+                        $("#SalesItemBody tr:last .item-barcode").focus();
+                    }, 100);
+
+                }).fail(function () {
+                    hideLoader();
+                    toastr.error("Error loading batches");
+                });
+
             }).fail(function() {
                 hideLoader();
                 toastr.error("Error processing barcode");
@@ -4028,11 +4171,13 @@
             let totalCess = 0;
             let totalDiscount = 0;
             let totalamt = 0;
+            let sumQty = 0;
             let gstRows = [];
 
             $("#SalesItemBody tr").each(function () {
                 let row = $(this);
                 let qty = parseFloat(row.find(".qty").val()) || 0;
+                sumQty += qty;
                 let rate = parseFloat(row.find(".rate").val()) || 0;
                 let gst = parseFloat(row.find(".gst").val()) || 0;
                 let cess = parseFloat(row.find(".cess").val()) || 0;
@@ -4162,7 +4307,33 @@
             $("#paidAmout").val(paidAmount.toFixed(2));
             $("#balance").val(balance.toFixed(2));
             $("#returnAmount").val(returnAmount.toFixed(2));
+            $("#returnAmountDisplay").text(returnAmount.toFixed(2));
+
+            // Toggle Prescription Warning Banner
+            let hasPrescriptionItem = false;
+            $("#SalesItemBody tr").each(function () {
+                let row = $(this);
+                let narcotics = row.attr("data-narcotics") === "true" || row.attr("data-narcotics") === "True";
+                let scheduleh = row.attr("data-scheduleh") === "true" || row.attr("data-scheduleh") === "True";
+                let scheduleh1 = row.attr("data-scheduleh1") === "true" || row.attr("data-scheduleh1") === "True";
+                let categoryname = (row.attr("data-categoryname") || "").toLowerCase().trim();
+
+                if (narcotics || scheduleh || scheduleh1 || categoryname === "syrup") {
+                    hasPrescriptionItem = true;
+                }
+            });
+
+            if (hasPrescriptionItem) {
+                let billNo = ($("#BillNo").val() || "").trim();
+                $("#warningBillNo").text(billNo);
+                $("#prescriptionWarning").removeClass("d-none");
+            } else {
+                $("#prescriptionWarning").addClass("d-none");
+            }
             $("#returnAmountDisplay").text(returnAmount.toFixed(2)); 
+            if ($("#totalQtyDisplay").length) {
+                $("#totalQtyDisplay").val(sumQty % 1 !== 0 ? sumQty.toFixed(2) : sumQty);
+            }
         }
 
         function toggleAddRowButton() {
@@ -4179,6 +4350,12 @@
             }
             toggleAddRowButton();
         }, 300);
+
+        $(document).on("input", "#BillNo", function () {
+            if (!$("#prescriptionWarning").hasClass("d-none")) {
+                $("#warningBillNo").text($(this).val().trim());
+            }
+        });
 
         // NEW VALIDATION HANDLER (Bill discount validation)
         $("#discountPercent").on("input", function() {
@@ -4231,7 +4408,7 @@
                    </td>
                    <td> <input name="SalsePaymentDetails[${subrowIndex}].Amount" class="form-control form-control-sm paymentAmount" value="0" /> </td>
                    <td> <input name="SalsePaymentDetails[${subrowIndex}].ReferenceNo" class="form-control form-control-sm paymentReferenceNO" /> </td>
-                   <td> <input name="SalsePaymentDetails[${subrowIndex}].Description" class="form-control form-control-sm rate paymentDescription" /> </td>
+                   <td> <input name="SalsePaymentDetails[${subrowIndex}].Description" class="form-control form-control-sm paymentDescription" /> </td>
                    <td> <u class="remove-paymentrow-btn text-danger" style="cursor:pointer;">Remove</u> </td>
                </tr>`;
        
@@ -4330,6 +4507,20 @@
                     }
                 });
                 subrowIndex++;
+            });
+        }
+
+        function updateRowIndices() {
+            const rows = document.querySelectorAll('#SalesItemBody tr');
+            rowIndex = 0;
+            rows.forEach(row => {
+                row.querySelectorAll('input, select').forEach(input => {
+                    const name = input.name;
+                    if (name) {
+                        input.name = name.replace(/\[\d+\]/, `[${rowIndex}]`);
+                    }
+                });
+                rowIndex++;
             });
         }
 
@@ -4439,8 +4630,20 @@
         if (e.key === "Tab") {
             e.preventDefault();
 
+            const itemId = (row.find(".item-id").val() || "").trim();
             const itemBarcode = (row.find(".item-barcode").val() || "").trim();
             const batch = (row.find(".batch").val() || "").trim();
+
+            // If there's a barcode/name entered but no item selected yet, look it up first
+            if (itemBarcode && !itemId) {
+                const isBarcodeBase = $('#itemBarCodeYes').is(':checked');
+                if (isBarcodeBase) {
+                    currentRow = row;
+                    currentRowForCrossItemModal = row;
+                    processBarcode(itemBarcode);
+                    return;
+                }
+            }
 
             // Current row is BLANK
             if (!itemBarcode && !batch) {
@@ -4469,6 +4672,7 @@
                 // Valid rows exist → Remove current blank row
                 row.remove();
                 calculateTotalSummary();
+                updateRowIndices();
 
                 setTimeout(() => {
                     $("#discountPercent").focus().select();
@@ -4568,6 +4772,7 @@
 
                 row.remove();
                 calculateTotalSummary();
+                updateRowIndices();
 
                 setTimeout(() => {
                     $("#discountPercent").focus().select();
@@ -5047,6 +5252,7 @@
 
                 row.remove();
                 calculateTotalSummary();
+                updateRowIndices();
 
                 setTimeout(() => {
                     $("#discountPercent").focus().select();
@@ -5495,6 +5701,7 @@
         $.ajax({
             url: '/SalseSetting/GetSidebarSettings',
             type: 'GET',
+            cache: false,
             success: function (data) {
 
                 settingsSaved = data.isNotConfigured;
@@ -5509,6 +5716,7 @@
                 $('#stripWise').prop('checked', data.itemConversion === "StripWise");
                 $("#rateRoundUpToggle").prop("checked", data.rateRoundUp === true);
                 $('#allowNegativeYes').prop('checked', data.allowNegative === true);
+                window.itemBarCodeBase = data.itemBarCodeBase === true;
                 $('#allowNegativeNo').prop('checked', data.allowNegative !== true);
 
                 if (data.expiryAllowedDays && data.expiryAllowedDays > 0) {
@@ -5691,8 +5899,12 @@
                         });
 
                         html += `</tbody></table>`;
+                        
+                        // Save calculated free items globally to add them when user applies BOGO
+                        window.currentFreeItems = response.freeItems || [];
                     } else {
                         html = '<p>No valid offers found.</p>';
+                        window.currentFreeItems = [];
                     }
 
                     $('#offerModalBody').html(html);
@@ -5802,23 +6014,18 @@
     }
 
     function applyBuyXGetXOffer(offerId) {
-        showLoader("Applying BuyX GetX offer..."); // ✅ Show loader
+        if (!window.currentFreeItems || window.currentFreeItems.length === 0) {
+            toastr.warning("No free items found for this offer.");
+            $(".applyOffer").prop("disabled", false);
+            return;
+        }
 
-        $.get(`/Sales/GetBuyXGetXFreeItems?offerId=${offerId}`, function (response) {
-            hideLoader(); // ✅ Hide loader
-
-            if (!response || response.length === 0) {
-                toastr.warning("No free items found.");
-                return;
-            }
-
-            response.forEach(item => {
-                window.addNewRow(item.itemId, item.itemName, item.qty);
-            });
-        }).fail(function() {
-            hideLoader(); // ✅ Hide loader
-            toastr.error("Failed to apply offer");
+        window.currentFreeItems.forEach(item => {
+            window.addNewRow(item.itemMasterId, item.itemName, item.qty, item.rate);
+            toastr.success(`Added free item: ${item.itemName} (Qty: ${item.qty})`);
         });
+        
+        $(".applyOffer").prop("disabled", false);
     }
 
     // function applySelectedOfferDiscount() {
@@ -6101,7 +6308,7 @@
                 </td>
                 <td>
                     <input name="SalsePaymentDetails[${subrowIndex}].Description"
-                           class="form-control form-control-sm rate paymentDescription" value="${description}" />
+                           class="form-control form-control-sm paymentDescription" value="${description}" />
                 </td>
                 <td>
                     <u class="remove-paymentrow-btn text-danger" style="cursor:pointer;">Remove</u>
@@ -7032,6 +7239,7 @@
 
         $.get('/Sales/GetAllItems', function (items) {
             hideLoader();
+            cachedItemsList = items;
 
             const businessType = @ViewBag.BusinessType;
 

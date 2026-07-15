@@ -1,4 +1,10 @@
-﻿@model IEnumerable<Division>
+@model IEnumerable<Division>
+@inject EasyBill.DataAccess.Repository.IRepository.ITenantRegistrationRepository TenantRepo
+@{
+    var tenantId = User.FindFirst("TenantId")?.Value;
+    var tenant = await TenantRepo.GetById(tenantId);
+    bool isHo = User.IsInRole("SuperAdmin") || string.IsNullOrEmpty(tenant?.ParentTenantId);
+}
 
 @{
     ViewData["Title"] = "Division";
@@ -186,6 +192,8 @@
 }
 
 <!-- CREATE FORM -->
+@if (isHo)
+{
 <div class="card mb-3">
 
     <div class="card-body">
@@ -221,20 +229,23 @@
 
                     </select>
 
-                    <!-- F2 F3 -->
-                    <div class="shortcut-box">
+                    @if (isHo)
+                    {
+                        <!-- F2 F3 -->
+                        <div class="shortcut-box">
 
-                        <span id="btnF2"
-                              class="shortcut-link">
-                            F2 - New
-                        </span>
+                            <span id="btnF2"
+                                  class="shortcut-link">
+                                F2 - New
+                            </span>
 
-                        <span id="btnF3"
-                              class="shortcut-link text-danger">
-                            F3 - Mod
-                        </span>
+                            <span id="btnF3"
+                                  class="shortcut-link text-danger">
+                                F3 - Mod
+                            </span>
 
-                    </div>
+                        </div>
+                    }
 
                 </div>
 
@@ -262,6 +273,7 @@
     </div>
 
 </div>
+}
 
 <!-- TABLE -->
 <div class="card">
@@ -293,24 +305,27 @@
 
                             <div class="btn-group float-end">
 
-                                <!-- EDIT -->
-                                <a asp-action="Edit"
-                                   asp-route-id="@item.Id"
-                                   title="Edit">
+                                @if (isHo)
+                                {
+                                    <!-- EDIT -->
+                                    <a asp-action="Edit"
+                                       asp-route-id="@item.Id"
+                                       title="Edit">
 
-                                    <i class="bi bi-pencil-square"></i>
+                                        <i class="bi bi-pencil-square"></i>
 
-                                </a>
+                                    </a>
 
-                                <!-- DELETE -->
-                                <a href="javascript:void(0)"
-                                   class="btn-delete"
-                                   data-id="@item.Id"
-                                   title="Delete">
+                                    <!-- DELETE -->
+                                    <a href="javascript:void(0)"
+                                       class="btn-delete"
+                                       data-id="@item.Id"
+                                       title="Delete">
 
-                                    <i class="bi bi-trash-fill text-danger p-1"></i>
+                                        <i class="bi bi-trash-fill text-danger p-1"></i>
 
-                                </a>
+                                    </a>
+                                }
 
                             </div>
 

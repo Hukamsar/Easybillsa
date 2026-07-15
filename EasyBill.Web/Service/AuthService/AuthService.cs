@@ -1,4 +1,4 @@
-﻿using EasyBill.Models.Model;
+using EasyBill.Models.Model;
 using EasyBill.Models.ViewModels;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -54,6 +54,7 @@ namespace AOneWeb.Service.AuthService
 
             var claims = new List<Claim>
             {
+                new Claim(ClaimTypes.NameIdentifier, customer.IdentityUserId ?? ""),
                 new Claim("CustomerId", customer.Id.ToString()),
                 new Claim("CustomerName", customer.FullName ?? ""),
                 new Claim("PhoneNumber", customer.MobileNumber),

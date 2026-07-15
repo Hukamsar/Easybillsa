@@ -1,4 +1,4 @@
-﻿@model EasyBill.Models.ViewModels.PaymentVoucherVM
+@model EasyBill.Models.ViewModels.PaymentVoucherVM
 @{
     ViewData["Title"] = "Create Payment Voucher  ";
 }
@@ -57,6 +57,7 @@
                             <select asp-for="SupplierId" id="venderId" class="form-select form-select-sm">
                                 <option selected disabled>Select</option>
                             </select>
+                            <span id="venderBalance" class="badge bg-info mt-1" style="display:none;">Balance: 0.00</span>
                             <span asp-validation-for="SupplierId" class="text-danger small"></span>
                         </div>
                         <div class="col-md-2 col-form-label text-start small customerdiv" style="display:none">
@@ -66,6 +67,7 @@
                             <select asp-for="CustomerId" id="customerId" asp-items="@ViewBag.CustomerList" class="form-select form-select-sm">
                                 <option selected disabled>Select</option>
                             </select>
+                            <span id="customerBalance" class="badge bg-info mt-1" style="display:none;">Balance: 0.00</span>
                             <span asp-validation-for="CustomerId" class="text-danger small"></span>
                         </div>
                         <div class="col-md-2 col-form-label text-start small staffdiv" style="display:none">
@@ -75,6 +77,7 @@
                             <select asp-for="EmployeeId" id="employeeId" asp-items="@ViewBag.EmployeeList" class="form-select form-select-sm">
                                 <option selected disabled>Select</option>
                             </select>
+                            <span id="employeeBalance" class="badge bg-info mt-1" style="display:none;">Balance: 0.00</span>
                             <span asp-validation-for="EmployeeId" class="text-danger small"></span>
                         </div>
                          
@@ -85,25 +88,27 @@
                             </Select>
                             <span asp-validation-for="VoucherCategoryId" class="text-danger small"></span>
                         </div>
-
+                        <!-- Amount -->
+                        <label asp-for="PaymentModeId" class="col-md-2 col-form-label text-start small">Payment Mode <i class="text-danger">*</i> </label>
+                        <div class="col-md-4">
+                            <Select asp-for="PaymentModeId" asp-items="@ViewBag.PaymentModeList" required class="form-control form-control-sm">
+                                <option value="">select</option>
+                            </Select>
+                            <span id="paymentModeBalance" class="badge bg-info mt-1" style="display:none;">Balance: 0.00</span>
+                            <span asp-validation-for="PaymentModeId" class="text-danger small"></span>
+                        </div>
                         <!-- Cheque No -->
                     @*     <div class="col-md-4 d-none cheque-section">
                             <label asp-for="ChequeNo" class="col-3">Cheque No</label>
                             <input asp-for="ChequeNo" class="col-8 form-control form-control-sm" />
                             <span asp-validation-for="ChequeNo" class="text-danger small"></span>
                         </div> *@
-                        <div class="col-md-2 col-form-label text-start small chequediv" style="display:none">
-                            <label asp-for="ChequeNo">Cheque No <i class="text-danger">*</i></label>
-                        </div>
-                        <div class="col-md-4 chequediv" style="display:none">
-                            <input asp-for="ChequeNo" id="chequeno" class="col-8 form-control form-control-sm" />
-                            <span asp-validation-for="EmployeeId" class="text-danger small"></span>
-                        </div>
+
                         <div class="col-md-2 col-form-label text-start small chequediv" style="display:none">
                             <label asp-for="ChequeDate">Cheque Date <i class="text-danger">*</i></label>
                         </div>
                         <div class="col-md-4 chequediv" style="display:none">
-                            <input asp-for="ChequeDate" id="chequedate" type="date" class="col-8 form-control form-control-sm" />
+                            <input asp-for="ChequeDate" id="chequedate" type="date" class="form-control form-control-sm" />
                             <span asp-validation-for="ChequeDate" class="text-danger small"></span>
                         </div>
                      @*    <!-- Cheque Date -->
@@ -113,7 +118,7 @@
                             <span asp-validation-for="ChequeDate" class="text-danger small"></span>
                         </div> *@
                         <!-- Ref No -->
-                      @*   <div class="col-md-4 d-none ref-section">
+                       @*   <div class="col-md-4 d-none ref-section">
                             <label asp-for="RefNo" class="col-3">Ref No</label>
                             <input asp-for="RefNo" class="col-8 form-control form-control-sm" />
                             <span asp-validation-for="RefNo" class="text-danger small"></span>
@@ -122,17 +127,10 @@
                             <label asp-for="RefNo">Ref No<i class="text-danger">*</i></label>
                         </div>
                         <div class="col-md-4 refdiv" style="display:none">
-                            <input asp-for="RefNo" id="refno" class="col-8 form-control form-control-sm" />
+                            <input asp-for="RefNo" id="refno" class="form-control form-control-sm" />
                             <span asp-validation-for="RefNo" class="text-danger small"></span>
                         </div>
-                        <!-- Amount -->
-                        <label asp-for="PaymentModeId" class="col-md-2 col-form-label text-start small">Payment Mode <i class="text-danger">*</i> </label>
-                        <div class="col-md-4">
-                            <Select asp-for="PaymentModeId" asp-items="@ViewBag.PaymentModeList" required class="form-control form-control-sm">
-                                <option value="">select</option>
-                            </Select>
-                            <span asp-validation-for="PaymentModeId" class="text-danger small"></span>
-                        </div>
+                     
                         <label asp-for="Amount" class="col-md-2 col-form-label text-start small">Amount <i class="text-danger">*</i></label>
                         <div class="col-md-4">
                             <input asp-for="Amount" class="form-control form-control-sm" id="balanceAmount" required />
@@ -237,37 +235,119 @@
 
 
 
-           function handleCategoryChange() {
-               let categoryText = $('#voucherCategory option:selected')
-                   .text()
-                   .trim()
-                   .toLowerCase();
+            function handlePaymentModeChange() {
+                let modeText = $('#PaymentModeId option:selected')
+                    .text()
+                    .trim()
+                    .toLowerCase();
 
-               $('.chequediv, .refdiv').hide();
-               $('#chequeno, #chequedate, #refno').prop('required', false).val('');
-                
+                $('.chequediv, .refdiv').hide();
+                $('#chequedate, #refno').prop('required', false);
+                 
+                if (!modeText || modeText === 'select') return;
 
-               if (!categoryText || categoryText === 'select') return;
+                if (modeText.includes('cheque') || modeText.includes('check')) {
+                    $('.chequediv, .refdiv').show();
+                    $('#chequedate, #refno').prop('required', true);
+                }
+                else if (
+                    modeText.includes('online') ||
+                    modeText.includes('upi') ||
+                    modeText.includes('net') ||
+                    modeText.includes('neft') ||
+                    modeText.includes('rtgs') ||
+                    modeText.includes('imps')
+                ) {
+                    $('.refdiv').show();
+                    $('#refno').prop('required', true);
+                }
+            }
 
-               if (categoryText.includes('cheque')) {
-                   $('.chequediv').show();
-                   $('#chequeno, #chequedate').prop('required', true);
-               }
-               else if (
-                   categoryText.includes('online') ||
-                   categoryText.includes('upi') ||
-                   categoryText.includes('net') ||
-                   categoryText.includes('neft')
-               ) {
-                   $('.refdiv').show();
-                   $('#refno').prop('required', true);
-               }
-           }
+            $('#PaymentModeId').on('change', function () {
+                handlePaymentModeChange();
+            });
 
-           $('#voucherCategory').on('change', function () {
-              
-               handleCategoryChange();
-           });
+            // Balance check functions
+            function updateBalance(type, id, targetSelector) {
+                if (!id) {
+                    $(targetSelector).hide();
+                    return;
+                }
+                $.ajax({
+                    url: '/PaymentVoucher/GetPartyBalance',
+                    type: 'GET',
+                    data: { type: type, id: id },
+                    success: function (res) {
+                        if (res && res.success) {
+                            let formatted = parseFloat(res.balance).toFixed(2);
+                            $(targetSelector).text('Balance: ' + formatted).show();
+                        } else {
+                            $(targetSelector).hide();
+                        }
+                    },
+                    error: function () {
+                        $(targetSelector).hide();
+                    }
+                });
+            }
+
+            function updatePaymentModeBalance() {
+                let modeId = $('#PaymentModeId').val();
+                if (!modeId) {
+                    $('#paymentModeBalance').hide();
+                    return;
+                }
+                $.ajax({
+                    url: '/PaymentVoucher/GetPaymentModeDetails',
+                    type: 'GET',
+                    data: { id: modeId },
+                    success: function (res) {
+                        if (res && res.success) {
+                            if (res.type === 'cash') {
+                                updateBalance('cash', 0, '#paymentModeBalance');
+                            } else if (res.type === 'bank' && res.bankId) {
+                                updateBalance('bank', res.bankId, '#paymentModeBalance');
+                            } else {
+                                $('#paymentModeBalance').hide();
+                            }
+                        } else {
+                            $('#paymentModeBalance').hide();
+                        }
+                    },
+                    error: function () {
+                        $('#paymentModeBalance').hide();
+                    }
+                });
+            }
+
+            // Bind events for balance update
+            $(document).on('change', '#customerId', function () {
+                updateBalance('customer', $(this).val(), '#customerBalance');
+            });
+            $(document).on('change', '#venderId', function () {
+                let selectedParty = $('#partyddl').find("option:selected").text();
+                let type = (selectedParty === 'Customer') ? 'customer' : 'supplier';
+                updateBalance(type, $(this).val(), '#venderBalance');
+            });
+            $(document).on('change', '#employeeId', function () {
+                updateBalance('staff', $(this).val(), '#employeeBalance');
+            });
+            $(document).on('change', '#PaymentModeId', function () {
+                updatePaymentModeBalance();
+            });
+
+            // Initial load balance triggers
+            if ($('#customerId').val()) updateBalance('customer', $('#customerId').val(), '#customerBalance');
+            if ($('#venderId').val()) {
+                let selectedParty = $('#partyddl').find("option:selected").text();
+                let type = (selectedParty === 'Customer') ? 'customer' : 'supplier';
+                updateBalance(type, $('#venderId').val(), '#venderBalance');
+            }
+            if ($('#employeeId').val()) updateBalance('staff', $('#employeeId').val(), '#employeeBalance');
+            updatePaymentModeBalance();
+
+            // Trigger on page load
+            handlePaymentModeChange();
 
             function loadSuppliers(type) {
 
@@ -394,6 +474,34 @@
 
             $('form').submit(function (e) {
                 e.preventDefault();
+
+                let enteredAmount = parseFloat($('#balanceAmount').val()) || 0;
+
+                // Validate against Party Balance if visible
+
+                // let partySelectors = ['#customerBalance', '#venderBalance', '#employeeBalance'];
+                // for (let sel of partySelectors) {
+                //     let el = $(sel);
+                //     if (el.is(':visible')) {
+                //         let text = el.text();
+                //         let balanceVal = parseFloat(text.replace('Balance:', '').trim());
+                //         if (!isNaN(balanceVal) && enteredAmount > balanceVal) {
+                //             Swal.fire("Error", "Amount cannot exceed the selected party's balance of " + balanceVal.toFixed(2), "error");
+                //             return false;
+                //         }
+                //     }
+                // }
+
+                // Validate against Payment Mode Balance if visible
+                let pmEl = $('#paymentModeBalance');
+                if (pmEl.is(':visible')) {
+                    let text = pmEl.text();
+                    let balanceVal = parseFloat(text.replace('Balance:', '').trim());
+                    if (!isNaN(balanceVal) && enteredAmount > balanceVal) {
+                        Swal.fire("Error", "Amount cannot exceed the payment mode's balance of " + balanceVal.toFixed(2), "error");
+                        return false;
+                    }
+                }
 
                 let form = $(this);
                 let formData = new FormData(form[0]);

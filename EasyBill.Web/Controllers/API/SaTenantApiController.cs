@@ -161,12 +161,16 @@ namespace EasyBill.UI.Controllers.API
                 DrugLicNo = fields.DrugLic,
                 LicenceExpiryDate = ParseSaDate(fields.LicExp),
                 YearFrom = ParseSaDate(fields.FinYearFrom),
-                YearTo = ParseSaDate(fields.FinYearTo)
+                YearTo = ParseSaDate(fields.FinYearTo),
+                IsHeadOffice = fields.IsHeadOffice ?? false,
+                ParentTenantId = fields.ParentTenantId
             };
 
             if (!string.IsNullOrEmpty(fields.CompType) && Enum.TryParse<CompanyType>(fields.CompType, true, out var compType))
             {
                 tenant.CompanyType = compType;
+                tenant.IsHeadOffice = (compType == CompanyType.HeadOffice || compType == CompanyType.Standalone);
+                tenant.ParentTenantId = (compType == CompanyType.Branch) ? fields.ParentTenantId : null;
             }
             if (!string.IsNullOrEmpty(fields.StateCode) && Enum.TryParse<GstStateCode>(fields.StateCode, true, out var stateCode))
             {
@@ -192,7 +196,16 @@ namespace EasyBill.UI.Controllers.API
                     .ThenInclude(pf => pf.Feature)
                 .FirstOrDefaultAsync(p => p.PlanName.ToLower() == planName.ToLower());
 
-            if (plan != null)
+            if (tenant.CompanyType == CompanyType.Branch && !string.IsNullOrEmpty(tenant.ParentTenantId))
+            {
+                var parentHo = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenant.ParentTenantId);
+                if (parentHo != null)
+                {
+                    tenant.SubscriptionPlanId = parentHo.SubscriptionPlanId;
+                    tenant.AllowedModulesJson = parentHo.AllowedModulesJson;
+                }
+            }
+            else if (plan != null)
             {
                 tenant.SubscriptionPlanId = plan.Id;
                 
@@ -290,10 +303,21 @@ namespace EasyBill.UI.Controllers.API
             tenant.LicenceExpiryDate = ParseSaDate(fields.LicExp);
             tenant.YearFrom = ParseSaDate(fields.FinYearFrom);
             tenant.YearTo = ParseSaDate(fields.FinYearTo);
+            
+            if (fields.IsHeadOffice.HasValue)
+            {
+                tenant.IsHeadOffice = fields.IsHeadOffice.Value;
+            }
+            if (fields.ParentTenantId != null)
+            {
+                tenant.ParentTenantId = fields.ParentTenantId;
+            }
 
             if (!string.IsNullOrEmpty(fields.CompType) && Enum.TryParse<CompanyType>(fields.CompType, true, out var compType))
             {
                 tenant.CompanyType = compType;
+                tenant.IsHeadOffice = (compType == CompanyType.HeadOffice || compType == CompanyType.Standalone);
+                tenant.ParentTenantId = (compType == CompanyType.Branch) ? fields.ParentTenantId : null;
             }
             if (!string.IsNullOrEmpty(fields.StateCode) && Enum.TryParse<GstStateCode>(fields.StateCode, true, out var stateCode))
             {
@@ -312,27 +336,50 @@ namespace EasyBill.UI.Controllers.API
                 tenant.TaxType = taxType;
             }
 
-            // Update Subscription Plan if changed
-            if (payload.Subscription != null && !string.IsNullOrEmpty(payload.Subscription.PlanName))
+            if (tenant.CompanyType == CompanyType.Branch && !string.IsNullOrEmpty(tenant.ParentTenantId))
             {
-                var newPlanName = payload.Subscription.PlanName;
-                if (tenant.SubscriptionPlan == null || !string.Equals(tenant.SubscriptionPlan.PlanName, newPlanName, StringComparison.OrdinalIgnoreCase))
+                var parentHo = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenant.ParentTenantId);
+                if (parentHo != null)
                 {
-                    var plan = await _context.SubscriptionPlans
-                        .Include(p => p.PlanFeatures)
-                            .ThenInclude(pf => pf.Feature)
-                        .FirstOrDefaultAsync(p => p.PlanName.ToLower() == newPlanName.ToLower());
-                    if (plan != null)
+                    tenant.SubscriptionPlanId = parentHo.SubscriptionPlanId;
+                    tenant.AllowedModulesJson = parentHo.AllowedModulesJson;
+                }
+            }
+            else
+            {
+                // Update Subscription Plan if changed
+                if (payload.Subscription != null && !string.IsNullOrEmpty(payload.Subscription.PlanName))
+                {
+                    var newPlanName = payload.Subscription.PlanName;
+                    if (tenant.SubscriptionPlan == null || !string.Equals(tenant.SubscriptionPlan.PlanName, newPlanName, StringComparison.OrdinalIgnoreCase))
                     {
-                        tenant.SubscriptionPlanId = plan.Id;
-                        tenant.SubscriptionPlan = plan;
-                        
-                        // Copy default plan features
-                        var planFeatures = plan.PlanFeatures
-                            .Where(pf => pf.Feature != null)
-                            .Select(pf => pf.Feature.FeatureKey)
-                            .ToList();
-                        tenant.AllowedModulesJson = JsonConvert.SerializeObject(planFeatures);
+                        var plan = await _context.SubscriptionPlans
+                            .Include(p => p.PlanFeatures)
+                                .ThenInclude(pf => pf.Feature)
+                            .FirstOrDefaultAsync(p => p.PlanName.ToLower() == newPlanName.ToLower());
+                        if (plan != null)
+                        {
+                            tenant.SubscriptionPlanId = plan.Id;
+                            tenant.SubscriptionPlan = plan;
+                            
+                            // Copy default plan features
+                            var planFeatures = plan.PlanFeatures
+                                .Where(pf => pf.Feature != null)
+                                .Select(pf => pf.Feature.FeatureKey)
+                                .ToList();
+                            tenant.AllowedModulesJson = JsonConvert.SerializeObject(planFeatures);
+                        }
+                    }
+                }
+
+                if (tenant.IsHeadOffice)
+                {
+                    var childBranches = await _context.Tenants.Where(t => t.ParentTenantId == tenant.Id).ToListAsync();
+                    foreach (var branch in childBranches)
+                    {
+                        branch.SubscriptionPlanId = tenant.SubscriptionPlanId;
+                        branch.AllowedModulesJson = tenant.AllowedModulesJson;
+                        _context.Tenants.Update(branch);
                     }
                 }
             }
@@ -1180,6 +1227,110 @@ namespace EasyBill.UI.Controllers.API
                 cost = tx.Debit,
                 remarks = tx.Remarks
             };
+        }
+        [HttpPost("merge-to-ho")]
+        public async Task<IActionResult> MergeToHeadOfficeAsync([FromBody] MergeTenantsRequest request)
+        {
+            if (!IsAuthorized()) return Unauthorized("Invalid API Key");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var hoTenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == request.HoTenantId);
+            if (hoTenant == null || !hoTenant.IsHeadOffice)
+                return BadRequest("Invalid Head Office Tenant. Make sure the target is marked as Head Office or Standalone.");
+
+            var branches = await _context.Tenants.Where(t => request.BranchTenantIds.Contains(t.Id)).ToListAsync();
+            if (!branches.Any())
+                return BadRequest("No valid branch tenants found.");
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Update Branches
+                foreach (var branch in branches)
+                {
+                    branch.ParentTenantId = hoTenant.Id;
+                    branch.CompanyType = AOne.Utility.Enums.CompanyType.Branch;
+                    branch.IsHeadOffice = false;
+                }
+
+                // 2. Consolidate CategoryMaster
+                var branchCategoryMasters = await _context.CategoryMasters
+                    .Where(c => request.BranchTenantIds.Contains(c.TenantId))
+                    .ToListAsync();
+                
+                var newCategories = new List<CategoryMaster>();
+                foreach (var group in branchCategoryMasters.GroupBy(c => c.CategoryName.Trim().ToLower()))
+                {
+                    var cat = group.First();
+                    var hoCat = new CategoryMaster
+                    {
+                        CategoryName = cat.CategoryName,
+                        TenantId = hoTenant.Id
+                    };
+                    newCategories.Add(hoCat);
+                    // Since there's no IsActive, we can't soft delete. We'll skip modifying the old branch categories for now.
+                }
+                if (newCategories.Any()) await _context.CategoryMasters.AddRangeAsync(newCategories);
+
+                // 3. Consolidate ItemMaster
+                var branchItems = await _context.ItemMasters
+                    .Where(i => request.BranchTenantIds.Contains(i.TenantId) && i.IsActive)
+                    .ToListAsync();
+
+                var newItems = new List<ItemMaster>();
+                foreach (var group in branchItems.GroupBy(i => string.IsNullOrWhiteSpace(i.Barcode) ? i.Name.Trim().ToLower() : i.Barcode.Trim()))
+                {
+                    var item = group.First();
+                    var hoItem = new ItemMaster
+                    {
+                        Name = item.Name,
+                        Code = item.Code,
+                        Barcode = item.Barcode,
+                        Unit1 = item.Unit1,
+                        Unit2 = item.Unit2,
+                        Packing = item.Packing,
+                        Mrp = item.Mrp,
+                        SalesRate1 = item.SalesRate1,
+                        SalesRate2 = item.SalesRate2,
+                        MinimumQty = item.MinimumQty,
+                        MaximumQty = item.MaximumQty,
+                        IsActive = true,
+                        TenantId = hoTenant.Id
+                    };
+                    newItems.Add(hoItem);
+
+                    foreach (var oldItem in group)
+                    {
+                        oldItem.IsActive = false;
+                    }
+                }
+                
+                if (newItems.Any()) await _context.ItemMasters.AddRangeAsync(newItems);
+                
+                await _context.SaveChangesAsync();
+
+                // Post-Save ID Mapping for ParentItemId
+                foreach(var hoItem in newItems)
+                {
+                    var matchingOldItems = branchItems.Where(i => 
+                        (string.IsNullOrWhiteSpace(i.Barcode) ? i.Name.Trim().ToLower() : i.Barcode.Trim()) == 
+                        (string.IsNullOrWhiteSpace(hoItem.Barcode) ? hoItem.Name.Trim().ToLower() : hoItem.Barcode.Trim())
+                    );
+                    foreach(var oldItem in matchingOldItems)
+                    {
+                        oldItem.ParentItemId = hoItem.Id;
+                    }
+                }
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+                return Ok(new { Message = "Tenants successfully merged to Head Office. Consolidated " + newItems.Count + " unique items." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, $"Internal server error during consolidation: {ex.Message}");
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using AOne.Utility.Enums;
+using AOne.Utility.Enums;
 using EasyBill.Models.Entity;
 using Microsoft.AspNetCore.Http;
 using System;
@@ -24,11 +24,10 @@ namespace EasyBill.Models.ViewModels
         public decimal NetAmount { get; set; }
         public string? Description { get; set; }
         public string? Attachments { get; set; }
-        //[SwaggerIgnore]
         public IFormFile? UploadAttachments { get; set; }
-        public string? ChequeNo { get; set; }
         public DateTime? ChequeDate { get; set; }
         public string? RefNo { get; set; }
+        public DateTime? ClearedDate { get; set; }
         public Party? Party { get; set; }
         public int? CustomerId { get; set; } 
         public int? EmployeeId { get; set; }

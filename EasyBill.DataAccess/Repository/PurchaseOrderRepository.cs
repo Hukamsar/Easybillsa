@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.Repository.IRepository;
+using AOne.DataAccess.Repository.IRepository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +23,7 @@ namespace EasyBill.DataAccess.Repository
             try
             {
                 var repository = _unitofwork.GetRepository<PurchaseOrder>();
-                IList<PurchaseOrder> results = await repository.Query().Include(x => x.Suppliers).Include(x => x.PurchaseOrderItems).ThenInclude(x => x.ItemMasters).ToListAsync();
+                IList<PurchaseOrder> results = await repository.Query().Include(x => x.Suppliers).Include(x => x.TargetTenant).Include(x => x.PurchaseOrderItems).ThenInclude(x => x.ItemMasters).ToListAsync();
 
                 return results;
             }
@@ -32,6 +32,39 @@ namespace EasyBill.DataAccess.Repository
                 throw ex;
             }
         }
+        public async Task<IList<PurchaseOrder>> GetIncomingRequests(string targetTenantId)
+        {
+            try
+            {
+                var repository = _unitofwork.GetRepository<PurchaseOrder>();
+                
+                // Debug log before querying
+                System.IO.File.AppendAllText("F:\\NewEasyBill_Project\\debug.txt", $"Repo GetIncomingRequests Called. targetTenantId: '{targetTenantId}'\n");
+                
+                var allDbSrs = await repository.GetAll().IgnoreQueryFilters().Where(p => p.OrderType == "SR").ToListAsync();
+                System.IO.File.AppendAllText("F:\\NewEasyBill_Project\\debug.txt", $"Repo Total SR count in DB (unfiltered): {allDbSrs.Count}\n");
+                foreach (var s in allDbSrs) {
+                    System.IO.File.AppendAllText("F:\\NewEasyBill_Project\\debug.txt", $"Repo SR DB -> Id: {s.Id}, Target: '{s.TargetTenantId}', Status: '{s.WorkflowStatus}'\n");
+                }
+
+                // Bypass global query filters with IgnoreQueryFilters()
+                IList<PurchaseOrder> results = await repository.GetAll().IgnoreQueryFilters()
+                    .Include(x => x.Suppliers)
+                    .Include(x => x.TargetTenant)
+                    .Include(x => x.PurchaseOrderItems).ThenInclude(x => x.ItemMasters)
+                    .Where(p => p.TargetTenantId == targetTenantId && p.OrderType == "SR" && p.WorkflowStatus == "Pending")
+                    .ToListAsync();
+                    
+                System.IO.File.AppendAllText("F:\\NewEasyBill_Project\\debug.txt", $"Repo Filtered Results count: {results.Count}\n");
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         public async Task<PurchaseOrder> GetById(int? Id)
         {
             try
@@ -45,6 +78,24 @@ namespace EasyBill.DataAccess.Repository
                 throw ex;
             }
         }
+        public async Task<PurchaseOrder> GetIncomingRequestById(int id)
+        {
+            try
+            {
+                var repository = _unitofwork.GetRepository<PurchaseOrder>();
+                var result = await repository.GetAll().IgnoreQueryFilters()
+                    .Include(x => x.Suppliers)
+                    .Include(x => x.PurchaseOrderItems).ThenInclude(x => x.ItemMasters)
+                    .Where(l => l.Id == id)
+                    .FirstOrDefaultAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         public async Task<PurchaseOrder> Create(PurchaseOrder model)
         {
             try

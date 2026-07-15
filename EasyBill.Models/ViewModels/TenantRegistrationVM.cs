@@ -35,6 +35,10 @@ namespace EasyBill.Models.ViewModels
         [Display(Name = "Contact Person")]
         public string? ContactPerson { get; set; }
         public string? Phone { get; set; }
+        
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+        
         public string? MobileNo { get; set; }
         public string? GstNo { get; set; }
         [Display(Name = "State Code")]
@@ -63,5 +67,18 @@ namespace EasyBill.Models.ViewModels
         [Display(Name = "Subscription Plan")]
         public int? SubscriptionPlanId { get; set; }
         public List<string>? SelectedFeatures { get; set; }
+
+        [Display(Name = "Parent Head Office")]
+        public string? ParentTenantId { get; set; }
+    }
+
+    public class MergeTenantsRequest
+    {
+        [Required]
+        public string HoTenantId { get; set; }
+
+        [Required]
+        [MinLength(1, ErrorMessage = "At least one branch tenant must be selected.")]
+        public List<string> BranchTenantIds { get; set; } = new List<string>();
     }
 }

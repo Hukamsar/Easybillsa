@@ -70,6 +70,7 @@ namespace EasyBill.Models.ViewModels
         public decimal RoundOffAmount { get; set; }
         public List<SalesVM> ChildPayments { get; set; } = new List<SalesVM>();
         public decimal TotalCessAmount { get; set; }
+        public string? Remarks { get; set; }
         public int Qty { get; set; }
         public string? Mfg { get; set; }
         public DateTime? ExpiryDate { get; set; }

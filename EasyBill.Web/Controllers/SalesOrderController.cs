@@ -1,8 +1,10 @@
+using AOne.Models.Entity;
 using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System.Text.RegularExpressions;
 
 namespace EasyBill.UI.Controllers
@@ -41,7 +43,8 @@ namespace EasyBill.UI.Controllers
             IStockReceiveRepository stockreceiveservice,
             ITenantRegistrationRepository tenantRegistration,
             IStockService currentstockRepo,
-            IAccountGroupRepository accountgroupRepo
+            IAccountGroupRepository accountgroupRepo,
+            IMemoryCache memoryCache
             )
         {
             _salesOrderRepo = salesOrderRepo;
@@ -726,7 +729,12 @@ namespace EasyBill.UI.Controllers
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var setting = await _salsesettingservice.GetByUserId(userId);
 
-            var itemMasters = (await _itemmasterservice.GetAll()).Where(x => x.IsActive).OrderBy(x => x.Name);
+            
+             var itemMasters = (await _itemmasterservice.GetAll())
+                    .Where(x => x.IsActive)
+                    .OrderBy(x => x.Name)
+                    .ToList();
+
 
             var currentStocks = await _currentstockRepo.GetAll();
 
@@ -975,7 +983,11 @@ namespace EasyBill.UI.Controllers
             if (!match.Success)
                 return "SO0001";
 
-            int number = int.Parse(match.Value);
+            if (!long.TryParse(match.Value, out long number))
+            {
+                return "SO0001";
+            }
+
             string prefix = lastCode[..match.Index];
             string suffix = lastCode[(match.Index + match.Length)..];
 

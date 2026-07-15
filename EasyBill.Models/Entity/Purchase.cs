@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
@@ -46,5 +46,7 @@ namespace EasyBill.Models.Entity
         [ForeignKey("PurchaseOrderId")]
         public PurchaseOrder? PurchaseOrder { get; set; }
         public decimal TotalCessAmt {  get; set; }
+        public decimal Expense { get; set; }
+        public string? Remarks { get; set; }
     }
 }

@@ -1192,6 +1192,18 @@
                     <div class="setting-control"><input type="number" class="num-input" placeholder="e.g. 90" min="0" id="purchaseExpiryDays"></div>
                 </div>
             </div>
+            <div class="settings-card">
+                <div class="card-header-strip"><i class="bi bi-wallet2"></i><span>Expense Control</span></div>
+                <div class="setting-row">
+                    <div class="setting-info"><div class="setting-name">Enable Expense Field</div><div class="setting-hint">Show expense field above roundoff on purchase create and edit</div></div>
+                    <div class="setting-control">
+                        <div class="radio-group">
+                            <label class="radio-pill"><input type="radio" name="purchaseExpense" value="yes"><span class="radio-dot"></span> Yes</label>
+                            <label class="radio-pill"><input type="radio" name="purchaseExpense" value="no" checked><span class="radio-dot"></span> No</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="settings-panel" id="panel-invoicethemes">
@@ -1821,7 +1833,10 @@
         function loadPurchaseSettings() {
             fetch('/PurchaseSetting/GetSidebarSettings')
                 .then(res => res.json())
-                .then(data => document.getElementById('purchaseExpiryDays').value = data.minPurchaseExpiryDays || '')
+                .then(data => {
+                    document.getElementById('purchaseExpiryDays').value = data.minPurchaseExpiryDays || '';
+                    setRadio('purchaseExpense', data.expense ? 'yes' : 'no');
+                })
                 .catch(() => showToast('Purchase settings load error', true));
         }
 
@@ -1861,7 +1876,8 @@
         function savePurchaseSettings() {
             const payload = {
                 applicationUserId: userId,
-                minPurchaseExpiryDays: parseInt(document.getElementById('purchaseExpiryDays').value) || 0
+                minPurchaseExpiryDays: parseInt(document.getElementById('purchaseExpiryDays').value) || 0,
+                expense: getRadio('purchaseExpense') === 'yes'
             };
 
             fetch('/PurchaseSetting/SaveSidebarSettings', {

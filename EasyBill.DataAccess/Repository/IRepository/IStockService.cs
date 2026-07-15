@@ -9,8 +9,8 @@ namespace EasyBill.DataAccess.Repository.IRepository
 {
     public interface IStockService
     {
-        Task<IList<CurrentStock>> GetAll();
-        Task UpdateStock(int itemId, string batch, decimal qtyChange, DateTime? expiry, decimal mrp, decimal salesRateA, decimal? salesRateB = null,decimal? purchaseRate = null, string? barcode = null, bool forceUpdate = false);
+        Task<IList<CurrentStock>> GetAll(string? targetTenantId = null);
+        Task UpdateStock(int itemId, string batch, decimal qtyChange, DateTime? expiry, decimal mrp, decimal salesRateA, decimal? salesRateB = null,decimal? purchaseRate = null, string? barcode = null, bool forceUpdate = false, string? overrideTenantId = null);
         Task<CurrentStock?> GetStock(int itemId,string batch,DateTime? expiry,decimal mrp);
         Task OverwriteStock(
             int stockId,

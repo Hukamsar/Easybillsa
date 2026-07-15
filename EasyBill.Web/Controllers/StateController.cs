@@ -1,10 +1,12 @@
-﻿using EasyBill.DataAccess.Repository.IRepository;
+using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
+using EasyBill.UI.Filters;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
 namespace EasyBill.UI.Controllers
 {
+    [HeadOfficeOnly]
     public class StateController : Controller
     {
         private readonly ICountryRepository _countryservice;

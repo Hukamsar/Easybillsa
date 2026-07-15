@@ -1,4 +1,4 @@
-﻿using AOne.Models.Entity;
+using AOne.Models.Entity;
 using AOne.Models;
 using System;
 using System.Collections.Generic;
@@ -16,5 +16,6 @@ namespace EasyBill.Models.ViewModels
         public string? ApplicationUserId { get; set; }
         public int MinPurchaseExpiryDays { get; set; }
         public PurchaseTax PurchaseTax { get; set; }
+        public bool Expense { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿@model IEnumerable<StockIssue>
+@model IEnumerable<StockIssue>
 
 @{
     ViewData["Title"] = "Index";
@@ -39,6 +39,9 @@
             <th>
                 @Html.DisplayNameFor(model => model.Address)
             </th>
+            <th>
+                Status
+            </th>
             <th></th>
         </tr>
     </thead>
@@ -53,15 +56,80 @@
               @item.ChallanDate?.ToString("dd/MM/yyyy")
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.Customers.Name)
+                @if (!string.IsNullOrEmpty(item.TransferToTenantId) && ViewBag.Tenants != null)
+                {
+                    var tenants = (Dictionary<string, AOne.Models.Entity.Tenant>)ViewBag.Tenants;
+                    if (tenants.TryGetValue(item.TransferToTenantId, out var targetBranch))
+                    {
+                        <span class="badge bg-info">Branch Transfer</span><br/>
+                        <strong>@targetBranch.Name</strong>
+                    }
+                    else
+                    {
+                        @Html.DisplayFor(modelItem => item.TransferToTenantId)
+                    }
+                }
+                else
+                {
+                    @Html.DisplayFor(modelItem => item.Customers.Name)
+                }
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.MobileNo)
+                @if (!string.IsNullOrEmpty(item.TransferToTenantId) && ViewBag.Tenants != null)
+                {
+                    var tenants = (Dictionary<string, AOne.Models.Entity.Tenant>)ViewBag.Tenants;
+                    if (tenants.TryGetValue(item.TransferToTenantId, out var targetBranch))
+                    {
+                        @(targetBranch.Phone ?? targetBranch.MobileNo)
+                    }
+                }
+                else
+                {
+                    @Html.DisplayFor(modelItem => item.MobileNo)
+                }
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.Address)
+                @if (!string.IsNullOrEmpty(item.TransferToTenantId) && ViewBag.Tenants != null)
+                {
+                    var tenants = (Dictionary<string, AOne.Models.Entity.Tenant>)ViewBag.Tenants;
+                    if (tenants.TryGetValue(item.TransferToTenantId, out var targetBranch))
+                    {
+                        <small>@targetBranch.Address1</small>
+                    }
+                }
+                else
+                {
+                    @Html.DisplayFor(modelItem => item.Address)
+                }
             </td>
             <td>
+                @if (!string.IsNullOrEmpty(item.TransferToTenantId))
+                {
+                    if (item.TransferStatus == "Pending")
+                    {
+                        <span class="badge bg-warning text-dark">Pending</span>
+                    }
+                    else if (item.TransferStatus == "Accepted")
+                    {
+                        <span class="badge bg-success">Accepted</span>
+                    }
+                    else if (item.TransferStatus == "Rejected")
+                    {
+                        <span class="badge bg-danger">Rejected</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">@item.TransferStatus</span>
+                    }
+                }
+                else
+                {
+                    <span class="badge bg-success">Completed</span>
+                }
+            </td>
+            <td>
+                @if (!item.IsReceived && (string.IsNullOrEmpty(item.TransferToTenantId) || item.TransferStatus == "Pending"))
+                {
                     <div class="btn-group" role="group" style="float:right">
                         <a asp-controller="StockIssue" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
                             <i class="bi bi-pencil-square"></i>
@@ -75,6 +143,7 @@
                             <i class="bi bi-trash-fill text-danger p-1"></i>
                         </a>
                     </div>
+                }
             </td>
         </tr>
 }

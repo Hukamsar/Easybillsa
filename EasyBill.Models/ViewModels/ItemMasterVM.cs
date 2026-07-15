@@ -1,4 +1,4 @@
-﻿using AOne.Models.Entity;
+using AOne.Models.Entity;
 using AOne.Utility.Enums;
 using Microsoft.AspNetCore.Http;
 using System;
@@ -30,28 +30,23 @@ namespace EasyBill.Models.ViewModels
         public string? Unit { get; set; }
         public string? Packing { get; set; }
 
-        [Required(ErrorMessage = "Please select Category.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Please select Category.")]
+        [Range(0, int.MaxValue, ErrorMessage = "Please select Category.")]
         public int? CategoryId { get; set; }
         public string? CategoryName { get; set; }
 
-        [Required(ErrorMessage = "Please select Sub Category.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Please select Sub Category.")]
+        [Range(0, int.MaxValue, ErrorMessage = "Please select Sub Category.")]
         public int? SubCategoryId { get; set; }
         public string? SubCategoryname { get; set; }
 
-        [Required(ErrorMessage = "Please select Division.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Please select Division.")]
+        [Range(0, int.MaxValue, ErrorMessage = "Please select Division.")]
         public int? DivisionId { get; set; }
         public string? DivisionName { get; set; }
 
-        [Required(ErrorMessage = "Please select HSN.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid HSN.")]
+        [Range(0, int.MaxValue, ErrorMessage = "Please select a valid HSN.")]
         public int? HsnId { get; set; }
         public string? HsnCode { get; set; }
 
-        [Required(ErrorMessage = "Please select Company.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Please select Company.")]
+        [Range(0, int.MaxValue, ErrorMessage = "Please select Company.")]
         public int? CompanyId { get; set; }
         public string? Companyname { get; set; }
         public decimal Mrp { get; set; }

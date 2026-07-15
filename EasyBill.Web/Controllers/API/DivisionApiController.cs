@@ -1,10 +1,11 @@
-﻿using AOne.DataAccess.ProfileService;
+using AOne.DataAccess.ProfileService;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using EasyBill.UI.Filters;
 
 namespace EasyBill.UI.Controllers.API
 {
@@ -53,6 +54,7 @@ namespace EasyBill.UI.Controllers.API
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create([FromBody] DivisionVM Vm)
         {
             if (Vm == null)
@@ -69,6 +71,7 @@ namespace EasyBill.UI.Controllers.API
         }
 
         [HttpPut("{id}")]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(int id, [FromBody] DivisionVM Vm)
         {
             var model = await _divisionservice.GetById(id);
@@ -83,6 +86,7 @@ namespace EasyBill.UI.Controllers.API
         }
 
         [HttpDelete("{id}")]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try

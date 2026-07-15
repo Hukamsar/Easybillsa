@@ -1,6 +1,10 @@
 @model EasyBill.Models.ViewModels.PurchaseVM
+@inject EasyBill.DataAccess.Repository.IRepository.ITenantRegistrationRepository TenantRepo
 @{
     ViewData["Title"] = "Create";
+    var tenantId = User.FindFirst("TenantId")?.Value;
+    var tenant = await TenantRepo.GetById(tenantId);
+    bool isHo = User.IsInRole("SuperAdmin") || string.IsNullOrEmpty(tenant?.ParentTenantId);
 }
 <link href="~/css/page.css" rel="stylesheet" />
 <style>
@@ -597,6 +601,12 @@
                         </table>
                        
                         <div class="row mt-3">
+                            <div class="col-md-9 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <label asp-for="Remarks" class="col-form-label fw-bold me-2 small" style="white-space:nowrap;">Remarks:</label>
+                                    <input asp-for="Remarks" class="form-control form-control-sm" placeholder="Enter remarks..." />
+                                </div>
+                            </div>
                              
                             <div class="col-md-9">
                                 <strong>Payment Details</strong>
@@ -701,6 +711,12 @@
                                     <label class="col-md-6 col-form-label small">TotalCess Amt</label>
                                     <div class="col-md-6 text-end">
                                         <input asp-for="TotalCessAmt" class="form-control form-control-sm text-end" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2 align-items-center" id="expenseContainer" style="display:none;">
+                                    <label class="col-md-6 col-form-label small">Expense (-)</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="Expense" id="expenseAmount" class="form-control form-control-sm text-end" value="0" />
                                     </div>
                                 </div>
                                 <div class="row mb-2 align-items-center">
@@ -1006,10 +1022,13 @@
                                class="form-control form-control-sm"
                                placeholder="Search by item name..." />
                     </div>
-                    <div class="col-md-2 ps-0">
-                        <a href="javascript:void(0)" class="shortcut-link d-block small" id="btnNewItem">F2 - New</a>
-                        <a href="javascript:void(0)" class="shortcut-link text-danger d-block small" id="btnModifyItem">F3 - Mod</a>
-                    </div>
+                    @if (isHo)
+                    {
+                        <div class="col-md-2 ps-0">
+                            <a href="javascript:void(0)" class="shortcut-link d-block small" id="btnNewItem">F2 - New</a>
+                            <a href="javascript:void(0)" class="shortcut-link text-danger d-block small" id="btnModifyItem">F3 - Mod</a>
+                        </div>
+                    }
                 </div>
 
                 <!-- Item Table -->
@@ -1084,6 +1103,17 @@
                placeholder="e.g.90"
                min="0"
                style="max-width:120px;" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label d-block">Enable Expense Field</label>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="sidebarExpense" id="sidebarExpenseYes" value="true">
+            <label class="form-check-label" for="sidebarExpenseYes">Yes</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="sidebarExpense" id="sidebarExpenseNo" value="false" checked>
+            <label class="form-check-label" for="sidebarExpenseNo">No</label>
+        </div>
     </div>
     <button type="button" class="btn btn-sm btn-primary" id="saveSidebarSettings">Save</button>
     <button type="button" class="btn btn-sm btn-danger" id="closeSidebar">Close</button>
@@ -1199,6 +1229,7 @@
 
         
         let minPurchaseExpiryDays = 0;
+        let hasPurchaseExpense = false;
         const isPharmacyTenant = @(((int?)ViewBag.BusinessType ?? 0) == 2 ? "true" : "false");
     </script>
 
@@ -2530,20 +2561,36 @@
         });
 
         
+        let cachedItemsList = null;
+
+        // Preload items immediately on script load
+        $.get('/Purchase/GetAllItems', { purchaseType: $("#purchasetype").val() || "" }, function (items) {
+            cachedItemsList = items;
+        });
+
         function openItemModal(searchText = "") {
 
             if (window.stopAutoItemOpen === true || $("#itemMasterModal").is(":visible"))
                 return;
 
             var purchaseType = $("#purchasetype").val();
+            const businessType = @ViewBag.BusinessType;
+
+            if (cachedItemsList) {
+                let rows = renderItemRows(cachedItemsList, businessType);
+                $("#itemTableBody").html(rows);
+                $("#itemSearch").val(searchText);
+                $("#itemSearch").trigger("input");
+                $("#itemModal").modal("show");
+                return;
+            }
 
             showLoader("Loading items...");
 
             $.get('/Purchase/GetAllItems', { purchaseType: purchaseType }, function (items) {
 
                 hideLoader();
-
-                const businessType = @ViewBag.BusinessType;
+                cachedItemsList = items;
 
                 let rows = renderItemRows(items, businessType);
 
@@ -2695,6 +2742,7 @@
             $.get('/Purchase/GetAllItems', { purchaseType: purchaseType }, function (items) {
 
                 hideLoader();
+                cachedItemsList = items;
 
                 const businessType = @ViewBag.BusinessType;
 
@@ -3743,7 +3791,11 @@
                     <td>${escapeImportHtml(formatImportNumber(item.rate))}</td>
                     <td>${escapeImportHtml(item.reason)}</td>
                     <td>
+                        @if (isHo) {
+                        <text>
                         <button type="button" class="btn btn-sm btn-primary me-1 open-import-quick-create" data-row-key="${escapeImportHtml(item.key)}">Create Item</button>
+                        </text>
+                        }
                         <button type="button" class="btn btn-sm btn-outline-secondary focus-import-row" data-row-key="${escapeImportHtml(item.key)}">Go To Row</button>
                     </td>
                 </tr>
@@ -5434,7 +5486,8 @@
                 ? totalCgst + totalSgst
                 : 0;
 
-            let totalPayable = totalamt + totalTax + totalcess;
+            let expense = parseFloat($("#expenseAmount").val()) || 0;
+            let totalPayable = totalamt + totalTax + totalcess - expense;
 
             let roundedPayable = Math.round(totalPayable);
 
@@ -5472,6 +5525,12 @@
             $("[name='TotalCessAmt']").val(totalcess);
             $("[name='RoundOffAmount']").val(roundOffAmount);
 
+            if ($("#PaymentDetailsBody tr").length === 1) {
+                $("#PaymentDetailsBody tr:first .paymentAmount").val(roundedPayable.toFixed(2));
+            }
+            if (typeof calculateTotalPaid === 'function') {
+                calculateTotalPaid();
+            }
         }
         // function calculateTotalSummary() {
         //     let total = 0, totalGst = 0, totalDiscount = 0, totalamt = 0;
@@ -5588,6 +5647,44 @@
             });
 
             calculateTotalSummary();
+        });
+
+        $("#expenseAmount").on("input change paste", function () {
+            calculateTotalSummary();
+        });
+
+        const numericSelectors = "input[type='number'], input.qty, input.freeqty, input.rate:not(.paymentDescription), input.mrp, input.discount, input.salserateA, input.salserateB, input.paymentAmount, #discountPercent, #discountamount, #expenseAmount, #minPurchaseExpiryDays, #popupSalseRateA, #popupSalseRateB, #popupMrp";
+
+        $(document).on("keypress", numericSelectors, function (e) {
+            let charCode = (e.which) ? e.which : e.keyCode;
+            let isIntegerOnly = $(this).hasClass('qty') || $(this).hasClass('freeqty') || $(this).attr('id') === 'minPurchaseExpiryDays';
+            if (charCode < 48 || charCode > 57) {
+                if (!isIntegerOnly && charCode === 46 && this.value.indexOf('.') === -1) {
+                    return true;
+                }
+                e.preventDefault();
+                return false;
+            }
+            return true;
+        });
+
+        $(document).on("input paste", numericSelectors, function () {
+            let val = this.value;
+            let isIntegerOnly = $(this).hasClass('qty') || $(this).hasClass('freeqty') || $(this).attr('id') === 'minPurchaseExpiryDays';
+            let regex = isIntegerOnly ? /[^0-9]/g : /[^0-9.]/g;
+            if (regex.test(val)) {
+                let cleaned = val.replace(regex, '');
+                if (!isIntegerOnly) {
+                    let parts = cleaned.split('.');
+                    if (parts.length > 2) {
+                        cleaned = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                }
+                if (this.value !== cleaned) {
+                    this.value = cleaned;
+                    $(this).trigger("change");
+                }
+            }
         });
 
         // NEW VALIDATION HANDLER (Bill discount validation)
@@ -6061,14 +6158,21 @@
     <script>
         $(document).ready(function () {
 
-            // ✅ Load settings on page load to get minPurchaseExpiryDays
+            // ✅ Load settings on page load to get minPurchaseExpiryDays and expense setting
             function loadMinExpiryDays() {
                 $.ajax({
                     url: '@Url.Action("GetSidebarSettings", "PurchaseSetting")',
                     type: 'GET',
                     success: function (data) {
                         minPurchaseExpiryDays = data.minPurchaseExpiryDays || 0;
-                        console.log("Min Purchase Expiry Days:", minPurchaseExpiryDays);
+                        hasPurchaseExpense = data.expense || false;
+                        if (hasPurchaseExpense) {
+                            $("#expenseContainer").show();
+                        } else {
+                            $("#expenseContainer").hide();
+                            $("#expenseAmount").val("0");
+                        }
+                        console.log("Min Purchase Expiry Days:", minPurchaseExpiryDays, "Expense:", hasPurchaseExpense);
                     },
                     error: function (xhr) {
                         console.error("Error loading expiry settings:", xhr.status);
@@ -6099,6 +6203,14 @@
 
                         // ✅ Update global variable
                         minPurchaseExpiryDays = data.minPurchaseExpiryDays || 0;
+                        hasPurchaseExpense = data.expense || false;
+                        $("input[name='sidebarExpense'][value='" + hasPurchaseExpense + "']").prop("checked", true);
+                        if (hasPurchaseExpense) {
+                            $("#expenseContainer").show();
+                        } else {
+                            $("#expenseContainer").hide();
+                            $("#expenseAmount").val("0");
+                        }
                     },
                     error: function (xhr) {
                         hideLoader();
@@ -6111,6 +6223,7 @@
                 const userId = $('#userId').val();
                 const minPurchaseExpiryDaysInput =
                     parseInt($("#minPurchaseExpiryDays").val()) || 0;
+                const expenseInput = $("input[name='sidebarExpense']:checked").val() === "true";
 
                 if (minPurchaseExpiryDaysInput < 0 || minPurchaseExpiryDaysInput > 365) {
                     alert("Expiry Allowed Days should be between 0 and 365");
@@ -6125,13 +6238,23 @@
                     contentType: 'application/json',
                     data: JSON.stringify({
                         applicationUserId: userId,
-                        MinPurchaseExpiryDays: minPurchaseExpiryDaysInput
+                        MinPurchaseExpiryDays: minPurchaseExpiryDaysInput,
+                        Expense: expenseInput
                     }),
                     success: function () {
                         hideLoader();
 
                         // ✅ Update global variable after save
                         minPurchaseExpiryDays = minPurchaseExpiryDaysInput;
+                        hasPurchaseExpense = expenseInput;
+                        if (hasPurchaseExpense) {
+                            $("#expenseContainer").show();
+                        } else {
+                            $("#expenseContainer").hide();
+                            $("#expenseAmount").val("0");
+                            calculateTotalSummary();
+                            calculateTotalPaid();
+                        }
 
                         alert("Settings saved successfully");
                     },

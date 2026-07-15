@@ -91,8 +91,18 @@ BEGIN
       (
           @FilterMode IS NULL
           OR @FilterMode = N'All'
-          OR (@FilterMode = N'Tenant' AND im.TenantId = @TenantId)
-          OR (@FilterMode = N'User' AND im.CreatedBy = @UserId)
+          OR (@FilterMode IN (N'Tenant', N'User') AND (
+              im.TenantId = @TenantId
+              OR (
+                  EXISTS (SELECT 1 FROM dbo.Tenants t WHERE t.Id = @TenantId AND t.IsHeadOffice = 1)
+                  AND im.TenantId IN (SELECT id FROM dbo.Tenants WHERE ParentTenantId = @TenantId)
+              )
+              OR (
+                  EXISTS (SELECT 1 FROM dbo.Tenants t WHERE t.Id = @TenantId AND t.ParentTenantId IS NOT NULL)
+                  AND EXISTS (SELECT 1 FROM dbo.BranchItemMappings bim WHERE bim.TenantId = @TenantId AND bim.ItemMasterId = im.Id AND bim.IsActive = 1 AND bim.Deleted IS NULL)
+              )
+          ))
+          
       )
     ORDER BY im.Id;
 END
@@ -193,8 +203,18 @@ BEGIN
       (
           @FilterMode IS NULL
           OR @FilterMode = N'All'
-          OR (@FilterMode = N'Tenant' AND im.TenantId = @TenantId)
-          OR (@FilterMode = N'User' AND im.CreatedBy = @UserId)
+          OR (@FilterMode IN (N'Tenant', N'User') AND (
+              im.TenantId = @TenantId
+              OR (
+                  EXISTS (SELECT 1 FROM dbo.Tenants t WHERE t.Id = @TenantId AND t.IsHeadOffice = 1)
+                  AND im.TenantId IN (SELECT id FROM dbo.Tenants WHERE ParentTenantId = @TenantId)
+              )
+              OR (
+                  EXISTS (SELECT 1 FROM dbo.Tenants t WHERE t.Id = @TenantId AND t.ParentTenantId IS NOT NULL)
+                  AND EXISTS (SELECT 1 FROM dbo.BranchItemMappings bim WHERE bim.TenantId = @TenantId AND bim.ItemMasterId = im.Id AND bim.IsActive = 1 AND bim.Deleted IS NULL)
+              )
+          ))
+          
       )
     ORDER BY im.Id;
 
@@ -315,9 +335,50 @@ BEGIN
       (
           @FilterMode IS NULL
           OR @FilterMode = N'All'
-          OR (@FilterMode = N'Tenant' AND im.TenantId = @TenantId)
-          OR (@FilterMode = N'User' AND im.CreatedBy = @UserId)
+          OR (@FilterMode IN (N'Tenant', N'User') AND (
+              im.TenantId = @TenantId
+              OR (
+                  EXISTS (SELECT 1 FROM dbo.Tenants t WHERE t.Id = @TenantId AND t.IsHeadOffice = 1)
+                  AND im.TenantId IN (SELECT id FROM dbo.Tenants WHERE ParentTenantId = @TenantId)
+              )
+              OR (
+                  EXISTS (SELECT 1 FROM dbo.Tenants t WHERE t.Id = @TenantId AND t.ParentTenantId IS NOT NULL)
+                  AND EXISTS (SELECT 1 FROM dbo.BranchItemMappings bim WHERE bim.TenantId = @TenantId AND bim.ItemMasterId = im.Id AND bim.IsActive = 1 AND bim.Deleted IS NULL)
+              )
+          ))
+          
       )
     ORDER BY im.Id;
+END
+GO
+
+IF OBJECT_ID(N'dbo.usp_ItemImage_GetAll', N'P') IS NULL
+BEGIN
+    EXEC(N'CREATE PROCEDURE dbo.usp_ItemImage_GetAll AS BEGIN SET NOCOUNT ON; END');
+END
+GO
+
+ALTER PROCEDURE [dbo].[usp_ItemImage_GetAll]
+    @FilterMode NVARCHAR(20),
+    @TenantId NVARCHAR(450) = NULL,
+    @UserId NVARCHAR(450) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        ItemMasterId,
+        ImagePath
+    FROM dbo.ItemImages
+    WHERE Deleted IS NULL
+      AND IsDeleted = 0
+      AND
+      (
+          @FilterMode IS NULL
+          OR @FilterMode = N'All'
+          OR (@FilterMode = N'Tenant' AND TenantId = @TenantId)
+          OR (@FilterMode = N'User' AND CreatedBy = @UserId)
+      )
+    ORDER BY ItemMasterId, SortOrder;
 END
 GO

@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.Repository.IRepository;
+using AOne.DataAccess.Repository.IRepository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using Microsoft.EntityFrameworkCore;
@@ -7,15 +7,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace EasyBill.DataAccess.Repository
 {
     public class OfferRepository : IOfferRepository
     {
         private readonly IUnitOfWork _unitofwork;
-        public OfferRepository(IUnitOfWork unitofwork)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        public OfferRepository(IUnitOfWork unitofwork, IHttpContextAccessor httpContextAccessor)
         {
             _unitofwork = unitofwork;
+            _httpContextAccessor = httpContextAccessor;
         }
         public async Task<Offer> Create(Offer model)
         {
@@ -58,8 +61,27 @@ namespace EasyBill.DataAccess.Repository
         {
             try
             {
+                var tenantId = _httpContextAccessor.HttpContext?.User?.FindFirst("TenantId")?.Value;
                 var repository = _unitofwork.GetRepository<Offer>();
-                IList<Offer> results = await repository.Query().Include(x => x.OfferItems).ToListAsync();
+
+                if (string.IsNullOrEmpty(tenantId))
+                {
+                    // For HO / SuperAdmin: Return all offers
+                    return await repository.GetAll().Include(x => x.OfferItems).ToListAsync();
+                }
+
+                // For Branch: Get mapped offers explicitly bypassing CreatedBy filter
+                var mappedOfferIds = await _unitofwork.GetRepository<EasyBill.Models.Entity.OfferStoreMapping>()
+                                        .GetAll()
+                                        .Where(m => m.TenantId == tenantId)
+                                        .Select(m => m.OfferId)
+                                        .ToListAsync();
+
+                var results = await repository.GetAll()
+                                .Include(x => x.OfferItems)
+                                .Where(x => x.TenantId == tenantId || mappedOfferIds.Contains(x.Id))
+                                .ToListAsync();
+
                 return results;
             }
             catch (Exception ex)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -42,5 +42,9 @@ namespace EasyBill.Models.ViewModels
         public string? CompanyName { get; set; } 
         public string? Packing { get; set; }
         public string? Mfg { get; set; }     
+        public bool Narcotics { get; set; }
+        public bool ScheduleH { get; set; }
+        public bool ScheduleH1 { get; set; }
+        public string? CategoryName { get; set; }
     }  
 }

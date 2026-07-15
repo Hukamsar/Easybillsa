@@ -1,4 +1,4 @@
-﻿@using EasyBill.UI.Service
+@using EasyBill.UI.Service
 
 @model IEnumerable<Employee>
 
@@ -66,6 +66,10 @@
                 <td>
                     <div class="btn-group" role="group" style="float:right">
 
+                        <a href="javascript:void(0);" onclick="openBranchModal(@item.Id)" title="Branch Access">
+                            <i class="bi bi-buildings-fill text-primary p-1"></i>
+                        </a>
+
                         <a asp-controller="Employee" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
                             <i class="bi bi-pencil-square"></i>
                         </a>
@@ -78,15 +82,134 @@
                            data-controller="@ViewContext.RouteData.Values["controller"]">
                             <i class="bi bi-trash-fill text-danger p-1"></i>
                         </a>
-
                     </div>
                 </td>
             </tr>
         }
     </tbody>
 </table>
+
+<!-- Branch Access Modal -->
+<div class="modal fade" id="branchAccessModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-header" style="background-color: #2b6ac9; color: white;">
+                <h5 class="modal-title">Manage Branch Access</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="branchAccessUserId" />
+                <div id="branchAccessEmpName" class="mb-3 fw-bold text-primary" style="font-size: 1.1rem;"></div>
+                
+                <div id="branchListContainer" class="list-group shadow-sm" style="max-height: 300px; overflow-y: auto;">
+                    <!-- Branches will be populated here -->
+                </div>
+                <div id="branchAccessError" class="text-danger mt-3 small fw-bold" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success btn-sm px-4" id="btnSaveBranchAccess" style="background-color: #2b6ac9; border-color: #2b6ac9;">
+                    <i class="bi bi-save me-1"></i> Save Access
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     $(document).ready(function(){
         $("#emptable").DataTable();
-    })
+        
+        $("#btnSaveBranchAccess").click(function() {
+            const userId = $("#branchAccessUserId").val();
+            if (!userId) {
+                $("#branchAccessError").text("This user does not have a login account.").show();
+                return;
+            }
+            
+            const selectedBranches = [];
+            $(".branch-checkbox:checked").each(function() {
+                selectedBranches.push($(this).val());
+            });
+            
+            const btn = $(this);
+            const originalText = btn.html();
+            btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+            btn.prop("disabled", true);
+            
+            $.ajax({
+                url: '/api/EmployeeApi/AssignBranches',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ userId: userId, branchIds: selectedBranches }),
+                success: function(res) {
+                    btn.html(originalText);
+                    btn.prop("disabled", false);
+                    if (res.success) {
+                        $("#branchAccessModal").modal('hide');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: 'Branch access updated successfully.',
+                            confirmButtonColor: '#2b6ac9'
+                        });
+                    } else {
+                        $("#branchAccessError").text(res.message).show();
+                    }
+                },
+                error: function(err) {
+                    btn.html(originalText);
+                    btn.prop("disabled", false);
+                    const msg = err.responseJSON && err.responseJSON.message ? err.responseJSON.message : "Error saving branches.";
+                    $("#branchAccessError").text(msg).show();
+                }
+            });
+        });
+    });
+
+    function openBranchModal(employeeId) {
+        $("#branchAccessError").hide();
+        $("#branchAccessUserId").val('');
+        $("#branchAccessEmpName").text('Loading...');
+        $("#branchListContainer").html('<div class="text-center py-4 text-muted"><div class="spinner-border text-primary mb-2" role="status"></div><br/>Loading branches...</div>');
+        $("#btnSaveBranchAccess").prop("disabled", true);
+        
+        $("#branchAccessModal").modal("show");
+        
+        $.get('/api/EmployeeApi/GetEmployeeBranches', { employeeId: employeeId }, function(data) {
+            $("#branchAccessEmpName").text(data.employeeName);
+            
+            if (!data.hasLogin) {
+                $("#branchListContainer").html('<div class="alert alert-warning m-0">This employee does not have login credentials enabled.</div>');
+                return;
+            }
+            
+            $("#branchAccessUserId").val(data.userId);
+            $("#btnSaveBranchAccess").prop("disabled", false);
+            
+            let html = '';
+            if (data.allBranches && data.allBranches.length > 0) {
+                data.allBranches.forEach(b => {
+                    const isChecked = data.allowedBranches.includes(b.id) ? 'checked' : '';
+                    html += `
+                        <label class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" style="cursor:pointer;">
+                            <div>
+                                <i class="bi bi-building me-2 text-secondary"></i>
+                                ${b.name}
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input branch-checkbox" type="checkbox" value="${b.id}" style="cursor:pointer; transform: scale(1.2);" ${isChecked}>
+                            </div>
+                        </label>
+                    `;
+                });
+            } else {
+                html = '<div class="p-3 text-center text-muted">No branches found.</div>';
+            }
+            $("#branchListContainer").html(html);
+        }).fail(function() {
+            $("#branchListContainer").html('<div class="alert alert-danger m-0">Failed to load branches.</div>');
+            $("#branchAccessEmpName").text('Error');
+        });
+    }
 </script>

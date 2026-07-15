@@ -323,7 +323,6 @@ namespace EasyBill.DataAccess.StoredProcedures
                 NetAmount = r.ReadDecimal("NetAmount"),
                 Description = r.ReadNullableString("Description"),
                 Attachments = r.ReadNullableString("Attachments"),
-                ChequeNo = r.ReadNullableString("ChequeNo"),
                 ChequeDate = r.ReadNullableDateTime("ChequeDate"),
                 RefNo = r.ReadNullableString("RefNo"),
                 CustomerId = r.ReadNullableInt32("CustomerId"),

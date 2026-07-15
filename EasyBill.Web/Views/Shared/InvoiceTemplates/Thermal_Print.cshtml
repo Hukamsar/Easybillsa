@@ -137,14 +137,15 @@
     decimal computedTax = 0m;
     foreach (var it in items)
     {
-        var gross = it.Qty * it.Rate;
-        var discount = it.Discount > 0 ? it.Discount : 0m;
-        var taxable = gross - discount;
+        var rate = (it.IsSoldInTablets && it.StripRate > 0m) ? it.StripRate : it.Rate;
+        var gross = it.Qty * rate;
+        var discountAmt = (gross * it.Discount) / 100m;
+        var taxable = gross - discountAmt;
         if (taxable < 0) taxable = 0;
         var gstAmt = (it.Gst > 0 && taxable > 0) ? (taxable * it.Gst / 100m) : 0m;
 
         subTotal += gross;
-        computedDiscount += discount;
+        computedDiscount += discountAmt;
         computedTax += gstAmt;
     }
 
@@ -612,6 +613,14 @@
             {
                 <div style="margin-bottom: 2px;"><b>Phone:</b> @Model.Customers.PhoneNo</div>
             }
+            @if (!string.IsNullOrWhiteSpace(Model?.Customers?.GSTNo))
+            {
+                <div style="margin-bottom: 2px;"><b>Cust GSTIN:</b> @Model.Customers.GSTNo</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model?.PharmacyDoctor?.Name))
+            {
+                <div style="margin-bottom: 2px;"><b>Doctor:</b> Dr. @Model.PharmacyDoctor.Name</div>
+            }
         </div>
         <div class="line" style="margin: 5px 0;"></div>
 
@@ -628,13 +637,14 @@
                 {
                     foreach (var item in items)
                     {
-                        var gross = item.Qty * item.Rate;
-                        var discount = item.Discount > 0 ? item.Discount : 0m;
-                        var taxable = gross - discount;
+                        var rate = (item.IsSoldInTablets && item.StripRate > 0m) ? item.StripRate : item.Rate;
+                        var gross = item.Qty * rate;
+                        var discountAmt = (gross * item.Discount) / 100m;
+                        var taxable = gross - discountAmt;
                         if (taxable < 0) taxable = 0m;
                         var gstAmt = (item.Gst > 0 && taxable > 0) ? (taxable * item.Gst / 100m) : 0m;
                         var rowAmount = item.Amount > 0 ? item.Amount : (taxable + gstAmt);
-                        var itemRateLine = $"{Qty(item.Qty)} x {Money(item.Rate)}";
+                        var itemRateLine = $"{Qty(item.Qty)} x {Money(rate)}";
                         var subParts = new List<string>();
                         if (showHSN)
                         {
@@ -643,7 +653,7 @@
                         }
                         if (showGSTPercent && item.Gst > 0) subParts.Add($"GST:{Qty(item.Gst)}%");
                         if (showGstAmount && gstAmt > 0) subParts.Add($"GSTAmt:{Money(gstAmt)}");
-                        if (showItemDiscount && item.Discount > 0) subParts.Add($"Disc:{Money(item.Discount)}");
+                        if (showItemDiscount && item.Discount > 0) subParts.Add($"Disc:{Qty(item.Discount)}%");
                         var itemSubText = string.Join(" | ", subParts);
                         <tr>
                             <td class="item-name">
@@ -716,6 +726,13 @@
                 <div class="tax-breakup">
                     <div class="tax-line"><span>CGST</span><span>Rs @Money(cgst)</span></div>
                     <div class="tax-line"><span>SGST</span><span>Rs @Money(sgst)</span></div>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model?.Remarks))
+            {
+                <div style="font-size: 10px; margin-top: 4px; padding: 3px 0; border-top: 1px dashed #000; font-weight: 700;">
+                    <b>Remarks:</b> @Model.Remarks
                 </div>
             }
 

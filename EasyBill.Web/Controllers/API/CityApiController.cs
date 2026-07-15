@@ -1,4 +1,4 @@
-﻿using EasyBill.DataAccess.Repository.IRepository;
+using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -50,7 +50,8 @@ namespace EasyBill.UI.Controllers.API
             {
                 Name = vm.Name,
                 CountryId = vm.CountryId,
-                StateId = vm.StateId
+                StateId = vm.StateId,
+                Zone = vm.Zone
             };
 
             await _cityservice.Create(model);
@@ -67,6 +68,7 @@ namespace EasyBill.UI.Controllers.API
             model.Name = vm.Name;
             model.CountryId = vm.CountryId;
             model.StateId = vm.StateId;
+            model.Zone = vm.Zone;
 
             await _cityservice.Update(model);
 

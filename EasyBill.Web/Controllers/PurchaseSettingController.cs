@@ -1,4 +1,4 @@
-﻿using EasyBill.DataAccess.Repository;
+using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -31,7 +31,8 @@ namespace EasyBill.UI.Controllers
             {
                 ApplicationUserId = userId,
                 MinPurchaseExpiryDays = setting?.MinPurchaseExpiryDays ?? 0,
-                PurchaseTax = setting?.SalesTax ?? 0
+                PurchaseTax = setting?.SalesTax ?? 0,
+                Expense = setting?.Expense ?? false
             };
 
             return Json(model);
@@ -51,7 +52,8 @@ namespace EasyBill.UI.Controllers
                 {
                     ApplicationUserId = viewModel.ApplicationUserId,
                     MinPurchaseExpiryDays = viewModel.MinPurchaseExpiryDays,
-                    SalesTax = viewModel.PurchaseTax
+                    SalesTax = viewModel.PurchaseTax,
+                    Expense = viewModel.Expense
                 };
                 await _purchasesettingservice.Create(newSetting);
             }
@@ -60,6 +62,7 @@ namespace EasyBill.UI.Controllers
                 // Update existing
                 existing.MinPurchaseExpiryDays = viewModel.MinPurchaseExpiryDays;
                 existing.SalesTax = viewModel.PurchaseTax;
+                existing.Expense = viewModel.Expense;
                 await _purchasesettingservice.Update(existing);
             }
 

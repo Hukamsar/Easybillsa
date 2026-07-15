@@ -1,4 +1,4 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
@@ -15,6 +15,7 @@ using OfficeOpenXml;
 using System;
 using static AOne.Utility.Permissions;
 using Table = iText.Layout.Element.Table;
+using EasyBill.UI.Filters;
 namespace EasyBill.UI.Controllers
 {
     public class PurchaseReturnController : Controller
@@ -114,6 +115,7 @@ namespace EasyBill.UI.Controllers
 
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create(PurchaseReturnVM VM)
         {
             if (VM != null)
@@ -282,6 +284,7 @@ namespace EasyBill.UI.Controllers
             return View(purchaseVM);
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(PurchaseReturnVM VM)
         {
             Models.Entity.PurchaseReturn model = await _purchasereturnservice.GetById(VM.Id);
@@ -413,6 +416,7 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try

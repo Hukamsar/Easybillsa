@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.ProfileService;
+using AOne.DataAccess.ProfileService;
 using DocumentFormat.OpenXml.Spreadsheet;
 using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
@@ -7,6 +7,7 @@ using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Buffers.Text;
 
 namespace EasyBill.UI.Controllers.API
 {
@@ -27,6 +28,7 @@ namespace EasyBill.UI.Controllers.API
         private readonly IStockReceiveRepository _stockreceiveservice;
         private readonly ICompanyRepository _companyServices;
         private readonly IProfileService _profileService;
+        private readonly IStockService _currenstockService;
 
         public PurchaseApiController(
             IPurchaseRepository purchaseservice,
@@ -40,7 +42,8 @@ namespace EasyBill.UI.Controllers.API
             IStockReturnRepository stockrturnservice,
             IStockReceiveRepository stockReceiveservice,
             ICompanyRepository companyServices,
-            IProfileService profileService)
+            IProfileService profileService,
+            IStockService currenstockService)
         {
             _purchaseservice = purchaseservice;
             _supplierservice = supplierservice;
@@ -54,6 +57,7 @@ namespace EasyBill.UI.Controllers.API
             _stockreceiveservice = stockReceiveservice;
             _companyServices = companyServices;
             _profileService = profileService;
+            _currenstockService = currenstockService;
         }
          
         [HttpGet]
@@ -497,68 +501,69 @@ namespace EasyBill.UI.Controllers.API
         [HttpGet("CurrentStock")]
         public async Task<IActionResult> CurrentStock()
         {
-            // 1. Saara data fetch karein
             var itemMasters = await _itemmasterservice.GetAll();
-            var purchases = await _purchaseservice.GetAll();
-            var purchasereturns = await _purchasereturnservice.GetAll();
-            var sales = await _salesService.GetAll();
-            var stockIssue = await _stockissueservice.GetAll();
-            var stockReturn = await _stockrturnservice.GetAll();
-            var stockreceive = await _stockreceiveservice.GetAll();
+            var currentStocks = await _currenstockService.GetAll();
+            var itemImages = await _itemmasterservice.GetAllItemImages();
 
-            var purchaseItems = purchases.Where(p => p.PurchaseItems != null).SelectMany(p => p.PurchaseItems).ToList();
-            var purchaseReturnItems = purchasereturns.Where(r => r.PurchaseReturnItems != null).SelectMany(r => r.PurchaseReturnItems).ToList();
-            var salesItems = sales.Where(s => s.SalesItems != null).SelectMany(s => s.SalesItems).ToList();
-            var stockissueItems = stockIssue.Where(s => s.StockIssuesItems != null).SelectMany(s => s.StockIssuesItems).ToList();
-            var stockreturnItems = stockReturn.Where(s => s.StockReturnItems != null).SelectMany(s => s.StockReturnItems).ToList();
-            var stockreceiveItems = stockreceive.Where(s => s.StockReceiveItems != null).SelectMany(s => s.StockReceiveItems).ToList();
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
-            var usedItemIds = purchaseItems.Select(x => x.ItemId)
-                .Union(purchaseReturnItems.Select(x => x.ItemId))
-                .Union(salesItems.Select(x => x.ItemMasterId))
-                .Distinct()
-                .ToHashSet();
+            var imageDict = itemImages
+            .GroupBy(x => x.ItemMasterId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(x => x.SortOrder)
+                      .Select(x => x.ImagePath)
+                      .ToList()
+            );
 
-            var filteredItemMasters = itemMasters.Where(i => usedItemIds.Contains(i.Id)).ToList();
+            var stockDict = currentStocks
+                .GroupBy(x => x.ItemId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => new
+                    {
+                        Qty = g.Sum(x => x.Qty),
+                        Latest = g.OrderByDescending(x => x.Id).FirstOrDefault(),
+                        salesrateA = g.OrderByDescending(x => x.Id).FirstOrDefault()?.SalesRateA ?? 0m,
+                        salesrateB = g.OrderByDescending(x => x.Id).FirstOrDefault()?.SalesRateB ?? 0m
+                    }
+                );
 
-            var stockList = filteredItemMasters.Select(item =>
+            var stockList = itemMasters.Select(item =>
             {
                 var itemId = item.Id;
-
-                // Stock Calculation Logic (Existing)
-                var totalPurchasedQty = purchaseItems.Where(x => x.ItemId == itemId).Sum(x => x.Qty + x.FreeQty);
-                var totalpurchaseReturnedQty = purchaseReturnItems.Where(x => x.ItemId == itemId).Sum(x => x.Qty + x.FreeQty);
-                var totalsalseQty = salesItems.Where(x => x.ItemMasterId == itemId).Sum(x => x.Qty);
-                var totalstockissueQty = stockissueItems.Where(x => x.ItemMasterId == itemId).Sum(x => x.Qty);
-                var totalstockreturnQty = stockreturnItems.Where(x => x.ItemMasterId == itemId).Sum(x => x.Qty);
-                var totalstockreceiveQty = stockreceiveItems.Where(x => x.ItemMasterId == itemId).Sum(x => x.Qty);
-
-                var currentStock = totalPurchasedQty + totalstockreturnQty + totalstockreceiveQty - totalpurchaseReturnedQty - totalsalseQty - totalstockissueQty;
-
-                // --- NEW LOGIC: Latest Purchase Details ---
-                // Item ki sabse last wali purchase nikal rahe hain taaki Rate/MRP dikh sake
-                var latestPurchase = purchaseItems
-                    .Where(x => x.ItemId == itemId)
-                    .OrderByDescending(x => x.Id)
-                    .FirstOrDefault();
-
+                var stockData = stockDict.ContainsKey(itemId) ? stockDict[itemId] : null;
+                decimal qty = stockData?.Qty ?? 0m;
+                var latest = stockData?.Latest;
+                var SalesRateA = stockData?.salesrateA ?? 0;
+                var SalesRateB = stockData?.salesrateB ?? 0;
+                var conversion = item.Conversion;
                 return new StockVM
                 {
                     ItemMasterId = itemId,
                     ItemCode = item.Code,
                     CategoryName = item.Category?.CategoryName ?? "Unknown",
                     ItemName = item.Name,
+                    ItemImages = imageDict.TryGetValue(item.Id, out var images)
+                    ? images.Select(x => $"{baseUrl}{x}").ToList()
+                    : new List<string>(),
                     Unit1 = item.Unit1 ?? "",
                     Unit2 = item.Unit2 ?? "",
-                    Stocks = currentStock,
+                    Stocks = qty,
 
                     // Assigning Values
-                    Mrp = latestPurchase?.Mrp ?? 0,
-                    Rate = latestPurchase?.Rate ?? 0,
-                    GstAmount = latestPurchase?.Gst ?? 0, // Per unit GST percentage ya amount
-                    Amount = (latestPurchase?.Rate ?? 0) * currentStock // Total stock value
+                    Mrp = latest?.Mrp ?? 0m,
+                    Rate = latest?.PurchaseRate ?? 0m,
+                    GstAmount = item.Hsn?.IGST ?? 0m,
+                    Amount = (latest?.PurchaseRate ?? 0m) * qty,
+                    SalesRateA = SalesRateA,
+                    SalesRateB = SalesRateB,
+                    Conversion = conversion
                 };
-            }).ToList();
+            })
+            .Where(x => x.Stocks != 0)
+            .OrderBy(x => x.ItemName)
+            .ToList();
 
             return Ok(stockList);
         }

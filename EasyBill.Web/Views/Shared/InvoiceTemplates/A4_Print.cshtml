@@ -52,7 +52,7 @@
     string pageCssSize = isLandscape ? "A4 landscape" : "A4 portrait";
 
     // Fallback totals for PDF conversion path where header values may occasionally be missing.
-    decimal ResolveDisplayRate(EasyBill.Models.Entity.SalesItem x) => x.StripRate > 0m ? x.StripRate : x.Rate;
+    decimal ResolveDisplayRate(EasyBill.Models.Entity.SalesItem x) => (x.IsSoldInTablets && x.StripRate > 0m) ? x.StripRate : x.Rate;
     decimal lineSubtotal = Model?.SalesItems?.Sum(x => x.Qty * ResolveDisplayRate(x)) ?? 0m;
     decimal lineDiscount = Model?.SalesItems?.Sum(x => ((x.Qty * ResolveDisplayRate(x)) * x.Discount) / 100m) ?? 0m;
     decimal lineTaxable = lineSubtotal - lineDiscount;
@@ -63,7 +63,7 @@
         return taxable > 0 ? (taxable * x.Gst) / 100m : 0m;
     }) ?? 0m;
 
-    decimal displaySubTotal = (Model?.Total ?? 0m) > 0m ? (Model?.Total ?? 0m) : lineTaxable;
+    decimal displaySubTotal = (Model?.Total ?? 0m) > 0m ? (Model?.Total ?? 0m) : lineSubtotal;
     decimal displayDiscount = (Model?.Totaldiscount ?? 0m) > 0m ? (Model?.Totaldiscount ?? 0m) : lineDiscount;
     decimal displayGst = (Model?.TotalGstAmt ?? 0m) > 0m ? (Model?.TotalGstAmt ?? 0m) : lineGst;
     decimal displayCess = Model?.TotalCessAmount ?? 0m;
@@ -269,10 +269,15 @@
                 <div style="font-size: 1.1em; font-weight: 600;">@(Model?.Customers?.Name ?? "Walk-in Customer")</div>
                 @if (!string.IsNullOrEmpty(Model?.Customers?.PhoneNo)) { <div>+91 @Model.Customers.PhoneNo</div> }
                 @if (!string.IsNullOrEmpty(Model?.Customers?.Address)) { <div>@Model.Customers.Address</div> }
+                @if (!string.IsNullOrEmpty(Model?.Customers?.GSTNo)) { <div><b>GSTIN:</b> @Model.Customers.GSTNo</div> }
             </div>
             <div style="text-align:right;">
                 <div><b>Invoice No:</b> @(Model?.BillNo ?? "INV-XXXX")</div>
                 <div><b>Date:</b> @(Model?.BillDate?.ToString("dd-MMM-yyyy") ?? DateTime.Now.ToString("dd-MMM-yyyy"))</div>
+                @if (!string.IsNullOrEmpty(Model?.PharmacyDoctor?.Name))
+                {
+                    <div style="margin-top: 4px;"><b>Doctor:</b> Dr. @Model.PharmacyDoctor.Name @(!string.IsNullOrEmpty(Model.PharmacyDoctor.RegistrationNo) ? $"({Model.PharmacyDoctor.RegistrationNo})" : "")</div>
+                }
             </div>
         </div>
 
@@ -295,6 +300,8 @@
                     foreach (var item in Model.SalesItems)
                     {
                         var displayRate = ResolveDisplayRate(item);
+                        decimal lineGross = item.Qty * displayRate;
+                        decimal lineDiscAmt = (lineGross * item.Discount) / 100m;
                         <tr>
                             <td><b>@(item.ItemMaster?.Name ?? "Item Name")</b></td>
                             @if(showHsn){ <td>@(item.ItemMaster?.Hsn?.HsnCode ?? "-")</td> }
@@ -302,10 +309,10 @@
                             <td style="text-align:center;">@item.Qty</td>
                             <td style="text-align:right;">@displayRate.ToString("0.00")</td>
                             
-                            @if(showDisc){ <td style="text-align:right;">@item.Discount.ToString("0.00")</td> }
+                            @if(showDisc){ <td style="text-align:right;">@(item.Discount > 0 ? $"{item.Discount:0.##}% (₹{lineDiscAmt:0.00})" : "0.00")</td> }
                             @if(showGstPct){ <td style="text-align:center;">@item.Gst%</td> }
                             @if(showGstAmt){ 
-                                decimal taxable = (item.Qty * displayRate) - item.Discount;
+                                decimal taxable = lineGross - lineDiscAmt;
                                 decimal gAmt = (taxable > 0 && item.Gst > 0) ? (taxable * item.Gst) / 100m : 0m; 
                                 <td style="text-align:right;">₹ @gAmt.ToString("0.00")</td> 
                             }
@@ -354,6 +361,14 @@
                     <div style="margin-bottom: 15px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border);">
                         <div class="footer-label">Bank Details</div>
                         <div style="white-space: pre-wrap; font-weight:600; font-size: 0.95em;">@bank</div>
+                    </div>
+                }
+
+                @if(!string.IsNullOrWhiteSpace(Model?.Remarks))
+                {
+                    <div style="margin-bottom: 15px; padding: 10px; background: #fffbeb; border-radius: 6px; border: 1px solid #fcd34d;">
+                        <div class="footer-label" style="color: #b45309;">Remarks</div>
+                        <div style="white-space: pre-wrap; font-weight:600; font-size: 0.95em; color: #92400e;">@Model.Remarks</div>
                     </div>
                 }
 

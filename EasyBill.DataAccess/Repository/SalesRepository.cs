@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.Repository.IRepository;
+using AOne.DataAccess.Repository.IRepository;
 using AOne.DataAccess.Data;
 using AOne.Models.Entity;
 using EasyBill.DataAccess.Repository.IRepository;
@@ -318,6 +318,7 @@ namespace EasyBill.DataAccess.Repository
                 AddParameter(command, "@RoundOffAmount", model.RoundOffAmount, DbType.Decimal);
                 AddParameter(command, "@TotalCessAmount", model.TotalCessAmount, DbType.Decimal);
                 AddParameter(command, "@PaymentStatus", model.PaymentStatus);
+                AddParameter(command, "@Remarks", model.Remarks);
 
                 AddStructuredParameter(command, "@SalesItems", "dbo.SalesItemTvp", SalesModuleTableTypeMapper.CreateSalesItemTable(model.SalesItems));
                 AddStructuredParameter(command, "@PaymentDetails", "dbo.SalesPaymentDetailTvp", SalesModuleTableTypeMapper.CreateSalesPaymentDetailTable(model.SalsePaymentDetails));
@@ -406,6 +407,7 @@ namespace EasyBill.DataAccess.Repository
                 RoundOffAmount = reader.ReadDecimal("RoundOffAmount"),
                 TotalCessAmount = reader.ReadDecimal("TotalCessAmount"),
                 PaymentStatus = reader.ReadNullableString("PaymentStatus"),
+                Remarks = reader.ReadNullableString("Remarks"),
                 TenantId = reader.ReadNullableString("TenantId"),
                 Created = reader.ReadNullableDateTime("Created"),
                 CreatedBy = reader.ReadNullableString("CreatedBy"),
@@ -560,6 +562,40 @@ namespace EasyBill.DataAccess.Repository
 
             var value = reader[columnName];
             return value != DBNull.Value && Convert.ToBoolean(value, CultureInfo.InvariantCulture);
+        }
+        public async Task<IList<Sales>> GetDeletedSales()
+        {
+            var repository = _unitofwork.GetRepository<Sales>();
+
+            return await repository.Query().IgnoreQueryFilters().Where(x => x.Deleted != null).ToListAsync();
+        }
+        public async Task<bool> RestoreSales(int id)
+        {
+            try
+            {
+                var repository = _unitofwork.GetRepository<Sales>();
+
+                var item = await repository.Query().IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id);
+
+                if (item == null)
+                    return false;
+
+                item.Deleted = null;
+                item.DeletedBy = null;
+
+                repository.Update(item);
+                using (var transaction = repository.BeginTransaction())
+                {
+                    await repository.SaveChangesAsync();
+                    transaction.Commit();
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
     }
 }

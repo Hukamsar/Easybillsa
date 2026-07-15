@@ -1,8 +1,9 @@
-﻿using DocumentFormat.OpenXml.Bibliography;
+using DocumentFormat.OpenXml.Bibliography;
 using DocumentFormat.OpenXml.Spreadsheet;
 using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
+using EasyBill.UI.Filters;
 using EasyBill.Models.ViewModels;
 using EasyBill.UI.Service.ExcelService;
 using Microsoft.AspNetCore.Hosting;
@@ -54,8 +55,16 @@ namespace EasyBill.UI.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
-            ViewBag.AccountGroupList = new SelectList(await _accountgroupRepo.GetAll(), "Id", "Name");
-            ViewBag.ParentAccountGroupList = new SelectList(await _accountgroupRepo.GetAll(), "Id", "Name");
+            var accountGroups = await _accountgroupRepo.GetAll();
+            var sundryCreditorGroup = accountGroups.FirstOrDefault(x => x.Name != null && x.Name.Trim().ToLower() == "sundry creditor");
+
+            var supplierVM = new SupplierVM
+            {
+                AccountGroupId = sundryCreditorGroup?.Id
+            };
+
+            ViewBag.AccountGroupList = new SelectList(accountGroups, "Id", "Name", supplierVM.AccountGroupId);
+            ViewBag.ParentAccountGroupList = new SelectList(accountGroups, "Id", "Name");
             ViewBag.CountryList = new SelectList(await _countryRepo.GetAll(), "Id", "Name");
             ViewBag.CurrencyList = new SelectList(await _currencyRepo.GetAll(), "Id", "Name");
 
@@ -73,10 +82,10 @@ namespace EasyBill.UI.Controllers
             }
 
             ViewBag.InvoiceTemplates = templates;
-            return View(new SupplierVM());
-            //return View();
+            return View(supplierVM);
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create(SupplierVM supplierVM)
         {
             if (!ModelState.IsValid)
@@ -163,6 +172,7 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<JsonResult> CreateSupplier(SupplierVM model)
         {
             var supplierData = await _supplierRepo.GetALL();
@@ -271,6 +281,7 @@ namespace EasyBill.UI.Controllers
             return View(supplierVM);
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(SupplierVM VM)
         {
 
@@ -351,6 +362,7 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -403,6 +415,7 @@ namespace EasyBill.UI.Controllers
             return View();
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> ImportSupplier(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -649,6 +662,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> QuickSaveAccountGroup(int id, string name, int? parentId, bool isActive)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -693,6 +707,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> QuickSaveCountry(int id, string name)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -724,6 +739,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> QuickSaveState(int id, string name, int countryId)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -759,6 +775,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> QuickSaveCity(int id, string name, int stateId, int countryId)
         {
             if (string.IsNullOrWhiteSpace(name))

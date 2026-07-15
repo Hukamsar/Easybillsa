@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -36,9 +36,14 @@ namespace AOne.Utility.Enums
     }
     public enum CompanyType
     {
-        [Display(Name = "Head Office")]
+        [Display(Name = "Head Office (Centralized)")]
         HeadOffice = 1,
-        Branch = 2
+        
+        [Display(Name = "Branch (Spoke)")]
+        Branch = 2,
+
+        [Display(Name = "Standalone (Individual)")]
+        Standalone = 3
     }
     public enum WorkingStyle
     {
@@ -208,5 +213,15 @@ namespace AOne.Utility.Enums
     {
         Inclusive = 1,
         Exclusive = 2
+    }
+    public enum CashAndBank
+    {
+        Cash = 1,
+        Bank = 2
+    }
+    public enum ContraCategory
+    {
+        Deposit = 1,
+        Withdraw = 2
     }
 }

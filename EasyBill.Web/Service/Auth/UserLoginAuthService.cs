@@ -22,15 +22,19 @@ namespace EasyBill.UI.Service.Auth
         private readonly ITenantRepository _tenantRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly PasswordHasher<ApplicationUsers> _pinHasher = new();
+      //  private readonly EasyBill.UI.Helpers.DefaultItemsSeeder _defaultItemsSeeder;
 
         public UserLoginAuthService(
             UserManager<ApplicationUsers> userManager,
             ITenantRepository tenantRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork
+         //   EasyBill.UI.Helpers.DefaultItemsSeeder defaultItemsSeeder
+            )
         {
             _userManager = userManager;
             _tenantRepository = tenantRepository;
             _unitOfWork = unitOfWork;
+           // _defaultItemsSeeder = defaultItemsSeeder;
         }
 
         public async Task<UserLoginAuthResult> RegisterCompanyAsync(CompanyRegistrationRequest request)
@@ -136,6 +140,15 @@ namespace EasyBill.UI.Service.Auth
 
                 return UserLoginAuthResult.Fail(GetErrorMessage(addRoleResult, "Unable to assign role."));
             }
+
+            //try
+            //{
+            //    await _defaultItemsSeeder.SeedDefaultItemsForTenantAsync(tenant.Id, request.BusinessType);
+            //}
+            //catch (Exception)
+            //{
+            //    // Silently continue to prevent registration failure
+            //}
 
             return new UserLoginAuthResult
             {

@@ -1,4 +1,4 @@
-﻿using EasyBill.DataAccess.Repository.IRepository;
+using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -30,6 +30,7 @@ namespace EasyBill.UI.Controllers.API
             {
                 s.Id,
                 s.Name,
+                s.Zone,
                 CountryId = s.CountryId,
                 CountryName = countries.FirstOrDefault(c => c.Id == s.CountryId)?.Name
             });
@@ -49,6 +50,7 @@ namespace EasyBill.UI.Controllers.API
             {
                 model.Id,
                 model.Name,
+                model.Zone,
                 model.CountryId,
                 CountryName = country?.Name
             };
@@ -65,7 +67,8 @@ namespace EasyBill.UI.Controllers.API
             var model = new State
             {
                 Name = VM.Name,
-                CountryId = VM.CountryId
+                CountryId = VM.CountryId,
+                Zone = VM.Zone
             };
 
             await _stateservice.Create(model);
@@ -84,6 +87,7 @@ namespace EasyBill.UI.Controllers.API
 
             model.Name = VM.Name;
             model.CountryId = VM.CountryId;
+            model.Zone = VM.Zone;
 
             await _stateservice.Update(model);
             return Ok(new { success = true, message = "State updated successfully." });

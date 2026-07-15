@@ -1,4 +1,4 @@
-﻿@using EasyBill.Models.ViewModels
+@using EasyBill.Models.ViewModels
 @model StockIssueVM
 @{
     ViewData["Title"] = "Edit Stock Issue";
@@ -146,6 +146,21 @@
 
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="container-fluid px-3">
+        <!-- Professional Document Type Selector -->
+        <div class="row mb-3 pb-2 border-bottom align-items-center bg-light rounded p-2">
+            <label class="col-md-2 col-form-label text-start small fw-bold text-primary text-uppercase">Document Type:</label>
+            <div class="col-md-10 d-flex align-items-center">
+                <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input" type="radio" name="IssueToType" id="issueCustomer" value="Customer" @(Model.IssueToType == "Customer" ? "checked" : "")>
+                    <label class="form-check-label fw-bold" style="cursor: pointer;" for="issueCustomer"><i class="bi bi-person-fill"></i> Standard Issue (Customer)</label>
+                </div>
+                <div class="form-check form-check-inline mb-0 ms-4">
+                    <input class="form-check-input" type="radio" name="IssueToType" id="issueBranch" value="Branch" @(Model.IssueToType == "Branch" ? "checked" : "")>
+                    <label class="form-check-label fw-bold" style="cursor: pointer;" for="issueBranch"><i class="bi bi-shop"></i> In-Transit Transfer (Branch)</label>
+                </div>
+            </div>
+        </div>
+
         <div class="row mb-2">
             <label asp-for="ChallanNo" class="col-md-2 col-form-label text-start small">Challan No <i class="text-danger">*</i></label>
             <div class="col-md-2">
@@ -156,9 +171,25 @@
             <div class="col-md-2">
                 <input type="date" asp-for="ChallanDate" id="ChallanDate" class="form-control form-control-sm" required />
             </div>
+
+            <label class="col-md-2 col-form-label text-start small customer-section">Billing Type</label>
+            <div class="col-md-2 customer-section">
+                <select asp-for="billingType" id="billingType" class="form-control form-control-sm">
+                    <option value="walkin">Cash</option>
+                    <option value="registered">Customer</option>
+                </select>
+            </div>
+            
+            <!-- Branch Selection (Hidden by default) -->
+            <label class="col-md-2 col-form-label text-start small branch-section" style="display:none;">Select Branch <i class="text-danger">*</i></label>
+            <div class="col-md-2 branch-section" style="display:none;">
+                <select asp-for="TransferToTenantId" class="form-control form-control-sm" asp-items="ViewBag.Branches">
+                    <option value="">-- Select Branch --</option>
+                </select>
+            </div>
         </div>
 
-        <div class="row mb-2">
+        <div class="row mb-2 customer-section">
             <label class="col-md-2 col-form-label text-start small">Mobile No <i class="text-danger">*</i></label>
             <div class="col-md-2 d-flex align-items-center">
                 <div class="w-100">
@@ -579,6 +610,19 @@
         $(document).ready(function () {
             setTimeout(function() { $("#ChallanDate").focus(); }, 500);
 
+            // Document Type Toggle Logic
+            $('input[name="IssueToType"]').change(function() {
+                if ($(this).val() === 'Branch') {
+                    $('.customer-section').hide();
+                    $('.branch-section').show();
+                } else {
+                    $('.branch-section').hide();
+                    $('.customer-section').show();
+                }
+            });
+            // Trigger on load
+            $('input[name="IssueToType"]:checked').trigger('change');
+
             $("#mobilenumber, #doctorMobile").on("input", function () { this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10); });
 
             $("#mobilenumber").on("input", function () {
@@ -608,7 +652,22 @@
         // ================================================================
         // 🔹 ENTER KEY NAVIGATION FLOW (HEADER)
         // ================================================================
-        $(document).on("keydown", "#ChallanDate", function (e) { if (e.key === "Enter") { e.preventDefault(); $("#mobilenumber").focus(); } });
+        $(document).on("keydown", "#ChallanNo", function (e) { if (e.key === "Enter") { e.preventDefault(); $("#ChallanDate").focus(); } });
+        
+        $(document).on("keydown", "#ChallanDate", function (e) { 
+            if (e.key === "Enter") { 
+                e.preventDefault(); 
+                if ($('input[name="IssueToType"]:checked').val() === 'Branch') {
+                    $("#TransferToTenantId").focus();
+                } else {
+                    $("#billingType").focus();
+                } 
+            } 
+        });
+
+        $(document).on("keydown", "#billingType", function (e) { if (e.key === "Enter") { e.preventDefault(); $("#mobilenumber").focus(); } });
+        
+        $(document).on("keydown", "#TransferToTenantId", function (e) { if (e.key === "Enter") { e.preventDefault(); $("#doctorMobile").focus(); } });
 
         $(document).on("keydown", "#mobilenumber", function (e) {
             if (e.key === "Enter") {

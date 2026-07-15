@@ -1,4 +1,4 @@
-﻿using AOne.Models.Entity;
+using AOne.Models.Entity;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using EasyBill.UI.Service.ExcelService;
@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Buffers.Text;
 using System.Data;
-using static AOne.Utility.Permissions;
-using ItemMaster = AOne.Models.Entity.ItemMaster;
+using EasyBill.UI.Filters;
 
 namespace EasyBill.UI.Controllers.API
 {
@@ -47,15 +47,84 @@ namespace EasyBill.UI.Controllers.API
         public async Task<IActionResult> GetAll([FromQuery] string search = "", [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             var allData = await _itemmasterrepository.GetAll();
+            var itemImages = await _itemmasterrepository.GetAllItemImages();
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            var imageDict = itemImages
+           .Where(x => !x.IsDeleted)
+           .GroupBy(x => x.ItemMasterId)
+           .ToDictionary(
+               g => g.Key,
+               g => g.OrderBy(x => x.SortOrder)
+                     .Select(x => $"{baseUrl}{x.ImagePath}")
+                     .ToList()
+           );
 
             if (!string.IsNullOrEmpty(search))
             {
                 allData = allData.Where(x => x.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                                              x.Code.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
             }
+           
 
             int totalItems = allData.Count;
-            var paginatedData = allData.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var paginatedData = allData
+              .Skip((page - 1) * pageSize)
+              .Take(pageSize)
+              .Select(item => new ItemMasterListVM
+              {
+                  Id = item.Id,
+                  Name = item.Name,
+                  Code = item.Code,
+                  Barcode = item.Barcode,
+                  Unit1 = item.Unit1,
+                  Unit2 = item.Unit2,
+                  Packing = item.Packing,
+                  CategoryId = item.CategoryId,
+                  Category = item.Category,
+                  DivisionId = item.DivisionId,
+                  Division = item.Division,
+                  HsnId = item.HsnId,
+                  Hsn = item.Hsn,
+                  Mrp = item.Mrp,
+                  SalesRate1 = item.SalesRate1,
+                  SalesRate2 = item.SalesRate2,
+                  MinimumQty = item.MinimumQty,
+                  MaximumQty = item.MaximumQty,
+                  ShelfLife = item.ShelfLife,
+                  ShelfLifeUnit = item.ShelfLifeUnit,
+                  MaximumDiscount = item.MaximumDiscount,
+                  DecemalAllowed = item.DecemalAllowed,
+                  Conversion = item.Conversion,
+                  SubCategoryId = item.SubCategoryId,
+                  SubCategory = item.SubCategory,
+                  CompanyId = item.CompanyId,
+                  Company = item.Company,
+                  Tenant = item.Tenant,
+                  TenantId = item.TenantId,
+                  UploadImage = item.UploadImage,
+                  Local = item.Local,
+                  Central = item.Central,
+                  IsActive = item.IsActive,
+                  Narcotics = item.Narcotics,
+                  ScheduleH = item.ScheduleH,
+                  ScheduleH1 = item.ScheduleH1,
+                  Salt = item.Salt,
+                  ItemType = item.ItemType,
+                  ParentItemId = item.ParentItemId,
+                  ParentItem = item.ParentItem,
+                  ConversionFactor = item.ConversionFactor,
+              
+                  ItemImages = imageDict.TryGetValue(item.Id, out var images)
+                      ? images.Select(x => new ItemImageVM
+                      {
+                          ImagePath = x
+                      }).ToList()
+                      : new List<ItemImageVM>()
+              })
+              .ToList();
+
 
             return Ok(new
             {
@@ -76,6 +145,7 @@ namespace EasyBill.UI.Controllers.API
 
         //  Create new item
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create([FromForm] ItemMasterVM itemMasterVM)
         {
             if (itemMasterVM == null)
@@ -129,6 +199,7 @@ namespace EasyBill.UI.Controllers.API
 
         //  Update Item
         [HttpPut("{id}")]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Update(int id, [FromForm] ItemMasterVM vm)
         {
             var model = await _itemmasterrepository.GetByItemMasterId(id);
@@ -180,6 +251,7 @@ namespace EasyBill.UI.Controllers.API
 
         //  Delete Item
         [HttpDelete("{id}")]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             if (id <= 0)

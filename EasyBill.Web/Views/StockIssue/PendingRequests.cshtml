@@ -1,0 +1,49 @@
+@model IEnumerable<EasyBill.Models.Entity.PurchaseOrder>
+@{
+    ViewData["Title"] = "Pending Stock Requests";
+}
+
+<div class="card p-3 shadow-sm rounded">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 text-primary"><i class="bi bi-card-list"></i> Pending Stock Requests</h4>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Request No</th>
+                    <th>Date</th>
+                    <th>Requesting Branch</th>
+                    <th>Items Count</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var request in Model)
+                    {
+                        <tr>
+                            <td>@request.BillNo</td>
+                            <td>@(request.BillDate?.ToString("dd-MMM-yyyy") ?? "")</td>
+                            <td>@(request.Tenant?.Name ?? "Unknown")</td>
+                            <td>@(request.PurchaseOrderItems?.Count ?? 0)</td>
+                            <td>
+                                <a asp-action="FulfillRequest" asp-route-id="@request.Id" class="btn btn-sm btn-success">
+                                    <i class="bi bi-check-circle"></i> Fulfill Request
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No pending stock requests found.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

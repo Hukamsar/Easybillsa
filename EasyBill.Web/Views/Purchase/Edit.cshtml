@@ -549,6 +549,13 @@
 
                         <!-- ✅ ITEM PURCHASE HISTORY + TOTALS SECTION -->
                         <div class="row mt-3"> 
+                            <div class="col-md-9 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <label asp-for="Remarks" class="col-form-label fw-bold me-2 small" style="white-space:nowrap;">Remarks:</label>
+                                    <input asp-for="Remarks" class="form-control form-control-sm" placeholder="Enter remarks..." />
+                                </div>
+                            </div>
+
                             <div class="col-md-9">
                                 <strong>Payment Details</strong>
                                 <table class="table table-bordered table-striped">
@@ -662,6 +669,12 @@
                                     <label class="col-md-6 col-form-label small">Gst</label>
                                     <div class="col-md-6 text-end">
                                         <input asp-for="TotalSCGstAmt" class="form-control form-control-sm text-end" readonly />
+                                    </div>
+                                </div>
+                                <div class="row mb-2 align-items-center" id="expenseContainer" style="display:none;">
+                                    <label class="col-md-6 col-form-label small">Expense (-)</label>
+                                    <div class="col-md-6 text-end">
+                                        <input asp-for="Expense" id="expenseAmount" class="form-control form-control-sm text-end" />
                                     </div>
                                 </div>
                                 <div class="row mb-2 align-items-center">
@@ -920,6 +933,7 @@
 
 
         let minPurchaseExpiryDays = 0;
+        let hasPurchaseExpense = false;
         const isPharmacyTenant = @(((int?)ViewBag.BusinessType ?? 0) == 2 ? "true" : "false");
     </script>
 
@@ -2016,20 +2030,36 @@
             }
         });
 
+        let cachedItemsList = null;
+
+        // Preload items immediately on script load
+        $.get('/Purchase/GetAllItems', { purchaseType: $("#purchasetype").val() || "" }, function (items) {
+            cachedItemsList = items;
+        });
+
         function openItemModal(searchText = "") {
 
             if (window.stopAutoItemOpen === true || $("#itemMasterModal").is(":visible"))
                 return;
 
             var purchaseType = $("#purchasetype").val();
+            const businessType = @ViewBag.BusinessType;
+
+            if (cachedItemsList) {
+                let rows = renderItemRows(cachedItemsList, businessType);
+                $("#itemTableBody").html(rows);
+                $("#itemSearch").val(searchText);
+                $("#itemSearch").trigger("input");
+                $("#itemModal").modal("show");
+                return;
+            }
 
             showLoader("Loading items...");
 
             $.get('/Purchase/GetAllItems', { purchaseType: purchaseType }, function (items) {
 
                 hideLoader();
-
-                const businessType = @ViewBag.BusinessType;
+                cachedItemsList = items;
 
                 let rows = renderItemRows(items, businessType);
 
@@ -2182,6 +2212,7 @@
             $.get('/Purchase/GetAllItems', { purchaseType: purchaseType }, function (items) {
 
                 hideLoader();
+                cachedItemsList = items;
 
                 const businessType = @ViewBag.BusinessType;
 
@@ -3875,7 +3906,8 @@
                 ? totalCgst + totalSgst
                 : 0;
 
-            let totalPayable = totalamt + totalTax + totalcess;
+            let expense = parseFloat($("#expenseAmount").val()) || 0;
+            let totalPayable = totalamt + totalTax + totalcess - expense;
 
             let roundedPayable = Math.round(totalPayable);
 
@@ -3913,6 +3945,12 @@
              $("[name='TotalCessAmt']").val(totalcess);
             $("[name='RoundOffAmount']").val(roundOffAmount);
 
+            if ($("#PaymentDetailsBody tr").length === 1) {
+                $("#PaymentDetailsBody tr:first .paymentAmount").val(roundedPayable.toFixed(2));
+            }
+            if (typeof calculateTotalPaid === 'function') {
+                calculateTotalPaid();
+            }
         }
 
         // $("#discountPercent, #discountamount").on("input", function () {
@@ -3925,6 +3963,44 @@
             });
 
             calculateTotalSummary();
+        });
+
+        $("#expenseAmount").on("input change paste", function () {
+            calculateTotalSummary();
+        });
+
+        const numericSelectors = "input[type='number'], input.qty, input.freeqty, input.rate:not(.paymentDescription), input.mrp, input.discount, input.salserateA, input.salserateB, input.paymentAmount, #discountPercent, #discountamount, #expenseAmount, #minPurchaseExpiryDays, #popupSalseRateA, #popupSalseRateB, #popupMrp";
+
+        $(document).on("keypress", numericSelectors, function (e) {
+            let charCode = (e.which) ? e.which : e.keyCode;
+            let isIntegerOnly = $(this).hasClass('qty') || $(this).hasClass('freeqty') || $(this).attr('id') === 'minPurchaseExpiryDays';
+            if (charCode < 48 || charCode > 57) {
+                if (!isIntegerOnly && charCode === 46 && this.value.indexOf('.') === -1) {
+                    return true;
+                }
+                e.preventDefault();
+                return false;
+            }
+            return true;
+        });
+
+        $(document).on("input paste", numericSelectors, function () {
+            let val = this.value;
+            let isIntegerOnly = $(this).hasClass('qty') || $(this).hasClass('freeqty') || $(this).attr('id') === 'minPurchaseExpiryDays';
+            let regex = isIntegerOnly ? /[^0-9]/g : /[^0-9.]/g;
+            if (regex.test(val)) {
+                let cleaned = val.replace(regex, '');
+                if (!isIntegerOnly) {
+                    let parts = cleaned.split('.');
+                    if (parts.length > 2) {
+                        cleaned = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                }
+                if (this.value !== cleaned) {
+                    this.value = cleaned;
+                    $(this).trigger("change");
+                }
+            }
         });
 
         // NEW VALIDATION HANDLER (Bill discount validation)
@@ -4374,7 +4450,14 @@
                     type: 'GET',
                     success: function (data) {
                         minPurchaseExpiryDays = data.minPurchaseExpiryDays || 0;
-                        console.log("✅ Min Purchase Expiry Days Loaded (Edit):", minPurchaseExpiryDays);
+                        hasPurchaseExpense = data.expense || false;
+                        if (hasPurchaseExpense) {
+                            $("#expenseContainer").show();
+                        } else {
+                            $("#expenseContainer").hide();
+                            $("#expenseAmount").val("0");
+                        }
+                        console.log("✅ Min Purchase Expiry Days Loaded (Edit):", minPurchaseExpiryDays, "Expense:", hasPurchaseExpense);
                     },
                     error: function (xhr) {
                         console.error("❌ Error loading expiry settings:", xhr.status);

@@ -1,4 +1,4 @@
-﻿@using EasyBill.Models.ViewModels
+@using EasyBill.Models.ViewModels
 @using Microsoft.AspNetCore.Mvc.Rendering
 @model StockIssueVM
 @{
@@ -138,20 +138,39 @@
     </div>
 </div>
 
-<div class="card mb-3 shadow-sm">
-    <div class="card-header text-white d-flex align-items-center" style="background:#2b6ac9">
-        <h6 class="mb-0 me-auto">@title</h6>
-    </div>
-</div>
-
 <form asp-controller="StockIssue" asp-action="@(isEdit ? "Edit" : "Create")" method="post" id="stockIssueForm">
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header text-white d-flex align-items-center flex-wrap gap-2" style="background:#2b6ac9">
+            <h6 class="mb-0">@title</h6>
+            <button type="button" id="btnShowPendingRequests" class="btn btn-sm btn-success branch-section ms-auto" style="display:none;">
+                <i class="bi bi-list-check"></i> Pending Requests
+            </button>
+        </div>
+    </div>
+
     <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="StockRequestId" />
     <input type="hidden" asp-for="CustomerId" id="CustomerId" />
     <input type="hidden" asp-for="PharmacyDoctorId" id="DoctorId" />
     <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
     <div class="container">
+        <!-- Professional Document Type Selector -->
+        <div class="row mb-3 pb-2 border-bottom align-items-center bg-light rounded p-2">
+            <label class="col-md-2 col-form-label text-start small fw-bold text-primary text-uppercase">Document Type:</label>
+            <div class="col-md-10 d-flex align-items-center">
+                <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input" type="radio" name="IssueToType" id="issueCustomer" value="Customer" @(Model.IssueToType == "Customer" ? "checked" : "")>
+                    <label class="form-check-label fw-bold" style="cursor: pointer;" for="issueCustomer"><i class="bi bi-person-fill"></i> Standard Issue (Customer)</label>
+                </div>
+                <div class="form-check form-check-inline mb-0 ms-4">
+                    <input class="form-check-input" type="radio" name="IssueToType" id="issueBranch" value="Branch" @(Model.IssueToType == "Branch" ? "checked" : "")>
+                    <label class="form-check-label fw-bold" style="cursor: pointer;" for="issueBranch"><i class="bi bi-shop"></i> In-Transit Transfer (Branch)</label>
+                </div>
+            </div>
+        </div>
+
         <div class="row mb-2">
             <label for="BillNo" class="col-md-2 col-form-label text-start small">Bill No <i class="text-danger">*</i></label>
             <div class="col-md-2">
@@ -163,16 +182,25 @@
                 <input type="date" asp-for="ChallanDate" id="BillDate" class="form-control form-control-sm" required />
                 <span asp-validation-for="ChallanDate" class="text-danger"></span>
             </div>
-            <label class="col-md-2">Billing Type</label>
-            <div class="col-md-2">
+            
+            <label class="col-md-2 col-form-label text-start small customer-section">Billing Type</label>
+            <div class="col-md-2 customer-section">
                 <select asp-for="billingType" id="billingType" class="form-control form-control-sm">
                     <option value="walkin">Cash</option>
                     <option value="registered">Customer</option>
                 </select>
             </div>
+            
+            <!-- Branch Selection (Hidden by default) -->
+            <label class="col-md-2 col-form-label text-start small branch-section" style="display:none;">Select Branch <i class="text-danger">*</i></label>
+            <div class="col-md-2 branch-section" style="display:none;">
+                <select asp-for="TransferToTenantId" id="TransferToTenantId" class="form-control form-control-sm" asp-items="ViewBag.Branches">
+                    <option value="">-- Select Branch --</option>
+                </select>
+            </div>
         </div>
 
-        <div class="row mb-2">
+        <div class="row mb-2 customer-section">
             <label class="col-md-2 col-form-label text-start small">Mobile No</label>
             <div class="col-md-2 d-flex align-items-center">
                 <div class="w-100">
@@ -191,7 +219,7 @@
 
         @if (Model.DoctorRequired)
         {
-            <div class="row mb-2">
+            <div class="row mb-2 doctor-section">
                 <label class="col-md-2 col-form-label small">Doctor Mobile No</label>
                 <div class="col-md-2"><input type="text" asp-for="DoctorMobileNumber" class="form-control form-control-sm" id="doctorMobile" maxlength="10" /></div>
                 <label class="col-md-2 col-form-label small">Doctor</label>
@@ -503,7 +531,37 @@
 
 @section Scripts {
     <script src="~/js/payment-mode-popup.js"></script>
-    <script>
+    
+<!-- Pending Requests Modal -->
+<div class="modal fade" id="pendingRequestsModal" tabindex="-1" aria-labelledby="pendingRequestsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pendingRequestsModalLabel">Pending Stock Requests</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-bordered table-hover mb-0" id="pendingRequestsTable">
+                        <thead style="position: sticky; top: 0; background: #2465c7f7; color: white; z-index: 2;">
+                            <tr>
+                                <th>Req. No</th>
+                                <th>Date</th>
+                                <th>Requesting Branch</th>
+                                <th>Total Qty</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
         const isEditMode = @Html.Raw((isEdit ? "true" : "false"));
         const stockIssueId = @Model.Id;
         const businessType = @businessType;
@@ -1673,7 +1731,9 @@
             const billingType = $("#billingType").val();
             const mobile = ($("#mobilenumber").val() || "").trim();
 
-            if (billingType === "registered") {
+            const issueToType = $('input[name="IssueToType"]:checked').val();
+
+            if (billingType === "registered" && issueToType !== "Branch") {
                 if (!mobile) {
                     toastr.error("Mobile number is required.");
                     $("#mobilenumber").focus().select();
@@ -1689,6 +1749,14 @@
                 if (!$("#CustomerId").val()) {
                     toastr.error("Please select a valid customer.");
                     $("#customer").focus().select();
+                    return false;
+                }
+            }
+
+            if (issueToType === "Branch") {
+                if (!$("#TransferToTenantId").val()) {
+                    toastr.error("Please select a branch to transfer stock.");
+                    $("#TransferToTenantId").focus();
                     return false;
                 }
             }
@@ -1762,6 +1830,45 @@
                     addNewRow();
                 }
                 calculateTotal();
+
+                // Auto-load request from Notification
+                const urlParams = new URLSearchParams(window.location.search);
+                const requestId = urlParams.get('requestId');
+                if (requestId) {
+                    $('#StockRequestId').val(requestId);
+                    $('#billingType').val('registered').trigger('change');
+                    $('#issueBranch').prop('checked', true).trigger('change');
+                    
+                    showLoader("Loading Request...");
+                    $.ajax({
+                        url: '/StockIssue/GetRequestDetails/' + requestId,
+                        type: 'GET',
+                        success: function(res) {
+                            hideLoader();
+                            if (res.success) {
+                                $('#TransferToTenantId').val(res.requesterTenantId);
+                                  $('#StockIssueItemBody tr').remove();
+                                  rowIndex = 0; // Reset index to ensure sequential binding
+                                  res.data.forEach(function(item) {
+                                      if(typeof addNewRow === 'function') {
+                                          addNewRow();
+                                          let lastRow = $('#StockIssueItemBody tr:last');
+                                          lastRow.find('.item-input').val(item.itemName || item.ItemName || "");
+                                          lastRow.find('.item-id').val(item.itemId || item.ItemId || 0);
+                                          lastRow.find('.qty').val(item.qty || item.Qty || 0).trigger('change');
+                                          lastRow.find('.mrp').val(item.mrp || item.Mrp || 0);
+                                          lastRow.find('.rate').val(item.purchaseRate || item.PurchaseRate || 0);
+                                      }
+                                  });
+                                toastr.success('Stock Request loaded.');
+                            }
+                        },
+                        error: function(err) {
+                            hideLoader();
+                            toastr.error('Failed to load request.');
+                        }
+                    });
+                }
             });
 
             $("#mobilenumber, #doctorMobile").on("input", function () {
@@ -1935,7 +2042,11 @@
         $(document).on("keydown", "#BillDate", function (e) {
             if (e.key !== "Enter") return;
             e.preventDefault();
-            $("#paymentToggle").focus();
+            if ($('input[name="IssueToType"]:checked').val() === 'Branch') {
+                $("#TransferToTenantId").focus();
+            } else {
+                $("#billingType").focus();
+            }
         });
 
         $(document).on("keydown", "#Total, #discountPercent, #discountamount", function (e) {
@@ -2125,18 +2236,23 @@
             if (e.key !== "Enter") return;
 
             e.preventDefault();
+            const type = this.value;
 
-            if (this.value === "registered") {
-                $("#mobilenumber").prop("disabled", false).focus().select();
-                return;
-            }
-
-            $("#mobilenumber, #customer, #customeraddress").val("").prop("disabled", true);
-
-            if ($("#doctorMobile").length && $("#doctorMobile").is(":visible") && !$("#doctorMobile").is(":disabled")) {
-                $("#doctorMobile").focus();
+            if (type === "registered") {
+                if ($('input[name="IssueToType"]:checked').val() === 'Branch') {
+                    $("#TransferToTenantId").focus();
+                } else {
+                    $("#mobilenumber").focus();
+                }
             } else {
-                $("#taxCalculation").focus();
+                $("#doctorname").focus();
+            }
+        });
+
+        $(document).on("keydown", "#TransferToTenantId", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                focusItemGrid();
             }
         });
 
@@ -2296,6 +2412,14 @@
             }
         });
 
+        $(document).on("click", ".batch", function () {
+            currentRow = $(this).closest("tr");
+            const itemId = currentRow.find(".item-id").val();
+            if (itemId && itemId > 0) {
+                loadBatches(itemId);
+            }
+        });
+
         $(document).on("click", ".item-row", function () {
             const itemId = $(this).data("itemid");
             const itemName = $(this).data("name");
@@ -2320,20 +2444,27 @@
             currentRow.find(".batch").val(batch.batch || "");
             currentRow.find(".expirydate").val(normalizeDateDisplay(batch.expiry));
             currentRow.find(".mrp").val(Number(batch.mrp || 0).toFixed(2));
-            currentRow.find(".rate").val(Number(batch.rate || 0).toFixed(2));
-            currentRow.find(".stripe-rate").val(Number(batch.striprate || batch.rate || 0).toFixed(2));
+            // Use striprate if available (SalesRateA), else fallback to purchaseRate, then rate
+            currentRow.find(".rate").val(Number(batch.striprate || batch.purchaseRate || batch.rate || 0).toFixed(2));
+            currentRow.find(".stripe-rate").val(Number(batch.striprate || batch.purchaseRate || batch.rate || 0).toFixed(2));
             currentRow.find(".purchase-id").val(batch.purchaseItemId || 0);
             calculateRow(currentRow);
             $("#batchModal").modal("hide");
             setTimeout(() => {
                 if (businessType === 2 && isTabletWiseMode) {
-                    currentRow.find(".tablet-qty").val(1);
+                    let currentTabQty = parseFloat(currentRow.find(".tablet-qty").val()) || 0;
+                    if (currentTabQty === 0) {
+                        currentRow.find(".tablet-qty").val(1);
+                    }
                     calculateRow(currentRow);
                     currentRow.find(".tablet-qty").focus().select();
                     return;
                 }
 
-                currentRow.find(".qty").val(1);
+                let currentQty = parseFloat(currentRow.find(".qty").val()) || 0;
+                if (currentQty === 0) {
+                    currentRow.find(".qty").val(1);
+                }
                 calculateRow(currentRow);
                 currentRow.find(".qty").focus().select();
             }, 150);
@@ -2591,7 +2722,7 @@
                         hideLoader();
                         if (res.success) {
                             toastr.success(isEditMode ? "Stock issue updated successfully." : "Stock issue saved successfully.");
-                            window.location.href = isEditMode ? '/StockIssue/Index' : '/StockIssue/Create';
+                            window.location.href = '/StockIssue/Index';
                         } else {
                             if (Array.isArray(res.errors) && res.errors.length) {
                                 const errorHtml = res.errors
@@ -2629,5 +2760,113 @@
             e.stopImmediatePropagation();
             $("#saveBtn").trigger("click");
         });
+
+        // Branch Transfer Toggle Logic
+        $(document).ready(function() {
+            function toggleIssueType() {
+                const issueType = $('input[name="IssueToType"]:checked').val();
+                if (issueType === 'Branch') {
+                    $('.customer-section').hide();
+                    $('.doctor-section').hide();
+                    $('.branch-section').show();
+                    $('#TransferToTenantId').prop('required', true);
+                    $('#billingType').val('registered').trigger('change');
+                } else {
+                    $('.branch-section').hide();
+                    $('#TransferToTenantId').prop('required', false);
+                    $('.customer-section').show();
+                    $('.doctor-section').show();
+                }
+            }
+
+            $('input[name="IssueToType"]').on('change', toggleIssueType);
+            toggleIssueType(); // Initialize
+        });
     </script>
 }
+
+    <script>
+        $(document).ready(function() {
+            $('#btnShowPendingRequests').click(function() {
+                showLoader();
+                $.ajax({
+                    url: '/StockIssue/GetPendingIncomingRequests',
+                    type: 'GET',
+                    success: function(res) {
+                        hideLoader();
+                        if (res.success && res.data.length > 0) {
+                            let rows = '';
+                            res.data.forEach(function(req) {
+                                let date = new Date(req.billDate).toLocaleDateString();
+                                rows += `<tr>
+                                    <td>${req.billNo}</td>
+                                    <td>${date}</td>
+                                    <td>${req.requesterName}</td>
+                                    <td>${req.totalQty}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-success btn-select-request" 
+                                            data-id="${req.id}" 
+                                            data-tenantid="${req.requesterTenantId}">
+                                            Select
+                                        </button>
+                                    </td>
+                                </tr>`;
+                            });
+                            $('#pendingRequestsTable tbody').html(rows);
+                            $('#pendingRequestsModal').modal('show');
+                        } else {
+                            toastr.info('No pending requests found.');
+                        }
+                    },
+                    error: function(err) {
+                          hideLoader();
+                          toastr.error('Failed to load pending requests. Status: ' + err.status);
+                          console.error(err);
+                      }
+                });
+            });
+
+            $(document).on('click', '.btn-select-request', function() {
+                let reqId = $(this).data('id');
+                let targetTenantId = $(this).data('tenantid');
+                
+                $('#StockRequestId').val(reqId);
+                $('#TransferToTenantId').val(targetTenantId);
+                $('#pendingRequestsModal').modal('hide');
+                
+                showLoader();
+                $.ajax({
+                    url: '/StockIssue/GetRequestDetails/' + reqId,
+                    type: 'GET',
+                    success: function(res) {
+                        hideLoader();
+                        if (res.success) {
+                            // Clear existing rows
+                            $('#StockIssueItemBody tr').remove();
+                            rowIndex = 0; // Reset index to ensure sequential binding
+                            
+                            // Populate grid
+                            res.data.forEach(function(item) {
+                                if(typeof addNewRow === 'function') {
+                                    addNewRow();
+                                    let lastRow = $('#StockIssueItemBody tr:last');
+                                    lastRow.find('.item-input').val(item.itemName || item.ItemName || "");
+                                    lastRow.find('.item-id').val(item.itemId || item.ItemId || 0);
+                                    lastRow.find('.qty').val(item.qty || item.Qty || 0).trigger('change');
+                                    // Also set MRP and Rate if needed
+                                    lastRow.find('.mrp').val(item.mrp || item.Mrp || 0);
+                                    lastRow.find('.rate').val(item.purchaseRate || item.PurchaseRate || 0);
+                                }
+                            });
+                            toastr.success('Stock Request items loaded successfully.');
+                        }
+                    },
+                    error: function(err) {
+                          hideLoader();
+                          toastr.error('Failed to load request details. Status: ' + err.status);
+                          console.error(err);
+                      }
+                });
+            });
+        });
+    </script>

@@ -147,6 +147,27 @@
 										</form>
 									</div> *@
 									<div style="border: 1px solid #ccc; padding: 2rem; background-color: #2465c7f7; max-width: 450px; margin: 2rem auto; border-radius: 8px;">
+                                        @if (ViewBag.RequiresBranchSelection == true)
+                                        {
+                                            <form asp-action="SelectBranch" asp-controller="Account" method="post">
+                                                <h2 class="text-center mb-3 text-color">Select Branch</h2>
+                                                <hr />
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="userId" value="@ViewBag.PendingUserId" />
+                                                <input type="hidden" name="rememberMe" value="@(ViewBag.RememberMe == true ? "true" : "false")" />
+                                                
+                                                <div class="form-group mb-3">
+                                                    <select name="tenantId" class="form-control" asp-items="ViewBag.Branches" required>
+                                                        <option value="">-- Select Branch --</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <input type="submit" class="w-100 btn btn-lg btn-dark-blue" value="Proceed" />
+                                                </div>
+                                            </form>
+                                        }
+                                        else
+                                        {
 										<form id="account" method="post">
 											<h2 class="text-center mb-3 text-color">Login</h2>
 											<hr />
@@ -175,9 +196,10 @@
 												</div>
 
 												<div class="form-floating mb-3">
-													<input asp-for="Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
+													<input asp-for="Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" style="padding-right: 45px;" />
 													<label asp-for="Password" class="form-label" style="color:#114070;"><b>Password</b></label>
 													<span asp-validation-for="Password" class="text-danger"></span>
+													<i class="material-icons position-absolute" id="togglePasswordIcon" style="right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #114070; z-index: 10;">visibility</i>
 												</div>
 											</div>
 
@@ -220,6 +242,7 @@
 												<a asp-controller="Account" asp-action="VerifyEmail" class="text-color">Update Password?</a>
 											</div>
 										</form>
+                                        }
 									</div>
 
 									<div id="registerFormContainer" style="display:@(showRegisterForm ? "block" : "none"); border: 1px solid #ccc; padding: 2rem; background-color: #ffffff; max-width: 650px; margin: 2rem auto; border-radius: 8px;">
@@ -364,6 +387,20 @@
 					.catch(() => {
 						otpMessage.textContent = "OTP send failed.";
 					});
+				});
+			}
+
+			const togglePasswordIcon = document.getElementById("togglePasswordIcon");
+			const passwordInput = document.getElementById("Password");
+			if (togglePasswordIcon && passwordInput) {
+				togglePasswordIcon.addEventListener("click", function () {
+					if (passwordInput.type === "password") {
+						passwordInput.type = "text";
+						togglePasswordIcon.textContent = "visibility_off";
+					} else {
+						passwordInput.type = "password";
+						togglePasswordIcon.textContent = "visibility";
+					}
 				});
 			}
 		})();

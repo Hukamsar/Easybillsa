@@ -1671,19 +1671,75 @@ namespace EasyBill.UI.Controllers.API
             if (item == null)
                 return NotFound(new { success = false, message = "Item not found." });
 
-            var purchaseItems = await _purchaseitemservice.GetByItemMasterId(id);
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var setting = await _salsesettingservice.GetByUserId(userId);
 
-            var groupedResult = purchaseItems
-                .GroupBy(b => new { b.Batch, b.ExpiryDate, b.Mrp, b.Rate })
-                .Select(g => new
+            var currentStocks = await _currenstockService.GetAll();
+
+            var itemStocks = currentStocks
+                .Where(x => x.ItemId == id)
+                .ToList();
+
+            var groupedResult = itemStocks
+                .GroupBy(x => new { x.Batch, x.ExpiryDate, x.Mrp, x.PurchaseRate })
+                .Select(g =>
                 {
-                    batch = g.Key.Batch,
-                    expiry = g.Key.ExpiryDate,
-                    rate = g.Key.Rate,
-                    mrp = g.Key.Mrp,
-                    qty = g.Select(x => x.Qty).FirstOrDefault(),
-                    purchaseItemId = g.Select(x => x.Id).FirstOrDefault()
-                }).ToList();
+                    var batch = g.Key.Batch;
+                    var expiry = g.Key.ExpiryDate;
+                    var mrp = g.Key.Mrp;
+                    var purchaseRate = g.FirstOrDefault()?.SalesRateA ?? 0;
+                    decimal qty = g.Sum(x => x.Qty);
+
+                    decimal conversion = item.Conversion > 0 ? item.Conversion : 1;
+
+                    decimal ratePerUnit = purchaseRate;
+                    if (setting != null && setting.ItemConversion == "TabletWise")
+                    {
+                        ratePerUnit = conversion != 0 ? purchaseRate / conversion : purchaseRate;
+                    }
+
+                    string stripTabsQty;
+                    if (setting != null && setting.ItemConversion == "TabletWise" && conversion > 0)
+                    {
+                        int conv = (int)conversion;
+                        int totalTablets = (int)Math.Round(qty * conv, MidpointRounding.AwayFromZero);
+                        int strips = totalTablets / conv;
+                        int tablets = totalTablets % conv;
+                        stripTabsQty = $"{strips}:{tablets}";
+                    }
+                    else
+                    {
+                        stripTabsQty = qty.ToString("0.##");
+                    }
+
+                    return new
+                    {
+                        batch = batch,
+                        expiry = expiry,
+                        rate = ratePerUnit,
+                        striprate = purchaseRate,
+                        mrp = mrp,
+                        qty = qty,
+                        StripTabsQty = stripTabsQty,
+                        conversion = conversion,
+                        purchaseItemId = g.FirstOrDefault()?.Id ?? 0
+                    };
+                });
+
+            if (setting != null && !setting.AllowNegative)
+            {
+                groupedResult = groupedResult.Where(x => x.qty > 0);
+            }
+
+            if (setting != null && setting.ExpiryAllowedDays > 0)
+            {
+                var allowedDate = DateTime.Now.AddDays(setting.ExpiryAllowedDays);
+                groupedResult = groupedResult.Where(x => x.expiry == null || x.expiry >= allowedDate);
+            }
+
+            var finalResult = groupedResult
+                .OrderBy(x => x.expiry)
+                .ToList();
 
             var result = new
             {
@@ -1694,7 +1750,7 @@ namespace EasyBill.UI.Controllers.API
                 cgst = item.Hsn?.CGST,
                 sgst = item.Hsn?.SGST,
                 cess = item.Hsn?.Cess,
-                groupedResult = groupedResult
+                groupedResult = finalResult
             };
 
             return Ok(new { success = true, data = result });
@@ -1832,51 +1888,17 @@ namespace EasyBill.UI.Controllers.API
         [HttpGet("AllItems")]
         public async Task<IActionResult> GetAllItems()
         {
-            var itemMasters = (await _itemmasterservice.GetAll()).OrderBy(x => x.Name);
-            var purchases = await _purchaseservice.GetAll();
-            var purchasereturns = await _purchasereturnservice.GetAll();
-            var sales = await _salesservice.GetAll();
-            var stockIssue = await _stockissueservice.GetAll();
-            var stockReturn = await _stockrturnservice.GetAll();
-            var stockreceive = await _stockreceiveservice.GetAll();
+            var itemMasters = (await _itemmasterservice.GetAll()).OrderBy(x => x.Name).ToList();
+            var currentStocks = await _currenstockService.GetAll();
 
-            var purchaseItems = purchases.Where(p => p.PurchaseItems != null).SelectMany(p => p.PurchaseItems);
-            var purchaseReturnItems = purchasereturns.Where(r => r.PurchaseReturnItems != null).SelectMany(r => r.PurchaseReturnItems);
-            var salesItems = sales.Where(s => s.SalesItems != null).SelectMany(s => s.SalesItems);
-            var stockissueItems = stockIssue.Where(s => s.StockIssuesItems != null).SelectMany(s => s.StockIssuesItems);
-            var stockreturnItems = stockReturn.Where(s => s.StockReturnItems != null).SelectMany(s => s.StockReturnItems);
-            var stockreceiveItems = stockreceive.Where(s => s.StockReceiveItems != null).SelectMany(s => s.StockReceiveItems);
+            var stockByItem = currentStocks
+                .GroupBy(x => x.ItemId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Qty));
 
             var stockList = itemMasters.Select(item =>
             {
                 var itemId = item.Id;
-
-                var totalPurchasedQty = purchaseItems
-                    .Where(x => x.ItemId == itemId)
-                    .Sum(x => x.Qty + x.FreeQty);
-
-                var totalpurchaseReturnedQty = purchaseReturnItems
-                    .Where(x => x.ItemId == itemId)
-                    .Sum(x => x.Qty + x.FreeQty);
-
-                var totalsalseQty = salesItems
-                    .Where(x => x.ItemMasterId == itemId)
-                    .Sum(x => x.Qty);
-
-                var totalstockissueQty = stockissueItems
-                    .Where(x => x.ItemMasterId == itemId)
-                    .Sum(x => x.Qty);
-
-                var totalstockreturnQty = stockreturnItems
-                    .Where(x => x.ItemMasterId == itemId)
-                    .Sum(x => x.Qty);
-
-                var totalstockreceiveQty = stockreceiveItems
-                    .Where(x => x.ItemMasterId == itemId)
-                    .Sum(x => x.Qty);
-
-                var currentStock = totalPurchasedQty + totalstockreturnQty + totalstockreceiveQty
-                                 - totalpurchaseReturnedQty - totalsalseQty - totalstockissueQty;
+                stockByItem.TryGetValue(itemId, out var currentStock);
 
                 return new
                 {
@@ -1943,11 +1965,18 @@ namespace EasyBill.UI.Controllers.API
         [HttpPost("EvaluateOffers")]
         public async Task<IActionResult> EvaluateOffers([FromBody] SalesOfferRequest request)
         {
-            var result = await EvaluateOffer(request.SalesItemVMs, request.TotalAmount);
+            var tenantId = User.FindFirstValue("TenantId");
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                await _profileService.Set(User);
+                tenantId = _profileService?.Profile?.TenantId;
+            }
+
+            var result = await EvaluateOffer(request.SalesItemVMs, request.TotalAmount, tenantId);
             return Ok(new { success = true, data = result });
         }
 
-        private async Task<AppliedOfferResult> EvaluateOffer(IList<SalesItemVM> salesItems, decimal totalAmount)
+        private async Task<AppliedOfferResult> EvaluateOffer(IList<SalesItemVM> salesItems, decimal totalAmount, string tenantId)
         {
             var result = new AppliedOfferResult();
             var today = DateTime.Today;
@@ -1956,6 +1985,17 @@ namespace EasyBill.UI.Controllers.API
             var offers = allOffers
                 .Where(x => x.IsActive && x.StartDate <= today && x.EndDate > today)
                 .ToList();
+
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                var mappingRepo = _unitofwork.GetRepository<OfferStoreMapping>();
+                var validOfferIds = mappingRepo.Query()
+                    .Where(m => m.TenantId == tenantId)
+                    .Select(m => m.OfferId)
+                    .ToList();
+
+                offers = offers.Where(o => validOfferIds.Contains(o.Id)).ToList();
+            }
 
             foreach (var offer in offers)
             {

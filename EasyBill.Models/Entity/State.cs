@@ -16,6 +16,7 @@ namespace EasyBill.Models.Entity
         public int CountryId { get; set; }
         [ForeignKey(nameof(CountryId))]
         public Country Country { get; set; }
+        public string? Zone { get; set; }
 
     }
 }

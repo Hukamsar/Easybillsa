@@ -1,4 +1,4 @@
-﻿using AOne.Utility.Enums;
+using AOne.Utility.Enums;
 using EasyBill.Models.Entity;
 using System;
 using System.Collections.Generic;
@@ -33,6 +33,8 @@ namespace EasyBill.Models.ViewModels
         public int? CompanyId { get; set; }
         public int? CategoryId { get; set; }
         public int? ItemId { get; set; }
+        public int? BuyQty { get; set; }
+        public int? FreeQty { get; set; }
         public List<OfferItemVM> OfferItems { get; set; }
     }
 }

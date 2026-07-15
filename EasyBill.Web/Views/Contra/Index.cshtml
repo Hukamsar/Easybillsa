@@ -1,0 +1,111 @@
+@using EasyBill.Models.Entity
+@model IEnumerable<Contra>
+
+@{
+    ViewData["Title"] = "Contra Voucher Details";
+}
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+    }
+</style>
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Contra Voucher Details
+    </div>
+</div>
+<p>
+    <a asp-action="Create" class="btn btn-sm btn-primary btnBright-Sky-Blue mb-1 float-end"> <i class="bi bi-plus-circle"></i> Add </a>
+</p>
+<table class="table table-bordered table-striped">
+    <thead class="custom-header">
+        <tr>
+            <th>
+                Voucher No
+            </th>
+            <th>
+                Date
+            </th>
+            <th>
+                Category
+            </th>
+            <th>
+                Cash & Bank
+            </th>
+            <th>
+                Bank Account
+            </th>
+            <th>
+                Amount
+            </th>
+            <th>
+                Attachments
+            </th>
+            <th>
+                Description
+            </th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.VouncherNo)
+                </td>
+                <td>
+                    @(item.Date.HasValue ? item.Date.Value.ToString("yyyy-MM-dd") : "")
+                </td>
+                <td>
+                    @item.Category
+                </td>
+                <td>
+                    @item.CashAndBank
+                </td>
+                <td>
+                    @(item.Bank != null ? item.Bank.BankName : "-")
+                </td>
+                <td>
+                    @item.Amount
+                </td>
+                <td>
+                    @if (!string.IsNullOrEmpty(item.Attachments))
+                    {
+                        <a href="~/docs/Contra/@item.Attachments" target="_blank">@item.Attachments</a>
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Description)
+                </td>
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="Contra" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="Contra" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

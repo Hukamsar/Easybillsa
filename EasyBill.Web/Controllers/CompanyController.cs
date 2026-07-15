@@ -1,10 +1,12 @@
-﻿using AOne.DataAccess.ProfileService;
+using AOne.DataAccess.ProfileService;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
+using EasyBill.UI.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EasyBill.UI.Controllers
 {
+    [HeadOfficeOnly]
     public class CompanyController : Controller
     {
         private readonly ICompanyRepository _companyservice;

@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.ProfileService;
+using AOne.DataAccess.ProfileService;
 using ClosedXML.Excel;
 using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
@@ -697,7 +697,11 @@ namespace EasyBill.UI.Controllers
             if (!match.Success)
                 return "SR0001";
 
-            int number = int.Parse(match.Value);
+            if (!long.TryParse(match.Value, out long number))
+            {
+                return "SR0001";
+            }
+
             string prefix = lastCode[..match.Index];
             string suffix = lastCode[(match.Index + match.Length)..];
 

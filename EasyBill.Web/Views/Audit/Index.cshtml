@@ -1,0 +1,70 @@
+@model IEnumerable<EasyBill.Models.Entity.AuditLog>
+
+@{
+    ViewData["Title"] = "Audit Log";
+    var isSuperAdmin = User.IsInRole("SuperAdmin");
+}
+
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+    }
+</style>
+
+<div class="card mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Audit Log
+    </div>
+</div>
+
+<div class="table-responsive p-2 bg-white rounded shadow-sm">
+    <table id="auditLogTable" class="table table-bordered table-striped w-100">
+        <thead class="custom-header">
+            <tr>
+                <th>Username</th>
+                @if (isSuperAdmin)
+                {
+                    <th>Company/Tenant</th>
+                }
+                <th>Controller</th>
+                <th>Action</th>
+                <th>Description</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var log in Model)
+            {
+                <tr>
+                    <td>@log.Username</td>
+                    @if (isSuperAdmin)
+                    {
+                        <td>@(log.Tenant?.Name ?? "System / SuperAdmin")</td>
+                    }
+                    <td>@log.ControllerName</td>
+                    <td>@log.ActionName</td>
+                    <td>@log.Description</td>
+                    <td>@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#auditLogTable').DataTable({
+                "order": [[ @(isSuperAdmin ? 5 : 4), "desc" ]],
+                "pageLength": 25
+            });
+        });
+    </script>
+}

@@ -1,10 +1,11 @@
-﻿using AOne.Models.Entity;
+using AOne.Models.Entity;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using EasyBill.UI.Filters;
 
 namespace EasyBill.UI.Controllers.API
 {
@@ -39,6 +40,7 @@ namespace EasyBill.UI.Controllers.API
         }
 
         [HttpPost("create")]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create([FromBody] SubCategoryVM vm)
         {
             if (vm == null) return BadRequest("Invalid data.");
@@ -70,6 +72,7 @@ namespace EasyBill.UI.Controllers.API
         }
 
         [HttpPut("edit/{id}")]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(int id, [FromBody] SubCategoryVM vm)
         {
             if (vm == null) return BadRequest("Invalid data.");
@@ -85,6 +88,7 @@ namespace EasyBill.UI.Controllers.API
         }
 
         [HttpDelete("delete/{id}")]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             if (id <= 0) return BadRequest(new { success = false, message = "Invalid Id for deletion." });

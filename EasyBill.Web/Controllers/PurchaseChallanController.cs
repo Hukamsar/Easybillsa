@@ -1,4 +1,4 @@
-﻿using EasyBill.DataAccess.Repository;
+using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using EasyBill.Models.ViewModels;
@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using EasyBill.UI.Filters;
 
 namespace EasyBill.UI.Controllers
 {
@@ -194,6 +195,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create(PurchaseChallanVM VM)
         {
             NormalizeCollections(VM);
@@ -245,6 +247,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(PurchaseChallanVM VM)
         {
             NormalizeCollections(VM);
@@ -634,7 +637,11 @@ namespace EasyBill.UI.Controllers
                 return null;
             }
 
-            return int.Parse(match.Value);
+            if (int.TryParse(match.Value, out int number))
+            {
+                return number;
+            }
+            return null;
         }
     }
 }

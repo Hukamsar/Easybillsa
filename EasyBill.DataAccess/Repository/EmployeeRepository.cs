@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.Repository.IRepository;
+using AOne.DataAccess.Repository.IRepository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +22,11 @@ namespace EasyBill.DataAccess.Repository
             try
             {
                 var repository = _unitofwork.GetRepository<Employee>();
-                IList<Employee> results = await repository.Query().Include(x => x.Designation).Include(x => x.Departments).ToListAsync();
+                IList<Employee> results = await repository.Query()
+                    .Where(x => !x.IsHoAdmin)
+                    .Include(x => x.Designation)
+                    .Include(x => x.Departments)
+                    .ToListAsync();
                 return results;
             }
             catch (Exception ex)

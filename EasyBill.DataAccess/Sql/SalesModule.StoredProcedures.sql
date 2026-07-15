@@ -1,3 +1,9 @@
+IF COL_LENGTH(N'dbo.Saless', N'Remarks') IS NULL
+BEGIN
+    ALTER TABLE dbo.Saless ADD Remarks NVARCHAR(MAX) NULL;
+END
+GO
+
 IF TYPE_ID(N'dbo.SalesItemTvp') IS NULL
 BEGIN
     EXEC(N'
@@ -72,6 +78,7 @@ ALTER PROCEDURE dbo.usp_Sales_Save
     @RoundOffAmount DECIMAL(18,2),
     @TotalCessAmount DECIMAL(18,2),
     @PaymentStatus NVARCHAR(MAX) = NULL,
+    @Remarks NVARCHAR(MAX) = NULL,
     @SalesItems dbo.SalesItemTvp READONLY,
     @PaymentDetails dbo.SalesPaymentDetailTvp READONLY,
     @TenantId NVARCHAR(450) = NULL,
@@ -116,6 +123,7 @@ BEGIN
                 RoundOffAmount,
                 TotalCessAmount,
                 PaymentStatus,
+                Remarks,
                 TenantId,
                 Created,
                 CreatedBy
@@ -147,6 +155,7 @@ BEGIN
                 @RoundOffAmount,
                 @TotalCessAmount,
                 @PaymentStatus,
+                @Remarks,
                 @TenantId,
                 @Now,
                 @UserId
@@ -183,6 +192,7 @@ BEGIN
                 RoundOffAmount = @RoundOffAmount,
                 TotalCessAmount = @TotalCessAmount,
                 PaymentStatus = @PaymentStatus,
+                Remarks = @Remarks,
                 TenantId = COALESCE(s.TenantId, @TenantId),
                 LastModified = @Now,
                 LastModifiedBy = @UserId
@@ -458,6 +468,7 @@ BEGIN
         s.RoundOffAmount,
         s.TotalCessAmount,
         s.PaymentStatus,
+        s.Remarks,
         s.TenantId,
         s.Created,
         s.CreatedBy,
@@ -623,6 +634,7 @@ BEGIN
         s.RoundOffAmount,
         s.TotalCessAmount,
         s.PaymentStatus,
+        s.Remarks,
         s.TenantId,
         s.Created,
         s.CreatedBy,
@@ -785,6 +797,7 @@ BEGIN
         s.RoundOffAmount,
         s.TotalCessAmount,
         s.PaymentStatus,
+        s.Remarks,
         s.TenantId,
         s.Created,
         s.CreatedBy,

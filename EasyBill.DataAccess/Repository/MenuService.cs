@@ -57,19 +57,88 @@ namespace AOne.DataAccess.Repository
                     _allowedFeatures.Add("Master");
                     _allowedFeatures.Add("Master.Settings");
                     _allowedFeatures.Add("Master.Staff");
+                    _allowedFeatures.Add("Books");
+                    _allowedFeatures.Add("Contra");
+
+                    bool hasParent = !string.IsNullOrEmpty(tenant.ParentTenantId);
+                    HashSet<string> parentAllowedFeatures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    if (hasParent)
+                    {
+                        var parentTenant = await context.Tenants
+                            .FirstOrDefaultAsync(t => t.Id == tenant.ParentTenantId);
+                        if (parentTenant != null)
+                        {
+                            if (!string.IsNullOrEmpty(parentTenant.AllowedModulesJson))
+                            {
+                                try
+                                {
+                                    var parentKeys = JsonConvert.DeserializeObject<List<string>>(parentTenant.AllowedModulesJson);
+                                    if (parentKeys != null)
+                                    {
+                                        foreach (var pk in parentKeys) parentAllowedFeatures.Add(pk);
+                                    }
+                                }
+                                catch { }
+                            }
+                            else if (parentTenant.SubscriptionPlanId.HasValue)
+                            {
+                                var planFeatures = await context.PlanFeatures
+                                    .Include(pf => pf.Feature)
+                                    .Where(pf => pf.PlanId == parentTenant.SubscriptionPlanId.Value && pf.Feature != null && pf.Feature.IsActive)
+                                    .Select(pf => pf.Feature!.FeatureKey)
+                                    .ToListAsync();
+
+                                foreach (var pf in planFeatures) parentAllowedFeatures.Add(pf);
+                            }
+                        }
+                    }
 
                     if (!string.IsNullOrEmpty(tenant.AllowedModulesJson))
                     {
                         try
                         {
                             var keys = JsonConvert.DeserializeObject<List<string>>(tenant.AllowedModulesJson);
-                            if (keys != null)
+                            if (keys != null && keys.Count > 0)
                             {
-                                foreach (var k in keys) _allowedFeatures.Add(k);
+                                foreach (var k in keys)
+                                {
+                                    if (hasParent)
+                                    {
+                                        if (k.Equals("Master.Area", StringComparison.OrdinalIgnoreCase) ||
+                                            k.Equals("Master.Offers", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            continue;
+                                        }
+
+                                        if (parentAllowedFeatures.Contains(k))
+                                        {
+                                            _allowedFeatures.Add(k);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        _allowedFeatures.Add(k);
+                                    }
+                                }
                                 return;
                             }
                         }
                         catch { }
+                    }
+
+                    if (hasParent)
+                    {
+                        foreach (var pk in parentAllowedFeatures)
+                        {
+                            if (pk.Equals("Master.Area", StringComparison.OrdinalIgnoreCase) ||
+                                pk.Equals("Master.Offers", StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+                            _allowedFeatures.Add(pk);
+                        }
+                        return;
                     }
 
                     if (tenant.SubscriptionPlanId.HasValue)
@@ -97,8 +166,17 @@ namespace AOne.DataAccess.Repository
 
         private async Task<List<PermissionModel>> GetAllPermissions(IdentityRole role)
         {
-
             _assignedClaims = await _roleManager.GetClaimsAsync(role);
+
+            // Fallback: If a branch-specific Admin role has no claims, inherit from the global Admin role.
+            if (!_assignedClaims.Any() && role.Name != null && role.Name.EndsWith("_Admin"))
+            {
+                var globalAdminRole = await _roleManager.FindByNameAsync("Admin");
+                if (globalAdminRole != null)
+                {
+                    _assignedClaims = await _roleManager.GetClaimsAsync(globalAdminRole);
+                }
+            }
 
             foreach (var permission in _assignedClaims)
             {
@@ -320,6 +398,16 @@ namespace AOne.DataAccess.Repository
                         {
                             Title = "Supplier",
                             ControllerName = "Supplier",
+                            ActionName = "Index",
+                            PageStatus = PageStatus.Completed,
+                        });
+                    }
+                    if (IsExist("Permissions.Bank.View", role))
+                    {
+                        ledgerSubMen1u.SubItems.Add(new MenuSectionSubItemModel
+                        {
+                            Title = "Bank",
+                            ControllerName = "Bank",
                             ActionName = "Index",
                             PageStatus = PageStatus.Completed,
                         });
@@ -1090,6 +1178,7 @@ namespace AOne.DataAccess.Repository
                     });
 
                 }
+                
 
                 if (IsExist("Permissions.PurchaseChallan.View", role) && IsFeatureAllowed("Purchase.Challan", role))
                 {
@@ -1181,9 +1270,11 @@ namespace AOne.DataAccess.Repository
             //}
             //_features.Add(Stock);
             if ((IsExist("Permissions.PaymentVoucherCategory.View", role)
-             || IsExist("Permissions.PaymentVoucher.View", role)
-             || IsExist("Permissions.ReceiveVoucher.View", role))
-             && (IsFeatureAllowed("PaymentVoucher", role) || IsFeatureAllowed("ReceiveVoucher", role)))
+              || IsExist("Permissions.PaymentVoucher.View", role)
+              || IsExist("Permissions.ReceiveVoucher.View", role)
+              || IsExist("Permissions.Bank.View", role)
+              || IsExist("Permissions.Contra.View", role))
+              && (IsFeatureAllowed("PaymentVoucher", role) || IsFeatureAllowed("ReceiveVoucher", role) || IsFeatureAllowed("Contra", role)))
             {
                 MenuSectionModel PaymentVoucher = new MenuSectionModel();
                 PaymentVoucher.Title = "";
@@ -1192,7 +1283,7 @@ namespace AOne.DataAccess.Repository
                 var paymentvoucherSubMenu = new MenuSectionItemModel()
                 {
                     IsParent = true,
-                    Title = "Payment Voucher",
+                    Title = "Accounts",
                     MenuItems = new List<MenuSectionSubItemModel>()
                 };
 
@@ -1201,7 +1292,7 @@ namespace AOne.DataAccess.Repository
                 { 
                     paymentvoucherSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
                     {
-                        Title = "Payment Voucher Category",
+                        Title = "Voucher Category",
                         ControllerName = "PaymentVoucherCategory",
                         ActionName = "Index",
                         PageStatus = PageStatus.Completed
@@ -1229,27 +1320,32 @@ namespace AOne.DataAccess.Repository
                    });
                      
                 }
+                if (IsExist("Permissions.Bank.View", role))
+                {
+                   paymentvoucherSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
+                   {
+                       Title = "Bank Reconciliation",
+                       ControllerName = "BankReconciliation",
+                       ActionName = "Index",
+                       PageStatus = PageStatus.Completed
+                   });
+                }
+                if (IsExist("Permissions.Contra.View", role) && IsFeatureAllowed("Contra", role))
+                {
+
+                    paymentvoucherSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
+                    {
+                        Title = "Contra",
+                        ControllerName = "Contra",
+                        ActionName = "Index",
+                        PageStatus = PageStatus.Completed
+                    });
+
+                }
                 _features.Add(PaymentVoucher);
             }
 
-            if (IsExist("Permissions.Sales.View", role) && IsFeatureAllowed("Sales", role))
-            {
-                MenuSectionModel SalesBook = new MenuSectionModel
-                {
-                    Title = "",
-                    SectionItems = new List<MenuSectionItemModel>
-                    {
-                        new MenuSectionItemModel
-                        {
-                            Title = "Sales Book",
-                            ControllerName = "Sales",
-                            ActionName = "SalesBook",
-                            PageStatus = PageStatus.Completed
-                        }
-                    }
-                };
-                _features.Add(SalesBook);
-            }
+         
             if (IsExist("Permissions.Sales.View", role) && IsFeatureAllowed("Reports", role))
             {
                 MenuSectionModel Sales = new MenuSectionModel
@@ -1268,6 +1364,85 @@ namespace AOne.DataAccess.Repository
                 };
                 _features.Add(Sales);
             }
+
+
+            if ((IsExist("Permissions.CashBook.View", role)
+             || IsExist("Permissions.BankBook.View", role)
+             || IsExist("Permissions.DayBook.View", role)
+             || IsExist("Permissions.SalesBook.View", role)
+             || IsExist("Permissions.PurchaseBook.View", role)) && IsFeatureAllowed("Books", role))
+            {
+                MenuSectionModel Books = new MenuSectionModel();
+                Books.Title = "";
+                Books.SectionItems = new List<MenuSectionItemModel>();
+
+                var BooksSubMenu = new MenuSectionItemModel()
+                {
+                    IsParent = true,
+                    Title = "Books",
+                    MenuItems = new List<MenuSectionSubItemModel>()
+                };
+
+                Books.SectionItems.Add(BooksSubMenu);
+                if (IsExist("Permissions.CashBook.View", role))
+                {
+                    BooksSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
+                    {
+                        Title = "Cash Book",
+                        ControllerName = "CashBook",
+                        ActionName = "Index",
+                        PageStatus = PageStatus.Completed
+                    });
+                }
+                if (IsExist("Permissions.BankBook.View", role))
+                {
+                    BooksSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
+                    {
+                        Title = "Bank Book",
+                        ControllerName = "BankBook",
+                        ActionName = "Index",
+                        PageStatus = PageStatus.Completed
+                    });
+                }
+                if (IsExist("Permissions.DayBook.View", role))
+                {
+
+                    BooksSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
+                    {
+                        Title = "Day Book",
+                        ControllerName = "DayBook",
+                        ActionName = "Index",
+                        PageStatus = PageStatus.Completed
+                    });
+
+                }
+                if (IsExist("Permissions.SalesBook.View", role))
+                {
+
+                    BooksSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
+                    {
+                        Title = "Sales Book",
+                        ControllerName = "Sales",
+                        ActionName = "SalesBook",
+                        PageStatus = PageStatus.Completed
+                    });
+
+                }
+                if (IsExist("Permissions.PurchaseBook.View", role))
+                {
+
+                    BooksSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
+                    {
+                        Title = "Purchase Book",
+                        ControllerName = "Purchase",
+                        ActionName = "PurchaseBook",
+                        PageStatus = PageStatus.Completed
+                    });
+
+                }
+                _features.Add(Books);
+            }
+
 
 
             if ((IsExist("Permissions.Sales.View", role)
@@ -1792,22 +1967,38 @@ namespace AOne.DataAccess.Repository
                 _features.Add(Wallet);
             }
 
-            // MERGED FROM TL: Item Backup menu registration
-            MenuSectionModel ItemBackup = new MenuSectionModel
+            MenuSectionModel Restore = new MenuSectionModel();
+            Restore.Title = "";
+            Restore.SectionItems = new List<MenuSectionItemModel>();
+
+            var RestoreSubMenu = new MenuSectionItemModel()
             {
-                Title = "",
-                SectionItems = new List<MenuSectionItemModel>
-                    {
-                        new MenuSectionItemModel
-                        {
-                            Title = "Item Backup",
-                            ControllerName = "ItemMaster",
-                            ActionName = "RestoreItem",
-                            PageStatus = PageStatus.Completed
-                        }
-                    }
+                IsParent = true,
+                Title = "Restore",
+                MenuItems = new List<MenuSectionSubItemModel>()
             };
-            _features.Add(ItemBackup);
+
+            Restore.SectionItems.Add(RestoreSubMenu);
+
+            RestoreSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
+            {
+                Title = "Item Master",
+                ControllerName = "ItemMaster",
+                ActionName = "RestoreItem",
+                PageStatus = PageStatus.Completed
+            });
+
+            RestoreSubMenu.MenuItems.Add(new MenuSectionSubItemModel()
+            {
+                Title = "Sales ",
+                ControllerName = "Sales",
+                ActionName = "RestoreSales",
+                PageStatus = PageStatus.Completed
+            });
+
+
+
+            _features.Add(Restore);
 
             //MenuSectionModel Management = new MenuSectionModel();
             //Management.Title = "";
@@ -1914,6 +2105,40 @@ namespace AOne.DataAccess.Repository
             //}
             //_features.Add(Management);
 
+            if (string.Equals(role, "SuperAdmin", StringComparison.OrdinalIgnoreCase) || string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                MenuSectionModel AuditLogMenu = new MenuSectionModel
+                {
+                    Title = "",
+                    SectionItems = new List<MenuSectionItemModel>
+                    {
+                        new MenuSectionItemModel
+                        {
+                            Title = "Audit Log",
+                            ControllerName = "Audit",
+                            ActionName = "Index",
+                            PageStatus = PageStatus.Completed
+                        }
+                    }
+                };
+                _features.Add(AuditLogMenu);
+
+                MenuSectionModel DatabaseBackupMenu = new MenuSectionModel
+                {
+                    Title = "",
+                    SectionItems = new List<MenuSectionItemModel>
+                    {
+                        new MenuSectionItemModel
+                        {
+                            Title = "Database Backup",
+                            ControllerName = "Backup",
+                            ActionName = "Index",
+                            PageStatus = PageStatus.Completed
+                        }
+                    }
+                };
+                _features.Add(DatabaseBackupMenu);
+            }
 
             return _features;
         }

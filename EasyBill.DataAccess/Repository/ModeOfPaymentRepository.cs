@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.Repository.IRepository;
+using AOne.DataAccess.Repository.IRepository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using Microsoft.EntityFrameworkCore;
@@ -59,7 +59,7 @@ namespace EasyBill.DataAccess.Repository
             try
             {
                 var repository = _unitofwork.GetRepository<ModeOfPayment>();
-                IList<ModeOfPayment> results = await repository.Query().ToListAsync();
+                IList<ModeOfPayment> results = await repository.Query().Include(x => x.Bank).ToListAsync();
                 return results;
             }
             catch (Exception ex)
@@ -73,7 +73,7 @@ namespace EasyBill.DataAccess.Repository
             try
             {
                 var repository = _unitofwork.GetRepository<ModeOfPayment>();
-                var result = await repository.Query().Where(l => l.Id == Id).FirstOrDefaultAsync();
+                var result = await repository.Query().Include(x => x.Bank).Where(l => l.Id == Id).FirstOrDefaultAsync();
                 return result;
             }
             catch (Exception ex)

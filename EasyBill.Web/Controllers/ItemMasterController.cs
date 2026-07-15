@@ -7,9 +7,11 @@ using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using EasyBill.UI.Service.ExcelService;
+using EasyBill.UI.Filters;
 using Humanizer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using OfficeOpenXml;
 using System.Data;
 using System.Security.Claims;
@@ -73,9 +75,14 @@ namespace EasyBill.UI.Controllers
             ViewBag.TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
             ViewBag.Search = search;
 
+            var tenantId = User?.FindFirst("TenantId")?.Value;
+            var tenant = await _tenantRepository.GetById(tenantId);
+            ViewBag.IsHeadOffice = User.IsInRole("SuperAdmin") || string.IsNullOrEmpty(tenant?.ParentTenantId);
+
             return View(paginatedData);
         }
         [HttpGet]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create()
         {
 
@@ -139,6 +146,7 @@ namespace EasyBill.UI.Controllers
             return View(viewModel);
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create(ItemMasterVM itemMasterVM)
         {
             if (!ModelState.IsValid)
@@ -189,6 +197,8 @@ namespace EasyBill.UI.Controllers
 
                 await _itemmasterrepository.Create(model);
                 await SaveItemImagesAsync(model.Id, itemMasterVM.Images, itemMasterVM.PrimaryIndex);
+                // Remove ItemMaster cache
+                _itemmasterrepository.ClearItemMasterCache();
 
                 TempData["success"] = "Item created successfully";
             }
@@ -196,6 +206,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpGet]
+        [HeadOfficeOnly]
         public async Task<IActionResult> QuickCreateFromImport(
             string? rowKey,
             string? itemName,
@@ -242,6 +253,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> QuickCreateFromImport(QuickCreateItemFromImportVM vm)
         {
             vm.Name = vm.Name?.Trim() ?? string.Empty;
@@ -370,6 +382,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpGet]
+        [HeadOfficeOnly]
         public async Task<IActionResult> LoadItemMasterPartial()
         {
             await PopulateEmbeddedItemMasterLookupsAsync();
@@ -384,6 +397,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpGet]
+        [HeadOfficeOnly]
         public async Task<IActionResult> LoadItemMasterEditPartial(int id)
         {
             var model = await _itemmasterrepository.GetByItemMasterId(id);
@@ -397,6 +411,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> CreateItemFromSales([FromForm] ItemMasterVM vm)
         {
             if (vm == null)
@@ -424,6 +439,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> UpdateItemFromSales([FromForm] ItemMasterVM vm)
         {
             if (vm == null)
@@ -1059,6 +1075,7 @@ namespace EasyBill.UI.Controllers
             return Json(hsn);
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> CreateCategory(CategoryMasterVM model)
         {
             if (model == null || string.IsNullOrWhiteSpace(model.CategoryName))
@@ -1094,6 +1111,7 @@ namespace EasyBill.UI.Controllers
             });
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> CreateSubCategory(SubCategoryVM vm)
         {
             if (!ModelState.IsValid)
@@ -1140,6 +1158,7 @@ namespace EasyBill.UI.Controllers
             return Json(new { success = false, message = "Failed to create subcategory." });
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> CreateDivision(DivisionVM Vm)
         {
             if (Vm.CompanyId == 0)
@@ -1191,6 +1210,7 @@ namespace EasyBill.UI.Controllers
             }
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> CreateHsn(HSNVM vm)
         {
             // Sales Item Master popup does not show HSN Type, so default it before validation.
@@ -1253,6 +1273,7 @@ namespace EasyBill.UI.Controllers
             }
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> CreateCompany(CompanyVM vm)
         {
             if (vm == null || string.IsNullOrWhiteSpace(vm.Name))
@@ -1327,6 +1348,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpGet]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(int id)
         {
             var tenantId = User?.FindFirst("TenantId")?.Value;
@@ -1413,6 +1435,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(ItemMasterVM VM)
         {
             if (!ModelState.IsValid)
@@ -1471,6 +1494,7 @@ namespace EasyBill.UI.Controllers
             model.ConversionFactor = VM.ConversionFactor;
 
             await _itemmasterrepository.Update(model);
+            _itemmasterrepository.ClearItemMasterCache();
 
             // Primary Image Update karo (existing images mein se)
             if (VM.PrimaryImageId.HasValue && VM.PrimaryImageId.Value > 0)
@@ -1558,6 +1582,7 @@ namespace EasyBill.UI.Controllers
 
                 if (newImages.Any())
                     await _itemimagerepository.AddRange(newImages);
+                _itemmasterrepository.ClearItemMasterCache();
             }
 
             return Json(new
@@ -1568,6 +1593,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -1636,12 +1662,11 @@ namespace EasyBill.UI.Controllers
                         // ItemMaster delete fix: ignore missing/locked folder and continue delete.
                     }
 
-                    // ✅ 4. DB se ItemImage records delete karo
                     await _itemimagerepository.DeleteByItemId(id);
                 }
 
-                // ✅ 5. Item delete karo
                 await _itemmasterrepository.Delete(model);
+                _itemmasterrepository.ClearItemMasterCache();
 
                 return Json(new { success = true, message = "Item deleted successfully." });
             }
@@ -1650,7 +1675,10 @@ namespace EasyBill.UI.Controllers
                 return Json(new { success = false, message = $"An error occurred: {ex.Message}" });
             }
         }
+
+
         [HttpGet]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Import()
         {
             return View();
@@ -1698,6 +1726,7 @@ namespace EasyBill.UI.Controllers
         }
         
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> ImportItemMaster(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -1741,6 +1770,73 @@ namespace EasyBill.UI.Controllers
 
 
             var itemVMList = await _excelService.ImportAsync<ItemMasterVM>(stream.ToArray(), columnMap);
+
+            // Preload existing data from database for high-performance in-memory processing
+            var allItems = await _itemmasterrepository.GetAll();
+            var existingCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in allItems)
+            {
+                if (item.Code != null)
+                {
+                    existingCodes.Add(item.Code.Trim());
+                }
+            }
+
+            var categories = new Dictionary<string, CategoryMaster>(StringComparer.OrdinalIgnoreCase);
+            foreach (var cat in await _categoryservice.GetAll())
+            {
+                if (cat.CategoryName != null)
+                {
+                    categories[cat.CategoryName.Trim()] = cat;
+                }
+            }
+
+            var subCategories = new Dictionary<int, Dictionary<string, SubCategory>>();
+            foreach (var sub in await _subCategoryservice.GetAll())
+            {
+                if (sub.Name != null)
+                {
+                    if (!subCategories.TryGetValue(sub.CategoryId, out var catSubs))
+                    {
+                        catSubs = new Dictionary<string, SubCategory>(StringComparer.OrdinalIgnoreCase);
+                        subCategories[sub.CategoryId] = catSubs;
+                    }
+                    catSubs[sub.Name.Trim()] = sub;
+                }
+            }
+
+            var hsns = new Dictionary<string, Hsn>(StringComparer.OrdinalIgnoreCase);
+            foreach (var hsn in await _Hsnservice.GetAll())
+            {
+                if (hsn.HsnCode != null)
+                {
+                    hsns[hsn.HsnCode.Trim()] = hsn;
+                }
+            }
+
+            var companies = new Dictionary<string, Company>(StringComparer.OrdinalIgnoreCase);
+            foreach (var comp in await _companyservice.GetAll())
+            {
+                if (comp.Name != null)
+                {
+                    companies[comp.Name.Trim()] = comp;
+                }
+            }
+
+            var divisions = new Dictionary<int, Dictionary<string, Division>>();
+            foreach (var div in await _divisionservice.GetAll())
+            {
+                if (div.Name != null)
+                {
+                    if (!divisions.TryGetValue(div.CompanyId, out var compDivs))
+                    {
+                        compDivs = new Dictionary<string, Division>(StringComparer.OrdinalIgnoreCase);
+                        divisions[div.CompanyId] = compDivs;
+                    }
+                    compDivs[div.Name.Trim()] = div;
+                }
+            }
+
             var validItems = new List<ItemMaster>();
             var errors = new List<string>();
             var duplicateCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1765,91 +1861,116 @@ namespace EasyBill.UI.Controllers
                 }
 
                 // Duplicate Code Check
-                if (!duplicateCodes.Add(vm.Code))
+                if (!string.IsNullOrWhiteSpace(vm.Code))
                 {
-                    isValid = false;
-                    error += "Duplicate Code in Excel. ";
+                    string codeTrimmed = vm.Code.Trim();
+                    if (!duplicateCodes.Add(codeTrimmed))
+                    {
+                        isValid = false;
+                        error += "Duplicate Code in Excel. ";
+                    }
+
+                    if (existingCodes.Contains(codeTrimmed))
+                    {
+                        isValid = false;
+                        error += "Code already exists in database. ";
+                    }
                 }
 
-                if (await _itemmasterrepository.ExistsByCode(vm.Code))
+                if (isValid)
                 {
-                    isValid = false;
-                    error += "Code already exists in database. ";
-                }
+                    // Lookups and on-the-fly creations using preloaded dictionaries to avoid repeated DB hits
+                    CategoryMaster? category = null;
+                    if (!string.IsNullOrWhiteSpace(vm.CategoryName))
+                    {
+                        string catName = vm.CategoryName.Trim();
+                        if (!categories.TryGetValue(catName, out category))
+                        {
+                            var model = new CategoryMaster { CategoryName = catName };
+                            category = await _categoryservice.Create(model);
+                            categories[catName] = category;
+                        }
+                        vm.CategoryId = category.Id;
+                    }
 
-                // Validate related master data
-                vm.CategoryId = (await _categoryservice.GetByName(vm.CategoryName))?.Id;
-               // vm.SubCategoryId = (await _subCategoryservice.GetByName(vm.SubCategoryname))?.Id;
-                vm.DivisionId = (await _divisionservice.GetByName(vm.DivisionName))?.Id;
-                vm.HsnId = (await _Hsnservice.GetByCode(vm.HsnCode))?.Id;
-                vm.CompanyId = (await _companyservice.GetByName(vm.Companyname))?.Id;
+                    if (vm.CategoryId != null && !string.IsNullOrWhiteSpace(vm.SubCategoryname))
+                    {
+                        int catId = vm.CategoryId.Value;
+                        string subName = vm.SubCategoryname.Trim();
+                        if (!subCategories.TryGetValue(catId, out var catSubs))
+                        {
+                            catSubs = new Dictionary<string, SubCategory>(StringComparer.OrdinalIgnoreCase);
+                            subCategories[catId] = catSubs;
+                        }
 
-                if (vm.CategoryId == null && !string.IsNullOrEmpty(vm.CategoryName) )
-                { 
-                    var model = new CategoryMaster
-                    {
-                        CategoryName = vm.CategoryName
-                    };
-                   var result = await _categoryservice.Create(model);
-                   vm.CategoryId = result.Id;
-                }
-                if (!string.IsNullOrEmpty(vm.SubCategoryname) && vm.CategoryId != null)
-                {
-                    var subCategory = await _subCategoryservice
-                        .GetByNameAndCategory(vm.SubCategoryname, (int)vm.CategoryId);
+                        if (!catSubs.TryGetValue(subName, out var subCategory))
+                        {
+                            var subcategorymodel = new SubCategory
+                            {
+                                Name = subName,
+                                CategoryId = catId
+                            };
+                            subCategory = await _subCategoryservice.Create(subcategorymodel);
+                            catSubs[subName] = subCategory;
+                        }
+                        vm.SubCategoryId = subCategory.Id;
+                    }
 
-                    vm.SubCategoryId = subCategory?.Id;
-                }
-                if (vm.SubCategoryId == null && vm.CategoryId != null && !string.IsNullOrEmpty(vm.SubCategoryname))
-                {
-                    var subcategorymodel = new SubCategory
+                    if (!string.IsNullOrWhiteSpace(vm.HsnCode))
                     {
-                        Name = vm.SubCategoryname,
-                        CategoryId = (int)vm.CategoryId
-                    };
+                        string hsnCode = vm.HsnCode.Trim();
+                        if (!hsns.TryGetValue(hsnCode, out var hsn))
+                        {
+                            var hsnmodel = new Hsn
+                            {
+                                HsnCode = hsnCode,
+                                CGST = vm.CGST,
+                                SGST = vm.SGST,
+                                IGST = vm.IGST,
+                                Cess = vm.Cess
+                            };
+                            hsn = await _Hsnservice.Create(hsnmodel);
+                            hsns[hsnCode] = hsn;
+                        }
+                        vm.HsnId = hsn.Id;
+                    }
 
-                    var subcategoryresult = await _subCategoryservice.Create(subcategorymodel);
-                    vm.SubCategoryId = subcategoryresult.Id;
-                }
-                
-                if (vm.HsnId == null && !string.IsNullOrEmpty(vm.HsnCode))
-                { 
-                    var hsnmodel = new Hsn
+                    Company? company = null;
+                    if (!string.IsNullOrWhiteSpace(vm.Companyname))
                     {
-                        HsnCode = vm.HsnCode,
-                        CGST = vm.CGST,
-                        SGST = vm.SGST,
-                        IGST = vm.IGST,
-                        Cess = vm.Cess
-                    };
-                    var hsnresult = await _Hsnservice.Create(hsnmodel);
-                    vm.HsnId = hsnresult.Id;
-                }
-                if (vm.CompanyId == null && !string.IsNullOrEmpty(vm.Companyname))
-                { 
-                    var companymodel = new Company
+                        string compName = vm.Companyname.Trim();
+                        if (!companies.TryGetValue(compName, out company))
+                        {
+                            var companymodel = new Company { Name = compName };
+                            company = await _companyservice.Create(companymodel);
+                            companies[compName] = company;
+                        }
+                        vm.CompanyId = company.Id;
+                    }
+
+                    if (vm.CompanyId != null && !string.IsNullOrWhiteSpace(vm.DivisionName))
                     {
-                        Name = vm.Companyname
-                    };
-                    var companyresult = await _companyservice.Create(companymodel);
-                    vm.CompanyId = companyresult.Id;
-                }
-                if (vm.DivisionId == null && vm.CompanyId != null && !string.IsNullOrEmpty(vm.DivisionName))
-                { 
-                    var divisionmodel = new Division
-                    {
-                        Name = vm.DivisionName,
-                        CompanyId = (int)vm.CompanyId
-                    };
-                    var divisionresult = await _divisionservice.Create(divisionmodel);
-                    vm.DivisionId = divisionresult.Id;
-                }
-                if (!isValid)
-                {
-                    errors.Add(error);
-                }
-                else
-                {
+                        int compId = vm.CompanyId.Value;
+                        string divName = vm.DivisionName.Trim();
+                        if (!divisions.TryGetValue(compId, out var compDivs))
+                        {
+                            compDivs = new Dictionary<string, Division>(StringComparer.OrdinalIgnoreCase);
+                            divisions[compId] = compDivs;
+                        }
+
+                        if (!compDivs.TryGetValue(divName, out var division))
+                        {
+                            var divisionmodel = new Division
+                            {
+                                Name = divName,
+                                CompanyId = compId
+                            };
+                            division = await _divisionservice.Create(divisionmodel);
+                            compDivs[divName] = division;
+                        }
+                        vm.DivisionId = division.Id;
+                    }
+
                     validItems.Add(new ItemMaster
                     {
                         Name = vm.Name?.Trim(),
@@ -1871,21 +1992,21 @@ namespace EasyBill.UI.Controllers
                         MaximumQty = vm.MaximumQty,
 
                         ShelfLife = vm.ShelfLife,
-                        ShelfLifeUnit = string.IsNullOrWhiteSpace(vm.ShelfLifeUnit)
-                        ? "Days"
-                        : vm.ShelfLifeUnit,
+                        ShelfLifeUnit = string.IsNullOrWhiteSpace(vm.ShelfLifeUnit) ? "Days" : vm.ShelfLifeUnit,
 
-                        // 🔥 VERY IMPORTANT (DB REQUIRED)
                         Local = TaxStatus.Taxable,
                         Central = TaxStatus.Taxable,
 
-                        IsActive = true,  
+                        IsActive = true,
                         MaximumDiscount = vm.MaximumDiscount,
                         DecemalAllowed = vm.DecemalAllowed,
                         Conversion = vm.Conversion,
                         Salt = vm.Salt
                     });
-
+                }
+                else
+                {
+                    errors.Add(error);
                 }
 
                 rowIndex++;
@@ -1893,7 +2014,12 @@ namespace EasyBill.UI.Controllers
 
             if (errors.Any())
             {
-                TempData["error"] = string.Join("<br>", errors);
+                var displayErrors = errors.Take(20).ToList();
+                if (errors.Count > 20)
+                {
+                    displayErrors.Add($"... And {errors.Count - 20} more errors.");
+                }
+                TempData["error"] = string.Join("<br>", displayErrors);
                 return RedirectToAction("Index");
             }
 
@@ -1930,6 +2056,7 @@ namespace EasyBill.UI.Controllers
         //  UPDATE COMPANY
         // ══════════════════════════════════════════════════════════
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> UpdateCompany(CompanyVM vm)
         {
             if (vm.Id <= 0 || string.IsNullOrWhiteSpace(vm.Name))
@@ -1965,6 +2092,7 @@ namespace EasyBill.UI.Controllers
         //  UPDATE DIVISION
         // ══════════════════════════════════════════════════════════
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> UpdateDivision(DivisionVM vm)
         {
             if (vm.Id <= 0 || string.IsNullOrWhiteSpace(vm.Name))
@@ -2005,6 +2133,7 @@ namespace EasyBill.UI.Controllers
         //  UPDATE CATEGORY
         // ══════════════════════════════════════════════════════════
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> UpdateCategory(CategoryMasterVM model)
         {
             if (model.Id <= 0 || string.IsNullOrWhiteSpace(model.CategoryName))
@@ -2040,6 +2169,7 @@ namespace EasyBill.UI.Controllers
         //  UPDATE SUBCATEGORY
         // ══════════════════════════════════════════════════════════
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> UpdateSubCategory(SubCategoryVM vm)
         {
             if (vm.Id <= 0 || string.IsNullOrWhiteSpace(vm.Name))
@@ -2080,6 +2210,7 @@ namespace EasyBill.UI.Controllers
         //  UPDATE HSN
         // ══════════════════════════════════════════════════════════
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> UpdateHsn(HSNVM vm)
         {
             if (vm.Id <= 0 || string.IsNullOrWhiteSpace(vm.HsnCode))
@@ -2117,25 +2248,37 @@ namespace EasyBill.UI.Controllers
         }
 
         // MERGED FROM TL: Action to display and query soft-deleted items for restoration
-        public async Task<IActionResult> RestoreItem(string search = "", int page = 1, int pageSize = 10)
+        [HttpGet]
+        [HeadOfficeOnly]
+        public async Task<IActionResult> RestoreItem(string search = "")
         {
-            var allData = await _itemmasterrepository.GetAll();
+            var data = await _itemmasterrepository.GetDeletedItems();
 
-            // Filter
-            if (!string.IsNullOrEmpty(search))
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                allData = allData.Where(x => x.Name.Contains(search, StringComparison.OrdinalIgnoreCase) || x.Code.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+                data = data.Where(x =>
+                    x.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    x.Code.Contains(search, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
             }
 
-            // Pagination
-            int totalItems = allData.Count;
-            var paginatedData = allData.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            return View(data);
 
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
-            ViewBag.Search = search;
+        }
+        [HttpPost]
+        [HeadOfficeOnly]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var result = await _itemmasterrepository.RestoreItem(id);
 
-            return View(paginatedData);
+            if (!result)
+                return Json(new { success = false });
+
+            return Json(new
+            {
+                success = true,
+                message = "Item restored successfully"
+            });
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using AOne.Models;
+using AOne.Models;
+using AOne.Models.Entity;
 using AOne.Utility.Enums;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace EasyBill.Models.Entity
 {
-    public class PaymentVoucher : BaseEntity
+    public class PaymentVoucher : BaseEntity, IMayHaveTenant
     {
         public int Id { get; set; }
         public required string VouncherNo { get; set; }
@@ -39,6 +40,11 @@ namespace EasyBill.Models.Entity
         public int? PaymentModeId {  get; set; }
         [ForeignKey("PaymentModeId")]
         public ModeOfPayment? ModeOfPayment { get; set; }
-
+        public DateTime? ClearedDate { get; set; }
+        public string? SelectedPurchaseIds { get; set; }
+        public string? SelectedSalesIds { get; set; }
+        public string? TenantId { get; set; }
+        [ForeignKey(nameof(TenantId))]
+        public Tenant? Tenant { get; set; }
     }
 }

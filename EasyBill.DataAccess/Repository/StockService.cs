@@ -26,11 +26,11 @@ namespace EasyBill.DataAccess.Repository
         /// Applies tenant-level data isolation to ensure users only retrieve authorized stock records.
         /// </summary>
         /// <returns>A comprehensive list of CurrentStock entities.</returns>
-        public async Task<IList<CurrentStock>> GetAll()
+        public async Task<IList<CurrentStock>> GetAll(string? targetTenantId = null)
         {
             return await WithStoredProcedureCommandAsync("dbo.usp_CurrentStock_GetAll", async command =>
             {
-                AddFilterParameters(command);
+                AddFilterParameters(command, targetTenantId);
 
                 var stocks = new List<CurrentStock>();
                 await using var reader = await command.ExecuteReaderAsync();
@@ -62,7 +62,8 @@ namespace EasyBill.DataAccess.Repository
             decimal? salesRateB,
             decimal? purchaseRate,
             string? barcode,
-            bool forceUpdate = false)
+            bool forceUpdate = false,
+            string? overrideTenantId = null)
         {
             batch = NormalizeBatch(batch);
 
@@ -81,7 +82,7 @@ namespace EasyBill.DataAccess.Repository
                 AddParameter(command, "@Barcode", barcode);
 
                 AddParameter(command, "@ForceUpdate", forceUpdate, DbType.Boolean);
-                AddFilterParameters(command);
+                AddFilterParameters(command, overrideTenantId);
                 AddParameter(command, "@Now", DateTime.Now, DbType.DateTime2);
 
                 await command.ExecuteNonQueryAsync();

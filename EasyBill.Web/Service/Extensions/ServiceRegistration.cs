@@ -25,6 +25,7 @@ namespace EasyBill.UI.Service.Extensions
             services.AddScoped<IItemImageRepository, ItemImageRepository>();
             services.AddScoped<ICategoryMasterRepository, CategoryMasterRepository>();
             services.AddScoped<ISupplierRepository, SupplierRepository>();
+            services.AddScoped<IBankRepository, BankRepository>();
             services.AddScoped<ICurrencyRepository, CurrencyRepository>();
             services.AddScoped<IHSNRepository, HSNRepository>();
             services.AddScoped<ISubCategoryRepository, SubCategoryRepository>();
@@ -49,6 +50,7 @@ namespace EasyBill.UI.Service.Extensions
             services.AddScoped<IStockReceiveRepository, StockReceiveRepository>();
             services.AddScoped<IPharmacyDoctorRepository, PharmacyDoctorRepository>();
             services.AddScoped<IpaymentVoucherRepository, PaymentVoucherRepository>();
+            services.AddScoped<IContraRepository, ContraRepository>();
             services.AddScoped<IPaymentVoucherCategoryRepository, PaymentVoucherCategoryRepository>();
             services.AddScoped<ISalseSettingRepository, SalseSettingRepository>();
             services.AddScoped<ITermConditionsRepository, TermConditionsRepository>();
@@ -75,9 +77,10 @@ namespace EasyBill.UI.Service.Extensions
             services.AddScoped<IStockService, StockService>();
             services.AddScoped<ICustomerAdvanceRepository, CustomerAdvanceRepository>();
             services.AddScoped<ISupplierAdvanceRepository, SupplierAdvanceRepository>();
-            services.AddScoped<WhatsAppService>();
+            
             services.AddScoped<SmsService>();
             services.AddScoped<CustomerLoyaltyService>();
+            services.AddHttpClient<WhatsAppService>();
             return services;
         }
     }

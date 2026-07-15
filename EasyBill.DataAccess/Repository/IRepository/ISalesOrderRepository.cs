@@ -17,6 +17,8 @@ namespace EasyBill.DataAccess.Repository.IRepository
         Task Delete(SalesOrder model);
 
         Task<IList<SalesOrder>> GetByCustomerIdWithPayments(int? customerId);
+        Task<IList<SalesOrder>> GetByCustomerPhoneNumber(string phoneNumber);
+        Task<IList<SalesOrder>> GetByCustomerPhoneNumberWithPayments(string phoneNumber);
 
         /// <summary>
         /// Soft-cancel a SalesOrder by marking Deleted = DateTime.UtcNow and DeletedBy = cancelledBy.

@@ -51,6 +51,8 @@ namespace EasyBill.Models.ViewModels
         public string? DrugLic { get; set; }
         public string? LicExp { get; set; }
         public string? BranchCode { get; set; }
+        public bool? IsHeadOffice { get; set; }
+        public string? ParentTenantId { get; set; }
     }
 
     public class RechargeRequest

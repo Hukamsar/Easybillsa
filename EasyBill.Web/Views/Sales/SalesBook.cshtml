@@ -1,4 +1,4 @@
-﻿@model List<EasyBill.Models.ViewModels.SalesBookVM>
+@model List<EasyBill.Models.ViewModels.SalesBookVM>
 @using Microsoft.AspNetCore.Mvc.Rendering
 
 @{
@@ -9,6 +9,11 @@
     .table-primary {
     --bs-table-color: #ffffff ;
     --bs-table-bg: #2b6ac9;
+    }
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
     }
 </style>
 
@@ -67,9 +72,10 @@
 
 <!-- Report Table -->
 <table id="salesBooktbl" class="table table-bordered table-striped">
-    <thead class="table-primary">
+    <thead class="custom-header">
         <tr>
             <th>S.No</th>
+            <th>Date</th>
             <th>Inv No</th>
             <th>Customer</th>
             @* <th>Type</th> *@
@@ -88,6 +94,7 @@
             {
                 <tr>
                     <td>@sno</td>
+                    <td data-order='@(item.Date?.ToString("yyyyMMdd") ?? "")'>@item.Date?.ToString("dd-MM-yyyy")</td>
                     <td>@item.InvNo</td>
                     <td>@item.Customer</td>
                    @*  <td>@item.Type</td> *@
@@ -106,6 +113,7 @@
         <tr>
             <td></td>
             <td></td>
+            <td></td>
             <td class="text-end">TOTAL</td>
             <td class="text-end">@ViewBag.TaxableAmt</td>
             <td class="text-end">@ViewBag.TotalGst</td>
@@ -119,8 +127,8 @@
 <script>
         $(document).ready(function () {
             $("#salesBooktbl").DataTable({
-                ordering: false
-                  });
+                "order": [[1, "asc"]]
+            });
         });
                
 </script>

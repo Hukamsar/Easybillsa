@@ -5,8 +5,9 @@ using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using EasyBill.Models.ViewModels;
-using EasyBill.UI.Service.Whatsapp;
+using EasyBill.UI.Service.Loyalty;
 using EasyBill.UI.Service.Sms;
+using EasyBill.UI.Service.Whatsapp;
 using iText.Html2pdf;
 using iText.IO.Font.Constants;
 using iText.Kernel.Colors;
@@ -21,6 +22,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Mvc.ViewEngines;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Reporting.NETCore;
 using Microsoft.ReportingServices.Interfaces;
 using NPOI.POIFS.Properties;
@@ -28,8 +30,6 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
-
-using EasyBill.UI.Service.Loyalty;
 
 namespace EasyBill.UI.Controllers
 {
@@ -94,7 +94,8 @@ namespace EasyBill.UI.Controllers
             WhatsAppService whatsappservice,
             SmsService smsService,
             IRazorViewEngine viewEngine,
-            CustomerLoyaltyService loyaltyService)
+            CustomerLoyaltyService loyaltyService,
+            IMemoryCache memoryCache)
         {
             _salesservice = salesservice;
             _profileService = profileService;
@@ -295,6 +296,7 @@ namespace EasyBill.UI.Controllers
                     NetCollection = Vm.PaidAmount - (Math.Max(0, Vm.PaidAmount - Vm.TotalPayable)),
                     SalesOrderId = Vm.SalesOrderId,
                     OfferId = Vm.OfferId,
+                    Remarks = Vm.Remarks,
                     Balance = Vm.Balance,
                     TotalCessAmount = Vm.TotalCessAmount,
                     SalesItems = Vm.SalesItemVMs?.Select(x =>
@@ -715,6 +717,7 @@ namespace EasyBill.UI.Controllers
                 VM.PaidAmount = model.PaidAmount;
                 VM.ReturnAmount = model.ReturnAmount;
                 VM.OfferId = model.OfferId;
+                VM.Remarks = model.Remarks;
                 VM.Balance = model.Balance;
 
                 // GET ALL ITEMS FOR CONVERSION LOOKUP
@@ -743,12 +746,13 @@ namespace EasyBill.UI.Controllers
                     //    displayTabletQty = x.Qty % conversion;
                     //}
 
+                    var item = itemMasters.ContainsKey(x.ItemMasterId) ? itemMasters[x.ItemMasterId] : null;
+
                     decimal displayQty = x.Qty;          // strips
                     decimal displayTabletQty = 0;
 
-                    if (isTabletWiseMode && itemMasters.ContainsKey(x.ItemMasterId))
+                    if (isTabletWiseMode && item != null)
                     {
-                        var item = itemMasters[x.ItemMasterId];
                         int conversion = item.Conversion > 0 ? item.Conversion : 1;
 
                         // Step 1: convert strip qty to total tablets
@@ -758,8 +762,6 @@ namespace EasyBill.UI.Controllers
                         displayQty = totalTablets / conversion;          // strips
                         displayTabletQty = totalTablets % conversion;    // tablets
                     }
-
-
                     return new SalesItemVM
                     {
                         Id = x.Id,
@@ -777,6 +779,10 @@ namespace EasyBill.UI.Controllers
                         Cess = x.Cess,
                         Discount = x.Discount,
                         Amount = x.Amount,
+                        Narcotics = item?.Narcotics ?? false,
+                        ScheduleH = item?.ScheduleH ?? false,
+                        ScheduleH1 = item?.ScheduleH1 ?? false,
+                        CategoryName = item?.Category?.CategoryName
                     };
                 }).ToList()
                 : new List<SalesItemVM>();
@@ -920,6 +926,7 @@ namespace EasyBill.UI.Controllers
                 model.PaidAmount = VM.PaidAmount;
                 model.ReturnAmount = Math.Max(0, VM.PaidAmount - VM.TotalPayable);
                 model.OfferId = VM.OfferId;
+                model.Remarks = VM.Remarks;
                 model.Balance = VM.Balance;
                 model.NetCollection = VM.PaidAmount - model.ReturnAmount;
 
@@ -1241,7 +1248,11 @@ namespace EasyBill.UI.Controllers
             if (!match.Success)
                 return "SA0001";
 
-            int number = int.Parse(match.Value);
+            if (!long.TryParse(match.Value, out long number))
+            {
+                return "SA0001";
+            }
+
             string prefix = lastCode[..match.Index];
             string suffix = lastCode[(match.Index + match.Length)..];
 
@@ -2150,15 +2161,31 @@ namespace EasyBill.UI.Controllers
             using var wb = new XLWorkbook();
             var ws = wb.Worksheets.Add("Sales Book");
 
-            ws.Cell(1, 1).Value = "Sales Book Report";
+            var user = await _usersManager.GetUserAsync(User);
+            string companyName = "Company Name";
+
+            if (user != null)
+            {
+                var tenant = await _tenantRepository.GetById(user.TenantId);
+                companyName = tenant?.Name ?? "Company Name";
+            }
+
+            ws.Cell(1, 1).Value = companyName;
             ws.Range(1, 1, 1, 6).Merge()
                 .Style.Font.SetBold().Font.SetFontSize(14)
                 .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
-            ws.Cell(2, 1).Value = $"From: {fromDate:dd-MM-yyyy}   To: {toDate:dd-MM-yyyy}";
-            ws.Range(2, 1, 2, 6).Merge();
+            ws.Cell(2, 1).Value = "Sales Book";
+            ws.Range(2, 1, 2, 6).Merge()
+                .Style.Font.SetBold().Font.SetFontSize(12)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
-            int row = 4;
+            ws.Cell(3, 1).Value = $"From: {fromDate:dd-MM-yyyy}   To: {toDate:dd-MM-yyyy}";
+            ws.Range(3, 1, 3, 6).Merge()
+                .Style.Font.SetItalic()
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            int row = 5;
 
             string[] headers =
             {
@@ -2248,11 +2275,28 @@ namespace EasyBill.UI.Controllers
             PdfFont bold = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
             PdfFont normal = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
 
-            document.Add(new Paragraph("Sales Book Report")
+            var user = await _usersManager.GetUserAsync(User);
+            string companyName = "Company Name";
+
+            if (user != null)
+            {
+                var tenant = await _tenantRepository.GetById(user.TenantId);
+                companyName = tenant?.Name ?? "Company Name";
+            }
+
+            // Company Name
+            document.Add(new Paragraph(companyName)
                 .SetFont(bold)
                 .SetFontSize(16)
                 .SetTextAlignment(TextAlignment.CENTER));
 
+            // Report Name (Exactly "Sales Book", no "Report" suffix)
+            document.Add(new Paragraph("Sales Book")
+                .SetFont(bold)
+                .SetFontSize(12)
+                .SetTextAlignment(TextAlignment.CENTER));
+
+            // Date Range
             document.Add(new Paragraph($"From: {fromDate:dd-MM-yyyy}   To: {toDate:dd-MM-yyyy}")
                 .SetTextAlignment(TextAlignment.CENTER)
                 .SetMarginBottom(10));
@@ -4993,7 +5037,11 @@ namespace EasyBill.UI.Controllers
                 conversion = item.Conversion > 0 ? (decimal)item.Conversion : 1m,
                 itemConversion = setting?.ItemConversion ?? "StripWise",
                 gst = item.Hsn?.IGST ?? 0,
-                cess = item.Hsn?.Cess ?? 0
+                cess = item.Hsn?.Cess ?? 0,
+                narcotics = item.Narcotics,
+                scheduleH = item.ScheduleH,
+                scheduleH1 = item.ScheduleH1,
+                categoryName = item.Category?.CategoryName
             });
         }
 
@@ -5017,7 +5065,11 @@ namespace EasyBill.UI.Controllers
                 conversion = item.Conversion > 0 ? (decimal)item.Conversion : 1m,
                 itemConversion = setting?.ItemConversion ?? "StripWise",
                 gst = item.Hsn?.IGST ?? 0,
-                cess = item.Hsn?.Cess ?? 0
+                cess = item.Hsn?.Cess ?? 0,
+                narcotics = item.Narcotics,
+                scheduleH = item.ScheduleH,
+                scheduleH1 = item.ScheduleH1,
+                categoryName = item.Category?.CategoryName
             });
         }
 
@@ -5143,11 +5195,15 @@ namespace EasyBill.UI.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
+
             var setting = await _salsesettingservice.GetByUserId(userId);
-            var itemMasters = (await _itemmasterservice.GetAll())
-                .Where(x => x.IsActive)
-                .OrderBy(x => x.Name)
-                .ToList();
+
+               var itemMasters = (await _itemmasterservice.GetAll())
+                    .Where(x => x.IsActive)
+                    .OrderBy(x => x.Name)
+                    .ToList();
+
+
             var currentStocks = await _currenstockService.GetAll();
 
             var stockByItem = currentStocks
@@ -5189,7 +5245,11 @@ namespace EasyBill.UI.Controllers
                     allowNegative = setting?.AllowNegative ?? false,
                     minimumQty = item.MinimumQty,
                     conversion = item.Conversion > 0 ? (decimal)item.Conversion : 1m,
-                    ItemConversion = itemConversion
+                    ItemConversion = itemConversion,
+                    narcotics = item.Narcotics,
+                    scheduleH = item.ScheduleH,
+                    scheduleH1 = item.ScheduleH1,
+                    categoryName = item.Category?.CategoryName
                 };
             });
 
@@ -5202,6 +5262,8 @@ namespace EasyBill.UI.Controllers
             ViewBag.ItemConversion = itemConversion;
             return Json(result);
         }
+
+
         [HttpGet]
         public async Task<IActionResult> GetAllItemsForEdit(int saleId = 0)
         {
@@ -5265,7 +5327,11 @@ namespace EasyBill.UI.Controllers
                     allowNegative = setting?.AllowNegative ?? false,
                     minimumQty = item.MinimumQty,
                     conversion = item.Conversion > 0 ? (decimal)item.Conversion : 1m,
-                    ItemConversion = itemConversion
+                    ItemConversion = itemConversion,
+                    narcotics = item.Narcotics,
+                    scheduleH = item.ScheduleH,
+                    scheduleH1 = item.ScheduleH1,
+                    categoryName = item.Category?.CategoryName
                 };
             });
 
@@ -5713,23 +5779,32 @@ namespace EasyBill.UI.Controllers
 
         public async Task<AppliedOfferResult> EvaluateOffer(IList<SalesItemVM> salesItems, decimal totalAmount)
         {
-            var result = new AppliedOfferResult();
             var today = DateTime.Today;
 
             var allOffers = await _offerrepo.GetAll();
+            
+            // OfferRepo now pre-filters offers that belong to this Tenant or are Mapped via HO.
+            // We just need to check if they are active and valid for today.
             var offers = allOffers
-                .Where(x => x.IsActive && x.StartDate <= today && x.EndDate > today)
+                .Where(x => x.IsActive && x.StartDate.Date <= today && x.EndDate.Date >= today)
                 .ToList();
+
+            var bestResult = new AppliedOfferResult();
+            decimal maxDiscountValue = -1; // -1 to ensure even 0 value offers get picked if they are the only ones
 
             foreach (var offer in offers)
             {
+                var currentResult = new AppliedOfferResult();
+                decimal currentOfferDiscountValue = 0;
+
                 switch (offer.OfferType)
                 {
                     case OfferType.DisCountAmount:
                         if (totalAmount >= (offer.MinAmount ?? 0))
                         {
-                            result.TotalDiscount += offer.DiscountValue;
-                            result.Offers.Add(new OfferVM
+                            currentResult.TotalDiscount = offer.DiscountValue;
+                            currentOfferDiscountValue = offer.DiscountValue;
+                            currentResult.Offers.Add(new OfferVM
                             {
                                 Id = offer.Id,
                                 OfferName = offer.OfferName,
@@ -5743,8 +5818,9 @@ namespace EasyBill.UI.Controllers
                         if (totalAmount >= (offer.MinAmount ?? 0))
                         {
                             var percentDiscount = (totalAmount * offer.DiscountValue / 100);
-                            result.TotalDiscount += percentDiscount;
-                            result.Offers.Add(new OfferVM
+                            currentResult.TotalDiscount = percentDiscount;
+                            currentOfferDiscountValue = percentDiscount;
+                            currentResult.Offers.Add(new OfferVM
                             {
                                 Id = offer.Id,
                                 OfferName = offer.OfferName,
@@ -5755,63 +5831,114 @@ namespace EasyBill.UI.Controllers
                         break;
 
                     case OfferType.BuyXGetX:
-                        foreach (var offerItem in offer.OfferItems)
+                        if (offer.Applicable == Applicable.AllProduct)
                         {
-                            var match = salesItems.FirstOrDefault(x => x.ItemMasterId == offerItem.ItemId);
-                            if (match != null && match.Qty >= offerItem.BuyQty)
+                            int buyQty = (offer.BuyQty ?? 0) > 0 ? offer.BuyQty.Value : (int)(offer.MinAmount ?? 1);
+                            if (buyQty <= 0) buyQty = 1;
+
+                            int freeQty = (offer.FreeQty ?? 0) > 0 ? offer.FreeQty.Value : (int)(offer.DiscountValue > 0 ? offer.DiscountValue : 1);
+                            if (freeQty <= 0) freeQty = 1;
+
+                            foreach (var cartItem in salesItems)
                             {
-                                result.FreeItems.Add(new SalesItemVM
+                                int multiples = (int)(cartItem.Qty / buyQty);
+                                if (multiples > 0)
                                 {
-                                    ItemMasterId = offerItem.FreeItemId ?? 0,
-                                    Qty = offerItem.FreeQty,
-                                    Rate = 0
-                                });
-
-                                if (!result.Offers.Any(o => o.OfferName == offer.OfferName))
-                                {
-                                    result.Offers.Add(new OfferVM
+                                    var itemObj = await _itemmasterservice.GetByItemMasterId(cartItem.ItemMasterId);
+                                    currentResult.FreeItems.Add(new SalesItemVM
                                     {
-                                        Id = offer.Id,
-                                        OfferName = offer.OfferName,
-                                        OfferType = offer.OfferType,
-                                        DiscountValue = 0
+                                        ItemMasterId = cartItem.ItemMasterId,
+                                        ItemName = itemObj?.Name ?? "Free Item",
+                                        Qty = multiples * freeQty,
+                                        Rate = 0
                                     });
+                                    currentOfferDiscountValue += (multiples * freeQty * cartItem.Rate); 
 
+                                    if (!currentResult.Offers.Any(o => o.OfferName == offer.OfferName))
+                                    {
+                                        currentResult.Offers.Add(new OfferVM
+                                        {
+                                            Id = offer.Id,
+                                            OfferName = offer.OfferName,
+                                            OfferType = offer.OfferType,
+                                            DiscountValue = 0
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            foreach (var offerItem in offer.OfferItems)
+                            {
+                                var match = salesItems.FirstOrDefault(x => x.ItemMasterId == offerItem.ItemId);
+                                if (match != null && match.Qty >= offerItem.BuyQty)
+                                {
+                                    int multiples = (int)(match.Qty / offerItem.BuyQty);
+                                    currentResult.FreeItems.Add(new SalesItemVM
+                                    {
+                                        ItemMasterId = offerItem.FreeItemId ?? 0,
+                                        ItemName = offerItem.FreeItem?.Name ?? "Free Item",
+                                        Qty = multiples * offerItem.FreeQty,
+                                        Rate = 0
+                                    });
+                                    currentOfferDiscountValue += (multiples * offerItem.FreeQty * match.Rate); 
+
+                                    if (!currentResult.Offers.Any(o => o.OfferName == offer.OfferName))
+                                    {
+                                        currentResult.Offers.Add(new OfferVM
+                                        {
+                                            Id = offer.Id,
+                                            OfferName = offer.OfferName,
+                                            OfferType = offer.OfferType,
+                                            DiscountValue = 0
+                                        });
+
+                                    }
                                 }
                             }
                         }
                         break;
 
                     case OfferType.Combo:
-                        var comboGroup = offer.OfferItems.FirstOrDefault()?.ComboGroupId;
-                        if (!string.IsNullOrEmpty(comboGroup))
+                        var comboGroups = offer.OfferItems
+                            .Where(oi => !string.IsNullOrEmpty(oi.ComboGroupId))
+                            .GroupBy(oi => oi.ComboGroupId)
+                            .ToList();
+
+                        foreach (var group in comboGroups)
                         {
-                            var comboItems = offer.OfferItems;
-                            bool isValidCombo = comboItems.Any(ci =>
+                            var comboItems = group.ToList();
+                            // A combo is ONLY valid if ALL items in the specific combo group are present in the cart with sufficient quantity
+                            bool isValidCombo = comboItems.All(ci =>
                                 salesItems.Any(c => c.ItemMasterId == ci.ItemId && c.Qty >= ci.BuyQty));
 
                             if (isValidCombo)
                             {
                                 var totalComboPrice = comboItems.Sum(x => x.fixedPrice);
-                                //var actualComboPrice = comboItems.Sum(ci =>
-                                //    salesItems.First(c => c.ItemMasterId == ci.ItemId).Rate * (decimal)ci.BuyQty);
                                 var actualComboPrice = comboItems.Sum(ci =>
                                 {
                                     var cartItem = salesItems.FirstOrDefault(c => c.ItemMasterId == ci.ItemId);
                                     return cartItem != null ? cartItem.Rate * (decimal)ci.BuyQty : 0;
                                 });
 
-
                                 var comboDiscount = actualComboPrice - totalComboPrice;
-                                result.TotalDiscount += comboDiscount;
-
-                                result.Offers.Add(new OfferVM
+                                if (comboDiscount > 0)
                                 {
-                                    Id = offer.Id,
-                                    OfferName = offer.OfferName,
-                                    OfferType = offer.OfferType,
-                                    DiscountValue = comboDiscount
-                                });
+                                    currentResult.TotalDiscount += comboDiscount;
+                                    currentOfferDiscountValue += comboDiscount;
+
+                                    if (!currentResult.Offers.Any(o => o.OfferName == offer.OfferName))
+                                    {
+                                        currentResult.Offers.Add(new OfferVM
+                                        {
+                                            Id = offer.Id,
+                                            OfferName = offer.OfferName,
+                                            OfferType = offer.OfferType,
+                                            DiscountValue = comboDiscount
+                                        });
+                                    }
+                                }
                             }
                         }
                         break;
@@ -5819,13 +5946,14 @@ namespace EasyBill.UI.Controllers
                     case OfferType.CashbackAmount:
                         if (totalAmount >= (offer.MinAmount ?? 0))
                         {
-                            result.Offers.Add(new OfferVM
+                            currentResult.Offers.Add(new OfferVM
                             {
                                 Id = offer.Id,
                                 OfferName = offer.OfferName,
                                 OfferType = offer.OfferType,
                                 DiscountValue = offer.DiscountValue
                             });
+                            currentOfferDiscountValue = offer.DiscountValue;
                         }
                         break;
 
@@ -5833,19 +5961,26 @@ namespace EasyBill.UI.Controllers
                         if (totalAmount >= (offer.MinAmount ?? 0))
                         {
                             var cashbackAmount = (totalAmount * offer.DiscountValue / 100);
-                            result.Offers.Add(new OfferVM
+                            currentResult.Offers.Add(new OfferVM
                             {
                                 Id = offer.Id,
                                 OfferName = offer.OfferName,
                                 OfferType = offer.OfferType,
                                 DiscountValue = cashbackAmount
                             });
+                            currentOfferDiscountValue = cashbackAmount;
                         }
                         break;
                 }
+
+                if (currentResult.Offers.Any() && currentOfferDiscountValue > maxDiscountValue)
+                {
+                    maxDiscountValue = currentOfferDiscountValue;
+                    bestResult = currentResult;
+                }
             }
 
-            return result;
+            return bestResult;
         }
 
         #region Hold & Unhold logics..
@@ -8983,13 +9118,42 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> StockInSalesStatmentReport(DateTime? fromDate, DateTime? toDate, int? companyId)
+        public async Task<IActionResult> StockInSalesStatmentReport(string fromDate, string toDate, int? companyId)
         {
-            if (!fromDate.HasValue)
-                fromDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            //if (!fromDate.HasValue)
+            //    fromDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
 
-            if (!toDate.HasValue)
-                toDate = DateTime.Now;
+            //if (!toDate.HasValue)
+            //    toDate = DateTime.Now;
+
+            DateTime fDate;
+            DateTime tDate;
+
+            if (!DateTime.TryParseExact(
+                    fromDate,
+                    "dd-MM-yyyy",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None,
+                    out fDate))
+            {
+                fDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            }
+
+            if (!DateTime.TryParseExact(
+                    toDate,
+                    "dd-MM-yyyy",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None,
+                    out tDate))
+            {
+                tDate = DateTime.Now;
+            }
+
+            ViewBag.FromDate = fDate.ToString("dd-MM-yyyy");
+            ViewBag.ToDate = tDate.ToString("dd-MM-yyyy");
+
+            var filterFromDate = fDate.Date;
+            var filterToDate = tDate.Date;
 
             // Get companies for dropdown
             var companies = await _companyService.GetAll();
@@ -9001,8 +9165,8 @@ namespace EasyBill.UI.Controllers
                 }).ToList();
 
             ViewBag.SelectedCompanyId = companyId;
-            ViewBag.FromDate = fromDate?.ToString("dd-MM-yyyy");
-            ViewBag.ToDate = toDate?.ToString("dd-MM-yyyy");
+            ViewBag.FromDate = fDate.ToString("dd-MM-yyyy");
+            ViewBag.ToDate = tDate.ToString("dd-MM-yyyy");
 
             // Get all data
             var items = await _itemmasterservice.GetAll();
@@ -9010,6 +9174,8 @@ namespace EasyBill.UI.Controllers
             var purchaseReturns = await _purchasereturnservice.GetAll();
             var sales = await _salesservice.GetAll();
             var salesReturns = await _stockrturnservice.GetAll();
+            var stockIssues = await _stockissueservice.GetAll();
+            var stockReceives = await _stockreceiveservice.GetAll();
             var currentStock = await _purchaseitemservice.GetAll();
 
             // Filter by company if selected
@@ -9062,8 +9228,10 @@ namespace EasyBill.UI.Controllers
 
                 // ===== PURCHASE during period =====
                 var purchaseItemList = purchases
-                    .Where(p => p.BillDate >= fromDate && p.BillDate <= toDate)
-                    .SelectMany(p => p.PurchaseItems)
+                    .Where(p => p.BillDate.HasValue
+                             && p.BillDate.Value.Date >= filterFromDate
+                             && p.BillDate.Value.Date <= filterToDate)
+                    .SelectMany(p => p.PurchaseItems ?? new List<PurchaseItem>())
                     .Where(x => x.ItemId == item.Id)
                     .ToList();
 
@@ -9077,8 +9245,10 @@ namespace EasyBill.UI.Controllers
 
                 // ===== PURCHASE RETURN during period =====
                 var purchaseReturnItemList = purchaseReturns
-                    .Where(r => r.BillDate >= fromDate && r.BillDate <= toDate)
-                    .SelectMany(r => r.PurchaseReturnItems)
+                    .Where(r => r.BillDate.HasValue
+                             && r.BillDate.Value.Date >= filterFromDate
+                             && r.BillDate.Value.Date <= filterToDate)
+                    .SelectMany(r => r.PurchaseReturnItems ?? new List<PurchaseReturnItem>())
                     .Where(x => x.ItemId == item.Id)
                     .ToList();
 
@@ -9090,8 +9260,10 @@ namespace EasyBill.UI.Controllers
 
                 // ===== SALES during period =====
                 var salesItemList = sales
-                    .Where(s => s.BillDate >= fromDate && s.BillDate <= toDate)
-                    .SelectMany(s => s.SalesItems)
+                    .Where(s => s.BillDate.HasValue
+                             && s.BillDate.Value.Date >= filterFromDate
+                             && s.BillDate.Value.Date <= filterToDate)
+                    .SelectMany(s => s.SalesItems ?? new List<SalesItem>())
                     .Where(x => x.ItemMasterId == item.Id)
                     .ToList();
 
@@ -9105,8 +9277,10 @@ namespace EasyBill.UI.Controllers
 
                 // ===== SALES RETURN during period =====
                 var salesReturnItemList = salesReturns
-                    .Where(r => r.ChallanDate >= fromDate && r.ChallanDate <= toDate)
-                    .SelectMany(r => r.StockReturnItems)
+                    .Where(r => r.ChallanDate.HasValue
+                             && r.ChallanDate.Value.Date >= filterFromDate
+                             && r.ChallanDate.Value.Date <= filterToDate)
+                    .SelectMany(r => r.StockReturnItems ?? new List<StockReturnItem>())
                     .Where(x => x.ItemMasterId == item.Id)
                     .ToList();
 
@@ -9116,17 +9290,60 @@ namespace EasyBill.UI.Controllers
                 var salesReturnCessAmount = CalculateCessAmount(salesReturnQty, avgRate, avgCessPercent);
                 var salesReturnAmount = salesReturnBaseAmount + salesReturnGstAmount + salesReturnCessAmount;
 
-                // ===== CLOSING STOCK = current stock =====
-                var closingQty = currentStock
-                    .Where(x => x.ItemId == item.Id)
+                var stockReceiveQty = stockReceives
+                    .Where(r => r.ChallanDate.HasValue
+                             && r.ChallanDate.Value.Date >= filterFromDate
+                             && r.ChallanDate.Value.Date <= filterToDate)
+                    .SelectMany(r => r.StockReceiveItems ?? new List<StockReceiveItem>())
+                    .Where(x => x.ItemMasterId == item.Id)
                     .Sum(x => (decimal?)x.Qty) ?? 0;
+
+                var stockIssueQty = stockIssues
+                    .Where(s => s.ChallanDate.HasValue
+                             && s.ChallanDate.Value.Date >= filterFromDate
+                             && s.ChallanDate.Value.Date <= filterToDate)
+                    .SelectMany(s => s.StockIssuesItems ?? new List<StockIssueItem>())
+                    .Where(x => x.ItemMasterId == item.Id)
+                    .Sum(x => (decimal?)x.Qty) ?? 0;
+
+                var openingQty =
+                    (purchases
+                        .Where(p => p.BillDate.HasValue && p.BillDate.Value.Date < filterFromDate)
+                        .SelectMany(p => p.PurchaseItems ?? new List<PurchaseItem>())
+                        .Where(x => x.ItemId == item.Id)
+                        .Sum(x => (decimal?)(x.Qty + x.FreeQty)) ?? 0)
+                    + (salesReturns
+                        .Where(r => r.ChallanDate.HasValue && r.ChallanDate.Value.Date < filterFromDate)
+                        .SelectMany(r => r.StockReturnItems ?? new List<StockReturnItem>())
+                        .Where(x => x.ItemMasterId == item.Id)
+                        .Sum(x => (decimal?)x.Qty) ?? 0)
+                    + (stockReceives
+                        .Where(r => r.ChallanDate.HasValue && r.ChallanDate.Value.Date < filterFromDate)
+                        .SelectMany(r => r.StockReceiveItems ?? new List<StockReceiveItem>())
+                        .Where(x => x.ItemMasterId == item.Id)
+                        .Sum(x => (decimal?)x.Qty) ?? 0)
+                    - (purchaseReturns
+                        .Where(r => r.BillDate.HasValue && r.BillDate.Value.Date < filterFromDate)
+                        .SelectMany(r => r.PurchaseReturnItems ?? new List<PurchaseReturnItem>())
+                        .Where(x => x.ItemId == item.Id)
+                        .Sum(x => (decimal?)x.Qty) ?? 0)
+                    - (sales
+                        .Where(s => s.BillDate.HasValue && s.BillDate.Value.Date < filterFromDate)
+                        .SelectMany(s => s.SalesItems ?? new List<SalesItem>())
+                        .Where(x => x.ItemMasterId == item.Id)
+                        .Sum(x => (decimal?)x.Qty) ?? 0)
+                    - (stockIssues
+                        .Where(s => s.ChallanDate.HasValue && s.ChallanDate.Value.Date < filterFromDate)
+                        .SelectMany(s => s.StockIssuesItems ?? new List<StockIssueItem>())
+                        .Where(x => x.ItemMasterId == item.Id)
+                        .Sum(x => (decimal?)x.Qty) ?? 0);
+
+                var closingQty = openingQty + purchaseQty + salesReturnQty + stockReceiveQty
+                    - purchaseReturnQty - salesQty - stockIssueQty;
                 var closingBaseAmount = closingQty * avgRate;
                 var closingGstAmount = CalculateGstAmount(closingQty, avgRate, avgGstPercent);
                 var closingCessAmount = CalculateCessAmount(closingQty, avgRate, avgCessPercent);
                 var closingAmount = closingBaseAmount + closingGstAmount + closingCessAmount;
-
-                // ===== OPENING STOCK = Closing - Purchases + Purchase Returns + Sales - Sales Returns =====
-                var openingQty = closingQty - purchaseQty + purchaseReturnQty + salesQty - salesReturnQty;
                 var openingBaseAmount = openingQty * avgRate;
                 var openingGstAmount = CalculateGstAmount(openingQty, avgRate, avgGstPercent);
                 var openingCessAmount = CalculateCessAmount(openingQty, avgRate, avgCessPercent);
@@ -9178,6 +9395,7 @@ namespace EasyBill.UI.Controllers
             return View(report);
         }
 
+
         private async Task<List<SalesVM>> GetStockSalesReport(DateTime fromDate, DateTime toDate, int? companyId)
         {
             var items = await _itemmasterservice.GetAll();
@@ -9185,6 +9403,8 @@ namespace EasyBill.UI.Controllers
             var purchaseReturns = await _purchasereturnservice.GetAll();
             var sales = await _salesservice.GetAll();
             var salesReturns = await _stockrturnservice.GetAll();
+            var stockIssues = await _stockissueservice.GetAll();
+            var stockReceives = await _stockreceiveservice.GetAll();
             var currentStock = await _purchaseitemservice.GetAll();
 
             if (companyId.HasValue)
@@ -9216,34 +9436,87 @@ namespace EasyBill.UI.Controllers
                 decimal CessAmt(decimal q, decimal r, decimal c) => (q * r) * c / 100;
 
                 var purchaseQty = purchases
-                    .Where(p => p.BillDate >= fromDate && p.BillDate <= toDate)
-                    .SelectMany(p => p.PurchaseItems)
+                    .Where(p => p.BillDate.HasValue
+                             && p.BillDate.Value.Date >= fromDate.Date
+                             && p.BillDate.Value.Date <= toDate.Date)
+                    .SelectMany(p => p.PurchaseItems ?? new List<PurchaseItem>())
                     .Where(x => x.ItemId == item.Id)
                     .Sum(x => (decimal?)x.Qty + x.FreeQty) ?? 0;
 
                 var purchaseReturnQty = purchaseReturns
-                    .Where(r => r.BillDate >= fromDate && r.BillDate <= toDate)
-                    .SelectMany(r => r.PurchaseReturnItems)
+                    .Where(r => r.BillDate.HasValue
+                             && r.BillDate.Value.Date >= fromDate.Date
+                             && r.BillDate.Value.Date <= toDate.Date)
+                    .SelectMany(r => r.PurchaseReturnItems ?? new List<PurchaseReturnItem>())
                     .Where(x => x.ItemId == item.Id)
                     .Sum(x => (decimal?)x.Qty) ?? 0;
 
                 var salesQty = sales
-                    .Where(s => s.BillDate >= fromDate && s.BillDate <= toDate)
-                    .SelectMany(s => s.SalesItems)
+                    .Where(s => s.BillDate.HasValue
+                             && s.BillDate.Value.Date >= fromDate.Date
+                             && s.BillDate.Value.Date <= toDate.Date)
+                    .SelectMany(s => s.SalesItems ?? new List<SalesItem>())
                     .Where(x => x.ItemMasterId == item.Id)
                     .Sum(x => (decimal?)x.Qty) ?? 0;
 
                 var salesReturnQty = salesReturns
-                    .Where(r => r.ChallanDate >= fromDate && r.ChallanDate <= toDate)
-                    .SelectMany(r => r.StockReturnItems)
+                    .Where(r => r.ChallanDate.HasValue
+                             && r.ChallanDate.Value.Date >= fromDate.Date
+                             && r.ChallanDate.Value.Date <= toDate.Date)
+                    .SelectMany(r => r.StockReturnItems ?? new List<StockReturnItem>())
                     .Where(x => x.ItemMasterId == item.Id)
                     .Sum(x => (decimal?)x.Qty) ?? 0;
 
-                var closingQty = currentStock
-                    .Where(x => x.ItemId == item.Id)
+                var stockReceiveQty = stockReceives
+                    .Where(r => r.ChallanDate.HasValue
+                             && r.ChallanDate.Value.Date >= fromDate.Date
+                             && r.ChallanDate.Value.Date <= toDate.Date)
+                    .SelectMany(r => r.StockReceiveItems ?? new List<StockReceiveItem>())
+                    .Where(x => x.ItemMasterId == item.Id)
                     .Sum(x => (decimal?)x.Qty) ?? 0;
 
-                var openingQty = closingQty - purchaseQty + purchaseReturnQty + salesQty - salesReturnQty;
+                var stockIssueQty = stockIssues
+                    .Where(s => s.ChallanDate.HasValue
+                             && s.ChallanDate.Value.Date >= fromDate.Date
+                             && s.ChallanDate.Value.Date <= toDate.Date)
+                    .SelectMany(s => s.StockIssuesItems ?? new List<StockIssueItem>())
+                    .Where(x => x.ItemMasterId == item.Id)
+                    .Sum(x => (decimal?)x.Qty) ?? 0;
+
+                var openingQty =
+                    (purchases
+                        .Where(p => p.BillDate.HasValue && p.BillDate.Value.Date < fromDate.Date)
+                        .SelectMany(p => p.PurchaseItems ?? new List<PurchaseItem>())
+                        .Where(x => x.ItemId == item.Id)
+                        .Sum(x => (decimal?)(x.Qty + x.FreeQty)) ?? 0)
+                    + (salesReturns
+                        .Where(r => r.ChallanDate.HasValue && r.ChallanDate.Value.Date < fromDate.Date)
+                        .SelectMany(r => r.StockReturnItems ?? new List<StockReturnItem>())
+                        .Where(x => x.ItemMasterId == item.Id)
+                        .Sum(x => (decimal?)x.Qty) ?? 0)
+                    + (stockReceives
+                        .Where(r => r.ChallanDate.HasValue && r.ChallanDate.Value.Date < fromDate.Date)
+                        .SelectMany(r => r.StockReceiveItems ?? new List<StockReceiveItem>())
+                        .Where(x => x.ItemMasterId == item.Id)
+                        .Sum(x => (decimal?)x.Qty) ?? 0)
+                    - (purchaseReturns
+                        .Where(r => r.BillDate.HasValue && r.BillDate.Value.Date < fromDate.Date)
+                        .SelectMany(r => r.PurchaseReturnItems ?? new List<PurchaseReturnItem>())
+                        .Where(x => x.ItemId == item.Id)
+                        .Sum(x => (decimal?)x.Qty) ?? 0)
+                    - (sales
+                        .Where(s => s.BillDate.HasValue && s.BillDate.Value.Date < fromDate.Date)
+                        .SelectMany(s => s.SalesItems ?? new List<SalesItem>())
+                        .Where(x => x.ItemMasterId == item.Id)
+                        .Sum(x => (decimal?)x.Qty) ?? 0)
+                    - (stockIssues
+                        .Where(s => s.ChallanDate.HasValue && s.ChallanDate.Value.Date < fromDate.Date)
+                        .SelectMany(s => s.StockIssuesItems ?? new List<StockIssueItem>())
+                        .Where(x => x.ItemMasterId == item.Id)
+                        .Sum(x => (decimal?)x.Qty) ?? 0);
+
+                var closingQty = openingQty + purchaseQty + salesReturnQty + stockReceiveQty
+                    - purchaseReturnQty - salesQty - stockIssueQty;
 
                 decimal CalcAmt(decimal q)
                 {
@@ -9584,6 +9857,14 @@ namespace EasyBill.UI.Controllers
             var customers = await _customerservice.GetAll();
             var suppliers = await _supplierRepo.GetALL();
 
+            var allSales = await _salesService.GetAll();
+            var allStockReturns = await _stockrturnservice.GetAll();
+            var allCustomerAdvances = await _customerAdvanceRepo.GetAll();
+
+            var allPurchases = await _purchaseservice.GetAll();
+            var allPurchaseReturns = await _purchasereturnservice.GetAll();
+            var allSupplierAdvances = await _supplierAdvanceRepo.GetAll();
+
             var list = new List<LedgerVM>();
 
             // =========================================
@@ -9592,16 +9873,14 @@ namespace EasyBill.UI.Controllers
 
             foreach (var c in customers)
             {
-                var sales = await _salesService.GetByCustomerId(c.Id);
+                var sales = allSales.Where(x => x.CustomerId == c.Id).ToList();
+                var stockReturns = allStockReturns.Where(x => x.CustomerId == c.Id).ToList();
 
-                decimal pendingAmount =
-                    sales.Sum(x => x.TotalPayable - x.PaidAmount);
+                decimal totalDebit = sales.Sum(x => x.TotalPayable);
+                decimal totalCredit = sales.Sum(x => x.SalsePaymentDetails?.Sum(p => p.Amount) ?? 0) 
+                                      + stockReturns.Sum(x => x.TotalPayable);
 
-                var stockReturns =
-                    await _stockrturnservice.GetByCustomerId(c.Id);
-
-                pendingAmount -=
-                    stockReturns.Sum(x => x.TotalPayable);
+                decimal pendingAmount = totalDebit - totalCredit;
 
                 if (pendingAmount < 0)
                 {
@@ -9609,14 +9888,9 @@ namespace EasyBill.UI.Controllers
                 }
 
                 // CUSTOMER ADVANCE
+                var customerAdvance = allCustomerAdvances.Where(x => x.CustomerId == c.Id).FirstOrDefault();
 
-                var customerAdvance =
-                    (await _customerAdvanceRepo
-                    .GetByCustomerId(c.Id))
-                    .FirstOrDefault();
-
-                decimal advanceAmount =
-                    customerAdvance?.AdvanceAmount ?? 0;
+                decimal advanceAmount = customerAdvance?.AdvanceAmount ?? 0;
 
                 // =====================================
                 // CASE 1 : CUSTOMER PENDING
@@ -9659,18 +9933,14 @@ namespace EasyBill.UI.Controllers
 
             foreach (var s in suppliers)
             {
-                var purchases =
-                    await _purchaseservice.GetBySupplierId(s.Id);
+                var purchases = allPurchases.Where(x => x.SupplierId == s.Id).ToList();
+                var purchaseReturns = allPurchaseReturns.Where(x => x.SupplierId == s.Id).ToList();
 
-                decimal pendingAmount =
-                    purchases.Sum(x =>
-                        x.TotalPayable - x.PaidAmount);
+                decimal totalCredit = purchases.Sum(x => x.TotalPayable);
+                decimal totalDebit = purchases.Sum(x => x.PaymentDetails?.Sum(p => p.Amount) ?? 0) 
+                                     + purchaseReturns.Sum(x => x.TotalPayable);
 
-                var purchaseReturns =
-                    await _purchasereturnservice.GetBySupplierId(s.Id);
-
-                pendingAmount -=
-                    purchaseReturns.Sum(x => x.TotalPayable);
+                decimal pendingAmount = totalCredit - totalDebit;
 
                 if (pendingAmount < 0)
                 {
@@ -9678,14 +9948,9 @@ namespace EasyBill.UI.Controllers
                 }
 
                 // SUPPLIER ADVANCE
+                var supplierAdvance = allSupplierAdvances.Where(x => x.SupplierId == s.Id).FirstOrDefault();
 
-                var supplierAdvance =
-                    (await _supplierAdvanceRepo
-                    .GetBySupplierId(s.Id))
-                    .FirstOrDefault();
-
-                decimal advanceAmount =
-                    supplierAdvance?.AdvanceAmount ?? 0;
+                decimal advanceAmount = supplierAdvance?.AdvanceAmount ?? 0;
 
                 // =====================================
                 // CASE 1 : SUPPLIER PENDING
@@ -9721,27 +9986,7 @@ namespace EasyBill.UI.Controllers
                     });
                 }
             }
-            // ✅ SUPPLIER
-            //foreach (var s in suppliers)
-            //{
-            //    var purchases = await _purchaseservice.GetBySupplierId(s.Id);
 
-            //    // CHANGE: PaidAmount ki jagah PaymentAmt use karein
-            //    var credit = purchases.Sum(x => x.TotalPayable - x.PaymentAmt);
-
-            //    // ✅ ONLY IF PENDING
-            //    if (credit > 0)
-            //    {
-            //        list.Add(new LedgerVM
-            //        {
-            //            Id = s.Id,
-            //            PartyName = s.FirstName,
-            //            Type = "Supplier",
-            //            Debit = 0,
-            //            Credit = credit
-            //        });
-            //    }
-            //}
             // =========================================
             // ORDERING
             // =========================================
@@ -9752,24 +9997,31 @@ namespace EasyBill.UI.Controllers
 
             return View(list);
         }
+
         private async Task<List<LedgerVM>> GetLedgerSummary()
         {
             var customers = await _customerservice.GetAll();
             var suppliers = await _supplierRepo.GetALL();
+
+            var allSales = await _salesService.GetAll();
+            var allStockReturns = await _stockrturnservice.GetAll();
+
+            var allPurchases = await _purchaseservice.GetAll();
+            var allPurchaseReturns = await _purchasereturnservice.GetAll();
 
             var list = new List<LedgerVM>();
 
             // ✅ CUSTOMER
             foreach (var c in customers)
             {
-                var sales = await _salesService.GetByCustomerId(c.Id);
+                var sales = allSales.Where(x => x.CustomerId == c.Id).ToList();
+                var stockReturns = allStockReturns.Where(x => x.CustomerId == c.Id).ToList();
 
-                var debit = sales.Sum(x => x.TotalPayable - x.PaidAmount);
+                decimal totalDebit = sales.Sum(x => x.TotalPayable);
+                decimal totalCredit = sales.Sum(x => x.SalsePaymentDetails?.Sum(p => p.Amount) ?? 0) 
+                                      + stockReturns.Sum(x => x.TotalPayable);
 
-                var stockReturns =
-                    await _stockrturnservice.GetByCustomerId(c.Id);
-
-                debit -= stockReturns.Sum(x => x.TotalPayable);
+                decimal debit = totalDebit - totalCredit;
 
                 if (debit < 0)
                 {
@@ -9793,15 +10045,14 @@ namespace EasyBill.UI.Controllers
             // ✅ SUPPLIER
             foreach (var s in suppliers)
             {
-                var purchases = await _purchaseservice.GetBySupplierId(s.Id);
+                var purchases = allPurchases.Where(x => x.SupplierId == s.Id).ToList();
+                var purchaseReturns = allPurchaseReturns.Where(x => x.SupplierId == s.Id).ToList();
 
-                // CHANGE: PaidAmount ki jagah PaymentAmt use karein
-                var credit = purchases.Sum(x => x.TotalPayable - x.PaymentAmt);
+                decimal totalCredit = purchases.Sum(x => x.TotalPayable);
+                decimal totalDebit = purchases.Sum(x => x.PaymentDetails?.Sum(p => p.Amount) ?? 0) 
+                                     + purchaseReturns.Sum(x => x.TotalPayable);
 
-                var purchaseReturns =
-                    await _purchasereturnservice.GetBySupplierId(s.Id);
-
-                credit -= purchaseReturns.Sum(x => x.TotalPayable);
+                decimal credit = totalCredit - totalDebit;
 
                 if (credit < 0)
                 {
@@ -11894,6 +12145,26 @@ namespace EasyBill.UI.Controllers
             await viewResult.View.RenderAsync(viewContext);
 
             return sw.ToString();
+        }
+        public async Task<IActionResult> RestoreSales()
+        {
+            var data = await _salesService.GetDeletedSales();
+            return View(data);
+
+        }
+        [HttpPost]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var result = await _salesService.RestoreSales(id);
+
+            if (!result)
+                return Json(new { success = false });
+
+            return Json(new
+            {
+                success = true,
+                message = "Sales restored successfully"
+            });
         }
     }
 }

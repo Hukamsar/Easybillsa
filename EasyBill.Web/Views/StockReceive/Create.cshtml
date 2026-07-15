@@ -1,4 +1,4 @@
-﻿@using EasyBill.Models.ViewModels
+@using EasyBill.Models.ViewModels
 @model EasyBill.Models.ViewModels.StockReceiveVM
 @{
     var isEdit = ViewData["IsEdit"] as bool? ?? false;
@@ -433,6 +433,22 @@
                 <input type="hidden" asp-for="PurchaseOrderId" id="purchaseOrderId" />
                 <input type="hidden" asp-for="SourcePurchaseChallanId" id="sourcePurchaseChallanId" />
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <!-- Professional Document Type Selector -->
+                <div class="row mb-3 pb-2 border-bottom align-items-center bg-light rounded p-2 mx-0">
+                    <label class="col-md-2 col-form-label text-start small fw-bold text-primary text-uppercase" style="width: auto;">Document Type:</label>
+                    <div class="col-md-10 d-flex align-items-center">
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="radio" name="ReceiveFromType" id="receiveSupplier" value="Supplier" @(Model.ReceiveFromType == "Supplier" ? "checked" : "")>
+                            <label class="form-check-label fw-bold" style="cursor: pointer;" for="receiveSupplier"><i class="bi bi-truck"></i> Standard Receive (Supplier)</label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0 ms-4">
+                            <input class="form-check-input" type="radio" name="ReceiveFromType" id="receiveBranch" value="Branch" @(Model.ReceiveFromType == "Branch" ? "checked" : "")>
+                            <label class="form-check-label fw-bold" style="cursor: pointer;" for="receiveBranch"><i class="bi bi-shop"></i> In-Transit Receive (Branch)</label>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row">
                     <div class="col-md-4 d-flex align-items-center mb-1 border-radious ">
                         <div class="col-md-5 ">
@@ -453,7 +469,7 @@
                         </div>
                     </div>
 
-                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious">
+                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious supplier-section">
                         <div class="col-md-5 ">
                             <label>Billing Type</label>
                         </div>
@@ -464,8 +480,30 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <!-- Branch Selection (Hidden by default) -->
+                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious branch-section d-none">
+                        <div class="col-md-4">
+                            <label>Transfer From</label>
+                        </div>
+                        <div class="col-md-7">
+                            <input type="hidden" asp-for="SourceStockIssueId" id="SourceStockIssueId" />
+                            @if (Model.IsPendingTransfer)
+                            {
+                                <input type="text" class="form-control form-control-sm" value="@Model.TransferFromBranchName" readonly />
+                                <input type="hidden" asp-for="TransferFromTenantId" id="TransferFromTenantIdHidden" />
+                                <input type="hidden" asp-for="IsPendingTransfer" value="true" />
+                            }
+                            else
+                            {
+                                <select asp-for="TransferFromTenantId" class="form-control form-control-sm" asp-items="ViewBag.Branches">
+                                    <option value="">-- Select Branch --</option>
+                                </select>
+                            }
+                        </div>
+                    </div>
 
-                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious mb-1">
+                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious mb-1 supplier-section">
                         <div class="col-md-5">
                             <label asp-for="SupplierName"></label>
                         </div>
@@ -941,6 +979,15 @@
     </div>
 </div>
 
+                        <tbody id="pendingTransfersBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <!-- Settings Sidebar -->
 <div id="settingsSidebar" style="display:none; position:fixed; top:0; right:0; width:300px; height:100%; background:#f8f9fa; border-left:1px solid #ccc; padding:20px; z-index:1050;">
@@ -1237,6 +1284,10 @@
     //     return supplierId && supplierId !== "0";
     // }
     function isValidSupplier() {
+        const receiveType = $('input[name="ReceiveFromType"]:checked').val();
+        if (receiveType === 'Branch') {
+            return true;
+        }
 
         const billingType = $("#billingType").val();
         const supplierId = $(".supplier-id").val();
@@ -1698,29 +1749,30 @@
     });
     $(document).on("keydown", "#BillNo", function (e) {
         if (e.key !== "Enter") return;
-
         e.preventDefault();
-        e.stopImmediatePropagation();
-
-            $("#BillDate").focus();
+        $("#BillDate").focus();
     });
+
     $(document).on("keydown", "#BillDate", function (e) {
         if (e.key !== "Enter") return;
-
         e.preventDefault();
-        e.stopImmediatePropagation();
+        const receiveType = $('input[name="ReceiveFromType"]:checked').val();
+        if (receiveType === 'Branch') {
+            $("#TransferFromTenantId").focus();
+        } else {
+            $("#supplier-input").focus();
+        }
+    });
 
-        //$("#billingType").focus();
-        $("#paymentToggle").focus();
+    $(document).on("keydown", "#TransferFromTenantId", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            $("#PartyBillNo").focus();
+        }
     });
 
     $(document).on("keydown", "#billingType", function (e) {
         if (e.key === "ArrowUp" || e.key === "ArrowDown") return;
-
-        if (e.key === "Enter") {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-
             const type = this.value;
 
             if (type === "registered") {
@@ -1751,24 +1803,50 @@
             return;
         }
 
-        // Enter key - move to Billing Type
+        // Enter key - move to Billing Type or Branch Dropdown
         if (e.key === "Enter") {
             e.preventDefault();
             e.stopImmediatePropagation();
 
-            // Focus on Billing Type and open dropdown
-            const billingTypeSelect = document.getElementById("billingType");
-            if (billingTypeSelect) {
-                billingTypeSelect.focus();
+            const receiveType = $('input[name="ReceiveFromType"]:checked').val();
+            if (receiveType === 'Branch') {
+                const branchSelect = document.getElementById("TransferFromTenantId");
+                if (branchSelect && !branchSelect.disabled) {
+                    branchSelect.focus();
+                    setTimeout(() => {
+                        if ('showPicker' in HTMLSelectElement.prototype) {
+                            branchSelect.showPicker();
+                        } else {
+                            $(branchSelect).trigger('click');
+                        }
+                    }, 50);
+                } else {
+                    $("#PartyBillNo").focus();
+                }
+            } else {
+                // Focus on Billing Type and open dropdown
+                const billingTypeSelect = document.getElementById("billingType");
+                if (billingTypeSelect) {
+                    billingTypeSelect.focus();
 
-                setTimeout(() => {
-                    if ('showPicker' in HTMLSelectElement.prototype) {
-                        billingTypeSelect.showPicker();
-                    } else {
-                        $(billingTypeSelect).trigger('click');
-                    }
-                }, 50);
+                    setTimeout(() => {
+                        if ('showPicker' in HTMLSelectElement.prototype) {
+                            billingTypeSelect.showPicker();
+                        } else {
+                            $(billingTypeSelect).trigger('click');
+                        }
+                    }, 50);
+                }
             }
+        }
+    });
+
+    $(document).on("keydown", "#TransferFromTenantId", function (e) {
+        if (e.key === "ArrowUp" || e.key === "ArrowDown") return;
+        if (e.key === "Enter") {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            $("#PartyBillNo").focus();
         }
     });
 
@@ -3471,8 +3549,12 @@
                    data: $(form).serialize()
                });
 
-               toastr.success("Stock receive saved successfully!");
-               window.location.href = "/StockReceive/Index";
+               if (response.success) {
+                   toastr.success("Stock receive saved successfully!");
+                   window.location.href = "/StockReceive/Index";
+               } else {
+                   toastr.error(response.message || "Failed to save stock receive.");
+               }
 
            } catch (xhr) {
 
@@ -5054,6 +5136,118 @@
     });
 
 
+
+    // Branch Transfer Toggle Logic
+    $(document).ready(function() {
+        function toggleReceiveType() {
+            const receiveType = $('input[name="ReceiveFromType"]:checked').val();
+            if (receiveType === 'Branch') {
+                $('.supplier-section').removeClass('d-flex').addClass('d-none');
+                $('.branch-section').removeClass('d-none').addClass('d-flex');
+                $('#billingType').val('registered').trigger('change');
+            } else {
+                $('.branch-section').removeClass('d-flex').addClass('d-none');
+                $('.supplier-section').removeClass('d-none').addClass('d-flex');
+            }
+        }
+
+        $('input[name="ReceiveFromType"]').on('change', toggleReceiveType);
+        toggleReceiveType(); // Initialize
+
+        // Removed btnShowPendingTransfers click handler
+
+        function loadPendingTransferDetails(issueId) {
+            // showLoader("Fetching transfer details...");
+            $.get('/StockReceive/GetStockIssueDetails', { issueId: issueId }, function(res) {
+                // hideLoader();
+                if (res.success) {
+                    var data = res.data;
+                    $("#pendingTransfersModal").modal('hide');
+                    
+                    var tIssueId = readValue(data, "issueId", "IssueId");
+                    var tTenantId = readValue(data, "transferFromTenantId", "TransferFromTenantId");
+                    var tBranchName = readValue(data, "transferFromBranchName", "TransferFromBranchName");
+                    var tChallanNo = readValue(data, "challanNo", "ChallanNo");
+                    var tChallanDate = readValue(data, "challanDate", "ChallanDate");
+
+                    // Auto fill the form
+                    $("#SourceStockIssueId").val(tIssueId);
+                    
+                    if ($("#TransferFromTenantIdHidden").length > 0) {
+                        $("#TransferFromTenantIdHidden").val(tTenantId);
+                    } else {
+                        var $select = $("#TransferFromTenantId");
+                        if ($select.find("option[value='" + tTenantId + "']").length === 0) {
+                            $select.append(new Option(tBranchName || "Branch Transfer", tTenantId));
+                        }
+                        $select.val(tTenantId).trigger('change');
+                        $select.prop("disabled", true); // Don't let them change the source of a pending transfer
+                        
+                        if ($("#DynamicTransferFromTenantId").length === 0) {
+                            $("<input>").attr({
+                                type: 'hidden',
+                                id: 'DynamicTransferFromTenantId',
+                                name: 'TransferFromTenantId',
+                                value: tTenantId
+                            }).appendTo("form");
+                        } else {
+                            $("#DynamicTransferFromTenantId").val(tTenantId);
+                        }
+                    }
+                    
+                    $("#BillNo").val(tChallanNo);
+                    $("#BillDate").val(tChallanDate);
+                    $("#PartyBillNo").val(tChallanNo);
+                    $("#PartyBillDate").val(tChallanDate);
+                    
+                    // Clear existing grid and add fetched items
+                    $("#PurchaseItemBody").empty();
+                    rowIndex = 0; // reset global rowIndex
+                    
+                    var itemsList = readValue(data, "items", "Items") || [];
+                    itemsList.forEach(function(item) {
+                        var rRate = readValue(item, "rate", "Rate");
+                        var mappedItem = {
+                            itemId: readValue(item, "itemId", "ItemId"),
+                            itemName: readValue(item, "itemName", "ItemName"),
+                            qty: readValue(item, "qty", "Qty"),
+                            freeQty: readValue(item, "freeQty", "FreeQty") || 0,
+                            rate: rRate,
+                            mrp: readValue(item, "mrp", "Mrp") || rRate, 
+                            batch: readValue(item, "batch", "Batch"),
+                            expiryDate: readValue(item, "expiryDate", "ExpiryDate"),
+                            discount: readValue(item, "discountPercent", "DiscountPercent", "discount", "Discount"),
+                            gst: readValue(item, "taxPercent", "TaxPercent", "gst", "Gst")
+                        };
+                        addNewRow(mappedItem);
+                    });
+                    
+                    calculateTotalSummary();
+                    
+                    toastr.success("Data loaded! You can now review and edit the items.");
+                } else {
+                    toastr.error(res.message);
+                }
+            });
+        }
+
+        $(document).on("click", ".btn-accept-transfer", function() {
+            var issueId = $(this).data("id");
+            loadPendingTransferDetails(issueId);
+        });
+
+        @if (ViewBag.AutoLoadIssueId != null)
+        {
+            <text>
+            // Automatically select Branch transfer UI
+            $('input[name="ReceiveFromType"][value="Branch"]').prop("checked", true).trigger("change");
+            
+            setTimeout(function() {
+                loadPendingTransferDetails(@ViewBag.AutoLoadIssueId);
+            }, 500);
+            </text>
+        }
+    });
 
 </script>
 @* } *@

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,5 +14,6 @@ namespace EasyBill.Models.ViewModels
         public string? Address { get; set; }
         public string? Email { get; set; }
         public bool IsMobileVerified { get; set; }
+        public string? IdentityUserId { get; set; }
     }
 }

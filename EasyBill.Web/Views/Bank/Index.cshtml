@@ -1,0 +1,77 @@
+@model IEnumerable<EasyBill.Models.Entity.Bank>
+
+@{
+    ViewData["Title"] = "Bank List";
+}
+
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+<div class="row mb-3">
+    <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+        Bank List
+    </div>
+</div>
+
+<p class="d-flex justify-content-end gap-2 mb-2">
+    <a asp-controller="Bank" asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add
+    </a>
+</p>
+
+<table id="banktable" class="table table-bordered table-striped">
+    <thead class="table">
+        <tr>
+            <th>Bank Name</th>
+            <th>Account Group</th>
+            <th>Branch</th>
+            <th>City</th>
+            <th>Account No</th>
+            <th>IFSC Code</th>
+            <th>Swift No</th>
+            <th>Opening Balance</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.BankName</td>
+                <td>@(item.AccountGroup?.Name ?? "N/A")</td>
+                <td>@item.Branch</td>
+                <td>@item.City</td>
+                <td>@item.AccountNo</td>
+                <td>@item.IFSCCode</td>
+                <td>@item.SwiftNo</td>
+                <td>@item.OpeningBalance.ToString("N2")</td>
+                 
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <a asp-controller="Bank" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-controller="Bank" asp-action="Delete"
+                           class="btn-delete"
+                           title="Delete"
+                           asp-route-id="@item.Id"
+                           data-id="@item.Id"
+                           data-controller="@ViewContext.RouteData.Values["controller"]">
+                            <i class="bi bi-trash-fill text-danger p-1"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<script>
+    $(document).ready(function(){
+        $("#banktable").DataTable();
+    });
+</script>

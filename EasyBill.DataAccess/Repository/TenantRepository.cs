@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Data;
@@ -263,7 +263,15 @@ namespace EasyBill.DataAccess.Repository
             bool hasTenant = typeof(IMayHaveTenant).IsAssignableFrom(typeof(T));
             bool hasCreatedBy = typeof(T).GetProperty("CreatedBy") != null;
             bool isTenantMasterTable = typeof(IMasterEntity).IsAssignableFrom(typeof(T));
-            bool isGMasterTable = typeof(IGMasterEntity).IsAssignableFrom(typeof(T));
+              string typeName = typeof(T).Name;
+              bool isSharedMaster = typeName == "ItemMaster" ||
+                                   typeName == "CategoryMaster" ||
+                                   typeName == "SubCategory" ||
+                                   typeName == "Hsn" ||
+                                   typeName == "Division" ||
+                                   typeName == "Company" ||
+                                   typeName == "Offer";
+              bool isGMasterTable = typeof(IGMasterEntity).IsAssignableFrom(typeof(T));
 
             var tenantId = _tenantAccess.GetCurrentTenantId();
             var parameter = Expression.Parameter(typeof(T), "x");
@@ -273,33 +281,41 @@ namespace EasyBill.DataAccess.Repository
             {
                 return query;
             }
-            else if (isTenantMasterTable)
-            {
-                if (hasTenant && !string.IsNullOrEmpty(tenantId))
-                {
-                    var tenantProp = Expression.Property(parameter, "TenantId");
-                    var tenantConst = Expression.Constant(tenantId);
-                    filterExpression = Expression.Equal(tenantProp, tenantConst);
-                }
-            }
             else if (typeof(T) == typeof(Tenant))
             {
                 if (!string.IsNullOrEmpty(tenantId))
                 {
                     var idProp = Expression.Property(parameter, "Id");
-                    var tenantConst = Expression.Constant(tenantId);
-                    filterExpression = Expression.Equal(idProp, tenantConst);
+                    var allowedIds = GetTenantHierarchyIds(tenantId);
+                    
+                    Expression? orExpression = null;
+                    foreach (var id in allowedIds)
+                    {
+                        var equalExpr = Expression.Equal(idProp, Expression.Constant(id));
+                        orExpression = orExpression == null ? equalExpr : Expression.OrElse(orExpression, equalExpr);
+                    }
+                    filterExpression = orExpression;
                 }
             }
             else
             {
-                if (user.IsInRole("Admin") || user.IsInRole("Doctor"))
+                if (user.IsInRole("Admin") || user.IsInRole("Doctor") || isTenantMasterTable || isSharedMaster)
                 {
                     if (hasTenant && !string.IsNullOrEmpty(tenantId))
                     {
                         var tenantProp = Expression.Property(parameter, "TenantId");
-                        var tenantConst = Expression.Constant(tenantId);
-                        filterExpression = Expression.Equal(tenantProp, tenantConst);
+                        
+                        
+                        
+                        var allowedIds = GetFilteredTenantIds(tenantId, isSharedMaster);
+                        
+                        Expression? orExpression = null;
+                        foreach (var id in allowedIds)
+                        {
+                            var equalExpr = Expression.Equal(tenantProp, Expression.Constant(id));
+                            orExpression = orExpression == null ? equalExpr : Expression.OrElse(orExpression, equalExpr);
+                        }
+                        filterExpression = orExpression;
                     }
                 }
                 else
@@ -321,5 +337,95 @@ namespace EasyBill.DataAccess.Repository
 
             return query;
         }
+
+        private List<string> GetTenantHierarchyIds(string tenantId)
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            string cacheKey = $"TenantHierarchy_{tenantId}";
+            if (httpContext != null && httpContext.Items.TryGetValue(cacheKey, out var cachedObj) && cachedObj is List<string> cachedIds)
+            {
+                return cachedIds;
+            }
+
+            var allowedIds = new List<string> { tenantId };
+            try
+            {
+                var currentTenant = _context.Set<Tenant>().AsNoTracking().FirstOrDefault(t => t.Id == tenantId);
+                if (currentTenant != null)
+                {
+                    if (currentTenant.IsHeadOffice)
+                    {
+                        var branchIds = _context.Set<Tenant>().AsNoTracking()
+                            .Where(t => t.ParentTenantId == tenantId)
+                            .Select(t => t.Id)
+                            .ToList();
+                        allowedIds.AddRange(branchIds);
+                    }
+                    else if (!string.IsNullOrEmpty(currentTenant.ParentTenantId))
+                    {
+                        // Add the HO
+                        allowedIds.Add(currentTenant.ParentTenantId);
+                        
+                        // Add sibling branches
+                        var siblingIds = _context.Set<Tenant>().AsNoTracking()
+                            .Where(t => t.ParentTenantId == currentTenant.ParentTenantId && t.Id != tenantId)
+                            .Select(t => t.Id)
+                            .ToList();
+                        allowedIds.AddRange(siblingIds);
+                    }
+                }
+            }
+            catch { }
+
+            if (httpContext != null)
+            {
+                httpContext.Items[cacheKey] = allowedIds;
+            }
+
+            return allowedIds;
+        }
+
+        private List<string> GetFilteredTenantIds(string tenantId, bool isSharedMaster)
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            string cacheKey = $"FilteredTenants_{tenantId}_{isSharedMaster}";
+            if (httpContext != null && httpContext.Items.TryGetValue(cacheKey, out var cachedObj) && cachedObj is List<string> cachedIds)
+            {
+                return cachedIds;
+            }
+
+            var result = new List<string> { tenantId };
+            try
+            {
+                var currentTenant = _context.Set<Tenant>().AsNoTracking().FirstOrDefault(t => t.Id == tenantId);
+                if (currentTenant != null)
+                {
+                    if (currentTenant.IsHeadOffice)
+                    {
+                        // HO can see itself and all branches
+                        var branchIds = _context.Set<Tenant>().AsNoTracking()
+                            .Where(t => t.ParentTenantId == tenantId)
+                            .Select(t => t.Id)
+                            .ToList();
+                        result.AddRange(branchIds);
+                    }
+                    else if (!string.IsNullOrEmpty(currentTenant.ParentTenantId) && isSharedMaster)
+                    {
+                        // Branch can see parent HO records for shared master tables
+                        result.Add(currentTenant.ParentTenantId);
+                    }
+                }
+            }
+            catch { }
+
+            if (httpContext != null)
+            {
+                httpContext.Items[cacheKey] = result;
+            }
+
+            return result;
+        }
     }
 }
+
+

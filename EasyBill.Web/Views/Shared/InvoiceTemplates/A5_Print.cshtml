@@ -168,7 +168,11 @@
     var customerName = S(customerObj, "Name", "CustomerName", "PartyName");
     var customerPhone = S(customerObj, "PhoneNo", "Phone", "MobileNo");
     var customerAddress = S(customerObj, "Address", "BillingAddress", "FullAddress");
-    var customerGstin = S(customerObj, "GSTIN", "Gstin", "TaxNo");
+    var customerGstin = S(customerObj, "GSTNo", "GSTIN", "Gstin", "TaxNo");
+    var doctorObj = GetObj(Model, "PharmacyDoctor", "Doctor");
+    var doctorName = S(doctorObj, "Name", "DoctorName") ?? S(Model, "PharmacyDoctorName");
+    var doctorRegNo = S(doctorObj, "RegistrationNo", "RegNo") ?? S(Model, "DoctorRegNumber");
+    var billRemarks = S(Model, "Remarks", "Remark", "Notes");
 
     if (string.IsNullOrWhiteSpace(customerName)) customerName = "Walk-in Customer";
     if (string.IsNullOrWhiteSpace(customerPhone)) customerPhone = "-";
@@ -206,11 +210,14 @@
         if (string.IsNullOrWhiteSpace(expText)) expText = "-";
 
         var qty = D(item, "Qty", "Quantity");
-        // Form UI shows StripRate as Rate column; prefer that in print for consistency.
-        var rate = D(item, "StripRate", "Rate", "UnitPrice", "Price");
-        var discPct = D(item, "DiscountPercent", "DiscPer");
+        var isTabletWise = GetVal(item, "IsSoldInTablets") is bool b && b;
+        var stripRateVal = D(item, "StripRate");
+        var normalRateVal = D(item, "Rate", "UnitPrice", "Price");
+        var rate = (isTabletWise && stripRateVal > 0m) ? stripRateVal : (normalRateVal > 0m ? normalRateVal : stripRateVal);
 
-        var discAmt = D(item, "Discount", "DiscountAmount", "DiscAmount");
+        var discPct = D(item, "DiscountPercent", "DiscPer");
+        var discAmt = D(item, "DiscountAmount", "DiscAmount");
+        var rawDisc = D(item, "Discount"); // On SalesItem entity, Discount holds discount percent
 
         var gstPct = D(item, "Gst", "GSTPercent", "GstPercent");
         var gstAmt = D(item, "GSTAmount", "TaxAmount");
@@ -219,7 +226,12 @@
         var taxable = D(item, "TaxableAmount", "Taxable", "BaseAmount");
 
         var gross = qty * rate;
-        if (discAmt == 0m && discPct > 0m && gross > 0m) discAmt = Math.Round((gross * discPct) / 100m, 2);
+        if (discAmt == 0m)
+        {
+            if (rawDisc > 0m && rawDisc <= 100m && discPct == 0m) discPct = rawDisc;
+            if (discPct > 0m && gross > 0m) discAmt = Math.Round((gross * discPct) / 100m, 2);
+            else discAmt = rawDisc;
+        }
         if (taxable == 0m) taxable = gross > 0m ? Math.Max(gross - discAmt, 0m) : lineTotal;
         if (gstAmt == 0m && gstPct > 0m && taxable > 0m) gstAmt = Math.Round((taxable * gstPct) / 100m, 2);
         if (lineTotal == 0m) lineTotal = taxable + gstAmt;
@@ -904,6 +916,10 @@
                             {
                                 <div class="txtCustomerGstinClass">GSTIN: @customerGstin</div>
                             }
+                            @if (!string.IsNullOrWhiteSpace(doctorName))
+                            {
+                                <div style="margin-top:2px;"><b>Doctor:</b> Dr. @doctorName @(!string.IsNullOrWhiteSpace(doctorRegNo) ? $"({doctorRegNo})" : "")</div>
+                            }
                         </div>
                     </div>
                 </section>
@@ -1009,6 +1025,12 @@
                                     <span>Redeemed: <span style="color: #dc2626;">-@redeemed</span></span>
                                     <span>Balance Points: <span style="color: var(--primary);">@balance</span></span>
                                 </div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(billRemarks))
+                            {
+                                <div class="note-title" style="color: #b45309;">Remarks</div>
+                                <div class="note-text" style="color: #92400e; font-weight: 600;">@billRemarks</div>
                             }
 
                             <div class="note-title">Terms & Conditions</div>

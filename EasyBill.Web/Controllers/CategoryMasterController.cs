@@ -1,12 +1,14 @@
-﻿using AOne.Models.Entity;
+using AOne.Models.Entity;
 using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
+using EasyBill.UI.Filters;
 using Microsoft.AspNetCore.Mvc;
 using static AOne.Utility.Permissions;
 
 namespace EasyBill.UI.Controllers
 {
+    [HeadOfficeOnly]
     public class CategoryMasterController : Controller
     {
         private readonly ICategoryMasterRepository _categoryservice;

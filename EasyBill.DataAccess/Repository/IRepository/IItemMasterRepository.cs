@@ -13,7 +13,7 @@ namespace EasyBill.DataAccess.Repository.IRepository
 {
     public interface IItemMasterRepository
     {
-        Task<IList<ItemMaster>> GetAll();
+        Task<IList<ItemMaster>> GetAll(string? targetTenantId = null);
         Task<ItemMaster> Create(ItemMaster model);
         Task ItemAddRange(List<ItemMaster> items);
         Task<ItemMaster> GetByItemMasterId(int? Id);
@@ -34,5 +34,9 @@ namespace EasyBill.DataAccess.Repository.IRepository
 
         Task<ItemMaster> GetProductById(int Id);
         Task<bool> IsReferenced(int id); // MERGED FROM TL
+        Task<IList<ItemMaster>> GetDeletedItems();
+        Task<bool> RestoreItem(int id);
+        Task<IList<ItemImage>> GetAllItemImages();
+        void ClearItemMasterCache();
     }
 }

@@ -1,20 +1,22 @@
-﻿using AOne.DataAccess.ProfileService;
+using AOne.DataAccess.ProfileService;
+using AOne.Models.Entity;
 using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Office2010.Excel;
 using EasyBill.DataAccess.Repository.IRepository;
+using EasyBill.Models.Entity;
 using EasyBill.Models.ViewModels;
 using iText.IO.Font.Constants;
 using iText.Kernel.Font;
 using iText.Kernel.Pdf;
 using iText.Layout;
-using EasyBill.Models.Entity;
 using iText.Layout.Element;
 using iText.Layout.Properties;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Security.Claims;
+using Microsoft.Extensions.Caching.Memory;
 using System.Globalization;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Table = iText.Layout.Element.Table;
 namespace EasyBill.UI.Controllers
@@ -22,6 +24,7 @@ namespace EasyBill.UI.Controllers
     public class StockIssueController : Controller
     {
         private readonly IStockIssueRepository _stockissueservice;
+        private readonly IStockReceiveRepository _stockreceiveservice;
         private readonly IProfileService _profileService;
         private readonly ICustomerRepository _customerservice;
         private readonly IItemMasterRepository _itemmasterservice;
@@ -31,8 +34,11 @@ namespace EasyBill.UI.Controllers
         private readonly IStockService _currentstockService;
         private readonly ISalseSettingRepository _salsesettingservice;
         private readonly IModeOfPaymentRepository _modeofpaymentservice;
+        private readonly IPurchaseOrderRepository _purchaseOrderRepo;
+
         public StockIssueController(
             IStockIssueRepository stockissueservice, 
+            IStockReceiveRepository stockreceiveservice,
             IProfileService profileService, 
             ICustomerRepository customerservice,
             IItemMasterRepository itemmasterservice,
@@ -41,11 +47,13 @@ namespace EasyBill.UI.Controllers
             ITenantRegistrationRepository tenantRepository,
             IStockService currentstockService,
             ISalseSettingRepository salsesettingservice,
-            IModeOfPaymentRepository modeofpaymentservice
+            IModeOfPaymentRepository modeofpaymentservice,
+            IPurchaseOrderRepository purchaseOrderRepo
             )
         {
             _usersManager = userManager;
             _stockissueservice = stockissueservice;
+            _stockreceiveservice = stockreceiveservice;
             _profileService = profileService;
             _customerservice = customerservice;
             _itemmasterservice = itemmasterservice;
@@ -54,13 +62,26 @@ namespace EasyBill.UI.Controllers
             _currentstockService = currentstockService;
             _salsesettingservice = salsesettingservice;
             _modeofpaymentservice = modeofpaymentservice;
+            _purchaseOrderRepo = purchaseOrderRepo;
+
         }
         public async Task<IActionResult> Index()
         {
             await _profileService.Set(User);
             var data = await _stockissueservice.GetAll();
+            var tenants = await _tenantRepository.GetAll();
+            ViewBag.Tenants = tenants.ToDictionary(x => x.Id, x => x);
             return View(data);
         }
+
+        public async Task<IActionResult> PendingRequests()
+        {
+            var tenantId = User.FindFirst("TenantId")?.Value;
+            var allPOs = await _purchaseOrderRepo.GetAll();
+            var requests = allPOs.Where(x => x.TargetTenantId == tenantId && x.OrderType == "SR").ToList();
+            return View(requests);
+        }
+
         [HttpGet]
         public async Task<IActionResult> Create(string? returnUrl)
         {
@@ -75,8 +96,25 @@ namespace EasyBill.UI.Controllers
                 "Name");
 
             var tenantId = User?.FindFirst("TenantId")?.Value;
-            var tenantdata = (await _tenantRepository.GetAll()).FirstOrDefault(x => x.Id == tenantId);
+            var tenantList = await _tenantRepository.GetAll();
+            var tenantdata = tenantList.FirstOrDefault(x => string.Equals(x.Id, tenantId, StringComparison.OrdinalIgnoreCase));
             ViewBag.BusinessType = (int)(tenantdata?.BusinessType ?? 0);
+
+            // Fetch related branches for branch transfer
+            if (tenantdata != null)
+            {
+                var hoTenantId = string.IsNullOrEmpty(tenantdata.ParentTenantId) ? tenantdata.Id : tenantdata.ParentTenantId;
+                var branches = tenantList.Where(t => 
+                    string.Equals(t.ParentTenantId, hoTenantId, StringComparison.OrdinalIgnoreCase) && 
+                    !string.Equals(t.Id, tenantId, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(t => t.Name)
+                    .ToList();
+                ViewBag.Branches = new SelectList(branches, "Id", "Name");
+            }
+            else
+            {
+                ViewBag.Branches = new SelectList(new List<AOne.Models.Entity.Tenant>(), "Id", "Name");
+            }
 
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var setting = await _salsesettingservice.GetByUserId(userId);
@@ -93,6 +131,57 @@ namespace EasyBill.UI.Controllers
             };
             return View(vm);
         }
+        public async Task<IActionResult> FulfillRequest(int id)
+        {
+            var request = await _purchaseOrderRepo.GetById(id);
+            if (request == null) return NotFound();
+
+            var vm = new StockIssueVM
+            {
+                ChallanDate = DateTime.Today,
+                ChallanNo = await GenerateNxtNumber(),
+                billingType = "registered", 
+                IssueToType = "Branch",
+                PaymentType = "cash",
+                TransferToTenantId = request.TenantId, 
+                StockRequestId = request.Id, 
+                StockIssuesItemVMs = request.PurchaseOrderItems?.Select(x => new StockIssueItemVM
+                {
+                    ItemMasterId = x.ItemId,
+                    ItemName = x.ItemMasters?.Name,
+                    Qty = x.Qty,
+                    Batch = x.Batch
+                }).ToList()
+            };
+            
+            ViewBag.ReturnUrl = "/StockIssue/PendingRequests";
+            ViewBag.Customer = new SelectList(await _customerservice.GetAll(), "Id", "Name");
+            ViewBag.PaymentMode = new SelectList(await _modeofpaymentservice.GetAll(), "Id", "Name");
+            ViewBag.Items = new SelectList((await _itemmasterservice.GetAll()).Where(x => x.IsActive).OrderBy(x => x.Name), "Id", "Name");
+
+            var tenantId = User?.FindFirst("TenantId")?.Value;
+            var tenantList = await _tenantRepository.GetAll();
+            var tenantdata = tenantList.FirstOrDefault(x => string.Equals(x.Id, tenantId, StringComparison.OrdinalIgnoreCase));
+            ViewBag.BusinessType = (int)(tenantdata?.BusinessType ?? 0);
+
+            if (tenantdata != null)
+            {
+                var hoTenantId = string.IsNullOrEmpty(tenantdata.ParentTenantId) ? tenantdata.Id : tenantdata.ParentTenantId;
+                var branches = tenantList.Where(t => 
+                    string.Equals(t.ParentTenantId, hoTenantId, StringComparison.OrdinalIgnoreCase) && 
+                    !string.Equals(t.Id, tenantId, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(t => t.Name)
+                    .ToList();
+                ViewBag.Branches = new SelectList(branches, "Id", "Name");
+            }
+            else
+            {
+                ViewBag.Branches = new SelectList(new List<AOne.Models.Entity.Tenant>(), "Id", "Name");
+            }
+
+            return View("Create", vm);
+        }
+
         public async Task<string> GenerateNxtNumber()
         {
             var nextNumber = (await _stockissueservice.GetAll())
@@ -139,7 +228,7 @@ namespace EasyBill.UI.Controllers
             }
 
             // 3. Customer Validation
-            if (Vm.billingType == "registered")
+            if (Vm.billingType == "registered" && Vm.IssueToType != "Branch")
             {
                 if (string.IsNullOrWhiteSpace(Vm.MobileNo))
                     return Json(new { success = false, message = "Mobile number is required for registered customer." });
@@ -147,6 +236,18 @@ namespace EasyBill.UI.Controllers
                 var customerList = await _customerservice.GetAll();
                 if (!customerList.Any(x => !string.IsNullOrWhiteSpace(x.PhoneNo) && x.PhoneNo.Trim() == Vm.MobileNo.Trim()))
                     return Json(new { success = false, message = "Customer does not exist. Please create customer first." });
+            }
+
+            if (Vm.IssueToType == "Branch" && string.IsNullOrWhiteSpace(Vm.TransferToTenantId))
+            {
+                return Json(new { success = false, message = "Please select a branch to transfer stock." });
+            }
+
+            // Ensure at least one item is provided
+            var validItems = Vm.StockIssuesItemVMs?.Where(x => x.ItemMasterId > 0).ToList();
+            if (validItems == null || !validItems.Any())
+            {
+                return Json(new { success = false, message = "Please add at least one valid item to the issue." });
             }
 
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -180,6 +281,8 @@ namespace EasyBill.UI.Controllers
                 NetCollection = (Vm.PaidAmount ?? 0M) - Math.Max(0, (Vm.PaidAmount ?? 0M) - Vm.TotalPayable),
                 Balance = Vm.Balance ?? 0M,
                 TaxCalculation = Vm.TaxCalculation,
+
+                TransferToTenantId = Vm.IssueToType == "Branch" ? Vm.TransferToTenantId : null,
 
                 StockIssuesItems = Vm.StockIssuesItemVMs?.Where(x => x.ItemMasterId > 0).Select(x =>
                 {
@@ -232,6 +335,21 @@ namespace EasyBill.UI.Controllers
                 }
 
                 var createdIssue = await _stockissueservice.Create(model);
+
+                // 6. The Branch Transfer is tracked via the StockIssue's IsReceived flag.
+                // We no longer auto-create a StockReceive draft. The receiving branch will 
+                // accept the transfer via the "Pending Transfers" popup on the Create page.
+                
+                if (Vm.StockRequestId.HasValue)
+                {
+                    var stockRequest = await _purchaseOrderRepo.GetIncomingRequestById(Vm.StockRequestId.Value);
+                    if (stockRequest != null)
+                    {
+                        stockRequest.WorkflowStatus = "Issued";
+                        await _purchaseOrderRepo.Update(stockRequest);
+                    }
+                }
+
                 return Json(new { success = true, id = createdIssue.Id });
             }
             catch (Exception ex)
@@ -289,6 +407,9 @@ namespace EasyBill.UI.Controllers
                 vm.RoundOffAmount = model.RoundOffAmount;
                 vm.NetCollection = model.NetCollection;
                 vm.TaxCalculation = string.Equals(model.TaxCalculation, "No", StringComparison.OrdinalIgnoreCase) ? "No" : "Yes";
+                
+                vm.TransferToTenantId = model.TransferToTenantId;
+                vm.IssueToType = !string.IsNullOrEmpty(model.TransferToTenantId) ? "Branch" : "Customer";
                 vm.StockIssuesItemVMs = model.StockIssuesItems != null
                     ? model.StockIssuesItems.Select(x =>
                     {
@@ -354,9 +475,26 @@ namespace EasyBill.UI.Controllers
             ViewBag.PaymentMode = new SelectList(await _modeofpaymentservice.GetAll(), "Id", "Name");
 
             var tenantId = User?.FindFirst("TenantId")?.Value;
-            var tenantdata = (await _tenantRepository.GetAll()).FirstOrDefault(x => x.Id == tenantId);
+            var tenantList = await _tenantRepository.GetAll();
+            var tenantdata = tenantList.FirstOrDefault(x => string.Equals(x.Id, tenantId, StringComparison.OrdinalIgnoreCase));
             ViewBag.BusinessType = (int)(tenantdata?.BusinessType ?? 0);
             ViewBag.HasSetting = setting != null;
+
+            // Fetch related branches for branch transfer
+            if (tenantdata != null)
+            {
+                var hoTenantId = string.IsNullOrEmpty(tenantdata.ParentTenantId) ? tenantdata.Id : tenantdata.ParentTenantId;
+                var branches = tenantList.Where(t => 
+                    string.Equals(t.ParentTenantId, hoTenantId, StringComparison.OrdinalIgnoreCase) && 
+                    !string.Equals(t.Id, tenantId, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(t => t.Name)
+                    .ToList();
+                ViewBag.Branches = new SelectList(branches, "Id", "Name");
+            }
+            else
+            {
+                ViewBag.Branches = new SelectList(new List<AOne.Models.Entity.Tenant>(), "Id", "Name");
+            }
 
             return View("Create", vm);
         }
@@ -486,7 +624,18 @@ namespace EasyBill.UI.Controllers
                 return Json(new { success = false, message = $"{VM.ChallanNo} - This Challan Number already exists." });
             }
 
-            if (VM.billingType == "registered")
+            if (VM.IssueToType == "Branch")
+            {
+                if (string.IsNullOrWhiteSpace(VM.TransferToTenantId))
+                    return Json(new { success = false, message = "Branch is required for In-Transit Transfer." });
+                
+                // Clear customer specific fields
+                VM.billingType = "Cash";
+                VM.MobileNo = null;
+                VM.CustomerId = null;
+                VM.Address = null;
+            }
+            else if (VM.billingType == "registered")
             {
                 if (string.IsNullOrWhiteSpace(VM.MobileNo))
                     return Json(new { success = false, message = "Mobile number is required for registered customer." });
@@ -504,6 +653,11 @@ namespace EasyBill.UI.Controllers
             StockIssue model = await _stockissueservice.GetById(VM.Id);
             if (model == null) return Json(new { success = false, message = "Record not found." });
 
+            if ((!string.IsNullOrEmpty(model.TransferToTenantId) && model.TransferStatus != "Pending") || model.IsReceived)
+            {
+                return Json(new { success = false, message = "Cannot edit a branch transfer that has already been received or processed." });
+            }
+
             VM.StockIssuesItemVMs = VM.StockIssuesItemVMs?
                 .Where(x => x.ItemMasterId > 0)
                 .ToList() ?? new List<StockIssueItemVM>();
@@ -518,12 +672,13 @@ namespace EasyBill.UI.Controllers
                 .ToList() ?? new List<SalsePaymentDetailsVM>();
 
             // Update Header
-            model.CustomerId = VM.billingType == "registered" ? VM.CustomerId : null;
+            model.TransferToTenantId = VM.IssueToType == "Branch" ? VM.TransferToTenantId : null;
+            model.CustomerId = VM.IssueToType == "Customer" && VM.billingType == "registered" ? VM.CustomerId : null;
             model.ChallanDate = VM.ChallanDate;
             model.ChallanNo = VM.ChallanNo;
-            model.MobileNo = VM.billingType == "registered" ? VM.MobileNo : null;
-            model.Address = VM.billingType == "registered" ? VM.Address : null;
-            model.billingType = VM.billingType == "registered" ? VM.billingType : "Cash";
+            model.MobileNo = VM.IssueToType == "Customer" && VM.billingType == "registered" ? VM.MobileNo : null;
+            model.Address = VM.IssueToType == "Customer" && VM.billingType == "registered" ? VM.Address : null;
+            model.billingType = VM.IssueToType == "Customer" && VM.billingType == "registered" ? VM.billingType : "Cash";
             model.PaymentType = VM.PaymentType;
             model.PharmacyDoctorId = VM.PharmacyDoctorId;
             model.DoctorMobileNumber = VM.DoctorMobileNumber;
@@ -673,6 +828,11 @@ namespace EasyBill.UI.Controllers
                     return Json(new { success = false, message = "Item not found." });
                 }
 
+                if ((!string.IsNullOrEmpty(model.TransferToTenantId) && model.TransferStatus != "Pending") || model.IsReceived)
+                {
+                    return Json(new { success = false, message = "Cannot delete a branch transfer that has already been received or processed." });
+                }
+
                 if (model.StockIssuesItems != null)
                 {
                     foreach (var item in model.StockIssuesItems)
@@ -803,9 +963,9 @@ namespace EasyBill.UI.Controllers
             var setting = await _salsesettingservice.GetByUserId(userId);
 
             var itemMasters = (await _itemmasterservice.GetAll())
-                .Where(x => x.IsActive)
-                .OrderBy(x => x.Name)
-                .ToList();
+                            .Where(x => x.IsActive)
+                            .OrderBy(x => x.Name)
+                            .ToList();
 
             var currentStocks = await _currentstockService.GetAll();
 
@@ -1014,6 +1174,7 @@ namespace EasyBill.UI.Controllers
                         mrp = g.Key.Mrp,
                         qty = qty,
                         StripTabsQty = stripTabsQty,
+                        purchaseRate = g.Key.PurchaseRate,
                         purchaseItemId = purchaseItemId,
                         conversion = conversion
                     };
@@ -1122,6 +1283,7 @@ namespace EasyBill.UI.Controllers
                         mrp = g.Key.Mrp,
                         qty = qty,
                         StripTabsQty = stripTabsQty,
+                        purchaseRate = g.Key.PurchaseRate,
                         purchaseItemId = purchaseItemId,
                         conversion = conversion
                     };
@@ -1733,7 +1895,55 @@ namespace EasyBill.UI.Controllers
                 "application/pdf",
                 "StockIssueBillWise.pdf");
         }
+        [HttpGet]
+        public async Task<IActionResult> GetPendingIncomingRequests()
+        {
+            try {
+                var currentTenantId = User?.FindFirst("TenantId")?.Value;
 
+                var pendingRequests = await _purchaseOrderRepo.GetIncomingRequests(currentTenantId);
+System.IO.File.AppendAllText("F:\\NewEasyBill_Project\\debug.txt", $"Time: {DateTime.Now}, Tenant: '{currentTenantId}', Count: {pendingRequests.Count}\n");
 
+                var tenants = await _tenantRepository.GetAll();
+                
+                var result = pendingRequests.Select(pr => new {
+                    Id = pr.Id,
+                    BillNo = pr.BillNo,
+                    BillDate = pr.BillDate,
+                    RequesterName = tenants.FirstOrDefault(t => t.Id == pr.TenantId)?.Name ?? "Unknown Branch",
+                    RequesterTenantId = pr.TenantId,
+                    TotalQty = 0
+                }).ToList();
+
+                return Json(new { success = true, data = result });
+            } catch(Exception ex) {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetRequestDetails(int id)
+        {
+            try {
+                var order = await _purchaseOrderRepo.GetIncomingRequestById(id);
+                if (order == null) return Json(new { success = false, message = "Request not found" });
+
+                var items = order.PurchaseOrderItems;
+                if (items == null) return Json(new { success = true, data = new object[0] });
+
+                var result = items.Select(item => new {
+                    ItemId = item.ItemId,
+                    ItemName = item.ItemMasters?.Name,
+                    Qty = item.Qty,
+                    FreeQty = item.FreeQty,
+                    PurchaseRate = item.Rate,
+                    Mrp = item.Mrp
+                }).ToList();
+
+                return Json(new { success = true, data = result, requesterTenantId = order.TenantId });
+            } catch(Exception ex) {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

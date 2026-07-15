@@ -1,0 +1,279 @@
+@model EasyBill.Models.ViewModels.BankReconciliationVM
+
+@{
+    ViewData["Title"] = "Bank Reconciliation";
+}
+
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+
+    .custom-header th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        border-color: #2b6ac9 !important;
+    }
+
+    .badge-cleared {
+        background-color: #198754;
+        color: white;
+    }
+
+    .badge-uncleared {
+        background-color: #ffc107;
+        color: black;
+    }
+    
+    .text-payment {
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .text-receive {
+        color: #198754;
+        font-weight: bold;
+    }
+    .btn-xs {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+        border-radius: 0.2rem;
+    }
+</style>
+
+<div class="card mb-3">
+    <div class="card-header py-2">
+        <i class="bi bi-bank"></i> Bank Reconciliation
+    </div>
+    <div class="card-body">
+        <form method="get" asp-action="Index" class="row g-3 align-items-end mb-4">
+            <div class="col-md-3">
+                <label for="bankId" class="form-label small fw-bold">Select Bank</label>
+                <select id="bankId" name="bankId" asp-items="Model.Banks" class="form-select form-select-sm" required>
+                    <option value="">-- Select Bank --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="fromDate" class="form-label small fw-bold">From Date</label>
+                <input type="date" id="fromDate" name="fromDate" value="@Model.FromDate?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label for="toDate" class="form-label small fw-bold">To Date</label>
+                <input type="date" id="toDate" name="toDate" value="@Model.ToDate?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-3">
+                <label for="searchQuery" class="form-label small fw-bold">Search (Voucher No / Party)</label>
+                <input type="text" id="searchQuery" name="searchQuery" value="@Model.SearchQuery" placeholder="Search..." class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-sm btn-primary w-100 btnBright-Sky-Blue"><i class="bi bi-search"></i> Search</button>
+            </div>
+        </form>
+
+        @if (Model.BankId.HasValue)
+        {
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped align-middle">
+                    <thead class="custom-header text-center">
+                        <tr>
+                            <th>Date</th>
+                            <th>Voucher Type</th>
+                            <th>Voucher No</th>
+                            <th>Party Name</th>
+                            <th>Payment Mode</th>
+                            <th>Cheque/Ref Details</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Cleared Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Transactions.Any())
+                        {
+                            foreach (var item in Model.Transactions)
+                            {
+                                <tr>
+                                    <td class="text-center">@item.Date.ToString("dd-MMM-yyyy")</td>
+                                    <td class="text-center">
+                                        <span class="badge @(item.VoucherType == "Payment" ? "bg-danger" : "bg-success")">
+                                            @item.VoucherType
+                                        </span>
+                                    </td>
+                                    <td>@item.VoucherNo</td>
+                                    <td>@item.PartyName</td>
+                                    <td class="text-center">@item.PaymentModeName</td>
+                                    <td>
+                                       
+                                        @if (item.ChequeDate.HasValue)
+                                        {
+                                            <div><strong>Chq Date:</strong> @item.ChequeDate.Value.ToString("dd-MMM-yyyy")</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(item.RefNo))
+                                        {
+                                            <div><strong>Ref No:</strong> @item.RefNo</div>
+                                        }
+                                        @if (!item.ChequeDate.HasValue && string.IsNullOrEmpty(item.RefNo))
+                                        {
+                                            <span class="text-muted small">N/A</span>
+                                        }
+                                    </td>
+                                    <td class="text-end @(item.VoucherType == "Payment" ? "text-payment" : "text-receive")">
+                                        @(item.VoucherType == "Payment" ? "-" : "+")@item.Amount.ToString("N2")
+                                    </td>
+                                    <td class="text-center status-col">
+                                        @if (item.IsCleared)
+                                        {
+                                            <span class="badge badge-cleared"><i class="bi bi-check-circle-fill"></i> Cleared</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-uncleared"><i class="bi bi-exclamation-circle-fill"></i> Uncleared</span>
+                                        }
+                                    </td>
+                                    <td class="text-center" style="width: 180px;">
+                                        <input type="date" class="form-control form-control-sm cleared-date-input" 
+                                               value="@item.ClearedDate?.ToString("yyyy-MM-dd")" 
+                                               min="@(item.ChequeDate.HasValue ? item.ChequeDate.Value.ToString("yyyy-MM-dd") : item.Date.ToString("yyyy-MM-dd"))" />
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group gap-1">
+                                            <button type="button" class="btn btn-xs btn-success btn-clear-reconcile" 
+                                                    data-id="@item.Id" 
+                                                    data-type="@item.VoucherType"
+                                                    data-chequedate="@item.ChequeDate?.ToString("yyyy-MM-dd")"
+                                                    data-date="@item.Date.ToString("yyyy-MM-dd")">
+                                                <i class="bi bi-check-lg"></i> Clear
+                                            </button>
+                                            @if (item.IsCleared)
+                                            {
+                                                <button type="button" class="btn btn-xs btn-outline-danger btn-reset-reconcile" 
+                                                        data-id="@item.Id" data-type="@item.VoucherType">
+                                                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="10" class="text-center text-muted py-4">No transactions found for the selected filters.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info text-center py-4">
+                <i class="bi bi-info-circle-fill fs-4 d-block mb-2"></i>
+                Please select a Bank and date range to view transactions.
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Reconcile/Clear transaction
+            $(".btn-clear-reconcile").click(function() {
+                var btn = $(this);
+                var row = btn.closest("tr");
+                var id = btn.data("id");
+                var type = btn.data("type");
+                var clearedDate = row.find(".cleared-date-input").val();
+                var chequeDateStr = btn.data("chequedate");
+                var dateStr = btn.data("date");
+
+                if (!clearedDate) {
+                    toastr.warning("Please select a cleared date first.");
+                    return;
+                }
+
+                if (chequeDateStr) {
+                    if (clearedDate < chequeDateStr) {
+                        toastr.warning("Cleared Date cannot be earlier than Cheque Date (" + chequeDateStr + ").");
+                        return;
+                    }
+                } else if (dateStr) {
+                    if (clearedDate < dateStr) {
+                        toastr.warning("Cleared Date cannot be earlier than Voucher Date (" + dateStr + ").");
+                        return;
+                    }
+                }
+
+                $.ajax({
+                    url: '/BankReconciliation/ReconcileTransaction',
+                    type: 'POST',
+                    data: {
+                        id: id,
+                        type: type,
+                        clearedDate: clearedDate
+                    },
+                    success: function(res) {
+                        if (res.success) {
+                            toastr.success(res.message);
+                            // Refresh page to show updated status
+                            setTimeout(function() {
+                                location.reload();
+                            }, 800);
+                        } else {
+                            toastr.error(res.message);
+                        }
+                    },
+                    error: function(err) {
+                        toastr.error("An error occurred while saving reconciliation.");
+                    }
+                });
+            });
+
+            // Reset transaction (mark as uncleared)
+            $(".btn-reset-reconcile").click(function() {
+                var btn = $(this);
+                var id = btn.data("id");
+                var type = btn.data("type");
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "Do you want to reset the cleared status of this transaction?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Yes, reset it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '/BankReconciliation/ReconcileTransaction',
+                            type: 'POST',
+                            data: {
+                                id: id,
+                                type: type,
+                                clearedDate: null
+                            },
+                            success: function(res) {
+                                if (res.success) {
+                                    toastr.success("Transaction reset successfully.");
+                                    setTimeout(function() {
+                                        location.reload();
+                                    }, 800);
+                                } else {
+                                    toastr.error(res.message);
+                                }
+                            },
+                            error: function(err) {
+                                toastr.error("An error occurred while resetting.");
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+}

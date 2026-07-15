@@ -105,14 +105,18 @@ namespace EasyBill.UI.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
+            var accountGroups = await _accountgroupRepo.GetAll();
+            var sundryDebtor = accountGroups.FirstOrDefault(x => x.Name == "Sundry Debtor");
+
             // Create empty VM with default values
             var vm = new CustomerVM
             {
                 GSTType = GSTType.UnRegistered,  // Default value
-                Status = CustomerStatus.Active    // Default value
+                Status = CustomerStatus.Active,   // Default value
+                AccountGroupId = sundryDebtor?.Id
             };
 
-            ViewBag.AccountGroupList = new SelectList(await _accountgroupRepo.GetAll(), "Id", "Name");
+            ViewBag.AccountGroupList = new SelectList(accountGroups, "Id", "Name", sundryDebtor?.Id);
             ViewBag.ParentAccountGroupList = new SelectList(await _accountgroupRepo.GetAll(), "Id", "Name");
 
             ViewBag.GSTTypes = Enum.GetValues(typeof(GSTType))
@@ -247,8 +251,7 @@ namespace EasyBill.UI.Controllers
                 GSTType = Vm.GSTType,
                 Category = Vm.Category,
                 Status = Vm.Status,
-                PaymentDays = Vm.PaymentDays,
-                Addresses = Vm.Addresses
+                PaymentDays = Vm.PaymentDays
             };
 
             await _customerservice.Create(model);
@@ -276,10 +279,6 @@ namespace EasyBill.UI.Controllers
                 VM.Category = model.Category;
                 VM.Status = model.Status;
                 VM.PaymentDays = model.PaymentDays;
-                if (model.Addresses != null)
-                {
-                    VM.Addresses = model.Addresses.ToList();
-                }
             }
 
             // ViewBag populate karo
@@ -403,17 +402,6 @@ namespace EasyBill.UI.Controllers
                 model.Category = VM.Category;
                 model.Status = VM.Status;
                 model.PaymentDays = VM.PaymentDays;
-
-                // Sync Addresses
-                model.Addresses.Clear();
-                if (VM.Addresses != null)
-                {
-                    foreach (var addr in VM.Addresses)
-                    {
-                        addr.Id = 0; // reset ID so EF re-inserts them as new to avoid complex tracking (or keep it if EF merges)
-                        model.Addresses.Add(addr);
-                    }
-                }
 
                 await _customerservice.Update(model);
                 TempData["success"] = "Customer updated successfully.";

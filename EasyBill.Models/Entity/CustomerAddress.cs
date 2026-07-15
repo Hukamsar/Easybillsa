@@ -21,6 +21,10 @@ namespace EasyBill.Models.Entity
         public string? State { get; set; }
         public string? Pincode { get; set; }
 
+        // Geo-Location
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+
         public bool IsDefault { get; set; } = false;
     }
 }

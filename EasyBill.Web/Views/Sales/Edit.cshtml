@@ -10,6 +10,20 @@
      🔹 CUSTOM STYLES
      ================================================================ -->
 <style>
+    .fixed-action-btn {
+        width: 155px !important;
+        height: 38px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        padding: 4px 8px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
     /* Sales Edit uses page.css for shortcut links while preserving the existing Bootstrap modal layout. */
     #itemModal .modal-header,
     #batchModal .modal-header,
@@ -280,6 +294,10 @@
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
     <div class="container">
+        <!-- Prescription Warning Banner -->
+        <div id="prescriptionWarning" class="alert alert-danger py-2 px-3 mb-3 d-none text-center fw-bold shadow-sm" style="color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; font-size: 1.15rem;">
+            <span class="me-2">⚠️</span> Prescription Required for Bill No: <span id="warningBillNo"></span>
+        </div>
         <div class="row">
             <div class="row mb-2">
 
@@ -386,6 +404,8 @@
             </div>
         </div>
 
+
+
         <!-- Items Table -->
         <div style="overflow-x: auto; width: 100%;">
             <div class="table-responsive">
@@ -418,7 +438,11 @@
                             int rowIndex = 0;
                             foreach (var item in Model.SalesItemVMs)
                             {
-                                <tr>
+                                <tr data-narcotics="@(item.Narcotics ? "true" : "false")"
+                                    data-scheduleh="@(item.ScheduleH ? "true" : "false")"
+                                    data-scheduleh1="@(item.ScheduleH1 ? "true" : "false")"
+                                    data-categoryname="@item.CategoryName"
+                                    data-conversion="@item.Conversion">
                                     <td hidden><input name="SalesItemVMs[@rowIndex].Id" value="@item.Id" /></td>
                                     <td hidden>
                                         <input name="SalesItemVMs[@rowIndex].ItemMasterId" class="form-control form-control-sm item-id" value="@item.ItemMasterId" />
@@ -460,6 +484,20 @@
                 <!-- Totals -->
                 <div class="row mt-3">
                     <div class="col-md-7">
+                        <!-- Remarks and Total Qty Section -->
+                        <div class="row align-items-center mb-2">
+                            <div class="@(ViewBag.BusinessType != 2 ? "col-md-7" : "col-md-12") d-flex align-items-center">
+                                <label asp-for="Remarks" class="col-form-label fw-bold me-2 small" style="white-space:nowrap;">Remarks:</label>
+                                <input asp-for="Remarks" class="form-control form-control-sm" placeholder="Enter remarks..." />
+                            </div>
+                            @if (ViewBag.BusinessType != 2)
+                            {
+                                <div class="col-md-5 d-flex align-items-center mt-2 mt-md-0">
+                                    <label class="col-form-label fw-bold me-2 small" style="white-space:nowrap;">Total Qty:</label>
+                                    <input type="text" id="totalQtyDisplay" class="form-control form-control-sm fw-bold text-center" style="max-width:100px; background-color:#e9ecef; color:#0d6efd;" value="0" readonly />
+                                </div>
+                            }
+                        </div>
                         <strong>Payment Details</strong>
                         <table class="table table-bordered table-striped">
                             <thead class="table custom-header">
@@ -475,15 +513,15 @@
                                 @for (int i = 0; i < Model.SalsePaymentDetails?.Count; i++)
                                 {
                                     <tr>
-                                        <td hidden><input type="hidden" asp-for="@Model.SalsePaymentDetails[@i].Id" /></td>
+                                        <td hidden><input type="hidden" asp-for="SalsePaymentDetails[i].Id" /></td>
                                         <td style="min-width:185px;">
-                                            <select asp-for="SalsePaymentDetails[@i].PaymentModeId" asp-items="@ViewBag.PaymentMode" class="form-control form-control-sm paymentMode-dropdown" required>
+                                            <select asp-for="SalsePaymentDetails[i].PaymentModeId" asp-items="@ViewBag.PaymentMode" class="form-control form-control-sm paymentMode-dropdown" required>
                                                 <option value="">Select</option>
                                             </select>
                                         </td>
-                                        <td><input name="SalsePaymentDetails[@i].Amount" class="form-control form-control-sm paymentAmount" value="@Model.SalsePaymentDetails[i].Amount" /></td>
-                                        <td><input name="SalsePaymentDetails[@i].ReferenceNo" class="form-control form-control-sm paymentReferenceNO" value="@Model.SalsePaymentDetails[i].ReferenceNo" /></td>
-                                        <td><input name="SalsePaymentDetails[@i].Description" class="form-control form-control-sm paymentDescription" value="@Model.SalsePaymentDetails[i].Description" /></td>
+                                        <td><input asp-for="SalsePaymentDetails[i].Amount" class="form-control form-control-sm paymentAmount" /></td>
+                                        <td><input asp-for="SalsePaymentDetails[i].ReferenceNo" class="form-control form-control-sm paymentReferenceNO" /></td>
+                                        <td><input asp-for="SalsePaymentDetails[i].Description" class="form-control form-control-sm paymentDescription" /></td>
                                         <td><u class="remove-paymentrow-btn text-danger" style="cursor:pointer;">Remove</u></td>
                                     </tr>
                                 }
@@ -611,18 +649,18 @@
         <div class="mt-3 text-end">
             <button type="submit"
                     id="btnSave"
-                    class="btn btn-sm btn-primary me-2">
+                    class="btn btn-sm btn-primary me-2 fixed-action-btn">
                 End | Update 💾
             </button>
             <button type="button"
                     id="btnSaveShare"
-                    class="btn btn-success btn-sm me-2">
+                    class="btn btn-success btn-sm me-2 fixed-action-btn">
                 Save & Share
             </button>
 
             <a href="@(ViewBag.ReturnUrl ?? Url.Action("Index"))"
                id="btnCancel"
-               class="btn btn-sm btn-secondary">
+               class="btn btn-sm btn-secondary fixed-action-btn">
                 F11 | Cancel ❌
             </a>
         </div>
@@ -1768,15 +1806,20 @@
                         }
             
                     } else {
-                        // 🔥 Name search (old behavior)
+                        // 🔥 Name or Barcode search
                         const textToSearch = $(this).find("td:first").text().toLowerCase();
-            
-                        const searchWords = searchText.split(/\s+/);
-                        const itemWords = textToSearch.split(/\s+/);
-            
-                        match = searchWords.every((word, i) =>
-                            itemWords[i] && itemWords[i].startsWith(word)
-                        );
+                        const barcode = ($(this).data("barcode") || "").toString().toLowerCase();
+
+                        if (barcode && barcode.includes(searchText)) {
+                            match = true;
+                        } else {
+                            const searchWords = searchText.split(/\s+/);
+                            const itemWords = textToSearch.split(/\s+/);
+
+                            match = searchWords.every((word, i) =>
+                                itemWords[i] && itemWords[i].startsWith(word)
+                            );
+                        }
                     }
             
                     $(this).toggle(match);
@@ -1811,7 +1854,12 @@
                         isEnterNavigation = false;
                         return;
                     }
-                    processBarcode(barcode);
+                    const isBarcodeBase = (window.itemBarCodeBase === true);
+                    if (isBarcodeBase) {
+                        processBarcode(barcode);
+                    } else {
+                        openItemSearchModal(barcode);
+                    }
                 }
             });
 
@@ -1824,6 +1872,10 @@
                 const allowNegative = $(this).data("allownegative") === true || $(this).data("allownegative") === "True";
                 const minimumQty = parseFloat($(this).data("minimumqty")) || 0;
                 const conversion = parseFloat($(this).data("conversion")) || 1;
+                const narcotics = $(this).data("narcotics");
+                const scheduleh = $(this).data("scheduleh");
+                const scheduleh1 = $(this).data("scheduleh1");
+                const categoryname = $(this).data("categoryname");
 
                 if (!itemId || !currentRow) return;
 
@@ -1834,6 +1886,10 @@
                 currentRow.attr("data-max-discount", maxDiscount);
                 currentRow.attr("data-minimum-qty", minimumQty);
                 currentRow.attr("data-conversion", conversion);
+                currentRow.attr("data-narcotics", narcotics);
+                currentRow.attr("data-scheduleh", scheduleh);
+                currentRow.attr("data-scheduleh1", scheduleh1);
+                currentRow.attr("data-categoryname", categoryname || "");
 
                 // Store in global object
                 itemMaxDiscounts[itemId] = maxDiscount;
@@ -1962,37 +2018,58 @@
             });
 
             toggleAddRowButton();
+            calculateTotalSummary();
         });
 
-        function openItemSearchModal(searchText = "") {
+    let cachedItemsList = null;
 
-            if (window.stopAutoItemOpen === true || $("#itemMasterModal").is(":visible")) {
-                return;
+    // Preload items immediately on script load
+    $.get('/Sales/GetAllItemsForEdit?saleId=' + @Model.Id, function (items) {
+        cachedItemsList = items;
+    });
+
+    function openItemSearchModal(searchText = "") {
+
+        if (window.stopAutoItemOpen === true || $("#itemMasterModal").is(":visible")) {
+            return;
+        }
+
+        const businessType = @ViewBag.BusinessType;
+
+        if (cachedItemsList) {
+            let rows = renderSalesEditItemRows(cachedItemsList, businessType);
+            if (cachedItemsList.length > 0) {
+                window.allowNegativeSetting = cachedItemsList[0].allowNegative === true;
+            }
+            $("#itemTableBody").html(rows);
+            $("#itemSearch").val(searchText);
+            $("#itemSearch").trigger("input");
+            $("#itemModal").modal("show");
+            return;
+        }
+
+        showLoader("Loading items...");
+
+        const currentSaleId = @Model.Id;
+        $.get('/Sales/GetAllItemsForEdit?saleId=' + currentSaleId, function (items) {
+            hideLoader();
+            cachedItemsList = items;
+
+            let rows = renderSalesEditItemRows(items, businessType);
+
+            if (items.length > 0) {
+                window.allowNegativeSetting = items[0].allowNegative === true;
             }
 
-            showLoader("Loading items...");
-
-            const currentSaleId = @Model.Id;
-            $.get('/Sales/GetAllItemsForEdit?saleId=' + currentSaleId, function (items) {
-                hideLoader();
-
-                const businessType = @ViewBag.BusinessType;
-
-                let rows = renderSalesEditItemRows(items, businessType);
-
-                if (items.length > 0) {
-                    window.allowNegativeSetting = items[0].allowNegative === true;
-                }
-
-                $("#itemTableBody").html(rows);
-                $("#itemSearch").val(searchText);
-                $("#itemSearch").trigger("input");
-                $("#itemModal").modal("show");
-            }).fail(function() {
-                hideLoader();
-                toastr.error("Error loading items");
-            });
-        }
+            $("#itemTableBody").html(rows);
+            $("#itemSearch").val(searchText);
+            $("#itemSearch").trigger("input");
+            $("#itemModal").modal("show");
+        }).fail(function() {
+            hideLoader();
+            toastr.error("Error loading items");
+        });
+    }
 
         function renderSalesEditItemRows(items, businessType) {
 
@@ -2011,7 +2088,11 @@
                     data-maxdiscount="${item.maximumdiscount}"
                     data-allownegative="${item.allowNegative}"
                     data-minimumqty="${item.minimumQty}"
-                    data-conversion="${item.conversion || 1}">
+                    data-conversion="${item.conversion || 1}"
+                    data-narcotics="${item.narcotics}"
+                    data-scheduleh="${item.scheduleH}"
+                    data-scheduleh1="${item.scheduleH1}"
+                    data-categoryname="${item.categoryName || ''}">
                     <td>${item.name}</td>
                     <td class="salt-col">${item.salt || ''}</td>
                     ${
@@ -2130,74 +2211,86 @@
                     return;
                 }
 
+                const itemId = item.itemId;
                 const itemName = item.itemname;
                 const maxDiscount = parseFloat(item.maximumDiscount) || 0;
                 const allowNegative = item.allowNegative === true;
                 const minimumQty = parseFloat(item.minimumQty) || 0;
                 const conversion = parseFloat(item.conversion) || 1;
 
-                currentRow.find(".item-id").val(item.itemId);
+                currentRow.find(".item-id").val(itemId);
                 currentRow.find(".item-barcode").val(itemName);
                 currentRow.attr("data-max-discount", maxDiscount);
-                currentRow.attr("data-minimum-qty", minimumQty)
+                currentRow.attr("data-minimum-qty", minimumQty);
                 currentRow.attr("data-conversion", conversion);
-
+                currentRow.attr("data-narcotics", item.narcotics);
+                currentRow.attr("data-scheduleh", item.scheduleH);
+                currentRow.attr("data-scheduleh1", item.scheduleH1);
+                currentRow.attr("data-categoryname", item.categoryName || "");
 
                 itemMaxDiscounts[itemId] = maxDiscount;
-                itemConversionMap[item.itemId] = conversion;
+                itemConversionMap[itemId] = conversion;
                 window.allowNegativeSetting = allowNegative;
 
+                // Load batches and select last batch automatically
                 showLoader("Loading batches...");
-
                 $.get('/Sales/GetBatchesByItemIdForEdit', { id: item.itemId }, function (data) {
                     hideLoader();
-
-                    if (data.error || !data.groupedResult.length) {
-                        // Sales Edit Item Master save can trigger a new item batch check; keep the warning quiet once.
-                        if (window.suppressNextBatchNotFound === true || window.stopAutoItemOpen === true) {
-                            window.suppressNextBatchNotFound = false;
-                            return;
-                        }
-
-                        toastr.warning("No batches available");
+                    if (data.error || !data.groupedResult || data.groupedResult.length === 0) {
+                        toastr.warning("No batch available for this item.", "Batch Not Found");
+                        setTimeout(() => {
+                            currentRow.find(".item-barcode").focus().select();
+                        }, 200);
                         return;
                     }
 
-                    window.suppressNextBatchNotFound = false;
-                    currentRow.find(".gst").val(data.gst);
-                    currentRow.find(".cess").val(data.cess);
-                    let batchRows = '';
-                    data.groupedResult.forEach(batch => {
-                        const expiryDate = new Date(batch.expiry);
-                        const month = String(expiryDate.getMonth() + 1).padStart(2, '0');
-                        const year = expiryDate.getFullYear();
-                        const formattedExpiry = `${month}/${year}`;
-                        const encoded = encodeURIComponent(JSON.stringify(batch));
+                    // Select the last batch (latest batch)
+                    const lastBatch = data.groupedResult[data.groupedResult.length - 1];
 
-                        batchRows += `<tr class="batch-row" tabindex="0" data-batch="${encoded}">
-                            <td>${batch.batch}</td>
-                            <td>${formattedExpiry}</td>
-                            <td hidden>${batch.rate.toFixed(2)}</td>
-                            <td>${batch.striprate.toFixed(2)}</td>
-                            <td>${batch.mrp}</td>
-                            <td>${batch.qty}</td>
-                        </tr>`;
-                    });
+                    // Populate row with lastBatch data
+                    currentRow.find(".batch").val(lastBatch.batch);
+                    currentRow.find(".rate").val(lastBatch.rate.toFixed(4) || 0);
+                    currentRow.find(".stripe-rate").val(lastBatch.striprate.toFixed(2) || 0);
+                    currentRow.find(".mrp").val(lastBatch.mrp || 0);
+                    currentRow.attr("data-available-qty", lastBatch.qty);
 
-                    $("#batchTableBody").html(batchRows);
-                    const $rows = $(".batch-row");
-                    currentBatchIndex = $rows.length > 0 ? 0 : -1;
-                    highlightBatchRow($rows, currentBatchIndex);
-                    $("#batchModal").modal("show");
-                }).fail(function() {
+                    if (lastBatch.expiry) {
+                        let date = new Date(lastBatch.expiry);
+                        let formatted = ("0" + (date.getMonth() + 1)).slice(-2) + "/" + date.getFullYear();
+                        currentRow.find(".expirydate").val(formatted);
+                    }
+
+                    // Set default qty = 1 (For pharmacy Shop/BusinessType === 2, set qty = 1 and tablet-qty = 0)
+                    if (@ViewBag.BusinessType === 2) {
+                        currentRow.find(".qty").val(1);
+                        currentRow.find(".tablet-qty").val(0);
+                    } else {
+                        if (isTabletWiseMode) {
+                            currentRow.find(".tablet-qty").val(1);
+                        } else {
+                            currentRow.find(".qty").val(1);
+                        }
+                    }
+
+                    calculateRow(currentRow);
+
+                    // Add a new row and focus on its barcode field
+                    addNewRow();
+                    setTimeout(() => {
+                        $("#SalesItemBody tr:last .item-barcode").focus();
+                    }, 100);
+
+                }).fail(function () {
                     hideLoader();
                     toastr.error("Error loading batches");
                 });
+
             }).fail(function() {
                 hideLoader();
                 toastr.error("Error processing barcode");
             });
         }
+
 
         function highlightBatchRow($rows, index) {
             $rows.removeClass("selected");
@@ -2691,6 +2784,7 @@
             let totalGst = 0;
             let totalCess = 0;
             let totalDiscount = 0, totalamt = 0;
+            let sumQty = 0;
             let gstRows = [];
 
             // $("#SalesItemBody tr").each(function () {
@@ -2716,6 +2810,7 @@
             $("#SalesItemBody tr").each(function () {
                 let row = $(this);
                 let qty = parseFloat(row.find(".qty").val()) || 0;
+                sumQty += qty;
                 let rate = parseFloat(row.find(".rate").val()) || 0;
                 let gst = parseFloat(row.find(".gst").val()) || 0;
                 let cess = parseFloat(row.find(".cess").val()) || 0;
@@ -2847,7 +2942,38 @@
             $("#balance").val(balance.toFixed(2));
             $("#returnAmount").val(returnAmount.toFixed(2));
             $("#returnAmountDisplay").text(returnAmount.toFixed(2));
+
+            // Toggle Prescription Warning Banner
+            let hasPrescriptionItem = false;
+            $("#SalesItemBody tr").each(function () {
+                let row = $(this);
+                let narcotics = row.attr("data-narcotics") === "true" || row.attr("data-narcotics") === "True";
+                let scheduleh = row.attr("data-scheduleh") === "true" || row.attr("data-scheduleh") === "True";
+                let scheduleh1 = row.attr("data-scheduleh1") === "true" || row.attr("data-scheduleh1") === "True";
+                let categoryname = (row.attr("data-categoryname") || "").toLowerCase().trim();
+
+                if (narcotics || scheduleh || scheduleh1 || categoryname === "syrup") {
+                    hasPrescriptionItem = true;
+                }
+            });
+
+            if (hasPrescriptionItem) {
+                let billNo = ($("#BillNo").val() || "").trim();
+                $("#warningBillNo").text(billNo);
+                $("#prescriptionWarning").removeClass("d-none");
+            } else {
+                $("#prescriptionWarning").addClass("d-none");
+            }
+            if ($("#totalQtyDisplay").length) {
+                $("#totalQtyDisplay").val(sumQty % 1 !== 0 ? sumQty.toFixed(2) : sumQty);
+            }
         }
+
+        $(document).on("input", "#BillNo", function () {
+            if (!$("#prescriptionWarning").hasClass("d-none")) {
+                $("#warningBillNo").text($(this).val().trim());
+            }
+        });
 
         // NEW VALIDATION HANDLER (Bill discount validation)
         $("#discountPercent").on("input", function() {
@@ -3362,7 +3488,7 @@
                     </td>
                     <td>
                         <input name="SalsePaymentDetails[${subrowIndex}].Description"
-                               class="form-control form-control-sm rate paymentDescription" />
+                               class="form-control form-control-sm paymentDescription" />
                     </td>
                     <td>
                         <u class="remove-paymentrow-btn text-danger" style="cursor:pointer;">Remove</u>
@@ -3645,6 +3771,7 @@
             const currentSaleId = @Model.Id;
             $.get('/Sales/GetAllItemsForEdit?saleId=' + currentSaleId, function (items) {
                 hideLoader();
+                cachedItemsList = items;
 
                 const businessType = @ViewBag.BusinessType;
 
@@ -3748,8 +3875,20 @@
             if (e.key === "Tab") {
                 e.preventDefault();
 
+                const itemId = (row.find(".item-id").val() || "").trim();
                 const itemBarcode = (row.find(".item-barcode").val() || "").trim();
                 const batch = (row.find(".batch").val() || "").trim();
+
+                // If there's a barcode/name entered but no item selected yet, look it up first
+                if (itemBarcode && !itemId) {
+                    const isBarcodeBase = (window.itemBarCodeBase === true);
+                    if (isBarcodeBase) {
+                        currentRow = row;
+                        currentRowForCrossItemModal = row;
+                        processBarcode(itemBarcode);
+                        return;
+                    }
+                }
 
                 // Current row is BLANK
                 if (!itemBarcode && !batch) {
@@ -3778,6 +3917,7 @@
                     // Valid rows exist → Remove current blank row
                     row.remove();
                     calculateTotalSummary();
+                    updateRowIndices();
 
                     setTimeout(() => {
                         $("#discountPercent").focus().select();
@@ -3902,6 +4042,7 @@
                     // Valid rows exist → Remove current blank row
                     row.remove();
                     calculateTotalSummary();
+                    updateRowIndices();
 
                     setTimeout(() => {
                         $("#discountPercent").focus().select();
@@ -4173,6 +4314,7 @@
 
                     row.remove();
                     calculateTotalSummary();
+                    updateRowIndices();
 
                     setTimeout(() => {
                         $("#discountPercent").focus().select();
@@ -4673,6 +4815,7 @@
             $.ajax({
                 url: '/SalseSetting/GetSidebarSettings',
                 type: 'GET',
+                cache: false,
                 success: function (data) {
                     const incomingSalesTax = parseInt(data.salesTax ?? data.SalesTax);
                     salesTaxMode = (incomingSalesTax === SALES_TAX_INCLUSIVE || incomingSalesTax === SALES_TAX_EXCLUSIVE)
@@ -4681,6 +4824,7 @@
 
                     window.printType = data.printType || 'normal';
                     window.thermalPaperSize = data.thermalPaperSize?.toString() || '80';
+                    window.itemBarCodeBase = data.itemBarCodeBase === true;
 
                     $("#SalesItemBody tr").each(function () {
                         calculateRow($(this));

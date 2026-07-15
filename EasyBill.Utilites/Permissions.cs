@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -81,6 +81,15 @@ namespace AOne.Utility
             public const string Create = "Permissions.Suppliers.Create";
             public const string Edit = "Permissions.Suppliers.Edit";
             public const string Delete = "Permissions.Suppliers.Delete";
+        }
+        [DisplayName("Bank")]
+        [Description("Bank Permissions")]
+        public static class Bank
+        {
+            public const string View = "Permissions.Bank.View";
+            public const string Create = "Permissions.Bank.Create";
+            public const string Edit = "Permissions.Bank.Edit";
+            public const string Delete = "Permissions.Bank.Delete";
         }
         [DisplayName("AccountGroup")]
         [Description("AccountGroup Permissions")]
@@ -334,6 +343,25 @@ namespace AOne.Utility
             public const string Create = "Permissions.ReceiveVoucher.Create";
             public const string Edit = "Permissions.ReceiveVoucher.Edit";
             public const string Delete = "Permissions.ReceiveVoucher.Delete";
+        }
+        [DisplayName("Books")]
+        [Description("Books Permissions")]
+        public static class Books
+        {
+            public const string CashBookView = "Permissions.CashBook.View";
+            public const string BankBookView = "Permissions.BankBook.View";
+            public const string DayBookView = "Permissions.DayBook.View";
+            public const string SalesBookView = "Permissions.SalesBook.View";
+            public const string PurchaseBookView = "Permissions.PurchaseBook.View";
+        }
+        [DisplayName("Contra")]
+        [Description("Contra Permission")]
+        public static class Contra
+        {
+            public const string View = "Permissions.Contra.View";
+            public const string Create = "Permissions.Contra.Create";
+            public const string Edit = "Permissions.Contra.Edit";
+            public const string Delete = "Permissions.Contra.Delete";
         }
         
         /// <summary>

@@ -1,4 +1,4 @@
-﻿@model EasyBill.Models.ViewModels.ReceiveVoucherVM
+@model EasyBill.Models.ViewModels.ReceiveVoucherVM
 @{
     ViewData["Title"] = "Create Payment Voucher  ";
 }
@@ -63,6 +63,7 @@
                             <select asp-for="SupplierId" id="venderId" class="form-select form-select-sm">
                                 <option selected disabled>Select</option>
                             </select>
+                            <span id="venderBalance" class="badge bg-info mt-1" style="display:none;">Balance: 0.00</span>
                             <span asp-validation-for="SupplierId" class="text-danger small"></span>
                         </div>
                         <div class="col-md-2 col-form-label text-start small customerdiv" style="display:none">
@@ -72,6 +73,7 @@
                             <select asp-for="CustomerId" id="customerId" asp-items="@ViewBag.CustomerList" class="form-select form-select-sm">
                                 <option selected disabled>Select</option>
                             </select>
+                            <span id="customerBalance" class="badge bg-info mt-1" style="display:none;">Balance: 0.00</span>
                             <span asp-validation-for="CustomerId" class="text-danger small"></span>
                         </div>
                         <div class="col-md-2 col-form-label text-start small staffdiv" style="display:none">
@@ -81,6 +83,7 @@
                             <select asp-for="EmployeeId" id="employeeId" asp-items="@ViewBag.EmployeeList" class="form-select form-select-sm">
                                 <option selected disabled>Select</option>
                             </select>
+                            <span id="employeeBalance" class="badge bg-info mt-1" style="display:none;">Balance: 0.00</span>
                             <span asp-validation-for="EmployeeId" class="text-danger small"></span>
                         </div>
 
@@ -97,8 +100,33 @@
                             <Select asp-for="PaymentModeId" asp-items="@ViewBag.PaymentModeList" required class="form-control form-control-sm">
                                 <option value="">select</option>
                             </Select>
+                            <span id="paymentModeBalance" class="badge bg-info mt-1" style="display:none;">Balance: 0.00</span>
                             <span asp-validation-for="PaymentModeId" class="text-danger small"></span>
                         </div>
+
+                        <!-- Cheque Details -->
+                        <div class="col-md-2 col-form-label text-start small chequediv" style="display:none">
+                            <label asp-for="ChequeNo">Cheque No <i class="text-danger">*</i></label>
+                        </div>
+                        <div class="col-md-4 chequediv" style="display:none">
+                            <input asp-for="ChequeNo" id="chequeno" class="form-control form-control-sm" />
+                            <span asp-validation-for="ChequeNo" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-2 col-form-label text-start small chequediv" style="display:none">
+                            <label asp-for="ChequeDate">Cheque Date <i class="text-danger">*</i></label>
+                        </div>
+                        <div class="col-md-4 chequediv" style="display:none">
+                            <input asp-for="ChequeDate" id="chequedate" type="date" class="form-control form-control-sm" />
+                            <span asp-validation-for="ChequeDate" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-2 col-form-label text-start small refdiv" style="display:none">
+                            <label asp-for="RefNo">Ref No <i class="text-danger">*</i></label>
+                        </div>
+                        <div class="col-md-4 refdiv" style="display:none">
+                            <input asp-for="RefNo" id="refno" class="form-control form-control-sm" />
+                            <span asp-validation-for="RefNo" class="text-danger small"></span>
+                        </div>
+
                         <label asp-for="Amount" class="col-md-2 col-form-label text-start small">Amount <i class="text-danger">*</i></label>
                         <div class="col-md-4">
                             <input asp-for="Amount" class="form-control form-control-sm" id="balanceAmount" required />
@@ -173,6 +201,120 @@
 <script>
     $(document).ready(function() {
        $('.customerdiv, .venderdiv, .staffdiv, .customer-table-section, .vender-table-section').hide();
+
+        function handlePaymentModeChange() {
+            let modeText = $('#PaymentModeId option:selected')
+                .text()
+                .trim()
+                .toLowerCase();
+
+            $('.chequediv, .refdiv').hide();
+            $('#chequeno, #chequedate, #refno').prop('required', false);
+             
+            if (!modeText || modeText === 'select') return;
+
+            if (modeText.includes('cheque') || modeText.includes('check')) {
+                $('.chequediv, .refdiv').show();
+                $('#chequeno, #chequedate, #refno').prop('required', true);
+            }
+            else if (
+                modeText.includes('online') ||
+                modeText.includes('upi') ||
+                modeText.includes('net') ||
+                modeText.includes('neft') ||
+                modeText.includes('rtgs') ||
+                modeText.includes('imps')
+            ) {
+                $('.refdiv').show();
+                $('#refno').prop('required', true);
+            }
+        }
+
+        $('#PaymentModeId').on('change', function () {
+            handlePaymentModeChange();
+        });
+
+        // Balance check functions
+        function updateBalance(type, id, targetSelector) {
+            if (!id) {
+                $(targetSelector).hide();
+                return;
+            }
+            $.ajax({
+                url: '/PaymentVoucher/GetPartyBalance',
+                type: 'GET',
+                data: { type: type, id: id },
+                success: function (res) {
+                    if (res && res.success) {
+                        let formatted = parseFloat(res.balance).toFixed(2);
+                        $(targetSelector).text('Balance: ' + formatted).show();
+                    } else {
+                        $(targetSelector).hide();
+                    }
+                },
+                error: function () {
+                    $(targetSelector).hide();
+                }
+            });
+        }
+
+        function updatePaymentModeBalance() {
+            let modeId = $('#PaymentModeId').val();
+            if (!modeId) {
+                $('#paymentModeBalance').hide();
+                return;
+            }
+            $.ajax({
+                url: '/PaymentVoucher/GetPaymentModeDetails',
+                type: 'GET',
+                data: { id: modeId },
+                success: function (res) {
+                    if (res && res.success) {
+                        if (res.type === 'cash') {
+                            updateBalance('cash', 0, '#paymentModeBalance');
+                        } else if (res.type === 'bank' && res.bankId) {
+                            updateBalance('bank', res.bankId, '#paymentModeBalance');
+                        } else {
+                            $('#paymentModeBalance').hide();
+                        }
+                    } else {
+                        $('#paymentModeBalance').hide();
+                    }
+                },
+                error: function () {
+                    $('#paymentModeBalance').hide();
+                }
+            });
+        }
+
+        // Bind events for balance update
+        $(document).on('change', '#customerId', function () {
+            updateBalance('customer', $(this).val(), '#customerBalance');
+        });
+        $(document).on('change', '#venderId', function () {
+            let selectedParty = $('#partyddl').find("option:selected").text();
+            let type = (selectedParty === 'Customer') ? 'customer' : 'supplier';
+            updateBalance(type, $(this).val(), '#venderBalance');
+        });
+        $(document).on('change', '#employeeId', function () {
+            updateBalance('staff', $(this).val(), '#employeeBalance');
+        });
+        $(document).on('change', '#PaymentModeId', function () {
+            updatePaymentModeBalance();
+        });
+
+        // Initial load balance triggers
+        if ($('#customerId').val()) updateBalance('customer', $('#customerId').val(), '#customerBalance');
+        if ($('#venderId').val()) {
+            let selectedParty = $('#partyddl').find("option:selected").text();
+            let type = (selectedParty === 'Customer') ? 'customer' : 'supplier';
+            updateBalance(type, $('#venderId').val(), '#venderBalance');
+        }
+        if ($('#employeeId').val()) updateBalance('staff', $('#employeeId').val(), '#employeeBalance');
+        updatePaymentModeBalance();
+
+        // Trigger on load
+        handlePaymentModeChange();
 
         $('#partyddl').change(function () {
             let selectedParty = $(this).find("option:selected").text();

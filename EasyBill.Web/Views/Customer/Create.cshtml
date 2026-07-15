@@ -60,7 +60,16 @@
                             <div class="row mb-2">
                                 <label asp-for="Address" class="col-md-3 col-form-label text-start small">Address</label>
                                 <div class="col-md-6">
-                                    <input asp-for="Address" type="text" class="form-control form-control-sm" />
+                                    <input asp-for="Address" id="Address" type="text" class="form-control form-control-sm" placeholder="Type to search address..." />
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label class="col-md-3 col-form-label text-start small">Lat / Lng</label>
+                                <div class="col-md-3">
+                                    <input asp-for="Latitude" id="Latitude" type="text" class="form-control form-control-sm" readonly placeholder="Latitude" />
+                                </div>
+                                <div class="col-md-3">
+                                    <input asp-for="Longitude" id="Longitude" type="text" class="form-control form-control-sm" readonly placeholder="Longitude" />
                                 </div>
                             </div>
 
@@ -544,6 +553,52 @@
              });
 
          });
+
+         // ==========================================
+         //          ADDRESS AUTO-COMPLETE (NOMINATIM)
+         // ==========================================
+         if (typeof $.ui !== 'undefined') {
+             initAddressAutocomplete();
+         } else {
+             // Load jQuery UI dynamically if not present
+             $('<link/>', { rel: 'stylesheet', type: 'text/css', href: 'https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css' }).appendTo('head');
+             $.getScript('https://code.jquery.com/ui/1.13.2/jquery-ui.js', function() {
+                 initAddressAutocomplete();
+             });
+         }
+
+         function initAddressAutocomplete() {
+             $("#Address").autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: "/api/CustomerApi/search",
+                        dataType: "json",
+                        data: {
+                            q: request.term
+                        },
+                         success: function(data) {
+                             response($.map(data, function(item) {
+                                 return {
+                                     label: item.display_name,
+                                     value: item.display_name,
+                                     lat: item.lat,
+                                     lon: item.lon,
+                                     postcode: (item.address && item.address.postcode) ? item.address.postcode : ""
+                                 }
+                             }));
+                         }
+                     });
+                 },
+                 minLength: 3,
+                 select: function(event, ui) {
+                     $("#Latitude").val(ui.item.lat);
+                     $("#Longitude").val(ui.item.lon);
+                     if (ui.item.postcode && $("#PinCode").length) {
+                         $("#PinCode").val(ui.item.postcode);
+                     }
+                 }
+             });
+         }
 
         // ==========================================
         //          KEYBOARD SHORTCUTS

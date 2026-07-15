@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.Repository.IRepository;
+using AOne.DataAccess.Repository.IRepository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using Microsoft.EntityFrameworkCore;
@@ -13,9 +13,11 @@ namespace EasyBill.DataAccess.Repository
     public class StockIssueRepository : IStockIssueRepository
     {
         private readonly IUnitOfWork _unitofwork;
-        public StockIssueRepository(IUnitOfWork unitofwork)
+        private readonly AOne.DataAccess.Data.ApplicationDbContext _context;
+        public StockIssueRepository(IUnitOfWork unitofwork, AOne.DataAccess.Data.ApplicationDbContext context)
         {
             _unitofwork = unitofwork;
+            _context = context;
         }
         public async Task<IList<StockIssue>> GetAll()
         {
@@ -26,6 +28,34 @@ namespace EasyBill.DataAccess.Repository
                     .Include(x => x.Customers)
                     .Include(x => x.StockIssuesItems)
                     .Include(x => x.SalsePaymentDetails)
+                    .ToListAsync();
+                return results;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public async Task<IList<StockIssue>> GetPendingTransfersForBranch(string tenantId)
+        {
+            try
+            {
+                // We MUST use _context directly instead of _unitofwork.GetRepository<StockIssue>().Query()
+                // because the Repository automatically injects a ".Where(x => x.TenantId == CURRENT_TENANT)" filter.
+                // Since this StockIssue was created by the ISSUING branch, its TenantId is the Issuing branch's ID.
+                // The RECEIVING branch is querying it, so if the repository filter applies, it will return 0 results!
+                // IgnoreQueryFilters() only ignores EF Core global filters (like Deleted), NOT the manual Repository filter.
+                
+                // Get transfers for the last 30 days to avoid loading too much historical data.
+                var thirtyDaysAgo = DateTime.Now.AddDays(-30);
+                
+                IList<StockIssue> results = await _context.StockIssues
+                    .IgnoreQueryFilters()
+                    .Include(x => x.Tenant) // Issuing branch
+                    .Include(x => x.StockIssuesItems)
+                    .Where(x => x.TransferToTenantId == tenantId && x.Deleted == null && !x.IsReceived && x.TransferStatus == "Pending" && x.ChallanDate >= thirtyDaysAgo)
+                    .OrderByDescending(x => x.ChallanDate)
                     .ToListAsync();
                 return results;
             }
@@ -52,6 +82,24 @@ namespace EasyBill.DataAccess.Repository
                 throw ex;
             }
         }
+
+        public async Task<StockIssue> GetByIdBypassTenant(int id)
+        {
+            try
+            {
+                return await _context.StockIssues
+                    .IgnoreQueryFilters()
+                    .Include(x => x.Tenant)
+                    .Include(x => x.StockIssuesItems)
+                        .ThenInclude(i => i.ItemMaster)
+                    .FirstOrDefaultAsync(x => x.Id == id && x.Deleted == null);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         public async Task<StockIssue> GetById(int? Id)
         {
             try

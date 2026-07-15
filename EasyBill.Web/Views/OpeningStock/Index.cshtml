@@ -1,4 +1,4 @@
-﻿@using EasyBill.Models.ViewModels
+@using EasyBill.Models.ViewModels
 @model List<OpeningStockVM>
 <div class="d-flex justify-content-end align-items-center gap-2 mb-2">
     <form asp-action="ImportOpeningStock" method="post" enctype="multipart/form-data" class="d-flex gap-2">
@@ -12,7 +12,7 @@
 </div>
 <form asp-action="Save" method="post">
 
-    <table class="table table-bordered">
+    <table id="openingtable" class="table table-bordered">
         <thead>
             <tr>
                 <th>Item Name</th>
@@ -61,7 +61,9 @@
         </tbody>
     </table>
 
-    <button type="submit" class="btn btn-success">Save</button>
+    <div class="sticky-bottom bg-white p-3 border-top shadow-sm d-flex justify-content-start" style="z-index: 999; margin-top: 15px;">
+        <button type="submit" class="btn btn-success px-4">Save</button>
+    </div>
 </form>
 
 <!-- MODAL -->
@@ -108,6 +110,7 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         modal = new bootstrap.Modal(document.getElementById('stockModal'));
+         $('#openingtable').DataTable();
     });
 
     // ✅ Add Row

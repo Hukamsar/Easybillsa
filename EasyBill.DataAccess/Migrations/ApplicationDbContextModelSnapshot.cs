@@ -30,9 +30,15 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("AllowedBranches")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -84,6 +90,8 @@ namespace EasyBill.DataAccess.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
 
                     b.HasIndex("EmployeeId");
 
@@ -431,6 +439,12 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<int>("CalanderType")
                         .HasColumnType("int");
 
+                    b.Property<bool>("CanManageOwnPO")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanManageOwnStock")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("CityId")
                         .HasColumnType("int");
 
@@ -477,6 +491,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<bool>("IsEmailChargeActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsHeadOffice")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsPaymentGatewayActive")
                         .HasColumnType("bit");
 
@@ -492,6 +509,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<string>("Jurisdiction")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal?>("Latitude")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime?>("LicenceExpiryDate")
                         .HasColumnType("datetime2");
 
@@ -500,6 +520,9 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<string>("Logo")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("MobileNo")
                         .HasColumnType("nvarchar(max)");
@@ -510,6 +533,9 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<int>("OutletCount")
                         .HasColumnType("int");
+
+                    b.Property<string>("ParentTenantId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PaymentGatewayKey")
                         .HasColumnType("nvarchar(max)");
@@ -632,6 +658,128 @@ namespace EasyBill.DataAccess.Migrations
                     b.ToTable("AccountGroups");
                 });
 
+            modelBuilder.Entity("EasyBill.Models.Entity.AuditLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ActionName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ControllerName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("Deleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Username")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("EasyBill.Models.Entity.Bank", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AccountGroupId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AccountNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Branch")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("City")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("Deleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IFSCCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("OpeningBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("SwiftNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountGroupId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Banks");
+                });
+
             modelBuilder.Entity("EasyBill.Models.Entity.Batch", b =>
                 {
                     b.Property<int>("Id")
@@ -690,6 +838,50 @@ namespace EasyBill.DataAccess.Migrations
                     b.ToTable("Batches");
                 });
 
+            modelBuilder.Entity("EasyBill.Models.Entity.BranchItemMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("Deleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ItemMasterId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemMasterId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("BranchItemMappings");
+                });
+
             modelBuilder.Entity("EasyBill.Models.Entity.City", b =>
                 {
                     b.Property<int>("Id")
@@ -725,6 +917,9 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<int>("StateId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Zone")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -773,6 +968,69 @@ namespace EasyBill.DataAccess.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Companies");
+                });
+
+            modelBuilder.Entity("EasyBill.Models.Entity.Contra", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Attachments")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("BankId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CashAndBank")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("Deleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("VouncherNo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BankId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Contras");
                 });
 
             modelBuilder.Entity("EasyBill.Models.Entity.Country", b =>
@@ -989,6 +1247,12 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<string>("LastOtp")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal?>("Latitude")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1064,6 +1328,12 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Pincode")
                         .HasColumnType("nvarchar(max)");
@@ -1329,6 +1599,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<int?>("Initials")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsHoAdmin")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("LastModified")
                         .HasColumnType("datetime2");
 
@@ -1359,6 +1632,63 @@ namespace EasyBill.DataAccess.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Employees");
+                });
+
+            modelBuilder.Entity("EasyBill.Models.Entity.EmployeeTransferLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("Deleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FromTenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsReadByDestination")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ToDepartmentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ToDesignationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ToTenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("TransferDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TransferReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("EmployeeTransferLogs");
                 });
 
             modelBuilder.Entity("EasyBill.Models.Entity.Feature", b =>
@@ -1844,6 +2174,9 @@ namespace EasyBill.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BankId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("Created")
                         .HasColumnType("datetime2");
 
@@ -1877,6 +2210,8 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BankId");
+
                     b.HasIndex("TenantId");
 
                     b.ToTable("ModeOfPayments");
@@ -1891,6 +2226,9 @@ namespace EasyBill.DataAccess.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("Applicable")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BuyQty")
                         .HasColumnType("int");
 
                     b.Property<int?>("CategoryId")
@@ -1919,6 +2257,9 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<TimeSpan?>("EndTime")
                         .HasColumnType("time");
+
+                    b.Property<int?>("FreeQty")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -2025,6 +2366,45 @@ namespace EasyBill.DataAccess.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("OfferItems");
+                });
+
+            modelBuilder.Entity("EasyBill.Models.Entity.OfferStoreMapping", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("Deleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OfferId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OfferId");
+
+                    b.ToTable("OfferStoreMappings");
                 });
 
             modelBuilder.Entity("EasyBill.Models.Entity.OpeningStock", b =>
@@ -2241,6 +2621,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<string>("ChequeNo")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("ClearedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("Created")
                         .HasColumnType("datetime2");
 
@@ -2289,8 +2672,17 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<string>("RefNo")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("SelectedPurchaseIds")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SelectedSalesIds")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("SupplierId")
                         .HasColumnType("int");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int?>("VoucherCategoryId")
                         .HasColumnType("int");
@@ -2308,6 +2700,8 @@ namespace EasyBill.DataAccess.Migrations
                     b.HasIndex("PaymentModeId");
 
                     b.HasIndex("SupplierId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("VoucherCategoryId");
 
@@ -2574,6 +2968,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal>("Expense")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime?>("LastModified")
                         .HasColumnType("datetime2");
 
@@ -2603,6 +3000,9 @@ namespace EasyBill.DataAccess.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("PurchaseType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Remarks")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("ReturnAmount")
@@ -3040,14 +3440,23 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DeliveryType")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("LastModified")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("OrderType")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal>("PaidAmount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("ParentPurchaseOrderId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("PartyBillDate")
                         .HasColumnType("datetime2");
@@ -3076,6 +3485,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<int?>("SupplierId")
                         .HasColumnType("int");
 
+                    b.Property<string>("TargetTenantId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("TenantId")
                         .HasColumnType("nvarchar(450)");
 
@@ -3097,6 +3509,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<decimal>("Totaldiscount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("WorkflowStatus")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("billingType")
                         .HasColumnType("nvarchar(max)");
 
@@ -3109,6 +3524,8 @@ namespace EasyBill.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("SupplierId");
+
+                    b.HasIndex("TargetTenantId");
 
                     b.HasIndex("TenantId");
 
@@ -3436,6 +3853,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("Expense")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("LastModified")
                         .HasColumnType("datetime2");
 
@@ -3473,6 +3893,15 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<string>("Attachments")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ChequeDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChequeNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ClearedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("Created")
                         .HasColumnType("datetime2");
@@ -3521,6 +3950,15 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<int?>("PaymentModeId")
                         .HasColumnType("int");
+
+                    b.Property<string>("RefNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SelectedPurchaseIds")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SelectedSalesIds")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("SupplierId")
                         .HasColumnType("int");
@@ -3616,6 +4054,9 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<int?>("PharmacyDoctorId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("ReturnAmount")
                         .HasColumnType("decimal(18,2)");
@@ -4153,6 +4594,9 @@ namespace EasyBill.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Zone")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CountryId");
@@ -4320,6 +4764,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<string>("DoctorRegNumber")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsReceived")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("LastModified")
                         .HasColumnType("datetime2");
 
@@ -4367,6 +4814,12 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<decimal>("Totaldiscount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TransferStatus")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TransferToTenantId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("billingType")
                         .HasColumnType("nvarchar(max)");
@@ -4530,6 +4983,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<string>("DoctorRegNumber")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsPendingTransfer")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("LastModified")
                         .HasColumnType("datetime2");
 
@@ -4560,6 +5016,9 @@ namespace EasyBill.DataAccess.Migrations
                     b.Property<decimal>("RoundOffAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("SourceStockIssueId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("SupplierId")
                         .HasColumnType("int");
 
@@ -4583,6 +5042,9 @@ namespace EasyBill.DataAccess.Migrations
 
                     b.Property<decimal>("Totaldiscount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TransferFromTenantId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("billingType")
                         .HasColumnType("nvarchar(max)");
@@ -5536,9 +5998,15 @@ namespace EasyBill.DataAccess.Migrations
 
             modelBuilder.Entity("AOne.Models.ApplicationUsers", b =>
                 {
+                    b.HasOne("EasyBill.Models.Entity.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId");
+
                     b.HasOne("EasyBill.Models.Entity.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId");
+
+                    b.Navigation("Customer");
 
                     b.Navigation("Employee");
                 });
@@ -5665,11 +6133,58 @@ namespace EasyBill.DataAccess.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("EasyBill.Models.Entity.AuditLog", b =>
+                {
+                    b.HasOne("AOne.Models.Entity.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
+                    b.HasOne("AOne.Models.ApplicationUsers", "ApplicationUsers")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("ApplicationUsers");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("EasyBill.Models.Entity.Bank", b =>
+                {
+                    b.HasOne("EasyBill.Models.Entity.AccountGroup", "AccountGroup")
+                        .WithMany()
+                        .HasForeignKey("AccountGroupId");
+
+                    b.HasOne("AOne.Models.Entity.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
+                    b.Navigation("AccountGroup");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("EasyBill.Models.Entity.Batch", b =>
                 {
                     b.HasOne("AOne.Models.Entity.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("EasyBill.Models.Entity.BranchItemMapping", b =>
+                {
+                    b.HasOne("AOne.Models.Entity.ItemMaster", "ItemMaster")
+                        .WithMany()
+                        .HasForeignKey("ItemMasterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AOne.Models.Entity.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
+                    b.Navigation("ItemMaster");
 
                     b.Navigation("Tenant");
                 });
@@ -5698,6 +6213,21 @@ namespace EasyBill.DataAccess.Migrations
                     b.HasOne("AOne.Models.Entity.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("EasyBill.Models.Entity.Contra", b =>
+                {
+                    b.HasOne("EasyBill.Models.Entity.Bank", "Bank")
+                        .WithMany()
+                        .HasForeignKey("BankId");
+
+                    b.HasOne("AOne.Models.Entity.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
+                    b.Navigation("Bank");
 
                     b.Navigation("Tenant");
                 });
@@ -5839,6 +6369,17 @@ namespace EasyBill.DataAccess.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("EasyBill.Models.Entity.EmployeeTransferLog", b =>
+                {
+                    b.HasOne("EasyBill.Models.Entity.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("EasyBill.Models.Entity.Feature", b =>
                 {
                     b.HasOne("EasyBill.Models.Entity.Feature", "ParentFeature")
@@ -5945,9 +6486,15 @@ namespace EasyBill.DataAccess.Migrations
 
             modelBuilder.Entity("EasyBill.Models.Entity.ModeOfPayment", b =>
                 {
+                    b.HasOne("EasyBill.Models.Entity.Bank", "Bank")
+                        .WithMany()
+                        .HasForeignKey("BankId");
+
                     b.HasOne("AOne.Models.Entity.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId");
+
+                    b.Navigation("Bank");
 
                     b.Navigation("Tenant");
                 });
@@ -6008,6 +6555,17 @@ namespace EasyBill.DataAccess.Migrations
                     b.Navigation("Offer");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("EasyBill.Models.Entity.OfferStoreMapping", b =>
+                {
+                    b.HasOne("EasyBill.Models.Entity.Offer", "Offer")
+                        .WithMany()
+                        .HasForeignKey("OfferId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Offer");
                 });
 
             modelBuilder.Entity("EasyBill.Models.Entity.OpeningStock", b =>
@@ -6089,6 +6647,10 @@ namespace EasyBill.DataAccess.Migrations
                         .WithMany()
                         .HasForeignKey("SupplierId");
 
+                    b.HasOne("AOne.Models.Entity.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
                     b.HasOne("EasyBill.Models.Entity.PaymentVoucherCategory", "paymentVouchercategory")
                         .WithMany()
                         .HasForeignKey("VoucherCategoryId");
@@ -6100,6 +6662,8 @@ namespace EasyBill.DataAccess.Migrations
                     b.Navigation("ModeOfPayment");
 
                     b.Navigation("Suppliers");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("paymentVouchercategory");
                 });
@@ -6274,11 +6838,17 @@ namespace EasyBill.DataAccess.Migrations
                         .WithMany()
                         .HasForeignKey("SupplierId");
 
+                    b.HasOne("AOne.Models.Entity.Tenant", "TargetTenant")
+                        .WithMany()
+                        .HasForeignKey("TargetTenantId");
+
                     b.HasOne("AOne.Models.Entity.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId");
 
                     b.Navigation("Suppliers");
+
+                    b.Navigation("TargetTenant");
 
                     b.Navigation("Tenant");
                 });

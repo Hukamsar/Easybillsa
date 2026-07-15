@@ -8,9 +8,52 @@
 
     if (user != null)
     {
-        var roles = await UserManager.GetRolesAsync(user);
-        var roleName = roles.FirstOrDefault();
+        var roleName = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        if (string.IsNullOrEmpty(roleName))
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            roleName = roles.FirstOrDefault();
+        }
         menus = await MenuService.LoadMenu(roleName ?? string.Empty);
+    }
+
+    var currentCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var currentAct = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+}
+@functions {
+    bool IsItemActive(AOne.Models.SideMenu.MenuSectionItemModel item, string ctrl, string act)
+    {
+        if (string.IsNullOrEmpty(ctrl)) return false;
+        if (string.Equals(item.ControllerName, ctrl, StringComparison.OrdinalIgnoreCase)) return true;
+        if (item.MenuItems != null)
+        {
+            foreach (var sub in item.MenuItems)
+            {
+                if (IsSubItemActive(sub, ctrl, act)) return true;
+            }
+        }
+        return false;
+    }
+
+    bool IsSubItemActive(AOne.Models.SideMenu.MenuSectionSubItemModel sub, string ctrl, string act)
+    {
+        if (string.IsNullOrEmpty(ctrl)) return false;
+        if (string.Equals(sub.ControllerName, ctrl, StringComparison.OrdinalIgnoreCase)) return true;
+        if (sub.SubItems != null)
+        {
+            foreach (var child in sub.SubItems)
+            {
+                if (string.Equals(child.ControllerName, ctrl, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+        }
+        return false;
+    }
+
+    string MakeId(string prefix, string title)
+    {
+        var clean = string.Concat((title ?? "").ToLower().Where(c => char.IsLetterOrDigit(c) || c == '-'));
+        if (string.IsNullOrEmpty(clean)) clean = "menu";
+        return prefix + "-" + clean;
     }
 }
 <style>
@@ -129,39 +172,43 @@
                                             continue;
                                         }
 
-                                        var sectionId = "submenu-" + Guid.NewGuid().ToString("N");
+                                        var sectionId = MakeId("submenu", item.Title);
+                                        var isSectionActive = IsItemActive(item, currentCtrl, currentAct);
 
                                         <li class="nav-item">
                                             @if (item.IsParent && item.MenuItems.Any())
                                             {
-                                                <a href="#" class="nav-link d-flex justify-content-between" data-bs-toggle="collapse" data-bs-target="#@sectionId">
+                                                <a href="#" class="nav-link d-flex justify-content-between @(isSectionActive ? "" : "collapsed")" data-bs-toggle="collapse" data-bs-target="#@sectionId" aria-expanded="@(isSectionActive ? "true" : "false")">
                                                     <i class="nav-icon bi bi-folder-fill"></i>
                                                     <span class="ms-2">@item.Title</span>
                                                     <i class="nav-arrow bi bi-chevron-down"></i>
                                                 </a>
 
-                                                <div class="collapse" id="@sectionId">
+                                                <div class="collapse @(isSectionActive ? "show" : "")" id="@sectionId">
                                                     <ul class="nav nav-treeview">
                                                         @foreach (var subItem in item.MenuItems)
                                                         {
-                                                            var subId = "submenu-" + Guid.NewGuid().ToString("N");
+                                                            var subId = MakeId(sectionId, subItem.Title);
+                                                            var isSubActive = IsSubItemActive(subItem, currentCtrl, currentAct);
 
                                                             <li class="nav-item w-100">
                                                                 @if (subItem.SubItems != null && subItem.SubItems.Any())
                                                                 {
-                                                                    <a href="#" class="nav-link d-flex justify-content-between" data-bs-toggle="collapse" data-bs-target="#@subId">
+                                                                    <a href="#" class="nav-link d-flex justify-content-between @(isSubActive ? "" : "collapsed")" data-bs-toggle="collapse" data-bs-target="#@subId" aria-expanded="@(isSubActive ? "true" : "false")">
                                                                         <i class="nav-icon bi bi-folder-fill"></i>
                                                                         <span class="ms-2">@subItem.Title</span>
                                                                         <i class="nav-arrow bi bi-chevron-down"></i>
                                                                     </a>
 
-                                                                    <div class="collapse" id="@subId">
+                                                                    <div class="collapse @(isSubActive ? "show" : "")" id="@subId">
                                                                         <!-- Removed data-bs-parent -->
                                                                         <ul class="nav nav-treeview ">
                                                                             @foreach (var child in subItem.SubItems)
                                                                             {
+                                                                                var isChildActive = string.Equals(child.ControllerName, currentCtrl, StringComparison.OrdinalIgnoreCase) &&
+                                                                                                    (string.IsNullOrEmpty(child.ActionName) || string.Equals(child.ActionName, currentAct, StringComparison.OrdinalIgnoreCase) || string.Equals(currentAct, "Index", StringComparison.OrdinalIgnoreCase));
                                                                                 <li class="nav-item w-100">
-                                                                                    <a asp-controller="@child.ControllerName" asp-action="@child.ActionName" class="nav-link">
+                                                                                    <a asp-controller="@child.ControllerName" asp-action="@child.ActionName" class="nav-link @(isChildActive ? "active" : "")">
                                                                                         <i class="nav-icon bi bi-dot"></i>
                                                                                         <span class="ms-2">@child.Title</span>
                                                                                     </a>
@@ -172,9 +219,11 @@
                                                                 }
                                                                 else
                                                                 {
+                                                                    var isDirectSubActive = string.Equals(subItem.ControllerName, currentCtrl, StringComparison.OrdinalIgnoreCase) &&
+                                                                                            (string.IsNullOrEmpty(subItem.ActionName) || string.Equals(subItem.ActionName, currentAct, StringComparison.OrdinalIgnoreCase) || string.Equals(currentAct, "Index", StringComparison.OrdinalIgnoreCase));
                                                                     <a asp-controller="@subItem.ControllerName"
                                                                        asp-action="@subItem.ActionName"
-                                                                       class="nav-link">
+                                                                       class="nav-link @(isDirectSubActive ? "active" : "")">
                                                                         <i class="nav-icon bi bi-folder-fill"></i>
                                                                         <span class="ms-2">@subItem.Title</span>
                                                                     </a>
@@ -186,7 +235,9 @@
                                             }
                                             else
                                             {
-                                                <a asp-controller="@item.ControllerName" asp-action="@item.ActionName" class="nav-link">
+                                                var isItemDirectActive = string.Equals(item.ControllerName, currentCtrl, StringComparison.OrdinalIgnoreCase) &&
+                                                                         (string.IsNullOrEmpty(item.ActionName) || string.Equals(item.ActionName, currentAct, StringComparison.OrdinalIgnoreCase) || string.Equals(currentAct, "Index", StringComparison.OrdinalIgnoreCase));
+                                                <a asp-controller="@item.ControllerName" asp-action="@item.ActionName" class="nav-link @(isItemDirectActive ? "active" : "")">
                                                     <i class="nav-icon bi bi-folder-fill"></i>
                                                     <span class="ms-2">@item.Title</span>
                                                 </a>
@@ -202,16 +253,19 @@
         </nav>
     </div>
 </aside>
-
-
 <script>
+    // Clean up any stale localStorage openMenus from previous sessions so menus never get stuck open across refresh or login/logout
+    (function () {
+        try {
+            localStorage.removeItem("easybill.sidebar.openMenus");
+        } catch { }
+    })();
+
     document.addEventListener("DOMContentLoaded", function () {
         const sidebarWrapper = document.querySelector(".sidebar-wrapper");
         if (!sidebarWrapper || typeof bootstrap === "undefined" || !bootstrap.Collapse) {
             return;
         }
-
-        const sidebarStateKey = "easybill.sidebar.openMenus";
 
         function normalizePath(path) {
             if (!path) return "/";
@@ -228,36 +282,6 @@
 
             toggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
             toggle.classList.toggle("collapsed", !isExpanded);
-        }
-
-        function saveOpenMenus() {
-            const openIds = Array.from(sidebarWrapper.querySelectorAll(".collapse.show[id]")).map(function (el) {
-                return el.id;
-            });
-            localStorage.setItem(sidebarStateKey, JSON.stringify(openIds));
-        }
-
-        function restoreOpenMenus() {
-            const raw = localStorage.getItem(sidebarStateKey);
-            if (!raw) return;
-
-            let openIds = [];
-            try {
-                openIds = JSON.parse(raw);
-            } catch {
-                openIds = [];
-            }
-
-            if (!Array.isArray(openIds)) return;
-
-            openIds.forEach(function (id) {
-                if (!id) return;
-                const target = document.getElementById(id);
-                if (!target || !target.classList.contains("collapse")) return;
-
-                bootstrap.Collapse.getOrCreateInstance(target, { toggle: false }).show();
-                setToggleState(target, true);
-            });
         }
 
         function closeSiblingMenus(targetMenu) {
@@ -298,24 +322,18 @@
                     collapse.show();
                     setToggleState(targetMenu, true);
                 }
-
-                saveOpenMenus();
             });
         });
 
         sidebarWrapper.querySelectorAll(".collapse[id]").forEach(function (collapseElement) {
             collapseElement.addEventListener("shown.bs.collapse", function () {
                 setToggleState(collapseElement, true);
-                saveOpenMenus();
             });
 
             collapseElement.addEventListener("hidden.bs.collapse", function () {
                 setToggleState(collapseElement, false);
-                saveOpenMenus();
             });
-        })
-
-        restoreOpenMenus();
+        });
 
         const currentPath = normalizePath(window.location.pathname.toLowerCase());
         const menuLinks = sidebarWrapper.querySelectorAll("a.nav-link[href]");
@@ -336,17 +354,14 @@
 
             let parentCollapse = activeLink.closest(".collapse");
             while (parentCollapse) {
-                bootstrap.Collapse.getOrCreateInstance(parentCollapse, { toggle: false }).show();
+                // Instant class assignment without Bootstrap slide animation
+                parentCollapse.classList.add("show");
                 setToggleState(parentCollapse, true);
 
                 parentCollapse = parentCollapse.parentElement
                     ? parentCollapse.parentElement.closest(".collapse")
                     : null;
             }
-
-            saveOpenMenus();
         }
     });
 </script>
-
-

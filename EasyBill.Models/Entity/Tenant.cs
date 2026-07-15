@@ -31,6 +31,17 @@ namespace AOne.Models.Entity
         [ForeignKey(nameof(CityId))]
         public City? City { get; set; }
         public string? PinCode { get; set; }
+
+        // Geo-Location
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+
+        #region Headoffice 
+        public string? ParentTenantId { get; set; }
+        public bool IsHeadOffice { get; set; }
+        #endregion
+
+
         public string? ContactPerson { get; set; }
         public string? Phone { get; set; }
         public string? MobileNo { get; set; }
@@ -48,6 +59,10 @@ namespace AOne.Models.Entity
         //Other Tabs
         public string? Jurisdiction { get; set; }
         public WorkingStyle WorkingStyle { get; set; }
+
+        // Branch Permissions
+        public bool CanManageOwnPO { get; set; } = false;
+        public bool CanManageOwnStock { get; set; } = false;
 
 
         // Company Details

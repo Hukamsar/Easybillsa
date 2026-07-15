@@ -1,4 +1,4 @@
-﻿using EasyBill.Models.Entity;
+using EasyBill.Models.Entity;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System;
 using System.Collections.Generic;
@@ -21,6 +21,8 @@ namespace EasyBill.Models.ViewModels
 
         [Required(ErrorMessage = "Please select a country")]
         public int CountryId { get; set; }
+
+        public string? Zone { get; set; }
 
         [ValidateNever]
         public IEnumerable<State> States { get; set; }

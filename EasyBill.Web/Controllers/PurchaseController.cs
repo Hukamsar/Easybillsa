@@ -15,6 +15,7 @@ using iText.Layout.Element;
 using iText.Layout.Properties;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using EasyBill.UI.Filters;
 using Microsoft.Reporting.NETCore;
 using Microsoft.ReportingServices.Interfaces;
 using NPOI.SS.Formula.Functions;
@@ -143,6 +144,7 @@ namespace EasyBill.UI.Controllers
 
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create(PurchaseVM VM)
         {
             if (HasCollectionIndexGap(nameof(PurchaseVM.PurchaseItemVms)) ||
@@ -291,6 +293,8 @@ namespace EasyBill.UI.Controllers
                     Totaldiscount = VM.Totaldiscount,
                     TotalPayable = VM.TotalPayable,
                     RoundOffAmount = VM.RoundOffAmount,
+                    Expense = VM.Expense,
+                    Remarks = VM.Remarks,
                     discountPercent = VM.discountPercent,
                     discountAmount = VM.discountAmount,
                     Total = VM.Total,
@@ -300,6 +304,7 @@ namespace EasyBill.UI.Controllers
                     TotalCGstAmt = VM.TotalCGstAmt,
                     TotalSGstAmt = VM.TotalSGstAmt,
                     PaidAmount = VM.PaidAmount,
+                    PaymentAmt = VM.PaidAmount,
                     ReturnAmount = VM.ReturnAmount,
                     Balance = VM.Balance,
                     PurchaseOrderId = VM.PurchaseOrderId,
@@ -385,6 +390,7 @@ namespace EasyBill.UI.Controllers
                             // UPDATE PURCHASE
 
                             createdPurchase.PaidAmount += advanceToAdjust;
+                            createdPurchase.PaymentAmt += advanceToAdjust;
 
                             createdPurchase.Balance =
                                 createdPurchase.TotalPayable -
@@ -421,6 +427,7 @@ namespace EasyBill.UI.Controllers
                     await _purchaseChallanRepository.MarkConvertedAsync(sourceChallan.Id, createdPurchase.Id);
                 }
             }
+            await UpdateItemBarcodesFromPurchase(VM.PurchaseItemVms);
             return RedirectToAction("Index");
         }
 
@@ -436,6 +443,7 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> PreviewImportItems(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -517,6 +525,8 @@ namespace EasyBill.UI.Controllers
                 purchaseVM.Totaldiscount = model.Totaldiscount;
                 purchaseVM.TotalPayable = model.TotalPayable;
                 purchaseVM.RoundOffAmount = model.RoundOffAmount;
+                purchaseVM.Expense = model.Expense;
+                purchaseVM.Remarks = model.Remarks;
                 purchaseVM.Total = model.Total;
                 purchaseVM.billingType = model.billingType;
                 purchaseVM.PaymentType = model.PaymentType;
@@ -816,6 +826,7 @@ namespace EasyBill.UI.Controllers
 
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(PurchaseVM VM)
         {
             if (HasCollectionIndexGap(nameof(PurchaseVM.PurchaseItemVms)) ||
@@ -876,6 +887,8 @@ namespace EasyBill.UI.Controllers
                 model.Totaldiscount = VM.Totaldiscount;
                 model.TotalPayable = VM.TotalPayable;
                 model.RoundOffAmount = VM.RoundOffAmount;
+                model.Expense = VM.Expense;
+                model.Remarks = VM.Remarks;
                 model.Total = VM.Total;
                 model.billingType = VM.billingType;
                 model.PaymentType = VM.PaymentType;
@@ -883,6 +896,7 @@ namespace EasyBill.UI.Controllers
                 model.TotalCGstAmt = VM.TotalCGstAmt;
                 model.TotalSGstAmt = VM.TotalSGstAmt;
                 model.PaidAmount = VM.PaidAmount;
+                model.PaymentAmt = VM.PaidAmount;
                 model.ReturnAmount = VM.ReturnAmount;
                 model.Balance = VM.Balance;
                 model.PurchaseOrderId = VM.PurchaseOrderId;
@@ -1081,12 +1095,14 @@ namespace EasyBill.UI.Controllers
                     }
                 }
                 await _purchaseservice.Update(model);
+                await UpdateItemBarcodesFromPurchase(VM.PurchaseItemVms);
             }
 
             return RedirectToAction("Index");
         }
 
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -1152,7 +1168,11 @@ namespace EasyBill.UI.Controllers
             if (!match.Success)
                 return "BL0001";
 
-            int number = int.Parse(match.Value);
+            if (!long.TryParse(match.Value, out long number))
+            {
+                return "BL0001";
+            }
+
             string prefix = lastCode[..match.Index];
             string suffix = lastCode[(match.Index + match.Length)..];
 
@@ -1252,7 +1272,7 @@ namespace EasyBill.UI.Controllers
         //    return Json(stockList);
         //}
         [HttpGet]
-        public async Task<IActionResult> GetAllItems(string? purchaseType)
+        public async Task<IActionResult> GetAllItems(string? purchaseType, string? targetTenantId = null)
         {
             var itemMasters = (await _itemmasterservice.GetAll()).Where(x => x.IsActive).OrderBy(x => x.Name);
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -1260,7 +1280,7 @@ namespace EasyBill.UI.Controllers
                 return Unauthorized();
 
             var setting = await _salsesettingservice.GetByUserId(userId);
-            var currentStocks = await _currenstockService.GetAll();
+            var currentStocks = await _currenstockService.GetAll(targetTenantId);
 
             //var stockDict = currentStocks
             //    .GroupBy(x => x.ItemId)
@@ -8907,6 +8927,382 @@ namespace EasyBill.UI.Controllers
             };
 
             return Json(result);
+        }
+
+        private void CalculatePurchaseBookValues(Purchase p, out decimal taxableValue, out decimal taxValue, out decimal taxFreeValue)
+        {
+            taxableValue = 0;
+            taxValue = 0;
+            taxFreeValue = 0;
+
+            var items = p.PurchaseItems ?? new List<PurchaseItem>();
+            foreach (var item in items)
+            {
+                decimal baseAmt = (item.Qty * item.Rate) - item.DiscountAmt;
+                decimal cessAmt = baseAmt > 0 ? (baseAmt * item.Cess / 100) : 0;
+                decimal itemTax = item.CGstAmount + item.SGstAmount + cessAmt;
+
+                if (item.CGst == 0 && item.SGst == 0 && item.Cess == 0)
+                {
+                    taxFreeValue += baseAmt;
+                }
+                else
+                {
+                    taxableValue += baseAmt;
+                    taxValue += itemTax;
+                }
+            }
+
+            // Fallbacks if columns in db are 0
+            if (taxValue == 0 && p.TotalPayable > p.Total)
+            {
+                taxValue = p.TotalPayable - p.Total;
+            }
+            if (taxableValue == 0 && taxFreeValue == 0 && p.TotalPayable > 0)
+            {
+                taxableValue = p.Total;
+            }
+        }
+
+        // Purchase Book Report
+        [HttpGet]
+        public async Task<IActionResult> PurchaseBook(DateTime? fromDate, DateTime? toDate, int? supplierId)
+        {
+            if (!fromDate.HasValue || !toDate.HasValue)
+            {
+                var today = DateTime.Today;
+                fromDate = new DateTime(today.Year, today.Month, 1);
+                toDate = fromDate.Value.AddMonths(1).AddDays(-1);
+            }
+
+            var allPurchases = await _purchaseservice.GetAll() ?? new List<Purchase>();
+
+            allPurchases = allPurchases
+                .Where(p => p.BillDate.HasValue && p.BillDate.Value.Date >= fromDate.Value.Date && p.BillDate.Value.Date <= toDate.Value.Date)
+                .ToList();
+
+            if (supplierId.HasValue && supplierId.Value > 0)
+            {
+                allPurchases = allPurchases.Where(p => p.SupplierId == supplierId.Value).ToList();
+            }
+
+            var data = allPurchases.Select(p =>
+            {
+                CalculatePurchaseBookValues(p, out decimal taxableValue, out decimal taxValue, out decimal taxFreeValue);
+
+                return new PurchaseBookVM
+                {
+                    Date = p.BillDate,
+                    InvNo = p.BillNo,
+                    SupplierName = p.billingType == "walkin" ? "Cash" : p.Suppliers?.FirstName ?? "",
+                    BillValue = p.TotalPayable,
+                    TaxableValue = taxableValue,
+                    TaxValue = taxValue,
+                    TaxFreeValue = taxFreeValue
+                };
+            }).ToList();
+
+            var suppliers = await _supplierservice.GetALL();
+            ViewBag.SupplierList = new SelectList(suppliers, "Id", "FirstName", supplierId);
+            ViewBag.FromDate = fromDate.Value.ToString("yyyy-MM-dd");
+            ViewBag.ToDate = toDate.Value.ToString("yyyy-MM-dd");
+
+            ViewBag.TotalBillValue = data.Sum(x => x.BillValue);
+            ViewBag.TotalTaxableValue = data.Sum(x => x.TaxableValue);
+            ViewBag.TotalTaxValue = data.Sum(x => x.TaxValue);
+            ViewBag.TotalTaxFreeValue = data.Sum(x => x.TaxFreeValue);
+
+            return View(data);
+        }
+
+        // Export Purchase Book to Excel
+        [HttpGet]
+        public async Task<IActionResult> ExportPurchaseBookExcel(DateTime? fromDate, DateTime? toDate, int? supplierId)
+        {
+            if (!fromDate.HasValue || !toDate.HasValue)
+            {
+                var today = DateTime.Today;
+                fromDate = new DateTime(today.Year, today.Month, 1);
+                toDate = fromDate.Value.AddMonths(1).AddDays(-1);
+            }
+
+            var allPurchases = await _purchaseservice.GetAll() ?? new List<Purchase>();
+
+            allPurchases = allPurchases
+                .Where(p => p.BillDate.HasValue && p.BillDate.Value.Date >= fromDate.Value.Date && p.BillDate.Value.Date <= toDate.Value.Date)
+                .ToList();
+
+            if (supplierId.HasValue && supplierId.Value > 0)
+            {
+                allPurchases = allPurchases.Where(p => p.SupplierId == supplierId.Value).ToList();
+            }
+
+            var data = allPurchases.Select(p =>
+            {
+                CalculatePurchaseBookValues(p, out decimal taxableValue, out decimal taxValue, out decimal taxFreeValue);
+
+                return new PurchaseBookVM
+                {
+                    Date = p.BillDate,
+                    InvNo = p.BillNo,
+                    SupplierName = p.billingType == "walkin" ? "Cash" : p.Suppliers?.FirstName ?? "",
+                    BillValue = p.TotalPayable,
+                    TaxableValue = taxableValue,
+                    TaxValue = taxValue,
+                    TaxFreeValue = taxFreeValue
+                };
+            }).ToList();
+
+            using var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("Purchase Book");
+
+            var tenantid = User.FindFirst("TenantId")?.Value;
+            var tenantdata = await _tenantService.GetById(tenantid);
+            string companyName = tenantdata?.Name ?? "Company";
+
+            // Row 1: Company Name
+            ws.Cell(1, 1).Value = companyName;
+            ws.Range(1, 1, 1, 7).Merge()
+                .Style.Font.SetBold().Font.SetFontSize(14)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            // Row 2: Report Name (Exactly "Purchase Book", no "Report" suffix)
+            ws.Cell(2, 1).Value = "Purchase Book";
+            ws.Range(2, 1, 2, 7).Merge()
+                .Style.Font.SetBold().Font.SetFontSize(12)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            // Row 3: Date Range
+            ws.Cell(3, 1).Value = $"From: {fromDate:dd-MM-yyyy}   To: {toDate:dd-MM-yyyy}";
+            ws.Range(3, 1, 3, 7).Merge()
+                .Style.Font.SetItalic()
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+            int row = 5;
+
+            string[] headers =
+            {
+                "Date", "Invoice No", "Supplier Name",
+                "Bill Value", "Taxable Value", "Tax Value", "Tax Free Value"
+            };
+
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(row, i + 1).Value = headers[i];
+
+            ws.Range(row, 1, row, 7).Style.Font.SetBold();
+            row++;
+
+            foreach (var p in data)
+            {
+                ws.Cell(row, 1).Value = p.Date?.ToString("dd-MM-yyyy");
+                ws.Cell(row, 2).Value = p.InvNo;
+                ws.Cell(row, 3).Value = p.SupplierName;
+                ws.Cell(row, 4).Value = p.BillValue;
+                ws.Cell(row, 5).Value = p.TaxableValue;
+                ws.Cell(row, 6).Value = p.TaxValue;
+                ws.Cell(row, 7).Value = p.TaxFreeValue;
+                row++;
+            }
+
+            // TOTAL ROW
+            ws.Cell(row, 1).Value = "TOTAL";
+            ws.Cell(row, 4).Value = data.Sum(x => x.BillValue);
+            ws.Cell(row, 5).Value = data.Sum(x => x.TaxableValue);
+            ws.Cell(row, 6).Value = data.Sum(x => x.TaxValue);
+            ws.Cell(row, 7).Value = data.Sum(x => x.TaxFreeValue);
+
+            ws.Range(row, 1, row, 7).Style
+                .Font.SetBold()
+                .Fill.SetBackgroundColor(XLColor.LightGray);
+
+            ws.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            wb.SaveAs(stream);
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "PurchaseBook.xlsx"
+            );
+        }
+
+        // Export Purchase Book to PDF
+        [HttpGet]
+        public async Task<IActionResult> ExportPurchaseBookPdf(DateTime? fromDate, DateTime? toDate, int? supplierId)
+        {
+            if (!fromDate.HasValue || !toDate.HasValue)
+            {
+                var today = DateTime.Today;
+                fromDate = new DateTime(today.Year, today.Month, 1);
+                toDate = fromDate.Value.AddMonths(1).AddDays(-1);
+            }
+
+            var allPurchases = await _purchaseservice.GetAll() ?? new List<Purchase>();
+
+            allPurchases = allPurchases
+                .Where(p => p.BillDate.HasValue && p.BillDate.Value.Date >= fromDate.Value.Date && p.BillDate.Value.Date <= toDate.Value.Date)
+                .ToList();
+
+            if (supplierId.HasValue && supplierId.Value > 0)
+            {
+                allPurchases = allPurchases.Where(p => p.SupplierId == supplierId.Value).ToList();
+            }
+
+            var data = allPurchases.Select(p =>
+            {
+                CalculatePurchaseBookValues(p, out decimal taxableValue, out decimal taxValue, out decimal taxFreeValue);
+
+                return new PurchaseBookVM
+                {
+                    Date = p.BillDate,
+                    InvNo = p.BillNo,
+                    SupplierName = p.billingType == "walkin" ? "Cash" : p.Suppliers?.FirstName ?? "",
+                    BillValue = p.TotalPayable,
+                    TaxableValue = taxableValue,
+                    TaxValue = taxValue,
+                    TaxFreeValue = taxFreeValue
+                };
+            }).ToList();
+
+            using var stream = new MemoryStream();
+            var writer = new PdfWriter(stream);
+            var pdf = new PdfDocument(writer);
+            var document = new Document(pdf, iText.Kernel.Geom.PageSize.A4.Rotate());
+
+            PdfFont bold = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+            PdfFont normal = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+
+            var tenantid = User.FindFirst("TenantId")?.Value;
+            var tenantdata = await _tenantService.GetById(tenantid);
+            string companyName = tenantdata?.Name ?? "Company";
+
+            // Company Name
+            document.Add(new Paragraph(companyName)
+                .SetFont(bold)
+                .SetFontSize(16)
+                .SetTextAlignment(TextAlignment.CENTER));
+
+            // Report Name (Exactly "Purchase Book", no "Report" suffix)
+            document.Add(new Paragraph("Purchase Book")
+                .SetFont(bold)
+                .SetFontSize(12)
+                .SetTextAlignment(TextAlignment.CENTER));
+
+            // Date Range
+            document.Add(new Paragraph($"From: {fromDate:dd-MM-yyyy}   To: {toDate:dd-MM-yyyy}")
+                .SetTextAlignment(TextAlignment.CENTER)
+                .SetMarginBottom(10));
+
+            Table table = new Table(new float[] { 3, 3, 6, 4, 4, 4, 4 })
+                .UseAllAvailableWidth();
+
+            string[] headers =
+            {
+                "Date", "Invoice No", "Supplier Name",
+                "Bill Value", "Taxable Value", "Tax Value", "Tax Free Value"
+            };
+
+            foreach (var h in headers)
+            {
+                table.AddHeaderCell(
+                    new Cell().Add(new Paragraph(h).SetFont(bold))
+                              .SetTextAlignment(TextAlignment.CENTER)
+                );
+            }
+
+            foreach (var p in data)
+            {
+                table.AddCell(new Paragraph(p.Date?.ToString("dd-MM-yyyy") ?? "")
+                    .SetFont(normal));
+
+                table.AddCell(new Paragraph(p.InvNo ?? "")
+                    .SetFont(normal));
+
+                table.AddCell(new Paragraph(p.SupplierName ?? "")
+                    .SetFont(normal));
+
+                table.AddCell(new Paragraph($"{p.BillValue:0.00}")
+                    .SetTextAlignment(TextAlignment.RIGHT));
+
+                table.AddCell(new Paragraph($"{p.TaxableValue:0.00}")
+                    .SetTextAlignment(TextAlignment.RIGHT));
+
+                table.AddCell(new Paragraph($"{p.TaxValue:0.00}")
+                    .SetTextAlignment(TextAlignment.RIGHT));
+
+                table.AddCell(new Paragraph($"{p.TaxFreeValue:0.00}")
+                    .SetTextAlignment(TextAlignment.RIGHT));
+            }
+
+            table.AddCell(new Cell(1, 3)
+                .Add(new Paragraph("TOTAL").SetFont(bold)));
+
+            table.AddCell(new Paragraph($"{data.Sum(x => x.BillValue):0.00}")
+                .SetFont(bold)
+                .SetTextAlignment(TextAlignment.RIGHT));
+
+            table.AddCell(new Paragraph($"{data.Sum(x => x.TaxableValue):0.00}")
+                .SetFont(bold)
+                .SetTextAlignment(TextAlignment.RIGHT));
+
+            table.AddCell(new Paragraph($"{data.Sum(x => x.TaxValue):0.00}")
+                .SetFont(bold)
+                .SetTextAlignment(TextAlignment.RIGHT));
+
+            table.AddCell(new Paragraph($"{data.Sum(x => x.TaxFreeValue):0.00}")
+                .SetFont(bold)
+                .SetTextAlignment(TextAlignment.RIGHT));
+
+            document.Add(table);
+            document.Close();
+
+            return File(stream.ToArray(), "application/pdf", "PurchaseBook.pdf");
+        }
+
+        
+
+        private async System.Threading.Tasks.Task UpdateItemBarcodesFromPurchase(IEnumerable<PurchaseItemVM>? itemVms)
+        {
+            if (itemVms == null) return;
+
+            // 1. Get unique items with barcodes
+            var itemsToProcess = itemVms
+                .Where(x => x.ItemId > 0 && !string.IsNullOrWhiteSpace(x.Barcode))
+                .GroupBy(x => x.ItemId)
+                .Select(g => new { ItemId = g.Key, NewBarcode = g.First().Barcode!.Trim() })
+                .ToList();
+
+            if (!itemsToProcess.Any()) return;
+
+            // 2. Load all items exactly once to check current barcodes and duplicates in-memory
+            var allItems = await _itemmasterservice.GetAll();
+            var allItemsDict = allItems.ToDictionary(x => x.Id);
+
+            // 3. Process only items whose barcode has actually changed
+            foreach (var itemToUpdate in itemsToProcess)
+            {
+                if (allItemsDict.TryGetValue(itemToUpdate.ItemId, out var itemMaster))
+                {
+                    var existingBarcode = itemMaster.Barcode?.Trim() ?? string.Empty;
+                    var newBarcode = itemToUpdate.NewBarcode;
+
+                    // Only update if barcode has actually changed
+                    if (!string.Equals(existingBarcode, newBarcode, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Check duplicate in-memory
+                        var isDuplicate = allItems.Any(x => x.Id != itemToUpdate.ItemId &&
+                                                            x.Deleted == null &&
+                                                            !string.IsNullOrWhiteSpace(x.Barcode) &&
+                                                            x.Barcode.Trim().Equals(newBarcode, StringComparison.OrdinalIgnoreCase));
+                        if (!isDuplicate)
+                        {
+                            itemMaster.Barcode = newBarcode;
+                            await _itemmasterservice.Update(itemMaster);
+                        }
+                    }
+                }
+            }
         }
     }
 }

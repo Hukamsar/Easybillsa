@@ -1,13 +1,15 @@
-﻿using AOne.Models.Entity;
+using AOne.Models.Entity;
 using EasyBill.Models.Entity;
 using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
+using EasyBill.UI.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace EasyBill.UI.Controllers
 {
+    [HeadOfficeOnly]
     public class SubCategoryController : Controller
     {
         private readonly ISubCategoryRepository _subCategoryservice;

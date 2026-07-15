@@ -1,12 +1,14 @@
-﻿using DocumentFormat.OpenXml.Bibliography;
+using DocumentFormat.OpenXml.Bibliography;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using EasyBill.Models.ViewModels;
+using EasyBill.UI.Filters;
 using Microsoft.AspNetCore.Mvc;
 using City = EasyBill.Models.Entity.City;
 
 namespace EasyBill.UI.Controllers
 {
+    [HeadOfficeOnly]
     public class CityController : Controller
     {
         private readonly IStateRepository _stateservice;

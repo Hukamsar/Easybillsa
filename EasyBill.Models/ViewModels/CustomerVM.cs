@@ -22,6 +22,9 @@ namespace EasyBill.Models.ViewModels
         [RegularExpression(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", ErrorMessage = "Enter a valid email address")]
         public string? Email { get; set; }
 
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+
         [Display(Name = "Customer Group")]
         public int? AccountGroupId { get; set; }
 

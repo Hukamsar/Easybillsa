@@ -123,8 +123,23 @@ builder.Services.AddAuthentication()
             ClockSkew = TimeSpan.Zero
         };
 
+        bearer.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/HoPrint"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
+
 
     });
+builder.Services.AddMemoryCache();
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromDays(2); // Set session timeout
@@ -137,7 +152,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAngularApp",
         policy =>
         {
-            policy.WithOrigins("http://localhost:4200") // Your Angular app URL
+            policy.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost") // Allow any localhost port for Angular dev
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
@@ -150,6 +165,10 @@ builder.Services.AddDistributedSqlServerCache(options =>
     options.TableName = "AuthTicketCache";
 });
 builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.ValueCountLimit = 8192;
+});
 //builder.Services.AddControllersWithViews();
 builder.Services.AddControllersWithViews(options =>
 {
@@ -157,12 +176,14 @@ builder.Services.AddControllersWithViews(options =>
     options.ModelBinderProviders.Insert(0, new ExpiryDateModelBinderProvider());
     // ✅ Register PlanAccessFilter
     options.Filters.Add<EasyBill.UI.Helpers.PlanAccessFilter>();
+    // ✅ Register AuditLogFilter
+    options.Filters.Add<EasyBill.UI.Helpers.AuditLogFilter>();
 });
 
 builder.Services.AddAuthorization();
 builder.Services.RegisterApplicationServices();
 builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, EasyBill.UI.Helpers.LocalEmailSender>();
-builder.Services.AddHealthChecks();
+//builder.Services.AddHealthChecks();
 
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -230,7 +251,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<EasyBill.UI.Service.UserProfileMiddleware>();
 app.UseMiddleware<JwtSlidingExpirationMiddleware>();
-app.UseHealthChecks("/health");
+//app.UseHealthChecks("/health");
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");

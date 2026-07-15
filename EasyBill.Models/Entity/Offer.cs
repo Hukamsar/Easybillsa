@@ -1,4 +1,4 @@
-﻿using AOne.Models;
+using AOne.Models;
 using AOne.Models.Entity;
 using AOne.Utility.Enums;
 using System;
@@ -23,6 +23,8 @@ namespace EasyBill.Models.Entity
         public TimeSpan? StartTime { get; set; }
         public TimeSpan? EndTime { get; set; }
         public bool IsActive { get; set; } 
+        public int? BuyQty { get; set; }
+        public int? FreeQty { get; set; }
         public ICollection<OfferItem> OfferItems { get; set; }
         public int? CompanyId {  get; set; }
         [ForeignKey(nameof(CompanyId))]

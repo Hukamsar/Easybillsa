@@ -79,6 +79,42 @@ namespace EasyBill.UI.Helpers
                 allowedFeatures.Add("Master");
                 allowedFeatures.Add("Master.Settings");
                 allowedFeatures.Add("Master.Staff");
+                allowedFeatures.Add("Books");
+                allowedFeatures.Add("Contra");
+
+                bool hasParent = !string.IsNullOrEmpty(tenant.ParentTenantId);
+                HashSet<string> parentAllowedFeatures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                if (hasParent)
+                {
+                    var parentTenant = await _dbContext.Tenants
+                        .FirstOrDefaultAsync(t => t.Id == tenant.ParentTenantId);
+                    if (parentTenant != null)
+                    {
+                        if (!string.IsNullOrEmpty(parentTenant.AllowedModulesJson))
+                        {
+                            try
+                            {
+                                var parentKeys = JsonConvert.DeserializeObject<List<string>>(parentTenant.AllowedModulesJson);
+                                if (parentKeys != null)
+                                {
+                                    foreach (var pk in parentKeys) parentAllowedFeatures.Add(pk);
+                                }
+                            }
+                            catch { }
+                        }
+                        else if (parentTenant.SubscriptionPlanId.HasValue)
+                        {
+                            var planFeatures = await _dbContext.PlanFeatures
+                                .Include(pf => pf.Feature)
+                                .Where(pf => pf.PlanId == parentTenant.SubscriptionPlanId.Value && pf.Feature != null && pf.Feature.IsActive)
+                                .Select(pf => pf.Feature!.FeatureKey)
+                                .ToListAsync();
+
+                            foreach (var pf in planFeatures) parentAllowedFeatures.Add(pf);
+                        }
+                    }
+                }
 
                 if (!string.IsNullOrEmpty(tenant.AllowedModulesJson))
                 {
@@ -87,11 +123,44 @@ namespace EasyBill.UI.Helpers
                         var keys = JsonConvert.DeserializeObject<List<string>>(tenant.AllowedModulesJson);
                         if (keys != null)
                         {
-                            foreach (var k in keys) allowedFeatures.Add(k);
+                            foreach (var k in keys)
+                            {
+                                if (hasParent)
+                                {
+                                    if (k.Equals("Master.Area", StringComparison.OrdinalIgnoreCase) ||
+                                        k.Equals("Master.Offers", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        continue;
+                                    }
+
+                                    if (parentAllowedFeatures.Contains(k))
+                                    {
+                                        allowedFeatures.Add(k);
+                                    }
+                                }
+                                else
+                                {
+                                    allowedFeatures.Add(k);
+                                }
+                            }
                             return allowedFeatures;
                         }
                     }
                     catch { }
+                }
+
+                if (hasParent)
+                {
+                    foreach (var pk in parentAllowedFeatures)
+                    {
+                        if (pk.Equals("Master.Area", StringComparison.OrdinalIgnoreCase) ||
+                            pk.Equals("Master.Offers", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+                        allowedFeatures.Add(pk);
+                    }
+                    return allowedFeatures;
                 }
 
                 if (tenant.SubscriptionPlanId.HasValue)
@@ -227,6 +296,16 @@ namespace EasyBill.UI.Helpers
                 // Global Settings
                 case "globalsettings":
                     return "GlobalSettings";
+
+                // Books
+                case "cashbook":
+                case "bankbook":
+                case "daybook":
+                    return "Books";
+
+                // Contra
+                case "contra":
+                    return "Contra";
 
                 default:
                     return string.Empty;

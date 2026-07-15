@@ -10,6 +10,8 @@ using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using System.Security.Claims;
 using EasyBill.UI.Service.Auth;
+using AOne.Utility;
+using Newtonsoft.Json;
 
 
 namespace EasyBill.UI.Controllers
@@ -75,12 +77,15 @@ namespace EasyBill.UI.Controllers
                     return View(model);
                 }
 
-                var result = await signInManager.PasswordSignInAsync(user, model.Password ?? string.Empty, rememberMe, lockoutOnFailure: false);
+                var result = await signInManager.CheckPasswordSignInAsync(user, model.Password ?? string.Empty, lockoutOnFailure: false);
                 if (!result.Succeeded)
                 {
                     ModelState.AddModelError(string.Empty, "Invalid login attempt.");
                     return View(model);
                 }
+                
+                var multiBranchResult = await ProcessLoginSuccessAsync(user, rememberMe);
+                if (multiBranchResult != null) return multiBranchResult;
             }
             else if (model.LoginType.Equals(LoginTypes.MobilePin, StringComparison.OrdinalIgnoreCase))
             {
@@ -92,7 +97,8 @@ namespace EasyBill.UI.Controllers
                 }
 
                 user = pinLogin.User;
-                await signInManager.SignInAsync(user, isPersistent: rememberMe);
+                var multiBranchResult = await ProcessLoginSuccessAsync(user, rememberMe);
+                if (multiBranchResult != null) return multiBranchResult;
             }
             else if (model.LoginType.Equals(LoginTypes.MobileOtp, StringComparison.OrdinalIgnoreCase))
             {
@@ -104,7 +110,8 @@ namespace EasyBill.UI.Controllers
                 }
 
                 user = otpLogin.User;
-                await signInManager.SignInAsync(user, isPersistent: rememberMe);
+                var multiBranchResult = await ProcessLoginSuccessAsync(user, rememberMe);
+                if (multiBranchResult != null) return multiBranchResult;
             }
             else
             {
@@ -117,6 +124,20 @@ namespace EasyBill.UI.Controllers
                 ModelState.AddModelError(string.Empty, "Invalid login attempt.");
                 return View(model);
             }
+
+            var isSuperAdmin = await userManager.IsInRoleAsync(user, RoleName.SuperAdmin);
+            // if (!isSuperAdmin && !string.IsNullOrEmpty(user.TenantId))
+            // {
+            //     var tenant = await _tenantRepo.GetById(user.TenantId);
+            //     if (tenant != null && tenant.CompanyType == AOne.Utility.Enums.CompanyType.HeadOffice)
+            //     {
+            //         // Sign out to prevent partial session
+            //         await signInManager.SignOutAsync();
+            //         
+            //         // Redirect HO users to the designated HO portal
+            //         return Redirect("https://ho.easybill.com");
+            //     }
+            // }
 
             await SetUserSessionAsync(user);
             var setupStatus = await _userLoginAuthService.GetProfileSetupStatusAsync(user);
@@ -400,6 +421,9 @@ namespace EasyBill.UI.Controllers
                 users = users.Where(u => u.TenantId == tenantId).ToList();
             }
 
+            // Exclude HO multi-branch users from the standard EasyBill user list
+            users = users.Where(u => string.IsNullOrEmpty(u.AllowedBranches)).ToList();
+
             foreach (var user in users)
             {
                 var roles = await userManager.GetRolesAsync(user);
@@ -512,7 +536,7 @@ namespace EasyBill.UI.Controllers
             user.Email = viewModel.Email;
             user.UserName = viewModel.Email;
             user.PhoneNumber = viewModel.MobileNo;
-
+            user.TenantName = viewModel.TenantName;
             var updateResult = await userManager.UpdateAsync(user);
 
             var currentRoles = await userManager.GetRolesAsync(user);
@@ -597,6 +621,114 @@ namespace EasyBill.UI.Controllers
         public IActionResult AccessDenied()
         {
             return View();
+        }
+
+        private async Task<IActionResult?> ProcessLoginSuccessAsync(ApplicationUsers user, bool rememberMe)
+        {
+            var isSuperAdmin = await userManager.IsInRoleAsync(user, RoleName.SuperAdmin);
+            if (isSuperAdmin)
+            {
+                await signInManager.SignInAsync(user, isPersistent: rememberMe);
+                return null;
+            }
+
+            var allTenants = await _tenantRepo.GetAll();
+            var userTenant = allTenants.FirstOrDefault(t => t.Id == user.TenantId);
+
+            List<string> branches = new List<string>();
+
+            if (userTenant != null && userTenant.CompanyType == AOne.Utility.Enums.CompanyType.HeadOffice)
+            {
+                // Head Office admin should see all its branches and MUST select one to login
+                branches = allTenants.Where(t => t.ParentTenantId == user.TenantId && t.CompanyType == AOne.Utility.Enums.CompanyType.Branch).Select(t => t.Id).ToList();
+
+                if (!branches.Any())
+                {
+                    ModelState.AddModelError(string.Empty, "No branches are available for this Head Office yet. Please create a branch first.");
+                    return View("Login", new LoginViewModels());
+                }
+            }
+            else if (!string.IsNullOrEmpty(user.AllowedBranches))
+            {
+                try { branches = JsonConvert.DeserializeObject<List<string>>(user.AllowedBranches) ?? new List<string>(); }
+                catch { }
+            }
+
+            if (branches.Count > 1 || (userTenant != null && userTenant.CompanyType == AOne.Utility.Enums.CompanyType.HeadOffice))
+            {
+                var branchList = allTenants.Where(t => branches.Contains(t.Id)).ToList();
+                
+                ViewBag.RequiresBranchSelection = true;
+                ViewBag.PendingUserId = user.Id;
+                ViewBag.RememberMe = rememberMe;
+                ViewBag.Branches = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(branchList, "Id", "Name");
+                
+                return View("Login", new LoginViewModels());
+            }
+            
+            if (branches.Count == 1)
+            {
+                user.SelectedTenantIdForLogin = branches[0];
+            }
+            
+            await signInManager.SignInAsync(user, isPersistent: rememberMe);
+            return null; // Return null to continue default processing
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> SelectBranch()
+        {
+            var userId = TempData["PendingBranchLoginUserId"]?.ToString();
+            var rememberMeStr = TempData["RememberMe"]?.ToString();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return RedirectToAction("Login");
+            }
+            
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null || string.IsNullOrEmpty(user.AllowedBranches))
+            {
+                return RedirectToAction("Login");
+            }
+
+            List<string> branchIds = new List<string>();
+            try { branchIds = JsonConvert.DeserializeObject<List<string>>(user.AllowedBranches) ?? new List<string>(); }
+            catch { }
+
+            var branches = (await _tenantRepo.GetAll()).Where(t => branchIds.Contains(t.Id)).ToList();
+            
+            TempData.Keep("PendingBranchLoginUserId");
+            TempData.Keep("RememberMe");
+            
+            ViewBag.Branches = branches;
+            ViewBag.UserId = userId;
+            ViewBag.RememberMe = rememberMeStr;
+            
+            return View();
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SelectBranch(string tenantId, string userId, bool rememberMe)
+        {
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(tenantId))
+            {
+                return RedirectToAction("Login");
+            }
+
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return RedirectToAction("Login");
+            }
+            
+            user.SelectedTenantIdForLogin = tenantId;
+            await signInManager.SignInAsync(user, isPersistent: rememberMe);
+            
+            await SetUserSessionAsync(user);
+            return RedirectToAction("Index", "Home");
         }
     }
 }

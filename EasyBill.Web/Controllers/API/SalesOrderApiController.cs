@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -42,16 +42,30 @@ namespace EasyBill.UI.Controllers.API
             _opticalRepo = opticalRepo;
         }
 
-        // GET: api/SalesOrder
+        // GET: api/SalesOrderApi
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] string? tenantId)
         {
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                var currentUserTenantId = User.FindFirst("TenantId")?.Value;
+                var isSuperAdmin = User.IsInRole("SuperAdmin");
+
+                if (!isSuperAdmin && tenantId != currentUserTenantId)
+                {
+                    return StatusCode(403, new { success = false, message = "Access denied: You cannot view data for another tenant." });
+                }
+
+                HttpContext.Items["OverrideTenantId"] = tenantId;
+            }
+
             var data = await _salesOrderRepo.GetAll();
 
             var salesOrderData = data.Select(x => new
             {
                 Id = x.Id,
                 CustomerId = x.CustomerId,
+                CustomerName = x.Customers?.Name ?? string.Empty,
                 BillNo = x.BillNo,
                 BillDate = x.BillDate,
                 MobileNo = x.MobileNo ?? string.Empty,

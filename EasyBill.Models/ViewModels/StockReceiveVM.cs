@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -58,9 +58,16 @@ namespace EasyBill.Models.ViewModels
         public string? TaxCalculation { get; set; } = "Yes";
         public int? PurchaseOrderId { get; set; }
         public int? SourcePurchaseChallanId { get; set; }
+        public int? SourceStockIssueId { get; set; }
         public int? PharmacyDoctorId { get; set; }
         public string? DoctorName { get; set; }
         public string? DoctorMobileNumber { get; set; }
         public string? DoctorRegNumber { get; set; }
+
+        // Branch Transfer additions
+        public string? ReceiveFromType { get; set; } = "Supplier"; // "Supplier" or "Branch"
+        public string? TransferFromTenantId { get; set; }
+        public bool IsPendingTransfer { get; set; } = false;
+        public string? TransferFromBranchName { get; set; }
     }
 }

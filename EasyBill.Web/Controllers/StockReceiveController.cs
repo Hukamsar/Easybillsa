@@ -1,4 +1,4 @@
-﻿using AOne.DataAccess.ProfileService;
+using AOne.DataAccess.ProfileService;
 using ClosedXML.Excel;
 using AOne.Models.Entity;
 using EasyBill.DataAccess.Repository;
@@ -30,6 +30,7 @@ namespace EasyBill.UI.Controllers
         private readonly ISupplierRepository _supplierservice;
         private readonly IModeOfPaymentRepository _modeofpaymentservice;
         private readonly ISalsePaymentDetailsRepository _paymentDetailsRepository;
+        private readonly IStockIssueRepository _stockIssueService;
         public StockReceiveController(
             IStockReceiveRepository stockreceiveservice,
             IProfileService profileService,
@@ -41,7 +42,8 @@ namespace EasyBill.UI.Controllers
             IStockService currentStockService,
             ISupplierRepository supplierservice,
             IModeOfPaymentRepository modeofpaymentservice,
-            ISalsePaymentDetailsRepository paymentDetailsRepository
+            ISalsePaymentDetailsRepository paymentDetailsRepository,
+            IStockIssueRepository stockIssueService
             )
         {
             _stockreceiveservice = stockreceiveservice;
@@ -55,17 +57,34 @@ namespace EasyBill.UI.Controllers
             _supplierservice = supplierservice;
             _modeofpaymentservice = modeofpaymentservice;
             _paymentDetailsRepository = paymentDetailsRepository;
+            _stockIssueService = stockIssueService;
         }
         public async Task<IActionResult> Index()
         {
             await _profileService.Set(User);
             var data = await _stockreceiveservice.GetAll();
+
+            var tenantId = User.FindFirst("TenantId")?.Value;
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                var pendingTransfers = await _stockIssueService.GetPendingTransfersForBranch(tenantId);
+                ViewBag.PendingTransfers = pendingTransfers;
+            }
+            else
+            {
+                ViewBag.PendingTransfers = new List<StockIssue>();
+            }
+
+            var allTenants = await _tenantRepository.GetAll();
+            ViewBag.Tenants = allTenants.ToDictionary(t => t.Id, t => t);
+
             return View(data);
         }
         [HttpGet]
-        public async Task<IActionResult> Create(string? returnUrl)
+        public async Task<IActionResult> Create(string? returnUrl, int? pendingIssueId)
         {
             ViewBag.ReturnUrl=returnUrl;
+            ViewBag.AutoLoadIssueId = pendingIssueId;
             var tenantId = User.FindFirst("TenantId")?.Value;
             var tenant = string.IsNullOrWhiteSpace(tenantId) ? null : await _tenantRepository.GetById(tenantId);
 
@@ -73,6 +92,23 @@ namespace EasyBill.UI.Controllers
             ViewBag.PaymentMode = new SelectList(await _modeofpaymentservice.GetAll(), "Id", "Name");
             ViewBag.Hsn = new SelectList(Enumerable.Empty<SelectListItem>(), "Value", "Text");
             ViewBag.BusinessType = (int)(tenant?.BusinessType ?? 0);
+
+            // Fetch related branches for branch transfer
+            var tenantList = await _tenantRepository.GetAll();
+            if (tenant != null)
+            {
+                var hoTenantId = string.IsNullOrEmpty(tenant.ParentTenantId) ? tenant.Id : tenant.ParentTenantId;
+                var branches = tenantList.Where(t => 
+                    (t.ParentTenantId == hoTenantId || t.Id == hoTenantId) && 
+                    t.Id != tenantId)
+                    .OrderBy(t => t.Name)
+                    .ToList();
+                ViewBag.Branches = new SelectList(branches, "Id", "Name");
+            }
+            else
+            {
+                ViewBag.Branches = new SelectList(new List<AOne.Models.Entity.Tenant>(), "Id", "Name");
+            }
 
             var viewModel = new StockReceiveVM
             {
@@ -212,11 +248,6 @@ namespace EasyBill.UI.Controllers
                         return Json(new { success = false, message = $"Please enter batch on row {rowNumber}." });
                     }
 
-                    if (!item.Expirydate.HasValue)
-                    {
-                        return Json(new { success = false, message = $"Please select expiry date on row {rowNumber}." });
-                    }
-
                     if (item.Mrp <= 0)
                     {
                         return Json(new { success = false, message = $"Please enter MRP on row {rowNumber}." });
@@ -257,7 +288,9 @@ namespace EasyBill.UI.Controllers
 
                 Supplier? supplier = null;
 
-                if (Vm.billingType == "registered")
+                bool isRegisteredSupplier = Vm.billingType == "registered" && Vm.ReceiveFromType != "Branch";
+
+                if (isRegisteredSupplier)
                 {
                     if (!Vm.SupplierId.HasValue || Vm.SupplierId.Value <= 0)
                     {
@@ -279,15 +312,15 @@ namespace EasyBill.UI.Controllers
                 var model = new StockReceive
                 {
                     CustomerId = null,
-                    SupplierId = Vm.billingType == "registered" ? Vm.SupplierId : null,
+                    SupplierId = isRegisteredSupplier ? Vm.SupplierId : null,
                     ChallanDate = Vm.ChallanDate ?? DateTime.Now,
                     ChallanNo = Vm.ChallanNo,
                     PartyBillNo = Vm.PartyBillNo?.Trim(),
                     PartyBillDate = Vm.PartyBillDate,
-                    MobileNo = Vm.billingType == "registered"
+                    MobileNo = isRegisteredSupplier
                         ? (string.IsNullOrWhiteSpace(Vm.MobileNo) ? supplier?.PhoneNO : Vm.MobileNo)
                         : null,
-                    Address = Vm.billingType == "registered"
+                    Address = isRegisteredSupplier
                         ? (string.IsNullOrWhiteSpace(Vm.Address) ? supplier?.Address : Vm.Address)
                         : null,
                     PharmacyDoctorId = Vm.PharmacyDoctorId,
@@ -307,6 +340,9 @@ namespace EasyBill.UI.Controllers
                     billingType = Vm.billingType,
                     PaymentType = Vm.PaymentType,
                     TaxCalculation = Vm.TaxCalculation,
+                    SourceStockIssueId = Vm.SourceStockIssueId,
+                    TransferFromTenantId = Vm.TransferFromTenantId,
+                    IsPendingTransfer = false, // Always false once it is actually received and saved
                     StockReceiveItems = items.Select(x => new StockReceiveItem
                     {
                         ItemMasterId = x.ItemMasterId,
@@ -332,6 +368,18 @@ namespace EasyBill.UI.Controllers
                 };
 
                 await _stockreceiveservice.Create(model);
+
+                // If this receive is satisfying a pending branch transfer, mark the issue as received
+                if (Vm.SourceStockIssueId.HasValue && Vm.SourceStockIssueId.Value > 0)
+                {
+                    var sourceIssue = await _stockIssueService.GetByIdBypassTenant(Vm.SourceStockIssueId.Value);
+                    if (sourceIssue != null && !sourceIssue.IsReceived)
+                    {
+                        sourceIssue.IsReceived = true;
+                        sourceIssue.TransferStatus = "Accepted";
+                        await _stockIssueService.Update(sourceIssue);
+                    }
+                }
 
                 foreach (var item in items)
                 {
@@ -367,6 +415,50 @@ namespace EasyBill.UI.Controllers
                 return Json(new { success = false, message = $"Unable to save stock receive. {ex.Message}" });
             }
         }
+        [HttpPost]
+        public async Task<IActionResult> RejectTransfer(int issueId)
+        {
+            try
+            {
+                var issue = await _stockIssueService.GetByIdBypassTenant(issueId);
+                if (issue == null)
+                {
+                    return Json(new { success = false, message = "Transfer not found." });
+                }
+
+                issue.TransferStatus = "Rejected";
+                await _stockIssueService.Update(issue);
+
+                // Revert stock for the issuing branch
+                if (issue.StockIssuesItems != null && !string.IsNullOrEmpty(issue.TenantId))
+                {
+                    foreach (var item in issue.StockIssuesItems)
+                    {
+                        // Add stock back to the issuing branch
+                        await _currentStockService.UpdateStock(
+                            item.ItemMasterId,
+                            item.Batch?.Trim() ?? "",
+                            item.Qty, // Positive quantity to add back
+                            item.Expirydate,
+                            item.Mrp,
+                            item.Rate, // SalesRateA fallback
+                            null, // SalesRateB
+                            item.Rate, // purchaseRate fallback
+                            null, // Barcode
+                            false,
+                            issue.TenantId // Override TenantId to update issuing branch's stock
+                        );
+                    }
+                }
+
+                return Json(new { success = true, message = "Transfer rejected successfully." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Unable to reject transfer. {ex.Message}" });
+            }
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetItemDetails(int itemId)
         {
@@ -398,6 +490,75 @@ namespace EasyBill.UI.Controllers
                     salesRateB = x.salserateB,
                     barcode = x.Barcode
                 }).ToList()
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetPendingBranchTransfers()
+        {
+            var currentUser = await _usersManager.GetUserAsync(User);
+            var tenantId = currentUser?.TenantId;
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                return Json(new { success = false, message = "Tenant not found." });
+            }
+
+            // A SuperAdmin has TenantId = null and can see everything, but realistically 
+            // a branch transfer is meant for a specific branch. If SA is acting on behalf of a branch,
+            // they would switch tenants. So we match TransferToTenantId exactly.
+            var pendingIssues = (await _stockIssueService.GetPendingTransfersForBranch(tenantId))
+                .Select(x => new
+                {
+                    Id = x.Id,
+                    ChallanNo = x.ChallanNo,
+                    ChallanDate = x.ChallanDate?.ToString("dd-MMM-yyyy"),
+                    TotalAmount = x.TotalPayable,
+                    IssuingBranch = x.Tenant?.Name ?? "Head Office"
+                }).ToList();
+
+            return Json(new { success = true, data = pendingIssues });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetStockIssueDetails(int issueId)
+        {
+            var issue = await _stockIssueService.GetByIdBypassTenant(issueId);
+            if (issue == null || issue.IsReceived)
+            {
+                return Json(new { success = false, message = "Issue not found or already received." });
+            }
+
+            var items = issue.StockIssuesItems.Select(x => new
+            {
+                itemId = x.ItemMasterId,
+                itemName = x.ItemMaster?.Name,
+                qty = x.Qty,
+                freeQty = 0, // No FreeQty in StockIssueItem
+                rate = x.Rate,
+                mrp = x.Mrp,
+                discountPercent = x.Discount,
+                taxPercent = x.Gst,
+                taxAmount = (x.Amount * x.Gst) / (100 + x.Gst), // Rough estimate, or we can just let JS recalculate it
+                totalAmount = x.Amount,
+                batch = x.Batch,
+                expiryDate = x.Expirydate?.ToString("MM/yyyy")
+            }).ToList();
+
+            return Json(new { 
+                success = true, 
+                data = new {
+                    issueId = issue.Id,
+                    challanNo = issue.ChallanNo,
+                    challanDate = issue.ChallanDate?.ToString("yyyy-MM-dd"),
+                    total = issue.Total,
+                    totalGstAmt = issue.TotalGstAmt,
+                    totalPayable = issue.TotalPayable,
+                    discountPercent = issue.discountPercent,
+                    discountAmount = issue.discountAmount,
+                    roundOffAmount = issue.RoundOffAmount,
+                    transferFromTenantId = issue.TenantId,
+                    items = items
+                } 
             });
         }
         [HttpGet]
@@ -611,6 +772,11 @@ namespace EasyBill.UI.Controllers
                     return Json(new { success = false, message = "Stock receive record not found." });
                 }
 
+                if (model.SourceStockIssueId != null && model.SourceStockIssueId > 0)
+                {
+                    return Json(new { success = false, message = "Cannot edit a stock receipt that was generated from a branch transfer." });
+                }
+
                 VM.ChallanNo = VM.ChallanNo?.Trim();
                 if (string.IsNullOrWhiteSpace(VM.ChallanNo))
                 {
@@ -666,11 +832,6 @@ namespace EasyBill.UI.Controllers
                         return Json(new { success = false, message = $"Please enter batch on row {rowNumber}." });
                     }
 
-                    if (!item.Expirydate.HasValue)
-                    {
-                        return Json(new { success = false, message = $"Please select expiry date on row {rowNumber}." });
-                    }
-
                     if (item.Mrp <= 0)
                     {
                         return Json(new { success = false, message = $"Please enter MRP on row {rowNumber}." });
@@ -711,7 +872,9 @@ namespace EasyBill.UI.Controllers
 
                 Supplier? supplier = null;
 
-                if (VM.billingType == "registered")
+                bool isRegisteredSupplier = VM.billingType == "registered" && VM.ReceiveFromType != "Branch";
+
+                if (isRegisteredSupplier)
                 {
                     if (!VM.SupplierId.HasValue || VM.SupplierId.Value <= 0)
                     {
@@ -731,15 +894,15 @@ namespace EasyBill.UI.Controllers
                 var balance = paidAmount > totalPayable ? 0 : totalPayable - paidAmount;
 
                 model.CustomerId = null;
-                model.SupplierId = VM.billingType == "registered" ? VM.SupplierId : null;
+                model.SupplierId = isRegisteredSupplier ? VM.SupplierId : null;
                 model.ChallanDate = VM.ChallanDate ?? model.ChallanDate ?? DateTime.Now;
                 model.ChallanNo = VM.ChallanNo;
                 model.PartyBillNo = VM.PartyBillNo?.Trim();
                 model.PartyBillDate = VM.PartyBillDate;
-                model.MobileNo = VM.billingType == "registered"
+                model.MobileNo = isRegisteredSupplier
                     ? (string.IsNullOrWhiteSpace(VM.MobileNo) ? supplier?.PhoneNO : VM.MobileNo)
                     : null;
-                model.Address = VM.billingType == "registered"
+                model.Address = isRegisteredSupplier
                     ? (string.IsNullOrWhiteSpace(VM.Address) ? supplier?.Address : VM.Address)
                     : null;
                 model.PharmacyDoctorId = VM.PharmacyDoctorId;
@@ -759,6 +922,12 @@ namespace EasyBill.UI.Controllers
                 model.billingType = VM.billingType;
                 model.PaymentType = VM.PaymentType;
                 model.TaxCalculation = VM.TaxCalculation;
+                
+                // If it was a pending branch transfer, mark it as received
+                if (model.IsPendingTransfer)
+                {
+                    model.IsPendingTransfer = false;
+                }
 
                 model.StockReceiveItems ??= new List<StockReceiveItem>();
                 var removedItems = model.StockReceiveItems
@@ -931,6 +1100,11 @@ namespace EasyBill.UI.Controllers
                 if (model == null)
                 {
                     return Json(new { success = false, message = "Item not found." });
+                }
+
+                if (model.SourceStockIssueId != null && model.SourceStockIssueId > 0)
+                {
+                    return Json(new { success = false, message = "Cannot delete a stock receipt that was generated from a branch transfer." });
                 }
 
                 await _stockreceiveservice.Delete(model);

@@ -1,4 +1,4 @@
-﻿using AOne.Utility.Enums;
+using AOne.Utility.Enums;
 using EasyBill.Models.Entity;
 using System;
 using System.Collections.Generic;
@@ -15,5 +15,6 @@ namespace EasyBill.Models.ViewModels
         public string? Description { get; set; }
         public IEnumerable<ModeOfPayment> ModeOfPayments { get; set; }
         public modeofpayment? PaymentType { get; set; }
+        public int? BankId { get; set; }
     }
 }

@@ -1,0 +1,154 @@
+@model EasyBill.Models.ViewModels.BankVM
+
+@{
+    ViewData["Title"] = "Edit Bank";
+}
+
+<style>
+    .card-header {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+        font-weight: 500;
+        font-size: 16px;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: #333;
+    }
+</style>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header py-2">
+        <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Edit Bank</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" method="post" id="BankForm">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <input type="hidden" asp-for="Id" />
+
+            <div class="row g-3">
+                <!-- Bank Name -->
+                <div class="col-md-6">
+                    <label asp-for="BankName" class="form-label">Bank Name <span class="text-danger">*</span></label>
+                    <input asp-for="BankName" class="form-control form-control-sm" placeholder="Enter bank name" required />
+                    <span asp-validation-for="BankName" class="text-danger"></span>
+                </div>
+
+                <!-- Account Group Dropdown -->
+                <div class="col-md-6">
+                    <label asp-for="AccountGroupId" class="form-label">Account Group <span class="text-danger">*</span></label>
+                    <select asp-for="AccountGroupId" class="form-select form-select-sm" asp-items="ViewBag.AccountGroupList" required>
+                        <option value="">Select Account Group</option>
+                    </select>
+                    <span asp-validation-for="AccountGroupId" class="text-danger"></span>
+                </div>
+
+                <!-- Branch -->
+                <div class="col-md-6">
+                    <label asp-for="Branch" class="form-label">Branch <span class="text-danger">*</span></label>
+                    <input asp-for="Branch" class="form-control form-control-sm" placeholder="Enter branch name" required />
+                    <span asp-validation-for="Branch" class="text-danger"></span>
+                </div>
+
+                <!-- City -->
+                <div class="col-md-6">
+                    <label asp-for="City" class="form-label">City <span class="text-danger">*</span></label>
+                    <input asp-for="City" class="form-control form-control-sm" placeholder="Enter city name" required />
+                    <span asp-validation-for="City" class="text-danger"></span>
+                </div>
+
+                <!-- Account No -->
+                <div class="col-md-6">
+                    <label asp-for="AccountNo" class="form-label">Account Number <span class="text-danger">*</span></label>
+                    <input asp-for="AccountNo" class="form-control form-control-sm" placeholder="Enter account number" required />
+                    <span asp-validation-for="AccountNo" class="text-danger"></span>
+                </div>
+
+                <!-- IFSC Code -->
+                <div class="col-md-6">
+                    <label asp-for="IFSCCode" class="form-label">IFSC Code <span class="text-danger">*</span></label>
+                    <input asp-for="IFSCCode" class="form-control form-control-sm" placeholder="Enter IFSC code" required />
+                    <span asp-validation-for="IFSCCode" class="text-danger"></span>
+                </div>
+
+                <!-- Swift No -->
+                <div class="col-md-6">
+                    <label asp-for="SwiftNo" class="form-label">Swift Number</label>
+                    <input asp-for="SwiftNo" class="form-control form-control-sm" placeholder="Enter Swift code" />
+                    <span asp-validation-for="SwiftNo" class="text-danger"></span>
+                </div>
+
+                <!-- Opening Balance -->
+                <div class="col-md-3">
+                    <label asp-for="OpeningBalance" class="form-label">Opening Balance <span class="text-danger">*</span></label>
+                    <input asp-for="OpeningBalance" type="number" step="0.01" class="form-control form-control-sm" required />
+                    <span asp-validation-for="OpeningBalance" class="text-danger"></span>
+                </div>
+
+                
+            </div>
+
+            <div class="mt-4 d-flex justify-content-between">
+                <a asp-action="Index" class="btn btn-secondary px-4"><i class="bi bi-arrow-left me-2"></i>Back to List</a>
+                <button type="submit" class="btn btn-primary px-5 shadow-sm fw-bold"><i class="bi bi-save me-2"></i>Update Bank</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script>
+        $(document).ready(function () {
+            $("#BankForm").on("submit", function (e) {
+                e.preventDefault();
+                let form = this;
+
+                if (!$(form).valid()) {
+                    return false;
+                }
+
+                let bankName = $("input[name='BankName']").val().trim();
+                let id = $("input[name='Id']").val();
+
+                $.ajax({
+                    url: '/Bank/CheckDuplicate',
+                    type: 'GET',
+                    data: { name: bankName, id: id },
+                    success: function (response) {
+                        if (response.exists) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Duplicate Name',
+                                text: 'Bank name already exists!',
+                                confirmButtonColor: '#2b6ac9'
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Confirm Update?',
+                                text: 'Do you want to update this Bank?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonText: 'Yes, Update',
+                                cancelButtonText: 'Cancel',
+                                confirmButtonColor: '#2b6ac9',
+                                cancelButtonColor: '#dc3545',
+                                reverseButtons: true
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    form.submit();
+                                }
+                            });
+                        }
+                    },
+                    error: function () {
+                        form.submit();
+                    }
+                });
+            });
+        });
+    </script>
+}

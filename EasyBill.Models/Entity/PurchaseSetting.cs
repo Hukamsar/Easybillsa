@@ -1,4 +1,4 @@
-﻿using AOne.Models;
+using AOne.Models;
 using AOne.Models.Entity;
 using AOne.Utility.Enums;
 using System;
@@ -21,5 +21,6 @@ namespace EasyBill.Models.Entity
         public Tenant? Tenant { get; set; }
         public string? TenantId { get; set; }
         public PurchaseTax SalesTax { get; set; }
+        public bool Expense { get; set; }
     }
 }

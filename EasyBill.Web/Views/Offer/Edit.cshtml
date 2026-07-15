@@ -1,4 +1,4 @@
-﻿@model EasyBill.Models.ViewModels.OfferVM
+@model EasyBill.Models.ViewModels.OfferVM
 @{
     ViewData["Title"] = "Create";
 }
@@ -39,7 +39,7 @@
                             <span asp-validation-for="OfferType" class="text-danger small"></span>
                         </div>
                     </div>
-                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious" id="discountValueSection">
                         <div class="col-md-5 ">
                             <label asp-for="DiscountValue"></label>
                         </div>
@@ -49,13 +49,33 @@
                         </div>
                     </div>
 
-                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious" id="minAmountSection">
                         <div class="col-md-5 ">
                             <label asp-for="MinAmount"></label>
                         </div>
                         <div class="col-md-5">
                             <input asp-for="MinAmount" class="form-control form-control-sm" />
                             <span asp-validation-for="MinAmount" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious d-none" id="buyQtySection">
+                        <div class="col-md-5 ">
+                            <label asp-for="BuyQty">Buy Qty</label>
+                        </div>
+                        <div class="col-md-5">
+                            <input asp-for="BuyQty" class="form-control form-control-sm" />
+                            <span asp-validation-for="BuyQty" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 d-flex align-items-center mb-1 border-radious d-none" id="freeQtySection">
+                        <div class="col-md-5 ">
+                            <label asp-for="FreeQty">Free Qty</label>
+                        </div>
+                        <div class="col-md-5">
+                            <input asp-for="FreeQty" class="form-control form-control-sm" />
+                            <span asp-validation-for="FreeQty" class="text-danger small"></span>
                         </div>
                     </div>
                     <div class="col-md-6 d-flex align-items-center mb-1 border-radious">
@@ -93,17 +113,7 @@
                             <span asp-validation-for="CategoryId" class="text-danger small"></span>
                         </div>
                     </div>
-                    <div id="itemSection" class="col-md-6 d-flex align-items-center mb-1 border-radious d-none">
-                        <div class="col-md-5 ">
-                            <label>Item</label>
-                        </div>
-                        <div class="col-md-5 ">
-                            <select asp-for="ItemId" asp-items="@ViewBag.Item" class="form-select form-select-sm">
-                                <option value="">select</option>
-                            </select>
-                            <span asp-validation-for="ItemId" class="text-danger small"></span>
-                        </div>
-                    </div>
+
                    
                     <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
                         <div class="col-md-5 ">
@@ -133,7 +143,7 @@
                     </div>
                 </div>
 
-                <div style="overflow-x: auto; width: 100%;">
+                <div style="overflow-x: auto; width: 100%;" id="itemGridSection">
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped">
                             <thead class="table custom-header">
@@ -261,14 +271,52 @@
              $("#OfferType").change(function () {
                 $("#OfferItemBody").html(""); // Clear old rows
                 rowIndex = 0;
-                      const selectedType = $(this).val();
-                     if (selectedType === "Combo") {
-                         currentComboGroupId = generateComboGroupId();
-                     } else {
-                         currentComboGroupId = ""; // Reset if not combo
-                     }
-                     initializeExistingOfferRows();
+                const selectedType = $(this).val();
+                if (selectedType === "Combo") {
+                    currentComboGroupId = generateComboGroupId();
+                } else {
+                    currentComboGroupId = ""; // Reset if not combo
+                }
+                initializeExistingOfferRows();
+                updateDynamicUI();
             });
+
+            $('#applicableSelect').change(function () {
+                updateDynamicUI();
+            });
+
+            function updateDynamicUI() {
+                const offerType = $("#OfferType").val();
+                const applicable = $("#applicableSelect").val();
+
+                // Reset all
+                $('#discountValueSection, #minAmountSection, #buyQtySection, #freeQtySection').removeClass('d-none');
+                
+                if (offerType === 'BuyXGetX' || offerType === 'Combo') {
+                    $('#discountValueSection').addClass('d-none');
+                }
+                if (offerType === 'Combo') {
+                    $('#minAmountSection').addClass('d-none');
+                }
+                if (offerType !== 'BuyXGetX') {
+                    $('#buyQtySection, #freeQtySection').addClass('d-none');
+                }
+
+                // Applicable Logic
+                if (applicable === "Companies") {
+                    $('#companySection').removeClass('d-none');
+                    $('#categorySection').addClass('d-none');
+                } else if (applicable === "Categories") {
+                    $('#companySection').addClass('d-none');
+                    $('#categorySection').removeClass('d-none');
+                } else {
+                    $('#companySection, #categorySection').addClass('d-none');
+                }
+            }
+
+            // Initial call to set up UI
+            updateDynamicUI();
+
               function generateComboGroupId() {
                  return 'combo-' + crypto.randomUUID();
              }
@@ -315,17 +363,7 @@
                 $(this).closest("tr").remove();
             });
 
-            $('#applicableSelect').change(function () {
-                const selected = $(this).val();
-                $('#companySection, #categorySection, #itemSection').addClass('d-none');
-                if (selected === "Companies") {
-                    $('#companySection').removeClass('d-none');
-                } else if (selected === "Categories") {
-                    $('#categorySection').removeClass('d-none');
-                } else if (selected === "Selected") {
-                    $('#itemSection').removeClass('d-none');
-                }
-            });
+
 
             // 🔁 Trigger on load if already selected (like during Edit mode)
             $('#applicableSelect').trigger('change');
@@ -334,7 +372,6 @@
 }
 <script>
     $(document).ready(function () {
-
         let isSubmitting = false;
 
         $("#OfferForm").on("submit", function (e) {

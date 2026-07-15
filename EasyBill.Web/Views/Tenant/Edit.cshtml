@@ -1,4 +1,5 @@
 @using EasyBill.Models.ViewModels
+@using AOne.Utility.Enums
 @model TenantRegistrationVM
 @{
     ViewData["Title"] = "Create Company";
@@ -78,7 +79,7 @@
                     <div class="row mb-2">
                         <label asp-for="Address1" class="col-md-2 col-form-label text-start small">Address1 <i class="text-danger">*</i></label>
                         <div class="col-md-10">
-                            <input asp-for="Address1" type="text" class="form-control form-control-sm" required />
+                            <input asp-for="Address1" id="Address1" type="text" class="form-control form-control-sm" required placeholder="Type to search address..." />
                         </div>
                         <span asp-validation-for="Address1" class="text-danger"></span>
                     </div>
@@ -100,6 +101,21 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <label class="col-md-4 col-form-label text-start small">Lat / Lng</label>
+                                <div class="col-md-4">
+                                    <input asp-for="Latitude" id="Latitude" type="text" class="form-control form-control-sm" readonly placeholder="Latitude" />
+                                </div>
+                                <div class="col-md-4">
+                                    <input asp-for="Longitude" id="Longitude" type="text" class="form-control form-control-sm" readonly placeholder="Longitude" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- COUNTRY / STATE / CITY -->
                     <div class="row mb-2">
 
@@ -257,9 +273,18 @@
                     </div>
 
                     <div class="row mb-2">
-                        <label asp-for="CompanyType" class="col-md-4 col-form-label text-start"></label>
+                        <label asp-for="CompanyType" class="col-md-4 col-form-label text-start">Comp Type</label>
                         <div class="col-md-8">
-                            <select asp-for="CompanyType" id="CategoryId" asp-items="Html.GetEnumSelectList<CompanyType>()" class="form-select form-select-sm"></select>
+                            <select asp-for="CompanyType" id="CompanyTypeSelect" asp-items="Html.GetEnumSelectList<CompanyType>()" class="form-select form-select-sm"></select>
+                        </div>
+                    </div>
+                    <div class="row mb-2" id="parentTenantContainer" style="display: none;">
+                        <label asp-for="ParentTenantId" class="col-md-4 col-form-label text-start">Parent Head Office</label>
+                        <div class="col-md-8">
+                            <select asp-for="ParentTenantId" id="ParentTenantSelect" asp-items="@ViewBag.ParentTenantList" class="form-select form-select-sm">
+                                <option value="">select Head Office</option>
+                            </select>
+                            <span asp-validation-for="ParentTenantId" class="text-danger"></span>
                         </div>
                     </div>
                     <div class="row mb-2">
@@ -621,6 +646,55 @@
         };
 
         $(document).ready(function () {
+
+            // Toggle Parent Head Office dropdown based on Company Type selection
+            function toggleParentTenant() {
+                var compType = $("#CompanyTypeSelect").val();
+                if (compType === "2") { // 2 = Branch
+                    $("#parentTenantContainer").show();
+                    $("#ParentTenantSelect").prop("disabled", false).prop("required", true);
+                    
+                    $("#subscriptionPlanId").prop("disabled", true);
+                    $("#subscriptionPlanId").val("");
+                    if ($(".branch-plan-info").length === 0) {
+                        $("#subscriptionPlanId").closest(".col-md-8").append('<small class="text-info branch-plan-info fw-bold"><i class="bi bi-info-circle"></i> Branch automatically inherits HO plan.</small>');
+                    }
+                    
+                    // Fetch latest head offices dynamically for professional behavior
+                    var excludeId = '@(Model?.Id)';
+                    $.ajax({
+                        url: '/Tenant/GetHeadOffices',
+                        type: 'GET',
+                        data: { excludeId: excludeId },
+                        success: function(data) {
+                            var dropdown = $("#ParentTenantSelect");
+                            var currentValue = dropdown.val();
+                            dropdown.empty();
+                            dropdown.append('<option value="">select Head Office</option>');
+                            if (data && data.length > 0) {
+                                $.each(data, function(i, item) {
+                                    dropdown.append('<option value="' + item.id + '">' + item.text + '</option>');
+                                });
+                            }
+                            if (currentValue) {
+                                dropdown.val(currentValue);
+                            }
+                        },
+                        error: function() {
+                            console.error("Failed to load head offices");
+                        }
+                    });
+                    
+                } else {
+                    $("#parentTenantContainer").hide();
+                    $("#ParentTenantSelect").val("").prop("disabled", true).prop("required", false);
+                    $("#subscriptionPlanId").prop("disabled", false);
+                    $(".branch-plan-info").remove();
+                }
+            }
+
+            $("#CompanyTypeSelect").on("change", toggleParentTenant);
+            toggleParentTenant(); // Initialize on page load
 
             // Checkbox Tree Logic for Tenant Module Access Override
             $(".tenant-parent-chk").on("change", function () {
@@ -1327,6 +1401,52 @@
             }
 
         });
+
+        // ==========================================
+        //          ADDRESS AUTO-COMPLETE (NOMINATIM)
+        // ==========================================
+        if (typeof $.ui !== 'undefined') {
+            initAddressAutocomplete();
+        } else {
+            // Load jQuery UI dynamically if not present
+            $('<link/>', { rel: 'stylesheet', type: 'text/css', href: 'https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css' }).appendTo('head');
+            $.getScript('https://code.jquery.com/ui/1.13.2/jquery-ui.js', function() {
+                initAddressAutocomplete();
+            });
+        }
+
+        function initAddressAutocomplete() {
+            $("#Address1").autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: "/api/CustomerApi/search",
+                        dataType: "json",
+                        data: {
+                            q: request.term
+                        },
+                        success: function(data) {
+                            response($.map(data, function(item) {
+                                return {
+                                    label: item.display_name,
+                                    value: item.display_name,
+                                    lat: item.lat,
+                                    lon: item.lon,
+                                    postcode: (item.address && item.address.postcode) ? item.address.postcode : ""
+                                }
+                            }));
+                        }
+                    });
+                },
+                minLength: 3,
+                select: function(event, ui) {
+                    $("#Latitude").val(ui.item.lat);
+                    $("#Longitude").val(ui.item.lon);
+                    if (ui.item.postcode && $("#PinCode").length) {
+                        $("#PinCode").val(ui.item.postcode);
+                    }
+                }
+            });
+        }
 
     </script>
 }

@@ -1,4 +1,4 @@
-﻿using EasyBill.DataAccess.Repository;
+using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -46,8 +46,21 @@ namespace EasyBill.UI.Controllers.API
         }
 
         [HttpGet("dashboard")]
-        public async Task<IActionResult> GetDashboard()
+        public async Task<IActionResult> GetDashboard([FromQuery] string? tenantId)
         {
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                var currentUserTenantId = User.FindFirst("TenantId")?.Value;
+                var isSuperAdmin = User.IsInRole("SuperAdmin");
+
+                if (!isSuperAdmin && tenantId != currentUserTenantId)
+                {
+                    return StatusCode(403, new { success = false, message = "Access denied: You cannot view data for another tenant." });
+                }
+
+                HttpContext.Items["OverrideTenantId"] = tenantId;
+            }
+
             var salesData = await _salesRepo.GetAll();
             var purchaseData = await _purchaseRepo.GetAll();
             var payments = await _paymentVoucherRepo.GetAll();

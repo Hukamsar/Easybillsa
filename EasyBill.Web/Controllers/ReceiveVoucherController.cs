@@ -1,4 +1,4 @@
-﻿using EasyBill.DataAccess.Repository.IRepository;
+using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -260,6 +260,21 @@ namespace EasyBill.UI.Controllers
 
             #region Save Receive Voucher
 
+            var paymentMode = await _paymentmodeRepo.GetById(viewModel.PaymentModeId ?? 1);
+            bool isChequeMode = paymentMode != null && (paymentMode.Name.Contains("Cheque", StringComparison.OrdinalIgnoreCase) || paymentMode.Name.Contains("Check", StringComparison.OrdinalIgnoreCase));
+
+            var selectedsales = new List<int>();
+            if (!string.IsNullOrEmpty(Request.Form["selectedsales"]))
+            {
+                selectedsales = JsonConvert.DeserializeObject<List<int>>(Request.Form["selectedsales"]);
+            }
+
+            var selectedPurchases = new List<int>();
+            if (!string.IsNullOrEmpty(Request.Form["SelectedPurchases"]))
+            {
+                selectedPurchases = JsonConvert.DeserializeObject<List<int>>(Request.Form["SelectedPurchases"]);
+            }
+
             var model = new ReceiveVoucher()
             {
                 VouncherNo = viewModel.VouncherNo,
@@ -273,266 +288,268 @@ namespace EasyBill.UI.Controllers
                 Attachments = viewModel.Attachments,
                 Description = viewModel.Description,
                 PaymentModeId = viewModel.PaymentModeId,
+                ClearedDate = isChequeMode ? null : viewModel.Date,
+                SelectedSalesIds = selectedsales != null && selectedsales.Any() ? string.Join(",", selectedsales) : null,
+                SelectedPurchaseIds = selectedPurchases != null && selectedPurchases.Any() ? string.Join(",", selectedPurchases) : null
             };
 
             await _receiveVoucherRepo.Create(model);
 
             #endregion
 
-            var selectedsales =
-                JsonConvert.DeserializeObject<List<int>>(
-                    Request.Form["selectedsales"]);
-
-            var selectedPurchases =
-                JsonConvert.DeserializeObject<List<int>>(
-                    Request.Form["SelectedPurchases"]);
-
-            decimal remainingAmount = viewModel.Amount;
-
-            #region CUSTOMER PAYMENT
-
-            if (viewModel.Party == Party.Customer)
+            if (!isChequeMode)
             {
-                // ============================================
-                // AUTO ADJUST IF NO BILL SELECTED
-                // ============================================
+                decimal remainingAmount = viewModel.Amount;
 
-                var customerAdvance =
-                                    (await _customerAdvanceRepo
-                                    .GetByCustomerId(viewModel.CustomerId))
-                                    .FirstOrDefault();
+                #region CUSTOMER PAYMENT
 
-                decimal oldCustomerAdvance = 0;
-
-                if (customerAdvance != null &&
-                    customerAdvance.AdvanceAmount > 0)
+                if (viewModel.Party == Party.Customer)
                 {
-                    oldCustomerAdvance = customerAdvance.AdvanceAmount;
+                    // ============================================
+                    // AUTO ADJUST IF NO BILL SELECTED
+                    // ============================================
 
-                    remainingAmount += oldCustomerAdvance;
-                }
+                    var customerAdvance =
+                                        (await _customerAdvanceRepo
+                                        .GetByCustomerId(viewModel.CustomerId))
+                                        .FirstOrDefault();
 
-                if (selectedsales == null || selectedsales.Count == 0)
-                {
-                    var pendingBills =
-                        await _salesRepo.GetPendingBillsByCustomerId(
-                            viewModel.CustomerId);
+                    decimal oldCustomerAdvance = 0;
 
-                    selectedsales = pendingBills
-                        .Where(x => x.Balance > 0)
-                        .OrderBy(x => x.BillDate)
-                        .Select(x => x.Id)
-                        .ToList();
-                }
-
-                // ============================================
-                // BILL ADJUSTMENT
-                // ============================================
-
-                if (selectedsales != null && selectedsales.Count > 0)
-                {
-                    foreach (var salesId in selectedsales)
+                    if (customerAdvance != null &&
+                        customerAdvance.AdvanceAmount > 0)
                     {
-                        if (remainingAmount <= 0)
-                            break;
+                        oldCustomerAdvance = customerAdvance.AdvanceAmount;
 
-                        var sales = await _salesRepo.GetById(salesId);
+                        remainingAmount += oldCustomerAdvance;
+                    }
 
-                        if (sales == null)
-                            continue;
+                    if (selectedsales == null || selectedsales.Count == 0)
+                    {
+                        var pendingBills =
+                            await _salesRepo.GetPendingBillsByCustomerId(
+                                viewModel.CustomerId);
 
-                        if (sales.Balance <= 0)
-                            continue;
+                        selectedsales = pendingBills
+                            .Where(x => x.Balance > 0)
+                            .OrderBy(x => x.BillDate)
+                            .Select(x => x.Id)
+                            .ToList();
+                    }
 
-                        decimal deduction =
-                            Math.Min(sales.Balance, remainingAmount);
+                    // ============================================
+                    // BILL ADJUSTMENT
+                    // ============================================
 
-                        remainingAmount -= deduction;
-
-                        if (sales.SalsePaymentDetails == null)
+                    if (selectedsales != null && selectedsales.Count > 0)
+                    {
+                        foreach (var salesId in selectedsales)
                         {
-                            sales.SalsePaymentDetails = new List<SalsePaymentDetails>();
-                        }
+                            if (remainingAmount <= 0)
+                                break;
 
-                        // PAYMENT HISTORY
+                            var sales = await _salesRepo.GetById(salesId);
 
-                        sales.SalsePaymentDetails.Add(
-                            new SalsePaymentDetails
+                            if (sales == null)
+                                continue;
+
+                            if (sales.Balance <= 0)
+                                continue;
+
+                            decimal deduction =
+                                Math.Min(sales.Balance, remainingAmount);
+
+                            remainingAmount -= deduction;
+
+                            if (sales.SalsePaymentDetails == null)
                             {
-                                PaymentModeId = viewModel.PaymentModeId ?? 1,
-                                Amount = deduction,
-                                Description =
-                                    "Payment received via Receive Voucher " + viewModel.VouncherNo,
-                                CustomerId = viewModel.CustomerId,
-                                Date = viewModel.Date,
-                            });
+                                sales.SalsePaymentDetails = new List<SalsePaymentDetails>();
+                            }
 
-                        // UPDATE SALES
+                            // PAYMENT HISTORY
 
-                        sales.PaidAmount += deduction;
+                            sales.SalsePaymentDetails.Add(
+                                new SalsePaymentDetails
+                                {
+                                    PaymentModeId = viewModel.PaymentModeId ?? 1,
+                                    Amount = deduction,
+                                    Description =
+                                        "Payment received via Receive Voucher " + viewModel.VouncherNo,
+                                    CustomerId = viewModel.CustomerId,
+                                    Date = viewModel.Date,
+                                });
 
-                        sales.Balance -= deduction;
+                            // UPDATE SALES
 
-                        // PAYMENT STATUS
+                            sales.PaidAmount += deduction;
 
-                        if (sales.Balance <= 0)
-                        {
-                            sales.PaymentStatus = "Paid";
+                            sales.Balance -= deduction;
+
+                            // PAYMENT STATUS
+
+                            if (sales.Balance <= 0)
+                            {
+                                sales.PaymentStatus = "Paid";
+                            }
+                            else
+                            {
+                                sales.PaymentStatus = "Partial";
+                            }
+
+                            await _salesRepo.Update(sales);
                         }
-                        else
-                        {
-                            sales.PaymentStatus = "Partial";
-                        }
+                    }
 
-                        await _salesRepo.Update(sales);
+                    // ============================================
+                    // SAVE EXTRA AMOUNT AS ADVANCE
+                    // ============================================
+
+                    if (customerAdvance != null)
+                    {
+                        customerAdvance.AdvanceAmount = remainingAmount;
+
+                        await _customerAdvanceRepo.Update(customerAdvance);
+                    }
+                    else if (remainingAmount > 0)
+                    {
+                        var advance = new CustomerAdvance
+                        {
+                            CustomerId = viewModel.CustomerId ?? 0,
+                            AdvanceAmount = remainingAmount,
+                            Date = DateTime.Now,
+                            Remarks = "Advance received from Receive Voucher"
+                        };
+
+                        await _customerAdvanceRepo.Create(advance);
                     }
                 }
 
-                // ============================================
-                // SAVE EXTRA AMOUNT AS ADVANCE
-                // ============================================
+                #endregion
 
-                if (customerAdvance != null)
-                {
-                    customerAdvance.AdvanceAmount = remainingAmount;
+                #region SUPPLIER PAYMENT
 
-                    await _customerAdvanceRepo.Update(customerAdvance);
-                }
-                else if (remainingAmount > 0)
+                else if (viewModel.Party == Party.Supplier)
                 {
-                    var advance = new CustomerAdvance
+                    // ============================================
+                    // AUTO ADJUST PURCHASE IF NOT SELECTED
+                    // ============================================
+                    var supplierAdvance =
+                                          (await _supplierAdvanceRepo
+                                          .GetBySupplierId(viewModel.SupplierId))
+                                          .FirstOrDefault();
+
+                    decimal oldSupplierAdvance = 0;
+
+                    if (supplierAdvance != null &&
+                        supplierAdvance.AdvanceAmount > 0)
                     {
-                        CustomerId = viewModel.CustomerId ?? 0,
-                        AdvanceAmount = remainingAmount,
-                        Date = DateTime.Now,
-                        Remarks = "Advance received from Receive Voucher"
-                    };
+                        oldSupplierAdvance = supplierAdvance.AdvanceAmount;
 
-                    await _customerAdvanceRepo.Create(advance);
-                }
-            }
+                        remainingAmount += oldSupplierAdvance;
+                    }
 
-            #endregion
-
-            #region SUPPLIER PAYMENT
-
-            else if (viewModel.Party == Party.Supplier)
-            {
-                // ============================================
-                // AUTO ADJUST PURCHASE IF NOT SELECTED
-                // ============================================
-                var supplierAdvance =
-                                      (await _supplierAdvanceRepo
-                                      .GetBySupplierId(viewModel.SupplierId))
-                                      .FirstOrDefault();
-
-                decimal oldSupplierAdvance = 0;
-
-                if (supplierAdvance != null &&
-                    supplierAdvance.AdvanceAmount > 0)
-                {
-                    oldSupplierAdvance = supplierAdvance.AdvanceAmount;
-
-                    remainingAmount += oldSupplierAdvance;
-                }
-
-                if (selectedPurchases == null ||
-                    selectedPurchases.Count == 0)
-                {
-                    var pendingPurchases =
-                        await _purchaseRepo
-                        .GetPendingBillsBySupplierId(
-                            viewModel.SupplierId);
-
-                    selectedPurchases = pendingPurchases
-                        .Where(x =>
-                            (x.TotalPayable - x.PaymentAmt) > 0)
-                        .OrderBy(x => x.BillDate)
-                        .Select(x => x.Id)
-                        .ToList();
-                }
-
-                // ============================================
-                // PURCHASE ADJUSTMENT
-                // ============================================
-
-                if (selectedPurchases != null &&
-                    selectedPurchases.Count > 0)
-                {
-                    foreach (var purchaseId in selectedPurchases)
+                    if (selectedPurchases == null ||
+                        selectedPurchases.Count == 0)
                     {
-                        if (remainingAmount <= 0)
-                            break;
+                        var pendingPurchases =
+                            await _purchaseRepo
+                            .GetPendingBillsBySupplierId(
+                                viewModel.SupplierId);
 
-                        var purchase =
-                            await _purchaseRepo.GetById(purchaseId);
+                        selectedPurchases = pendingPurchases
+                            .Where(x =>
+                                (x.TotalPayable - x.PaymentAmt) > 0)
+                            .OrderBy(x => x.BillDate)
+                            .Select(x => x.Id)
+                            .ToList();
+                    }
 
-                        if (purchase == null)
-                            continue;
+                    // ============================================
+                    // PURCHASE ADJUSTMENT
+                    // ============================================
 
-                        decimal balance =
-                            purchase.TotalPayable - purchase.PaymentAmt;
-
-                        if (balance <= 0)
-                            continue;
-
-                        decimal paymentToApply =
-                            Math.Min(balance, remainingAmount);
-
-                        if (purchase.PaymentDetails == null)
+                    if (selectedPurchases != null &&
+                        selectedPurchases.Count > 0)
+                    {
+                        foreach (var purchaseId in selectedPurchases)
                         {
-                            purchase.PaymentDetails = new List<SalsePaymentDetails>();
+                            if (remainingAmount <= 0)
+                                break;
+
+                            var purchase =
+                                await _purchaseRepo.GetById(purchaseId);
+
+                            if (purchase == null)
+                                continue;
+
+                             decimal balance =
+                                 purchase.TotalPayable - purchase.PaidAmount;
+
+                             if (balance <= 0)
+                                 continue;
+
+                             decimal paymentToApply =
+                                 Math.Min(balance, remainingAmount);
+
+                             if (purchase.PaymentDetails == null)
+                             {
+                                 purchase.PaymentDetails = new List<SalsePaymentDetails>();
+                             }
+
+                             purchase.PaymentDetails.Add(
+                                 new SalsePaymentDetails
+                                 {
+                                     PaymentModeId = viewModel.PaymentModeId ?? 1,
+                                     Amount = paymentToApply,
+                                     Description =
+                                         "Payment paid via Receive Voucher " + viewModel.VouncherNo,
+                                     Date = viewModel.Date
+                                 });
+
+                             purchase.PaymentAmt += paymentToApply;
+                             purchase.PaidAmount += paymentToApply;
+                             purchase.Balance = purchase.TotalPayable - purchase.PaidAmount;
+
+                             remainingAmount -= paymentToApply;
+
+                             if (purchase.Balance <= 0)
+                             {
+                                 purchase.PaymentStatus = "Paid";
+                             }
+                             else
+                             {
+                                 purchase.PaymentStatus = "Partial";
+                             }
+
+                             await _purchaseRepo.Update(purchase);
                         }
+                    }
 
-                        purchase.PaymentDetails.Add(
-                            new SalsePaymentDetails
-                            {
-                                PaymentModeId = viewModel.PaymentModeId ?? 1,
-                                Amount = paymentToApply,
-                                Description =
-                                    "Payment paid via Receive Voucher " + viewModel.VouncherNo,
-                                Date = viewModel.Date
-                            });
+                    // ============================================
+                    // SAVE EXTRA AS SUPPLIER ADVANCE
+                    // ============================================
 
-                        purchase.PaymentAmt += paymentToApply;
+                    if (supplierAdvance != null)
+                    {
+                        supplierAdvance.AdvanceAmount = remainingAmount;
 
-                        remainingAmount -= paymentToApply;
-
-                        if (purchase.PaymentAmt >= purchase.TotalPayable)
+                        await _supplierAdvanceRepo.Update(supplierAdvance);
+                    }
+                    else if (remainingAmount > 0)
+                    {
+                        var advance = new SupplierAdvance
                         {
-                            purchase.PaymentStatus = "Paid";
-                        }
-                        else
-                        {
-                            purchase.PaymentStatus = "Partial";
-                        }
+                            SupplierId = viewModel.SupplierId ?? 0,
+                            AdvanceAmount = remainingAmount,
+                            Date = DateTime.Now,
+                            Remarks = "Advance paid from Receive Voucher"
+                        };
 
-                        await _purchaseRepo.Update(purchase);
+                        await _supplierAdvanceRepo.Create(advance);
                     }
                 }
 
-                // ============================================
-                // SAVE EXTRA AS SUPPLIER ADVANCE
-                // ============================================
-
-                if (supplierAdvance != null)
-                {
-                    supplierAdvance.AdvanceAmount = remainingAmount;
-
-                    await _supplierAdvanceRepo.Update(supplierAdvance);
-                }
-                else if (remainingAmount > 0)
-                {
-                    var advance = new SupplierAdvance
-                    {
-                        SupplierId = viewModel.SupplierId ?? 0,
-                        AdvanceAmount = remainingAmount,
-                        Date = DateTime.Now,
-                        Remarks = "Advance paid from Receive Voucher"
-                    };
-
-                    await _supplierAdvanceRepo.Create(advance);
-                }
+                #endregion
             }
             //else if (viewModel.Party == Party.Supplier && selectedPurchases != null && selectedPurchases.Count > 0)
             //{
@@ -561,7 +578,6 @@ namespace EasyBill.UI.Controllers
             //        remainingAmount -= paymentToApply;
             //    }
             //}
-            #endregion
 
             return Json(new
             {
@@ -591,6 +607,9 @@ namespace EasyBill.UI.Controllers
                 }
                 viewModel.Attachments = fileName;
             }
+            var paymentMode = await _paymentmodeRepo.GetById(viewModel.PaymentModeId ?? 1);
+            bool isChequeMode = paymentMode != null && (paymentMode.Name.Contains("Cheque", StringComparison.OrdinalIgnoreCase) || paymentMode.Name.Contains("Check", StringComparison.OrdinalIgnoreCase));
+
             var model = new ReceiveVoucher()
             {
                 VouncherNo = viewModel.VouncherNo,
@@ -605,6 +624,7 @@ namespace EasyBill.UI.Controllers
                 Amount = viewModel.Amount,
                 Attachments = viewModel.Attachments,
                 Description = viewModel.Description,
+                ClearedDate = isChequeMode ? null : viewModel.Date
             };
             await _receiveVoucherRepo.Create(model);
             TempData["success"] = "Saved successfully!.";

@@ -1,7 +1,8 @@
-﻿using EasyBill.DataAccess.Repository.IRepository;
+using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
+using EasyBill.UI.Filters;
 
 namespace EasyBill.UI.Controllers
 {
@@ -46,6 +47,23 @@ namespace EasyBill.UI.Controllers
             ViewBag.Item = new SelectList((await _itemMasterRepo.GetAll()).OrderBy(x => x.Name), "Id", "Name");
             ViewBag.Hsn = new SelectList(await _hSNRepo.GetAll(), "Id", "HsnCode");
            // ViewBag.PaymentMode = new SelectList(await _modeofpaymentservice.GetAll(), "Id", "Name");
+            
+            var tenantList = await _tenantRepo.GetAll();
+            if (tenantdata != null)
+            {
+                var hoTenantId = string.IsNullOrEmpty(tenantdata.ParentTenantId) ? tenantdata.Id : tenantdata.ParentTenantId;
+                var branches = tenantList.Where(t => 
+                    (string.Equals(t.ParentTenantId, hoTenantId, StringComparison.OrdinalIgnoreCase) || string.Equals(t.Id, hoTenantId, StringComparison.OrdinalIgnoreCase)) && 
+                    !string.Equals(t.Id, tenantid, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(t => t.Name)
+                    .ToList();
+                ViewBag.Branches = new SelectList(branches, "Id", "Name");
+            }
+            else
+            {
+                ViewBag.Branches = new SelectList(new List<AOne.Models.Entity.Tenant>(), "Id", "Name");
+            }
+
             var model = new PurchaseOrderVM()
             {
                 BillDate = DateTime.Now,
@@ -58,6 +76,7 @@ namespace EasyBill.UI.Controllers
             return View(model);
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create(PurchaseOrderVM VM)
         {
             if (!ModelState.IsValid)
@@ -254,14 +273,37 @@ namespace EasyBill.UI.Controllers
             ViewBag.Item = new SelectList((await _itemMasterRepo.GetAll()).OrderBy(x => x.Name), "Id", "Name");
             ViewBag.Hsn = new SelectList(await _hSNRepo.GetAll(), "Id", "HsnCode");
            // ViewBag.PaymentMode = new SelectList(await _modeofpaymentservice.GetAll(), "Id", "Name");
+            
+            var tenantList = await _tenantRepo.GetAll();
+            if (tenantdata != null)
+            {
+                var hoTenantId = string.IsNullOrEmpty(tenantdata.ParentTenantId) ? tenantdata.Id : tenantdata.ParentTenantId;
+                var branches = tenantList.Where(t => 
+                    (string.Equals(t.ParentTenantId, hoTenantId, StringComparison.OrdinalIgnoreCase) || string.Equals(t.Id, hoTenantId, StringComparison.OrdinalIgnoreCase)) && 
+                    !string.Equals(t.Id, tenantid, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(t => t.Name)
+                    .ToList();
+                ViewBag.Branches = new SelectList(branches, "Id", "Name");
+            }
+            else
+            {
+                ViewBag.Branches = new SelectList(new List<AOne.Models.Entity.Tenant>(), "Id", "Name");
+            }
+
             return View(purchaseVM);
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(PurchaseOrderVM VM)
         {
             PurchaseOrder model = await _purchaseOrderRepo.GetById(VM.Id);
             if (model != null)
             {
+                if (model.WorkflowStatus == "Issued")
+                {
+                    TempData["ErrorMessage"] = "Cannot update an issued stock request.";
+                    return RedirectToAction("Index");
+                }
                 model.Id = VM.Id;
                 model.SupplierId = VM.SupplierId;
                 model.BillNo = VM.BillNo;
@@ -392,6 +434,7 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -406,6 +449,11 @@ namespace EasyBill.UI.Controllers
                 if (model == null)
                 {
                     return Json(new { success = false, message = "Item not found." });
+                }
+
+                if (model.WorkflowStatus == "Issued")
+                {
+                    return Json(new { success = false, message = "Cannot delete an issued stock request." });
                 }
 
                 await _purchaseOrderRepo.Delete(model);
@@ -439,7 +487,11 @@ namespace EasyBill.UI.Controllers
             if (!match.Success)
                 return "BL0001";
 
-            int number = int.Parse(match.Value);
+            if (!long.TryParse(match.Value, out long number))
+            {
+                return "BL0001";
+            }
+
             string prefix = lastCode[..match.Index];
             string suffix = lastCode[(match.Index + match.Length)..];
 
@@ -462,6 +514,7 @@ namespace EasyBill.UI.Controllers
             return View(model);
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public IActionResult GenerateReorder(POWithAIVM VM)
         {
             if (!ModelState.IsValid)

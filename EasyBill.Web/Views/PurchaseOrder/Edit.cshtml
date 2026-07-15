@@ -4,6 +4,14 @@
 }
 
 <style>
+    /* Stock Request Logic */
+    body.mode-sr .po-field {
+        display: none !important;
+    }
+    body:not(.mode-sr) .sr-field {
+        display: none !important;
+    }
+
     /* ===============================
                        BATCH MODAL STYLING
                        =============================== */
@@ -180,8 +188,8 @@
         background: linear-gradient(to bottom, #f8fbff, #ffffff);
         border: 1.5px solid #b3d9ff !important;
         box-shadow: 0 1px 4px rgba(0, 123, 255, 0.08);
-        max-height: 250px; /* ✅ Height limit */
-        overflow-y: auto; /* ✅ Scroll if needed */
+        max-height: 250px; /*  Height limit */
+        overflow-y: auto; /*  Scroll if needed */
     }
 
     .purchase-history-table {
@@ -189,24 +197,24 @@
         border-spacing: 0;
         overflow: hidden;
         border-radius: 6px;
-        font-size: 11px; /* ✅ Small text */
+        font-size: 11px; /*  Small text */
     }
 
         .purchase-history-table thead tr {
             background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
             color: #ffffff;
             font-weight: 600;
-            font-size: 10px; /* ✅ Compact header */
+            font-size: 10px; /*  Compact header */
             text-transform: uppercase;
             letter-spacing: 0.3px;
         }
 
         .purchase-history-table thead th {
             border: none !important;
-            padding: 6px 5px; /* ✅ Reduced from 12px */
+            padding: 6px 5px; /*  Reduced from 12px */
             vertical-align: middle;
             white-space: nowrap;
-            position: sticky; /* ✅ Sticky header */
+            position: sticky; /*  Sticky header */
             top: 0;
             z-index: 10;
         }
@@ -226,16 +234,16 @@
 
             .purchase-history-table tbody tr:hover {
                 background-color: #e3f2fd;
-                transform: scale(1.005); /* ✅ Subtle hover */
+                transform: scale(1.005); /*  Subtle hover */
             }
 
         .purchase-history-table tbody td {
-            padding: 5px 5px; /* ✅ Reduced from 10px */
+            padding: 5px 5px; /*  Reduced from 10px */
             font-size: 11px;
             border-left: 1px solid #d6ebff;
             border-right: 1px solid #d6ebff;
             vertical-align: middle;
-            line-height: 1.3; /* ✅ Compact line height */
+            line-height: 1.3; /*  Compact line height */
         }
 
             .purchase-history-table tbody td:first-child {
@@ -331,15 +339,16 @@
                         id="refreshBtn"
                         class="btn btn-sm p-1 me-2 border-0 bg-transparent text-white"
                         title="Refresh">
-                    <span class="fs-5">🔄</span>
+                    <span class="fs-5"></span>
                 </button>
             </div>
         </div>
 
         <div class="card-body">
-            <form asp-action="Edit" id="purchaseForm">
+            <form asp-action="Edit" method="post" id="createPurchaseOrderForm">
+                <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
                 <input type="hidden" asp-for="Id" />
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" id="OrderTypeHidden" asp-for="OrderType" />
 
                 <div class="row">
                     <!-- Bill No -->
@@ -365,18 +374,18 @@
                     </div>
                     <div class="col-md-4 d-flex align-items-center mb-1 border-radious">
                         <div class="col-md-5 ">
-                            <label>Billing Type</label>
+                            <label>Type</label>
                         </div>
                         <div class="col-md-5 ">
-                            <select asp-for="billingType" id="billingType" class="form-control form-control-sm">
+                            <select asp-for="billingType" id="billingType" class="form-control form-control-sm" style="pointer-events: none; background-color: #e9ecef;" tabindex="-1">
                                 <option value="registered">Supplier</option>
                                 <option value="walkin">Cash</option>
-                               
+                                <option value="stockrequest">Stock Request</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- ✅ SUPPLIER - TEXT INPUT + MODAL -->
+                    <!--  SUPPLIER - TEXT INPUT + MODAL -->
                     <div class="col-md-4 d-flex align-items-center mb-1">
                         <div class="col-md-5">
                             <label asp-for="SupplierName"></label>
@@ -415,9 +424,21 @@
                             <span asp-validation-for="PartyBillDate" class="text-danger small"></span>
                         </div>
                     </div> *@
-                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious ">
+
+                    <div class="col-md-4 align-items-center mb-1 border-radious sr-field">
                         <div class="col-md-5 ">
-                            <label>Type</label>
+                            <label>Branch</label>
+                        </div>
+                        <div class="col-md-7 ">
+                            <select id="TargetTenantId" name="TargetTenantId" class="form-control form-control-sm" asp-items="ViewBag.Branches">
+                                <option value="">-- Select Branch --</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious po-field">
+                        <div class="col-md-5 ">
+                            <label>Payment Type</label>
                         </div>
                         <div class="col-md-5">
                             <div class="form-check form-switch">
@@ -432,7 +453,7 @@
                             <input type="hidden" asp-for="PaymentType" id="paymentTypeHidden" value="cash" />
                         </div>
                     </div>
-                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious">
+                    <div class="col-md-4 d-flex align-items-center mb-1 border-radious po-field">
                         <div class="col-md-5 ">
                             <label>Purchase Type</label>
                         </div>
@@ -460,7 +481,7 @@
                                     <th class="text-center">Rate</th>
                                     <th hidden class="text-center">RateA</th>
                                     <th hidden class="text-center">RateB</th>
-                                    <th class="text-center">Disc %</th>
+                                    <th class="text-center po-field">Disc %</th>
                                     <th class="text-center gst-col">Gst %</th>
                                     <th hidden class="text-center">Gst Amt</th>
                                     <th hidden class="text-center">CGst %</th>
@@ -478,14 +499,14 @@
                                     var item = Model.PurchaseOrderItemVMs[i];
 
                                     <tr data-itemdetail-valid="true">
-                                        <!-- ✅ ITEM - TEXT INPUT + HIDDEN ID -->
+                                        <!--  ITEM - TEXT INPUT + HIDDEN ID -->
                                         <td style="min-width:250px;">
                                             <input type="hidden" name="PurchaseOrderItemVMs[@i].ItemId" class="item-id" value="@item.ItemId" />
                                             <input type="text"
                                                    name="PurchaseOrderItemVMs[@i].ItemName"
                                                    class="form-control form-control-sm item-input"
                                                    placeholder="Press Enter to select item"
-                                                   value="@item.ItemName" />  <!-- ✅ Seedha use karo -->
+                                                   value="@item.ItemName" />  <!--  Seedha use karo -->
                                         </td>
 
                                         <td hidden><input name="PurchaseOrderItemVMs[@i].Batch" value="@item.Batch" class="form-control form-control-sm batch" /></td>
@@ -531,7 +552,7 @@
                             </tfoot>
                         </table>
 
-                        <!-- ✅ ITEM PURCHASE HISTORY + TOTALS SECTION -->
+                        <!--  ITEM PURCHASE HISTORY + TOTALS SECTION -->
                         <div class="row mt-3">
                             <div class="col-md-9">
                                 @* <strong>Payment Details</strong>
@@ -577,8 +598,8 @@
                                             <thead>
                                                 <tr>
                                                     <th>Supplier</th>
-                                                    <th>Bill No</th>
-                                                    <th>Bill Date</th>
+                                                    <th>PO No</th>
+                                                    <th>PO Date</th>
                                                     <th>Qty</th>
                                                     <th>Batch</th>
                                                     <th>MRP</th>
@@ -604,15 +625,15 @@
                                 </div>
 
                                 <div class="row mb-2 align-items-center">
-                                    <label class="col-md-6 col-form-label small">Bill Discount</label>
+                                    <label class="col-md-6 col-form-label small po-field">Bill Discount</label>
                                     <div class="col-md-3 text-end">
-                                        <input asp-for="discountPercent" id="discountPercent" class="form-control form-control-sm discount-input text-end"
+                                        <input asp-for="discountPercent" id="discountPercent" class="form-control form-control-sm discount-input text-end po-field"
                                                min="0"
                                                max="100"
                                                step="0.01" />
                                     </div>
                                     <div class="col-md-3 text-end">
-                                        <input asp-for="discountAmount" id="discountamount" class="form-control form-control-sm total-input text-end" />
+                                        <input asp-for="discountAmount" id="discountamount" class="form-control form-control-sm total-input text-end po-field" />
                                     </div>
                                 </div>
 
@@ -688,15 +709,15 @@
                 </div>
 
                 <div class="d-flex justify-content-end gap-2 mt-3">
-                    <button type="submit" class="btn btn-sm btn-primary">End | Update 💾</button>
-                    <a asp-controller="PurchaseOrder" asp-action="Index" id="btnCancel" class="btn btn-sm btn-outline-secondary">F11 | Cancel ❌</a>
+                    <button type="submit" class="btn btn-sm btn-primary">End | Update </button>
+                    <a asp-controller="PurchaseOrder" asp-action="Index" id="btnCancel" class="btn btn-sm btn-outline-secondary">F11 | Cancel </a>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- ✅ ITEM DETAILS MODAL -->
+<!--  ITEM DETAILS MODAL -->
 <div class="modal fade" id="itemDetailModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
@@ -735,7 +756,7 @@
     </div>
 </div>
 
-<!-- ✅ BATCH MODAL -->
+<!--  BATCH MODAL -->
 <div class="modal fade" id="batchModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -757,7 +778,7 @@
     </div>
 </div>
 
-<!-- ✅ ITEM SELECTION MODAL -->
+<!--  ITEM SELECTION MODAL -->
 <div class="modal fade" id="itemModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -786,7 +807,7 @@
     </div>
 </div>
 
-<!-- ✅ SUPPLIER SELECTION MODAL -->
+<!--  SUPPLIER SELECTION MODAL -->
 <div class="modal fade" id="supplierModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -814,7 +835,7 @@
     </div>
 </div>
 
-<!-- ✅ ADD NEW SUPPLIER MODAL -->
+<!--  ADD NEW SUPPLIER MODAL -->
 <div class="modal fade" id="addSupplierModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -875,7 +896,7 @@
     }
 
     <!-- ================================================================
-         🔹 GLOBAL VARIABLES & STATE
+          GLOBAL VARIABLES & STATE
          ================================================================ -->
     <script>
         let selectedRow = null;
@@ -954,7 +975,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 VALIDATION HELPERS
+          VALIDATION HELPERS
          ================================================================ -->
     <script>
         // function isValidSupplier() {
@@ -1001,13 +1022,13 @@
             }
 
             // if (!isValidPartyBillNo()) {
-            //     toastr.error("Party Bill No is required", "Validation Error");
+            //     toastr.error("Party Ref No is required", "Validation Error");
             //     $("#PartyBillNo").focus().select();
             //     return false;
             // }
 
             // if (!isValidPartyBillDate()) {
-            //     toastr.error("Party Bill Date is required", "Validation Error");
+            //     toastr.error("Party Ref Date is required", "Validation Error");
             //     $("#PartyBillDate").focus();
             //     return false;
             // }
@@ -1148,7 +1169,7 @@
                 return false;
             }
 
-            // ✅ Support both MM/YYYY and MM/YY formats
+            //  Support both MM/YYYY and MM/YY formats
             const regex4Digit = /^(0[1-9]|1[0-2])\/\d{4}$/;
             const regex2Digit = /^(0[1-9]|1[0-2])\/\d{2}$/;
 
@@ -1167,7 +1188,7 @@
                 return false;
             }
 
-            // ✅ Validate year range
+            //  Validate year range
             const year = parseInt(normalizedExpiry.split("/")[1]);
             const currentYear = new Date().getFullYear();
 
@@ -1179,7 +1200,7 @@
             return true;
         }
 
-        // ✅ Auto-format expiry date on blur
+        //  Auto-format expiry date on blur
         $(document).on("blur", "#popupExpiry", function() {
             validateExpiry(false); // Auto-format without showing error
         });
@@ -1208,7 +1229,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 INPUT FORMATTING & VALIDATION
+          INPUT FORMATTING & VALIDATION
          ================================================================ -->
     <script>
         $(document).on("input", "#addSupplierModal input[name='PhoneNO']", function () {
@@ -1259,7 +1280,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 FOCUS SOURCE TRACKING
+          FOCUS SOURCE TRACKING
          ================================================================ -->
     <script>
         $(document).on("keydown", function (e) {
@@ -1284,6 +1305,9 @@
     </script>
     <script>
         $(document).ready(function () {
+            if ($('#OrderTypeHidden').val() === 'SR') {
+                $('body').addClass('mode-sr');
+            }
 
            $("#itemTable tbody tr").each(function () {
               // $(this).find(".item-input").trigger("change");
@@ -1333,78 +1357,81 @@
 
 
         function applyBillingType(type) {
-            debugger;
             setTimeout(() => {
-
                 $("#supplier-input").prop("disabled", true);
-
 
                 if (type === "walkin") {
                     $("#supplier-input, #customeraddress")
                         .val("")
                         .prop("disabled", true);
-
-                    //hidePhoneError();
                 }
                 else if (type === "registered") {
                    $("#supplier-input").prop("disabled", false);
-                    $("#supplier-input").focus();
+                   $("#supplier-input").focus();
                 }
-
             }, 100);
         }
+
         $("#billingType").on("change", function () {
             isEnterNavigation = false;
             const billingType = this.value;
 
-            // Auto change Payment Type based on Billing Type
             if (billingType === "registered") {
-
+                $('#OrderTypeHidden').val('PO');
+                $('body').removeClass('mode-sr');
             } else if (billingType === "walkin") {
+                $('#OrderTypeHidden').val('PO');
+                $('body').removeClass('mode-sr');
                 $("#paymentToggle").prop("checked", false);
                 $("#paymentToggleLabel").text("Cash");
                 $("#paymentTypeHidden").val("cash");
+            } else if (billingType === "stockrequest") {
+                $('#OrderTypeHidden').val('SR');
+                $('body').addClass('mode-sr');
             }
             applyBillingType(this.value);
         });
-        $("#purchasetype").on("change", function () {
 
+        $("#purchasetype").on("change", function () {
             var purchasetype = $(this).val();
 
             if (purchasetype === "Local") {
-
                 $(".gst-row").hide();
                 $(".sgst-row").hide();
                 $(".cgst-row").hide();
-
                 $(".scgst-row").show();
-
                 $(".scgst-col").show();
                 $(".gst-col").hide();
-
             }
             else {
-
                 $(".gst-row").show();
-
                 $(".sgst-row").hide();
                 $(".cgst-row").hide();
                 $(".scgst-row").hide();
                 $(".scgst-col").hide();
                 $(".gst-col").show();
-
             }
             $("#PurchaseItemBody tr").each(function () {
                 calculateRow($(this));
             });
-
-
         });
+
         $(document).ready(function () {
-             $("#purchasetype").trigger("change");
+            if ($('#OrderTypeHidden').val() === 'SR') {
+                $('body').addClass('mode-sr');
+                $('#billingType').val('stockrequest');
+            } else {
+                $('body').removeClass('mode-sr');
+                if ($('#billingType').val() === 'stockrequest') {
+                    $('#billingType').val('registered');
+                }
+            }
+            
+            $("#purchasetype").trigger("change");
             $("#supplier-input").prop("disabled", true);
             applyBillingType($("#billingType").val());
         });
+
          $(document).on("keydown", "#BillDate", function (e) {
             if (e.key !== "Enter") return;
 
@@ -1475,7 +1502,7 @@
         });
     </script>
     <!-- ================================================================
-         🔹 KEYBOARD NAVIGATION - HEADER
+          KEYBOARD NAVIGATION - HEADER
          ================================================================ -->
     <script>
         $(document).ready(function () {
@@ -1548,7 +1575,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 SUPPLIER MODAL - COMPLETE SECTION
+          SUPPLIER MODAL - COMPLETE SECTION
          ================================================================ -->
     <script>
         function openSupplierModal(searchText = "") {
@@ -1763,7 +1790,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 KEYBOARD NAVIGATION - ITEM GRID
+          KEYBOARD NAVIGATION - ITEM GRID
          ================================================================ -->
     <script>
         $(document).on("keydown", ".item-input", function (e) {
@@ -1803,11 +1830,22 @@
             }
         });
 
-        function openItemModal(searchText = "") {
+                function openItemModal(searchText = "") {
             var purchaseType = $("#purchasetype").val();
+            var targetTenantId = null;
+
+            if ($("#billingType").val() === 'stockrequest') {
+                targetTenantId = $('#TargetTenantId').val();
+                if (!targetTenantId) {
+                    toastr.error("Please select a Branch first", "Validation Error");
+                    $('#TargetTenantId').focus();
+                    return;
+                }
+            }
+
             showLoader("Loading items...");
 
-            $.get('/Purchase/GetAllItems', { purchaseType: purchaseType }, function (items) {
+            $.get('/Purchase/GetAllItems', { purchaseType: purchaseType, targetTenantId: targetTenantId }, function (items) {
                 hideLoader();
 
                 let rows = "";
@@ -2025,7 +2063,7 @@
             setTimeout(() => {
 
                 if (currentRowForItemModal && currentRowForItemModal.length) {
-                    currentRowForItemModal.find(".qty").focus().select(); // ✅ ALWAYS QTY
+                    currentRowForItemModal.find(".qty").focus().select(); //  ALWAYS QTY
                 }
 
             }, 150);
@@ -2107,7 +2145,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 ARROW KEY NAVIGATION
+          ARROW KEY NAVIGATION
          ================================================================ -->
     <script>
         $(document).on("keydown", ".batch, .qty, .freeqty, .rate, .discount", function(e) {
@@ -2162,7 +2200,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 ADD ROW & REMOVE ROW
+          ADD ROW & REMOVE ROW
          ================================================================ -->
     <script>
         $(document).ready(function() {
@@ -2223,8 +2261,8 @@
         }
                         </select>
                     </td>
-                    <td><input name="PurchaseOrderItemVMs[${rowIndex}].Discount" class="form-control form-control-sm discount" value="0" min="0" max="100" step="0.01" /></td>
-                    <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].DiscountAmt" class="form-control form-control-sm discount-amt" readonly /></td>
+                    <td class="po-field"><input name="PurchaseOrderItemVMs[${rowIndex}].Discount" class="form-control form-control-sm discount" value="0" min="0" max="100" step="0.01" /></td>
+                    <td hidden class="po-field"><input name="PurchaseOrderItemVMs[${rowIndex}].DiscountAmt" class="form-control form-control-sm discount-amt" readonly /></td>
                     <td class="gst-col"><input name="PurchaseOrderItemVMs[${rowIndex}].Gst" class="form-control form-control-sm gst" readonly /></td>
                     <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].GstAmount" class="form-control form-control-sm gstamt" readonly /></td>
                     <td hidden><input name="PurchaseOrderItemVMs[${rowIndex}].CGst" class="form-control form-control-sm cgst" readonly /></td>
@@ -2297,7 +2335,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 FOOTER NAVIGATION & FORM SUBMIT
+          FOOTER NAVIGATION & FORM SUBMIT
          ================================================================ -->
     <script>
         $(document).on("keydown", "#Total, #discountPercent, #discountamount", function (e) {
@@ -2520,7 +2558,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 BATCH MODAL & ITEM DETAILS
+          BATCH MODAL & ITEM DETAILS
          ================================================================ -->
     <script>
         $(document).on("keydown", ".batch", function (e) {
@@ -2757,7 +2795,7 @@
                 hideLoader();
 
                 if (response.groupedResult && response.groupedResult.length > 0) {
-                    // ✅ GET EXISTING VALUES FROM ROW (all identifying fields)
+                    //  GET EXISTING VALUES FROM ROW (all identifying fields)
                     const existingBatch = row.find(".batch").val()?.trim().toLowerCase() || "";
                     const existingExpiry = row.find(".expirydate").val()?.trim() || "";
                     const existingMrp = parseFloat(row.find(".mrp").val()) || 0;
@@ -2803,7 +2841,7 @@
                             // Match MRP (with tolerance for decimal precision)
                             const mrpMatch = Math.abs((b.mrp || 0) - existingMrp) < 0.01;
 
-                            // ✅ Match Rate (with tolerance for decimal precision)
+                            //  Match Rate (with tolerance for decimal precision)
                             const rateMatch = Math.abs((b.rate || 0) - existingRate) < 0.01;
 
                             // ALL must match
@@ -2830,7 +2868,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 BATCH MODAL NAVIGATION
+          BATCH MODAL NAVIGATION
          ================================================================ -->
     <script>
         $('#batchModal').on('shown.bs.modal', function () {
@@ -2895,13 +2933,13 @@
                     currentRow.find(".mrp").val(batch.mrp || 0);
 
                     // QTY LOGIC FOR EDIT PAGE
-                    // If same batch as before → keep existing qty
-                    // If different batch → set 1 (if stock available)
+                    // If same batch as before  keep existing qty
+                    // If different batch  set 1 (if stock available)
                     if (currentBatchValue.toLowerCase() === batch.batch.toLowerCase()) {
-                        // Same batch → retain current qty
+                        // Same batch  retain current qty
                         currentRow.find(".qty").val(currentQtyValue);
                     } else {
-                        // Different batch → set 1 if stock available
+                        // Different batch  set 1 if stock available
                         if (batch.qty && parseFloat(batch.qty) > 0) {
                             currentRow.find(".qty").val(1);
                         } else {
@@ -3034,7 +3072,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 CALCULATIONS
+          CALCULATIONS
          ================================================================ -->
     <script>
         $(document).on("input", ".qty, .discount, .rate", function () {
@@ -3377,7 +3415,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 ADD SUPPLIER MODAL (CREATE NEW SUPPLIER)
+          ADD SUPPLIER MODAL (CREATE NEW SUPPLIER)
          ================================================================ -->
     <script>
         $(document).ready(function() {
@@ -3455,7 +3493,7 @@
     </script>
 
     <!-- ================================================================
-         🔹 ITEM PURCHASE HISTORY
+          ITEM PURCHASE HISTORY
          ================================================================ -->
     <script>
         function loadItemSupplierPurchaseInfo(itemId) {
@@ -3506,14 +3544,14 @@
             );
         }
 
-        // ✅ Calculate totals on page load
+        //  Calculate totals on page load
         calculateTotalSummary();
     </script>
     <script>
         $(document).ready(function () {
             $('#batchModal').on('hidden.bs.modal', function () {
 
-                // Agar batch select nahi hua (Esc ya ❌ se band hua)
+                // Agar batch select nahi hua (Esc ya  se band hua)
                 setTimeout(function () {
                     if (currentRow && currentRow.length) {
                         currentRow.find(".batch").focus().select();
@@ -3525,7 +3563,7 @@
     </script>
     <script>
         function validateExpiry(showError = true) {
-            // ✅ EXPIRY VALIDATION ALWAYS RUNS (independent of ENABLE_ITEM_DETAIL_VALIDATION)
+            //  EXPIRY VALIDATION ALWAYS RUNS (independent of ENABLE_ITEM_DETAIL_VALIDATION)
             const expiry = $("#popupExpiry").val().trim();
             const errorSpan = $("[data-field='popupExpiry']");
             errorSpan.text("");
@@ -3535,7 +3573,7 @@
                 return false;
             }
 
-            // ✅ Support both MM/YYYY and MM/YY formats
+            //  Support both MM/YYYY and MM/YY formats
             const regex4Digit = /^(0[1-9]|1[0-2])\/\d{4}$/;
             const regex2Digit = /^(0[1-9]|1[0-2])\/\d{2}$/;
 
@@ -3551,19 +3589,19 @@
                 return false;
             }
 
-            // ✅ Parse expiry date (first day of month, as in DB)
+            //  Parse expiry date (first day of month, as in DB)
             const [month, year] = normalizedExpiry.split("/");
             const expiryDate = new Date(parseInt(year), parseInt(month) - 1, 1);
             const currentDate = new Date();
             currentDate.setHours(0, 0, 0, 0);
 
-            // ✅ Cannot be in past
+            //  Cannot be in past
             if (expiryDate < currentDate) {
                 if (showError) errorSpan.text("Expiry date cannot be in the past");
                 return false;
             }
 
-            // ✅ Minimum expiry days validation
+            //  Minimum expiry days validation
             if (minPurchaseExpiryDays > 0) {
                 const minExpiryDate = new Date();
                 minExpiryDate.setDate(minExpiryDate.getDate() + minPurchaseExpiryDays);
@@ -3581,21 +3619,21 @@
         }
     </script>
     <!-- ================================================================
-         🔹 LOAD MIN EXPIRY DAYS SETTING ON PAGE LOAD
+          LOAD MIN EXPIRY DAYS SETTING ON PAGE LOAD
          ================================================================ -->
     <script>
         $(document).ready(function () {
-            // ✅ Load settings on page load
+            //  Load settings on page load
             function loadMinExpiryDays() {
                 $.ajax({
                     url: '@Url.Action("GetSidebarSettings", "PurchaseSetting")',
                     type: 'GET',
                     success: function (data) {
                         minPurchaseExpiryDays = data.minPurchaseExpiryDays || 0;
-                        console.log("✅ Min Purchase Expiry Days Loaded (Edit):", minPurchaseExpiryDays);
+                        console.log(" Min Purchase Expiry Days Loaded (Edit):", minPurchaseExpiryDays);
                     },
                     error: function (xhr) {
-                        console.error("❌ Error loading expiry settings:", xhr.status);
+                        console.error(" Error loading expiry settings:", xhr.status);
                     }
                 });
             }
@@ -3608,11 +3646,11 @@
             // F10 pressed
             if (e.key === "F10") {
 
-                // ❌ Browser refresh band
+                //  Browser refresh band
                 e.preventDefault();
                 e.stopImmediatePropagation();
 
-                // ❌ Agar koi modal open hai to kuch mat karo
+                //  Agar koi modal open hai to kuch mat karo
                 if ($(".modal.show").length > 0) return;
 
                 $("#refreshBtn").trigger("click");
@@ -3621,11 +3659,11 @@
             // F11 pressed
             if (e.key === "F11") {
 
-                // ❌ Browser refresh band
+                //  Browser refresh band
                 e.preventDefault();
                 e.stopImmediatePropagation();
 
-                // ❌ Agar koi modal open hai to kuch mat karo
+                //  Agar koi modal open hai to kuch mat karo
                 if ($(".modal.show").length > 0) return;
 
                 $("#btnCancel").trigger("click");
@@ -3638,8 +3676,8 @@
                 text: 'Changes will be lost. Do you want to cancel?',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: '❌ Yes, Cancel',
-                cancelButtonText: '↩ No, Stay',
+                confirmButtonText: ' Yes, Cancel',
+                cancelButtonText: ' No, Stay',
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
                 reverseButtons: true
@@ -3662,15 +3700,15 @@
             Swal.fire({
                 title: 'Refresh Page?',
                 html: `
-                    <p class="text-danger mb-2">⚠️ Any unsaved changes will be lost!</p>
+                    <p class="text-danger mb-2"> Any unsaved changes will be lost!</p>
                     <p class="mb-0">All items, payments, and customer details will be cleared.</p>
                 `,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#0d6efd',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: '🔄 Yes, Refresh',
-                cancelButtonText: '❌ No, Stay',
+                confirmButtonText: ' Yes, Refresh',
+                cancelButtonText: ' No, Stay',
                 reverseButtons: true,
                 customClass: {
                     confirmButton: 'btn btn-primary',
@@ -3818,3 +3856,5 @@
         }
     </script> *@
 }
+
+

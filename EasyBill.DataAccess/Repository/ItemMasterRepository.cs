@@ -1,5 +1,5 @@
-using AOne.DataAccess.Repository;
 using AOne.DataAccess.Data;
+using AOne.DataAccess.Repository;
 using AOne.DataAccess.Repository.IRepository;
 using AOne.Models.Entity;
 using AOne.Utility.Enums;
@@ -14,10 +14,11 @@ using EasyBill.Models.ViewModels;
 using iText.Commons.Actions.Contexts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using System.Data;
-using System.Data.Common;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,32 +28,44 @@ namespace EasyBill.DataAccess.Repository
     public class ItemMasterRepository : StoredProcedureRepositoryBase, IItemMasterRepository
     {
         private readonly IUnitOfWork _unitofwork;
+        private readonly IMemoryCache _memoryCache;
         public ItemMasterRepository(
             IUnitOfWork unitofwork,
             ApplicationDbContext dbContext,
             IHttpContextAccessor httpContextAccessor,
-            ITenantAccessor tenantAccessor)
+            ITenantAccessor tenantAccessor,
+            IMemoryCache memoryCache)
             : base(dbContext, httpContextAccessor, tenantAccessor)
         {
             _unitofwork = unitofwork;
+            _memoryCache = memoryCache;
         }
-        public async Task<IList<ItemMaster>> GetAll()
-        {
-            // Previous EF implementation kept commented for reference, as requested.
-            // try
-            // {
-            //     var repository = _unitofwork.GetRepository<ItemMaster>();
-            //     IList<ItemMaster> results = await repository.Query().Include(x => x.Category).Include(x => x.SubCategory).Include(x => x.Company).Include(x => x.Hsn).Include(x => x.Division).ToListAsync();
-            //     return results;
-            // }
-            // catch (Exception ex)
-            // {
-            //     throw ex;
-            // }
 
-            return await WithStoredProcedureCommandAsync("dbo.usp_ItemMaster_GetAll", async command =>
+        private string GetItemMasterCacheKey()
+        {
+            var filterMode = GetCurrentFilterMode();
+            var tenantId = GetCurrentTenantId() ?? "NoTenant";
+            var userId = GetCurrentUserId();
+
+            return filterMode switch
             {
-                AddFilterParameters(command);
+                "All" => "ItemMasters_All",
+                "Tenant" => $"ItemMasters_Tenant_{tenantId}",
+                "User" => $"ItemMasters_User_{tenantId}_{userId}",
+                _ => $"ItemMasters_Default_{tenantId}"
+            };
+        }
+
+        public async Task<IList<ItemMaster>> GetAll(string? targetTenantId = null)
+        {
+            var cacheKey = GetItemMasterCacheKey();
+            if (_memoryCache.TryGetValue(cacheKey, out IList<ItemMaster> cachedItems))
+            {
+                return cachedItems;
+            }
+            var results =  await WithStoredProcedureCommandAsync("dbo.usp_ItemMaster_GetAll", async command =>
+            {
+                AddFilterParameters(command, targetTenantId);
 
                 var results = new List<ItemMaster>();
                 await using var reader = await command.ExecuteReaderAsync();
@@ -64,17 +77,69 @@ namespace EasyBill.DataAccess.Repository
 
                 return (IList<ItemMaster>)results;
             });
+            _memoryCache.Set(cacheKey, results,
+             new MemoryCacheEntryOptions
+             {
+                 SlidingExpiration = TimeSpan.FromHours(2),
+                 Priority = CacheItemPriority.High
+             });
+
+            return results;
+        }
+
+        public async Task<IList<ItemImage>> GetAllItemImages()
+        {
+            return await WithStoredProcedureCommandAsync("dbo.usp_ItemImage_GetAll", async command =>
+            {
+                AddFilterParameters(command);
+
+                var results = new List<ItemImage>();
+
+                await using var reader = await command.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    results.Add(MapItemImage(reader));
+                }
+
+                return (IList<ItemImage>)results;
+            });
         }
         public async Task<IList<CategoryItems>> GetAllCategoryItems()
         {
             try
             {
-                var repository = _unitofwork.GetRepository<ItemMaster>();
+                var tenantId = GetCurrentTenantId();
+                var currentTenant = await DbContext.Set<Tenant>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId);
+                
+                var baseQuery = DbContext.Set<ItemMaster>()
+                    .AsNoTracking()
+                    .Where(x => !x.Deleted.HasValue && x.CategoryId != null && x.CategoryId != 0);
 
-                var categoryItems = await repository.Query().Where(x => x.CategoryId != null && x.CategoryId != 0)
+                if (currentTenant != null)
+                {
+                    if (currentTenant.IsHeadOffice)
+                    {
+                        var branchIds = await DbContext.Set<Tenant>().AsNoTracking().Where(t => t.ParentTenantId == tenantId).Select(t => t.Id).ToListAsync();
+                        branchIds.Add(tenantId);
+                        baseQuery = baseQuery.Where(x => branchIds.Contains(x.TenantId));
+                    }
+                    else if (!string.IsNullOrEmpty(currentTenant.ParentTenantId))
+                    {
+                        baseQuery = baseQuery.Where(x => 
+                            x.TenantId == tenantId || 
+                            DbContext.Set<BranchItemMapping>().Any(m => m.TenantId == tenantId && m.ItemMasterId == x.Id && m.IsActive)
+                        );
+                    }
+                    else
+                    {
+                        baseQuery = baseQuery.Where(x => x.TenantId == tenantId);
+                    }
+                }
+
+                var categoryItems = await baseQuery
                     .Select(x => new CategoryItems
                     {
-                        //Id = x.Id,
                         CategoryId = x.CategoryId ?? 0,
                         CategoryName = x.Category.CategoryName ?? ""
                     }).Distinct()
@@ -92,10 +157,40 @@ namespace EasyBill.DataAccess.Repository
         {
             try
             {
-                var repository = _unitofwork.GetRepository<ItemMaster>();
-                IList<ItemMaster> results = await repository.Query().Where(x => x.CategoryId == categoryId).Include(x => x.Category).Include(x => x.SubCategory).Include(x => x.Company).Include(x => x.Hsn).Include(x => x.Division).ToListAsync();
+                var tenantId = GetCurrentTenantId();
+                var currentTenant = await DbContext.Set<Tenant>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId);
+                
+                var baseQuery = DbContext.Set<ItemMaster>()
+                    .Include(x => x.Category)
+                    .Include(x => x.SubCategory)
+                    .Include(x => x.Company)
+                    .Include(x => x.Hsn)
+                    .Include(x => x.Division)
+                    .AsNoTracking()
+                    .Where(x => x.CategoryId == categoryId && !x.Deleted.HasValue && x.IsActive);
 
-                return results;
+                if (currentTenant != null)
+                {
+                    if (currentTenant.IsHeadOffice)
+                    {
+                        var branchIds = await DbContext.Set<Tenant>().AsNoTracking().Where(t => t.ParentTenantId == tenantId).Select(t => t.Id).ToListAsync();
+                        branchIds.Add(tenantId);
+                        baseQuery = baseQuery.Where(x => branchIds.Contains(x.TenantId));
+                    }
+                    else if (!string.IsNullOrEmpty(currentTenant.ParentTenantId))
+                    {
+                        baseQuery = baseQuery.Where(x => 
+                            x.TenantId == tenantId || 
+                            DbContext.Set<BranchItemMapping>().Any(m => m.TenantId == tenantId && m.ItemMasterId == x.Id && m.IsActive)
+                        );
+                    }
+                    else
+                    {
+                        baseQuery = baseQuery.Where(x => x.TenantId == tenantId);
+                    }
+                }
+
+                return await baseQuery.ToListAsync();
             }
             catch
             {
@@ -106,28 +201,51 @@ namespace EasyBill.DataAccess.Repository
         {
             try
             {
-                var repository = _unitofwork.GetRepository<ItemMaster>();
-                var results = await repository.Query()
-                        .Where(x =>
-                            x.IsActive &&
-                            (
-                                x.Name.ToLower().Contains(query) || x.Category.CategoryName.ToLower().Contains(query) || x.SubCategory.Name.ToLower().Contains(query)
-                            )
-                        )
-                        .Include(x => x.Category)
-                        .Include(x => x.SubCategory)
-                        .OrderBy(x => x.Name)
-                        .Take(8) // 🔥 LIMIT for header search
-                        .Select(x => new ItemSearchDto
-                        {
-                            Id = x.Id,
-                            Name = x.Name,
-                            Category = x.Category.CategoryName,
-                            SubCategory = x.SubCategory.Name,
-                            ImageUrl = x.UploadImage
-                        })
-                        .ToListAsync();
+                var tenantId = GetCurrentTenantId();
+                var currentTenant = await DbContext.Set<Tenant>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId);
+                
+                var baseQuery = DbContext.Set<ItemMaster>()
+                    .Include(x => x.Category)
+                    .Include(x => x.SubCategory)
+                    .AsNoTracking()
+                    .Where(x => x.IsActive && !x.Deleted.HasValue && 
+                                (x.Name.ToLower().Contains(query) || 
+                                 x.Category.CategoryName.ToLower().Contains(query) || 
+                                 x.SubCategory.Name.ToLower().Contains(query)));
 
+                if (currentTenant != null)
+                {
+                    if (currentTenant.IsHeadOffice)
+                    {
+                        var branchIds = await DbContext.Set<Tenant>().AsNoTracking().Where(t => t.ParentTenantId == tenantId).Select(t => t.Id).ToListAsync();
+                        branchIds.Add(tenantId);
+                        baseQuery = baseQuery.Where(x => branchIds.Contains(x.TenantId));
+                    }
+                    else if (!string.IsNullOrEmpty(currentTenant.ParentTenantId))
+                    {
+                        baseQuery = baseQuery.Where(x => 
+                            x.TenantId == tenantId || 
+                            DbContext.Set<BranchItemMapping>().Any(m => m.TenantId == tenantId && m.ItemMasterId == x.Id && m.IsActive)
+                        );
+                    }
+                    else
+                    {
+                        baseQuery = baseQuery.Where(x => x.TenantId == tenantId);
+                    }
+                }
+
+                var results = await baseQuery
+                    .OrderBy(x => x.Name)
+                    .Take(8)
+                    .Select(x => new ItemSearchDto
+                    {
+                        Id = x.Id,
+                        Name = x.Name,
+                        Category = x.Category.CategoryName,
+                        SubCategory = x.SubCategory.Name,
+                        ImageUrl = x.UploadImage
+                    })
+                    .ToListAsync();
                 return results;
             }
             catch
@@ -211,17 +329,7 @@ namespace EasyBill.DataAccess.Repository
 
         public async Task<ItemMaster> GetProductById(int Id)
         {
-            try
-            {
-                var repository = _unitofwork.GetRepository<ItemMaster>();
-                ItemMaster results = await repository.Query().Where(x => x.Id == Id).Include(x => x.Category).Include(x => x.SubCategory).Include(x => x.Company).Include(x => x.Hsn).Include(x => x.Division).FirstOrDefaultAsync();
-
-                return results;
-            }
-            catch
-            {
-                throw;
-            }
+            return await GetByItemMasterId(Id);
         }
 
         public async Task<ItemMaster> Create(ItemMaster model)
@@ -354,11 +462,51 @@ namespace EasyBill.DataAccess.Repository
             try
             {
                 var repository = _unitofwork.GetRepository<ItemMaster>();
-                repository.Update(model);
-                using (var transaction = repository.BeginTransaction())
+                var existing = await repository.Query().FirstOrDefaultAsync(x => x.Id == model.Id);
+                if (existing != null)
                 {
-                    await repository.SaveChangesAsync();
-                    transaction.Commit();
+                    existing.Name = model.Name;
+                    existing.Code = model.Code;
+                    existing.Barcode = model.Barcode;
+                    existing.Unit1 = model.Unit1;
+                    existing.Unit2 = model.Unit2;
+                    existing.Packing = model.Packing;
+                    existing.CategoryId = model.CategoryId;
+                    existing.DivisionId = model.DivisionId;
+                    existing.HsnId = model.HsnId;
+                    existing.Mrp = model.Mrp;
+                    existing.SalesRate1 = model.SalesRate1;
+                    existing.SalesRate2 = model.SalesRate2;
+                    existing.MinimumQty = model.MinimumQty;
+                    existing.MaximumQty = model.MaximumQty;
+                    existing.ShelfLife = model.ShelfLife;
+                    existing.ShelfLifeUnit = model.ShelfLifeUnit;
+                    existing.MaximumDiscount = model.MaximumDiscount;
+                    existing.DecemalAllowed = model.DecemalAllowed;
+                    existing.Conversion = model.Conversion;
+                    existing.ItemType = model.ItemType;
+                    existing.ParentItemId = model.ParentItemId;
+                    existing.ConversionFactor = model.ConversionFactor;
+                    existing.SubCategoryId = model.SubCategoryId;
+                    existing.CompanyId = model.CompanyId;
+                    existing.IsActive = model.IsActive;
+                    existing.Narcotics = model.Narcotics;
+                    existing.ScheduleH = model.ScheduleH;
+                    existing.ScheduleH1 = model.ScheduleH1;
+                    existing.Salt = model.Salt;
+                    existing.LastModified = model.LastModified;
+                    existing.LastModifiedBy = model.LastModifiedBy;
+                    existing.Deleted = model.Deleted;
+                    existing.DeletedBy = model.DeletedBy;
+                    existing.UploadImage = model.UploadImage;
+                    existing.Local = model.Local;
+                    existing.Central = model.Central;
+
+                    using (var transaction = repository.BeginTransaction())
+                    {
+                        await repository.SaveChangesAsync();
+                        transaction.Commit();
+                    }
                 }
 
                 return model;
@@ -545,6 +693,15 @@ namespace EasyBill.DataAccess.Repository
                 DeletedBy = reader.ReadNullableString("DeletedBy")
             };
         }
+        private static ItemImage MapItemImage(DbDataReader reader)
+        {
+            return new ItemImage
+            {
+                ItemMasterId = reader.ReadInt32("ItemMasterId"),
+                ImagePath = reader.ReadNullableString("ImagePath") ?? string.Empty
+                
+            };
+        }
 
         private static bool ReadBoolean(DbDataReader reader, string columnName)
         {
@@ -569,8 +726,49 @@ namespace EasyBill.DataAccess.Repository
         {
             return _unitofwork.IsRecordReferencedAsync<ItemMaster>(id);
         }
+
+        public async Task<IList<ItemMaster>> GetDeletedItems()
+        {
+            var repository = _unitofwork.GetRepository<ItemMaster>();
+
+            return await repository.Query().IgnoreQueryFilters().Where(x => x.Deleted != null).ToListAsync();
+        }
+        public async Task<bool> RestoreItem(int id)
+        {
+            try
+            {
+                var repository = _unitofwork.GetRepository<ItemMaster>();
+
+                var item = await repository.Query().IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id);
+
+                if (item == null)
+                    return false;
+
+                item.Deleted = null;
+                item.DeletedBy = null;
+
+                repository.Update(item);
+                using (var transaction = repository.BeginTransaction())
+                {
+                    await repository.SaveChangesAsync();
+                    transaction.Commit();
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public void ClearItemMasterCache()
+        {
+            _memoryCache.Remove(GetItemMasterCacheKey());
+        }
     }
 }
+
 
 
 

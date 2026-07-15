@@ -1,4 +1,5 @@
-﻿@using AOne.Models.Entity
+@using AOne.Models.Entity
+@using AOne.Utility.Enums
  @model IEnumerable<Tenant>
 
 @{
@@ -30,6 +31,8 @@
             <th>Location</th>
             <th>Phone No</th>
             <th>Mobile No</th>
+            <th>Comp Type</th>
+            <th>Branch Of (Parent HO)</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -44,6 +47,26 @@
                 <td>@item.Location</td>
                 <td>@item.Phone</td>
                 <td>@item.MobileNo</td>
+                <td>
+                    @if (item.CompanyType == CompanyType.HeadOffice)
+                    {
+                        <span class="badge bg-success">Head Office</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-info text-dark">Branch</span>
+                    }
+                </td>
+                <td>
+                    @if (!string.IsNullOrEmpty(item.ParentTenantId) && ViewBag.TenantNames != null && ViewBag.TenantNames.ContainsKey(item.ParentTenantId))
+                    {
+                        <span class="fw-bold text-primary">@ViewBag.TenantNames[item.ParentTenantId]</span>
+                    }
+                    else if (item.CompanyType == CompanyType.HeadOffice)
+                    {
+                        <span class="text-muted">- Self -</span>
+                    }
+                </td>
                 <td>
                     <div class="btn-group" role="group" style="float:right">
                         <a asp-controller="Tenant" asp-action="Edit" asp-route-id="@item.Id" title="Edit">

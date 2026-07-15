@@ -59,5 +59,10 @@ namespace EasyBill.Models.ViewModels
 
         public decimal? TotalCessAmount { get; set; }
         public string? TaxCalculation { get; set; } = "Yes";
+
+        // Branch Transfer additions
+        public string? IssueToType { get; set; } = "Customer"; // "Customer" or "Branch"
+        public string? TransferToTenantId { get; set; }
+        public int? StockRequestId { get; set; }
     }
 }

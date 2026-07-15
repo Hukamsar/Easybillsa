@@ -1,4 +1,4 @@
-﻿using AOne.Models;
+using AOne.Models;
 using AOne.Models.Entity;
 using AOne.Utility.Enums;
 using System;
@@ -41,5 +41,11 @@ namespace EasyBill.Models.Entity
         public int? EmployeeId { get; set; }
         [ForeignKey("EmployeeId")]
         public Employee? Employee { get; set; }
+        public string? ChequeNo { get; set; }
+        public DateTime? ChequeDate { get; set; }
+        public string? RefNo { get; set; }
+        public DateTime? ClearedDate { get; set; }
+        public string? SelectedPurchaseIds { get; set; }
+        public string? SelectedSalesIds { get; set; }
     }
 }

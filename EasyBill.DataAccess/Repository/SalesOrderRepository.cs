@@ -1,4 +1,5 @@
 using AOne.DataAccess.Repository.IRepository;
+using AOne.Utility.Enums;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
 using Microsoft.EntityFrameworkCore;
@@ -159,11 +160,18 @@ namespace EasyBill.DataAccess.Repository
                 if (order == null)
                     return false;  // Order nahi mila ya pehle se cancelled hai
 
+                if (order.OrderStatus != OrderStatus.Ordered)
+                    return false;
+
+
                 // Safety check: Fully paid order cancel nahi hoga
                 if (order.PaidAmount > 0 && order.PaidAmount >= order.TotalPayable)
                     return false;  // Fully paid — refund required, cancel blocked
 
+
+
                 // Soft delete — record DB mein rehta hai for admin audit
+                order.OrderStatus = OrderStatus.Cancelled;
                 order.Deleted    = DateTime.UtcNow;
                 order.DeletedBy  = $"CANCELLED_BY:{cancelledBy} | REASON:{reason}";
 
@@ -175,6 +183,49 @@ namespace EasyBill.DataAccess.Repository
                 }
 
                 return true;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public async Task<IList<SalesOrder>> GetByCustomerPhoneNumber(string phoneNumber)
+        {
+            try
+            {
+                var repository = _unitofwork.GetRepository<SalesOrder>();
+                IList<SalesOrder> result = await repository.Query()
+                    .IgnoreQueryFilters()
+                    .Include(x => x.Customers)
+                    .Include(x => x.PharmacyDoctor)
+                    .Include(x => x.salesOrderItems)
+                        .ThenInclude(x => x.ItemMaster)
+                    .Where(l => l.Customers != null && l.Customers.PhoneNo == phoneNumber)
+                    .ToListAsync();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public async Task<IList<SalesOrder>> GetByCustomerPhoneNumberWithPayments(string phoneNumber)
+        {
+            try
+            {
+                var repository = _unitofwork.GetRepository<SalesOrder>();
+                IList<SalesOrder> result = await repository.Query()
+                    .IgnoreQueryFilters()
+                    .Include(x => x.Customers)
+                    .Include(x => x.PharmacyDoctor)
+                    .Include(x => x.salesOrderItems)
+                        .ThenInclude(x => x.ItemMaster)
+                    .Include(x => x.SalsePaymentDetails)
+                    .Where(l => l.Customers != null && l.Customers.PhoneNo == phoneNumber)
+                    .ToListAsync();
+                return result;
             }
             catch (Exception ex)
             {

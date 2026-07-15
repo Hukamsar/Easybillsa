@@ -1,5 +1,11 @@
-﻿@using EasyBill.Models.ViewModels
+@using EasyBill.Models.ViewModels
 @model CityVM
+@inject EasyBill.DataAccess.Repository.IRepository.ITenantRegistrationRepository TenantRepo
+@{
+    var tenantId = User.FindFirst("TenantId")?.Value;
+    var tenant = await TenantRepo.GetById(tenantId);
+    bool isHo = User.IsInRole("SuperAdmin") || string.IsNullOrEmpty(tenant?.ParentTenantId);
+}
 
 @{
     ViewData["Title"] = "City List";
@@ -49,6 +55,9 @@
 </style>
 
 
+<!-- ===== ADD CITY FORM ===== -->
+@if (isHo)
+{
 <div class="card mb-3">
     <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
         <h5 class="mb-0">  Add City</h5>
@@ -65,10 +74,13 @@
                     <select asp-for="CountryId" id="CountryId" asp-items="@ViewBag.Country" class="form-control form-control-sm">
                         <option>select</option>
                     </select>
-                    <div class="shortcut-box">
-                        <span id="btnF2Country" class="shortcut-link">F2 - New</span>
-                        <span id="btnF3Country" class="shortcut-link text-danger">F3 - Mod</span>
-                    </div>
+                    @if (isHo)
+                    {
+                        <div class="shortcut-box">
+                            <span id="btnF2Country" class="shortcut-link">F2 - New</span>
+                            <span id="btnF3Country" class="shortcut-link text-danger">F3 - Mod</span>
+                        </div>
+                    }
                 </div>
                 <div class="col-md-4 d-flex align-items-center mb-2">
                     <label asp-for="StateId" class="me-2 mb-0" style="width: 100px;">
@@ -78,10 +90,13 @@
                     <select asp-for="StateId" id="StateId" asp-items="@ViewBag.State" class="form-control form-control-sm">
                         <option>select</option>
                     </select>
-                    <div class="shortcut-box">
-                        <span id="btnF2State" class="shortcut-link">F2 - New</span>
-                        <span id="btnF3State" class="shortcut-link text-danger">F3 - Mod</span>
-                    </div>
+                    @if (isHo)
+                    {
+                        <div class="shortcut-box">
+                            <span id="btnF2State" class="shortcut-link">F2 - New</span>
+                            <span id="btnF3State" class="shortcut-link text-danger">F3 - Mod</span>
+                        </div>
+                    }
                 </div>
 
                 <div class="col-md-4 d-flex align-items-center mb-2">
@@ -98,6 +113,7 @@
 
     </div>
 </div>
+}
 <table class="table">
     <thead class="custom-header">
         <tr>
@@ -124,18 +140,20 @@
                 </td>
                 <td>
                     <div class="btn-group" role="group" style="float:right">
-
-                        <a asp-controller="City" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-                        <a asp-controller="City" asp-action="Delete"
-                           class="btn-delete"
-                           title="Delete"
-                           asp-route-id="@item.Id"
-                           data-id="@item.Id"
-                           data-controller="@ViewContext.RouteData.Values["controller"]">
-                            <i class="bi bi-trash-fill text-danger p-1"></i>
-                        </a>
+                        @if (isHo)
+                        {
+                            <a asp-controller="City" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a asp-controller="City" asp-action="Delete"
+                               class="btn-delete"
+                               title="Delete"
+                               asp-route-id="@item.Id"
+                               data-id="@item.Id"
+                               data-controller="@ViewContext.RouteData.Values["controller"]">
+                                <i class="bi bi-trash-fill text-danger p-1"></i>
+                            </a>
+                        }
                     </div>
                 </td>
             </tr>

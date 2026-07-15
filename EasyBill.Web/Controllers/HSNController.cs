@@ -1,12 +1,14 @@
-﻿using AOne.DataAccess.ProfileService;
+using AOne.DataAccess.ProfileService;
 using AOne.Models.Entity;
 using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
+using EasyBill.UI.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EasyBill.UI.Controllers
 {
+    [HeadOfficeOnly]
     public class HSNController : Controller
     {
         private readonly IHSNRepository _hsnService;

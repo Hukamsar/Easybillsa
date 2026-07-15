@@ -52,5 +52,10 @@ namespace EasyBill.Models.Entity
         public decimal? RoundOffAmount { get; set; }
         public decimal? TotalCessAmount { get; set; }
         public string? TaxCalculation { get; set; } = "Yes";
+
+        // Branch Transfer tracking
+        public string? TransferToTenantId { get; set; }
+        public bool IsReceived { get; set; } = false;
+        public string? TransferStatus { get; set; } = "Pending"; // Pending, Accepted, Rejected
     }
 }

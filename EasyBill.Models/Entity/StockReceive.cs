@@ -1,4 +1,4 @@
-﻿using AOne.Models;
+using AOne.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System;
 using System.Collections.Generic;
@@ -52,5 +52,10 @@ namespace EasyBill.Models.Entity
         public decimal Balance { get; set; }
         public decimal TotalCessAmount { get; set; }
         public string? TaxCalculation { get; set; } = "Yes";
+
+        // Branch Transfer tracking
+        public string? TransferFromTenantId { get; set; }
+        public bool IsPendingTransfer { get; set; } = false;
+        public int? SourceStockIssueId { get; set; }
     }
 }

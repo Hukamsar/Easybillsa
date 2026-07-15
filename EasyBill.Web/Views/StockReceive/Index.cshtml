@@ -1,4 +1,4 @@
-﻿@model IEnumerable<StockReceive>
+@model IEnumerable<StockReceive>
 
 @{
     ViewData["Title"] = "Index";
@@ -50,10 +50,42 @@
         </tr>
     </thead>
     <tbody>
+        @if (ViewBag.PendingTransfers != null)
+        {
+            var pendingIssues = (IEnumerable<EasyBill.Models.Entity.StockIssue>)ViewBag.PendingTransfers;
+            foreach (var pending in pendingIssues)
+            {
+                <tr>
+                    <td>@pending.ChallanNo</td>
+                    <td>@pending.ChallanDate?.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        <span class="badge bg-danger">PENDING BRANCH TRANSFER</span><br/>
+                        <small>From: @(pending.Tenant?.Name ?? "Head Office")</small>
+                    </td>
+                    <td>@(pending.Tenant?.MobileNo ?? pending.MobileNo)</td>
+                    <td>@(pending.Tenant?.Address1 ?? pending.Address)</td>
+                    <td>
+                        @if (pending.TransferStatus == "Pending" && !pending.IsReceived)
+                        {
+                            <a href="/StockReceive/Create?pendingIssueId=@pending.Id" class="btn btn-sm btn-success fw-bold">Accept</a>
+                            <button class="btn btn-sm btn-danger fw-bold ms-1 btn-reject-transfer" data-id="@pending.Id">Reject</button>
+                        }
+                        else if (pending.IsReceived || pending.TransferStatus == "Accepted")
+                        {
+                            <span class="badge bg-success">Received</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Rejected</span>
+                        }
+                    </td>
+                </tr>
+            }
+        }
+
         @foreach (var item in Model)
         {
             <tr>
-
                 <td>
                     @Html.DisplayFor(modelItem => item.ChallanNo)
                 </td>
@@ -61,28 +93,75 @@
                     @item.ChallanDate?.ToString("dd/MM/yyyy")
                 </td>
                 <td>
-                    @(item.Supplier?.FirstName ?? item.Customers?.Name)
+                    @if (!string.IsNullOrEmpty(item.TransferFromTenantId) && ViewBag.Tenants != null)
+                    {
+                        var tenants = (Dictionary<string, AOne.Models.Entity.Tenant>)ViewBag.Tenants;
+                        if (tenants.TryGetValue(item.TransferFromTenantId, out var sourceBranch))
+                        {
+                            <span class="badge bg-info">Branch Transfer</span><br/>
+                            <strong>@sourceBranch.Name</strong>
+                        }
+                        else
+                        {
+                            <span class="badge bg-info">Branch Transfer</span><br/>
+                            <small>From: @item.TransferFromTenantId</small>
+                        }
+                    }
+                    else if (item.IsPendingTransfer)
+                    {
+                        <span class="badge bg-warning text-dark">Pending Transfer</span><br/>
+                        <small>From: @item.TransferFromTenantId</small>
+                    }
+                    else
+                    {
+                        @(item.Supplier?.FirstName ?? item.Customers?.Name)
+                    }
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.MobileNo)
+                    @if (!string.IsNullOrEmpty(item.TransferFromTenantId) && ViewBag.Tenants != null)
+                    {
+                        var tenants = (Dictionary<string, AOne.Models.Entity.Tenant>)ViewBag.Tenants;
+                        if (tenants.TryGetValue(item.TransferFromTenantId, out var sourceBranch))
+                        {
+                            @(sourceBranch.Phone ?? sourceBranch.MobileNo)
+                        }
+                    }
+                    else
+                    {
+                        @Html.DisplayFor(modelItem => item.MobileNo)
+                    }
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.Address)
+                    @if (!string.IsNullOrEmpty(item.TransferFromTenantId) && ViewBag.Tenants != null)
+                    {
+                        var tenants = (Dictionary<string, AOne.Models.Entity.Tenant>)ViewBag.Tenants;
+                        if (tenants.TryGetValue(item.TransferFromTenantId, out var sourceBranch))
+                        {
+                            @sourceBranch.Address1
+                        }
+                    }
+                    else
+                    {
+                        @Html.DisplayFor(modelItem => item.Address)
+                    }
                 </td>
                 <td>
-                    <div class="btn-group" role="group" style="float:right">
-                        <a asp-controller="StockReceive" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-                        <a asp-controller="StockReceive" asp-action="Delete"
-                           class="btn-delete"
-                           title="Delete"
-                           asp-route-id="@item.Id"
-                           data-id="@item.Id"
-                           data-controller="@ViewContext.RouteData.Values["controller"]">
-                            <i class="bi bi-trash-fill text-danger p-1"></i>
-                        </a>
-                    </div>
+                    @if (item.SourceStockIssueId == null || item.SourceStockIssueId <= 0)
+                    {
+                        <div class="btn-group" role="group" style="float:right">
+                            <a asp-controller="StockReceive" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a asp-controller="StockReceive" asp-action="Delete"
+                               class="btn-delete"
+                               title="Delete"
+                               asp-route-id="@item.Id"
+                               data-id="@item.Id"
+                               data-controller="@ViewContext.RouteData.Values["controller"]">
+                                <i class="bi bi-trash-fill text-danger p-1"></i>
+                            </a>
+                        </div>
+                    }
                 </td>
             </tr>
         }
@@ -94,6 +173,31 @@
         $(document).ready(function () {
             $("#stockRecieveTbl").DataTable({
                 "order": [[2, "desc"]]
+            });
+
+            $(".btn-reject-transfer").on("click", function() {
+                var issueId = $(this).data("id");
+                
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You want to reject this branch transfer?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, reject it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post('/StockReceive/RejectTransfer', { issueId: issueId }, function(res) {
+                            if (res.success) {
+                                toastr.success(res.message);
+                                setTimeout(function() { location.reload(); }, 1000);
+                            } else {
+                                toastr.error(res.message);
+                            }
+                        });
+                    }
+                });
             });
         });
     </script>

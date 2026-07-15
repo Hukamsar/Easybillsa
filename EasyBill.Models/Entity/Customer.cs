@@ -23,6 +23,10 @@ namespace EasyBill.Models.Entity
         public string? PhoneNo {  get; set; }
         public string? Email { get; set; }
 
+        // Geo-Location
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+
         // Accounting
         public int? AccountGroupId { get; set; }
         [ForeignKey("AccountGroupId")]

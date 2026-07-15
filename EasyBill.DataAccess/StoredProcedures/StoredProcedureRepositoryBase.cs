@@ -50,7 +50,11 @@ namespace EasyBill.DataAccess.StoredProcedures
                 return "All";
             }
 
-            if (user.IsInRole("Admin") || user.IsInRole("Doctor"))
+            var isCustomer = (user?.IsInRole("Customer") ?? false) || 
+                             (user?.HasClaim(c => c.Type == "CustomerId") ?? false) ||
+                             (user?.HasClaim(c => c.Type == "role" && c.Value == "Customer") ?? false);
+
+            if (user.IsInRole("Admin") || user.IsInRole("Doctor") || isCustomer)
             {
                 return string.IsNullOrWhiteSpace(GetCurrentTenantId()) ? "All" : "Tenant";
             }
@@ -109,10 +113,11 @@ namespace EasyBill.DataAccess.StoredProcedures
                 cancellationToken);
         }
 
-        protected void AddFilterParameters(DbCommand command)
+        protected void AddFilterParameters(DbCommand command, string? overrideTenantId = null)
         {
-            AddParameter(command, "@FilterMode", GetCurrentFilterMode());
-            AddParameter(command, "@TenantId", GetCurrentTenantId());
+            var filterMode = overrideTenantId != null ? "Tenant" : GetCurrentFilterMode();
+            AddParameter(command, "@FilterMode", filterMode);
+            AddParameter(command, "@TenantId", overrideTenantId ?? GetCurrentTenantId());
             AddParameter(command, "@UserId", GetCurrentUserId());
         }
 

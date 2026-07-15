@@ -1,0 +1,112 @@
+﻿@model IEnumerable<Sales>
+
+<table class="table table-bordered table-striped" id="salesTable">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.BillNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.BillDate)
+            </th>
+            <th>
+                Customer
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.MobileNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Address)
+            </th>
+
+            <th>
+                Taxable Amt
+            </th>
+            <th>
+                Gst Amt
+            </th>
+            <th>
+                Round Off
+            </th>
+            <th>
+                Total Amount
+            </th>
+
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.BillNo)
+                </td>
+                <td>
+                    @item.BillDate?.ToString("dd/MM/yyyy")
+                </td>
+                <td>
+                    @{
+                        if (!string.IsNullOrEmpty(item.Customers?.Name))
+                        {
+                            @item.Customers.Name
+                        }
+                        else
+                        {
+                            @item.billingType
+                        }
+                    }
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.MobileNo)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Address)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Total)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalGstAmt)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.RoundOffAmount)
+                </td>
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalPayable)
+                </td>
+
+                <td>
+                    <div class="btn-group" role="group" style="float:right">
+                        <button class="btn btn-success" onclick="restoreItem(@item.Id)">  Restore  </button>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<script>
+    $(document).ready(function(){
+        $("#salesTable").DataTable();
+
+    })
+    function restoreItem(id)
+    {
+        if (!confirm('Restore this item?'))
+            return;
+
+        $.ajax({
+            url: '/Sales/Restore',
+            type: 'POST',
+            data: { id: id },
+            success: function (res) {
+                if (res.success) {
+                    location.reload();
+                }
+            }
+        });
+    }
+</script>

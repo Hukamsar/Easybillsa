@@ -40,6 +40,7 @@ namespace AOneWeb.Controllers
         public async Task<IActionResult> Index()
         {
             var data = await _tenantRepository.GetAll();
+            ViewBag.TenantNames = data.ToDictionary(t => t.Id, t => t.Name);
             return View(data);
         }
         [HttpGet]
@@ -53,6 +54,7 @@ namespace AOneWeb.Controllers
 
             ViewBag.SubscriptionPlanList = new SelectList(await _context.SubscriptionPlans.Where(p => p.IsActive).ToListAsync(), "Id", "PlanName");
             ViewBag.Features = await _context.Features.OrderBy(f => f.FeatureKey).ToListAsync();
+            ViewBag.ParentTenantList = new SelectList(await _context.Tenants.Where(t => t.IsHeadOffice).OrderBy(t => t.Name).ToListAsync(), "Id", "Name");
 
             var model = new TenantRegistrationVM();
 
@@ -80,6 +82,7 @@ namespace AOneWeb.Controllers
                 await PopulateLocationLookupsAsync();
                 ViewBag.SubscriptionPlanList = new SelectList(await _context.SubscriptionPlans.Where(p => p.IsActive).ToListAsync(), "Id", "PlanName");
                 ViewBag.Features = await _context.Features.OrderBy(f => f.FeatureKey).ToListAsync();
+                ViewBag.ParentTenantList = new SelectList(await _context.Tenants.Where(t => t.IsHeadOffice).OrderBy(t => t.Name).ToListAsync(), "Id", "Name");
                 return View(new TenantRegistrationVM());
             }
 
@@ -108,6 +111,7 @@ namespace AOneWeb.Controllers
                 await PopulateLocationLookupsAsync();
                 ViewBag.SubscriptionPlanList = new SelectList(await _context.SubscriptionPlans.Where(p => p.IsActive).ToListAsync(), "Id", "PlanName", viewMode.SubscriptionPlanId);
                 ViewBag.Features = await _context.Features.OrderBy(f => f.FeatureKey).ToListAsync();
+                ViewBag.ParentTenantList = new SelectList(await _context.Tenants.Where(t => t.IsHeadOffice).OrderBy(t => t.Name).ToListAsync(), "Id", "Name", viewMode.ParentTenantId);
                 return View(viewMode);
             }
 
@@ -124,6 +128,7 @@ namespace AOneWeb.Controllers
                 await PopulateLocationLookupsAsync();
                 ViewBag.SubscriptionPlanList = new SelectList(await _context.SubscriptionPlans.Where(p => p.IsActive).ToListAsync(), "Id", "PlanName", viewMode.SubscriptionPlanId);
                 ViewBag.Features = await _context.Features.OrderBy(f => f.FeatureKey).ToListAsync();
+                ViewBag.ParentTenantList = new SelectList(await _context.Tenants.Where(t => t.IsHeadOffice).OrderBy(t => t.Name).ToListAsync(), "Id", "Name", viewMode.ParentTenantId);
                 return View(viewMode);
             }
 
@@ -147,40 +152,64 @@ namespace AOneWeb.Controllers
                     }
                     viewMode.Logo = $"docs/Tenant/{fileName}";
                 }
-                var model = new Tenant
-                {
-                   Name=viewMode.Name,
-                   Email=viewMode.Email,
-                   Address1 = viewMode.Address1,
-                   Address2 = viewMode.Address2,
-                   Location = viewMode.Location,
-                   CountryId = viewMode.CountryId,
-                   StateId = viewMode.StateId,
-                   CityId  = viewMode.CityId,
-                   PinCode = viewMode.PinCode,
-                   ContactPerson = viewMode.ContactPerson,
-                   Phone = viewMode.Phone,
-                   MobileNo = viewMode.MobileNo,
-                   GstNo = viewMode.GstNo,
-                   StateCode = viewMode.StateCode,
-                   CompanyType = viewMode.CompanyType ?? CompanyType.HeadOffice,
-                   Branch = viewMode.Branch,
-                   Logo = viewMode.Logo,
-                   Description = viewMode.Description,
-                   IFSSAINo = viewMode.IFSSAINo,
-                   DrugLicNo = viewMode.DrugLicNo,
-                   LicenceExpiryDate = viewMode.LicenceExpiryDate,
-                   Jurisdiction = viewMode.Jurisdiction,
-                   WorkingStyle = viewMode.WorkingStyle ?? WorkingStyle.Text,
-                   BranchCode = viewMode.BranchCode,
-                   BusinessType = viewMode.BusinessType ?? BusinessType.GroceryStore,
-                   CalanderType = viewMode.CalenderType ?? CalenderType.English,
-                   YearFrom = viewMode.YearFrom,
-                   YearTo = viewMode.YearTo,
-                   TaxType = viewMode.TaxType ?? TaxType.GST,
-                   SubscriptionPlanId = viewMode.SubscriptionPlanId,
-                   AllowedModulesJson = viewMode.SelectedFeatures != null && viewMode.SelectedFeatures.Any() ? JsonConvert.SerializeObject(viewMode.SelectedFeatures) : null
-                };
+                  var parentHo = (viewMode.CompanyType == CompanyType.Branch && !string.IsNullOrEmpty(viewMode.ParentTenantId)) 
+                      ? await _context.Tenants.FirstOrDefaultAsync(t => t.Id == viewMode.ParentTenantId) 
+                      : null;
+
+                  List<string> selectedFeatures = new List<string>();
+                  if (parentHo == null)
+                  {
+                      if (viewMode.SelectedFeatures != null && viewMode.SelectedFeatures.Any())
+                      {
+                          selectedFeatures = viewMode.SelectedFeatures;
+                      }
+                      else if (viewMode.SubscriptionPlanId.HasValue)
+                      {
+                          selectedFeatures = await _context.PlanFeatures
+                              .Where(pf => pf.PlanId == viewMode.SubscriptionPlanId.Value && pf.Feature != null)
+                              .Select(pf => pf.Feature!.FeatureKey)
+                              .ToListAsync();
+                      }
+                  }
+
+                  var model = new Tenant
+                  {
+                     Name=viewMode.Name,
+                     Email=viewMode.Email,
+                     Address1 = viewMode.Address1,
+                     Address2 = viewMode.Address2,
+                     Location = viewMode.Location,
+                     CountryId = viewMode.CountryId,
+                     StateId = viewMode.StateId,
+                     CityId  = viewMode.CityId,
+                     PinCode = viewMode.PinCode,
+                     Latitude = viewMode.Latitude,
+                     Longitude = viewMode.Longitude,
+                     ContactPerson = viewMode.ContactPerson,
+                     Phone = viewMode.Phone,
+                     MobileNo = viewMode.MobileNo,
+                     GstNo = viewMode.GstNo,
+                     StateCode = viewMode.StateCode,
+                     CompanyType = viewMode.CompanyType ?? CompanyType.HeadOffice,
+                     IsHeadOffice = (viewMode.CompanyType == CompanyType.HeadOffice || viewMode.CompanyType == CompanyType.Standalone),
+                     ParentTenantId = (viewMode.CompanyType == CompanyType.Branch) ? viewMode.ParentTenantId : null,
+                     Branch = viewMode.Branch,
+                     Logo = viewMode.Logo,
+                     Description = viewMode.Description,
+                     IFSSAINo = viewMode.IFSSAINo,
+                     DrugLicNo = viewMode.DrugLicNo,
+                     LicenceExpiryDate = viewMode.LicenceExpiryDate,
+                     Jurisdiction = viewMode.Jurisdiction,
+                     WorkingStyle = viewMode.WorkingStyle ?? WorkingStyle.Text,
+                     BranchCode = viewMode.BranchCode,
+                     BusinessType = viewMode.BusinessType ?? BusinessType.GroceryStore,
+                     CalanderType = viewMode.CalenderType ?? CalenderType.English,
+                     YearFrom = viewMode.YearFrom,
+                     YearTo = viewMode.YearTo,
+                     TaxType = viewMode.TaxType ?? TaxType.GST,
+                     SubscriptionPlanId = parentHo != null ? parentHo.SubscriptionPlanId : viewMode.SubscriptionPlanId,
+                     AllowedModulesJson = parentHo != null ? parentHo.AllowedModulesJson : (selectedFeatures.Any() ? JsonConvert.SerializeObject(selectedFeatures) : null)
+                  };
                // await _tenantRepository.Create(model);
                 var tenantresult = await _tenantRepository.Create(model);
                 if (!string.IsNullOrEmpty(tenantresult.Id))
@@ -191,11 +220,12 @@ namespace AOneWeb.Controllers
                         Email = model.Email?.Trim(),
                         EmailConfirmed = true,
                         TenantId = tenantresult.Id,
+                        TenantName = model.Name,
                         PhoneNumber = model.MobileNo?.Trim(),
                         PhoneNumberConfirmed = true
                     };
-                    // Registration keeps password empty; user will set password + PIN after mobile login.
-                    var result = await _userManager.CreateAsync(user);
+                    // Set default password so they can log in to the web HO/Branch panel
+                    var result = await _userManager.CreateAsync(user, "EasyBill@123");
                     if (result.Succeeded)
                     {
                         await _userManager.AddToRoleAsync(user, RoleName.Admin);
@@ -210,6 +240,7 @@ namespace AOneWeb.Controllers
                         await PopulateLocationLookupsAsync();
                         ViewBag.SubscriptionPlanList = new SelectList(await _context.SubscriptionPlans.Where(p => p.IsActive).ToListAsync(), "Id", "PlanName", viewMode.SubscriptionPlanId);
                         ViewBag.Features = await _context.Features.OrderBy(f => f.FeatureKey).ToListAsync();
+                        ViewBag.ParentTenantList = new SelectList(await _context.Tenants.Where(t => t.IsHeadOffice).OrderBy(t => t.Name).ToListAsync(), "Id", "Name", viewMode.ParentTenantId);
                         return View(viewMode);
                     }
                 }
@@ -260,6 +291,8 @@ namespace AOneWeb.Controllers
                 Vm.StateId = model.StateId;
                 Vm.CityId = model.CityId;
                 Vm.PinCode = model.PinCode;
+                Vm.Latitude = model.Latitude;
+                Vm.Longitude = model.Longitude;
                 Vm.ContactPerson = model.ContactPerson;
                 Vm.Phone = model.Phone;
                 Vm.MobileNo = model.MobileNo;
@@ -281,6 +314,7 @@ namespace AOneWeb.Controllers
                 Vm.YearTo = model.YearTo;
                 Vm.TaxType = model.TaxType;
                 Vm.SubscriptionPlanId = model.SubscriptionPlanId;
+                Vm.ParentTenantId = model.ParentTenantId;
 
                 if (!string.IsNullOrEmpty(model.AllowedModulesJson))
                 {
@@ -304,6 +338,7 @@ namespace AOneWeb.Controllers
 
             ViewBag.SubscriptionPlanList = new SelectList(await _context.SubscriptionPlans.Where(p => p.IsActive).ToListAsync(), "Id", "PlanName", model?.SubscriptionPlanId);
             ViewBag.Features = await _context.Features.OrderBy(f => f.FeatureKey).ToListAsync();
+            ViewBag.ParentTenantList = new SelectList(await _context.Tenants.Where(t => t.IsHeadOffice && t.Id != Id).OrderBy(t => t.Name).ToListAsync(), "Id", "Name", model?.ParentTenantId);
 
             return View(Vm);
 
@@ -325,6 +360,7 @@ namespace AOneWeb.Controllers
                 await PopulateLocationLookupsAsync();
                 ViewBag.SubscriptionPlanList = new SelectList(await _context.SubscriptionPlans.Where(p => p.IsActive).ToListAsync(), "Id", "PlanName", Vm.SubscriptionPlanId);
                 ViewBag.Features = await _context.Features.OrderBy(f => f.FeatureKey).ToListAsync();
+                ViewBag.ParentTenantList = new SelectList(await _context.Tenants.Where(t => t.IsHeadOffice && t.Id != Vm.Id).OrderBy(t => t.Name).ToListAsync(), "Id", "Name", Vm.ParentTenantId);
                 return View(Vm);
             }
             Tenant model = await _tenantRepository.GetById(Vm.Id);
@@ -357,12 +393,16 @@ namespace AOneWeb.Controllers
                 model.StateId = Vm.StateId;
                 model.CityId = Vm.CityId;
                 model.PinCode = Vm.PinCode;
+                model.Latitude = Vm.Latitude;
+                model.Longitude = Vm.Longitude;
                 model.ContactPerson = Vm.ContactPerson;
                 model.Phone = Vm.Phone;
                 model.MobileNo = Vm.MobileNo;
                 model.GstNo = Vm.GstNo;
                 model.StateCode = Vm.StateCode;
                 model.CompanyType = Vm.CompanyType ?? CompanyType.HeadOffice;
+                model.IsHeadOffice = (model.CompanyType == CompanyType.HeadOffice || model.CompanyType == CompanyType.Standalone);
+                model.ParentTenantId = model.IsHeadOffice ? null : Vm.ParentTenantId;
                 model.Branch = Vm.Branch;
                 model.Logo = Vm.Logo;
                 model.Description = Vm.Description;
@@ -377,10 +417,58 @@ namespace AOneWeb.Controllers
                 model.YearFrom = Vm.YearFrom;
                 model.YearTo = Vm.YearTo;
                 model.TaxType = Vm.TaxType ?? TaxType.GST;
-                model.SubscriptionPlanId = Vm.SubscriptionPlanId;
-                model.AllowedModulesJson = Vm.SelectedFeatures != null && Vm.SelectedFeatures.Any() ? JsonConvert.SerializeObject(Vm.SelectedFeatures) : null;
+                
+                List<string> editSelectedFeatures = new List<string>();
+                if (Vm.SelectedFeatures != null && Vm.SelectedFeatures.Any())
+                {
+                    editSelectedFeatures = Vm.SelectedFeatures;
+                }
+                else if (Vm.SubscriptionPlanId.HasValue)
+                {
+                    editSelectedFeatures = await _context.PlanFeatures
+                        .Where(pf => pf.PlanId == Vm.SubscriptionPlanId.Value && pf.Feature != null)
+                        .Select(pf => pf.Feature!.FeatureKey)
+                        .ToListAsync();
+                }
+
+                if (model.IsHeadOffice) 
+                {
+                    model.SubscriptionPlanId = Vm.SubscriptionPlanId;
+                    model.AllowedModulesJson = editSelectedFeatures.Any() ? JsonConvert.SerializeObject(editSelectedFeatures) : null;
+                    
+                    // Cascade to child branches
+                    var childBranches = await _context.Tenants.Where(t => t.ParentTenantId == model.Id).ToListAsync();
+                    foreach (var branch in childBranches)
+                    {
+                        branch.SubscriptionPlanId = model.SubscriptionPlanId;
+                        branch.AllowedModulesJson = model.AllowedModulesJson;
+                        _context.Tenants.Update(branch);
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                else if (model.CompanyType == CompanyType.Branch && !string.IsNullOrEmpty(model.ParentTenantId))
+                {
+                    var parentHo = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == model.ParentTenantId);
+                    if (parentHo != null)
+                    {
+                        model.SubscriptionPlanId = parentHo.SubscriptionPlanId;
+                        model.AllowedModulesJson = parentHo.AllowedModulesJson;
+                    }
+                }
+                else
+                {
+                    model.SubscriptionPlanId = Vm.SubscriptionPlanId;
+                    model.AllowedModulesJson = editSelectedFeatures.Any() ? JsonConvert.SerializeObject(editSelectedFeatures) : null;
+                }
 
                 await _tenantRepository.Update(model);
+
+                var usersToUpdate = _userManager.Users.Where(u => u.TenantId == model.Id).ToList();
+                foreach (var user in usersToUpdate)
+                {
+                    user.TenantName = model.Name;
+                    await _userManager.UpdateAsync(user);
+                }
             }
             return RedirectToAction("Index");
         }
@@ -556,6 +644,21 @@ namespace AOneWeb.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> GetHeadOffices(string? excludeId = null)
+        {
+            var query = _context.Tenants.Where(t => t.IsHeadOffice);
+            if (!string.IsNullOrEmpty(excludeId))
+            {
+                query = query.Where(t => t.Id != excludeId);
+            }
+            var list = await query
+                .Select(t => new { id = t.Id, text = t.Name })
+                .OrderBy(t => t.text)
+                .ToListAsync();
+            return Json(list);
+        }
+
+        [HttpGet]
         [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> EditProfile()
         {
@@ -715,6 +818,13 @@ namespace AOneWeb.Controllers
             model.TaxType = Vm.TaxType ?? TaxType.GST;
 
             await _tenantRepository.Update(model);
+
+            var usersToUpdate = _userManager.Users.Where(u => u.TenantId == model.Id).ToList();
+            foreach (var user in usersToUpdate)
+            {
+                user.TenantName = model.Name;
+                await _userManager.UpdateAsync(user);
+            }
 
             TempData["success"] = "Company Profile updated successfully.";
             return RedirectToAction(nameof(EditProfile));

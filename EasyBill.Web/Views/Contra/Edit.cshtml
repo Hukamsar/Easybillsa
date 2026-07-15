@@ -1,0 +1,197 @@
+@using AOne.Utility.Enums
+@model EasyBill.Models.ViewModels.ContraVM
+@{
+    ViewData["Title"] = "Edit Contra Voucher";
+}
+<style>
+    table.dataTable thead th {
+        background-color: #2b6ac9 !important;
+        color: white !important;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
+            <h5 class="mb-0">Edit Contra Voucher</h5>
+        </div>
+        <div class="card-body card-form">
+            <form asp-action="Edit" enctype="multipart/form-data">
+                <input type="hidden" asp-for="Id" />
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="row">
+                    <div class="row mb-2">
+
+                        <label asp-for="VouncherNo" class="col-md-2 col-form-label text-start small">Voucher No <i class="text-danger">*</i></label>
+                        <div class="col-md-4">
+                            <input asp-for="VouncherNo" required class="form-control form-control-sm" readonly />
+                            <span asp-validation-for="VouncherNo" class="text-danger small"></span>
+                        </div>
+
+                        <label asp-for="Date" class="col-md-2 col-form-label text-start small">Date <i class="text-danger">*</i></label>
+                        <div class="col-md-4">
+                            <input type="date" asp-for="Date" required class="form-control form-control-sm" />
+                            <span asp-validation-for="Date" class="text-danger small"></span>
+                        </div>
+
+                        <label asp-for="CashAndBank" class="col-md-2 col-form-label text-start small">Cash & Bank <i class="text-danger">*</i></label>
+                        <div class="col-md-4">
+                            <select asp-for="CashAndBank" id="cashAndBankddl" asp-items="@Html.GetEnumSelectList<CashAndBank>()" required class="form-control form-control-sm">
+                                <option selected disabled value="">Select Cash/Bank</option>
+                            </select>
+                            <span id="cashBankBalance" class="badge bg-info mt-1" style="display:none;">Balance: 0.00</span>
+                            <span asp-validation-for="CashAndBank" class="text-danger small"></span>
+                        </div>
+
+                        <label asp-for="Category" class="col-md-2 col-form-label text-start small">Category <i class="text-danger">*</i></label>
+                        <div class="col-md-4">
+                            <select asp-for="Category" asp-items="@Html.GetEnumSelectList<ContraCategory>()" required class="form-control form-control-sm">
+                                <option selected disabled value="">Select Category</option>
+                            </select>
+                            <span asp-validation-for="Category" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-2 col-form-label text-start small bankdiv">
+                            <label asp-for="BankId">Bank Account <i class="text-danger">*</i></label>
+                        </div>
+                        <div class="col-md-4 bankdiv">
+                            <select asp-for="BankId" id="bankId" asp-items="@ViewBag.BankList" class="form-select form-select-sm">
+                                <option selected disabled value="">Select Bank Account</option>
+                            </select>
+                            <span id="bankBalance" class="badge bg-info mt-1" style="display:none;">Balance: 0.00</span>
+                            <span asp-validation-for="BankId" class="text-danger small"></span>
+                        </div>
+
+                        <label asp-for="Amount" class="col-md-2 col-form-label text-start small">Amount <i class="text-danger">*</i></label>
+                        <div class="col-md-4">
+                            <input asp-for="Amount" id="amount" type="number" step="0.01" class="form-control form-control-sm" required />
+                            <span asp-validation-for="Amount" class="text-danger small"></span>
+                        </div>
+
+                        <label asp-for="UploadAttachments" class="col-md-2 col-form-label text-start small">Attachments</label>
+                        <div class="col-md-4">
+                            <input asp-for="UploadAttachments" class="form-control form-control-sm" />
+                            <span asp-validation-for="UploadAttachments" class="text-danger small"></span>
+                            @if (!string.IsNullOrEmpty(Model.Attachments))
+                            {
+                                <div class="mt-1 small">
+                                    Current: <a href="~/docs/Contra/@Model.Attachments" target="_blank">@Model.Attachments</a>
+                                </div>
+                            }
+                        </div>
+
+                        <label asp-for="Description" class="col-md-2 col-form-label text-start small">Description</label>
+                        <div class="col-md-4">
+                            <input asp-for="Description" class="form-control form-control-sm" />
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="submit" class="btn btn-sm btn-primary btnBright-Sky-Blue">Save Changes</button>
+                    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Check Bank Div visibility based on Cash & Bank value
+            function toggleBankDiv() {
+                $('.bankdiv').show();
+                $('#bankId').prop('required', true);
+            }
+
+            $('#cashAndBankddl').change(function () {
+                toggleBankDiv();
+            });
+
+            // Initial toggle check
+            toggleBankDiv();
+
+            function updateBalance(type, id, targetSelector) {
+                if (type !== 'cash' && !id) {
+                    $(targetSelector).hide();
+                    return;
+                }
+                $.ajax({
+                    url: '/PaymentVoucher/GetPartyBalance',
+                    type: 'GET',
+                    data: { type: type, id: id },
+                    success: function (res) {
+                        if (res && res.success) {
+                            let formatted = parseFloat(res.balance).toFixed(2);
+                            $(targetSelector).text('Balance: ' + formatted).show();
+                        } else {
+                            $(targetSelector).hide();
+                        }
+                    },
+                    error: function () {
+                        $(targetSelector).hide();
+                    }
+                });
+            }
+
+            function updateContraBalance() {
+                let selection = $('#cashAndBankddl').val();
+                if (selection == '1') { // Cash
+                    updateBalance('cash', 0, '#cashBankBalance');
+                    $('#bankBalance').hide();
+                } else if (selection == '2') { // Bank
+                    $('#cashBankBalance').hide();
+                    let bankId = $('#bankId').val();
+                    if (bankId) {
+                        updateBalance('bank', bankId, '#bankBalance');
+                    } else {
+                        $('#bankBalance').hide();
+                    }
+                } else {
+                    $('#cashBankBalance').hide();
+                    $('#bankBalance').hide();
+                }
+            }
+
+            $('#cashAndBankddl').change(function () {
+                updateContraBalance();
+            });
+            $('#bankId').change(function () {
+                updateContraBalance();
+            });
+
+            // Initial load
+            updateContraBalance();
+
+            $('form').submit(function (e) {
+                let enteredAmount = parseFloat($('#amount').val()) || 0;
+
+                // Validate against Cash balance if visible
+                let cashEl = $('#cashBankBalance');
+                if (cashEl.is(':visible')) {
+                    let text = cashEl.text();
+                    let balanceVal = parseFloat(text.replace('Balance:', '').trim());
+                    if (!isNaN(balanceVal) && enteredAmount > balanceVal) {
+                        e.preventDefault();
+                        Swal.fire("Error", "Amount cannot exceed the Cash balance of " + balanceVal.toFixed(2), "error");
+                        return false;
+                    }
+                }
+
+                // Validate against Bank balance if visible
+                let bankEl = $('#bankBalance');
+                if (bankEl.is(':visible')) {
+                    let text = bankEl.text();
+                    let balanceVal = parseFloat(text.replace('Balance:', '').trim());
+                    if (!isNaN(balanceVal) && enteredAmount > balanceVal) {
+                        e.preventDefault();
+                        Swal.fire("Error", "Amount cannot exceed the Bank balance of " + balanceVal.toFixed(2), "error");
+                        return false;
+                    }
+                }
+            });
+        });
+    </script>
+}

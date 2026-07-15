@@ -1,5 +1,6 @@
-﻿using EasyBill.DataAccess.Repository.IRepository;
+using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.ViewModels;
+using EasyBill.UI.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EasyBill.UI.Controllers
@@ -27,6 +28,7 @@ namespace EasyBill.UI.Controllers
             return View(data);
         }
         [HttpGet]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create()
         {
             var viewModel = new OfferVM();
@@ -53,6 +55,7 @@ namespace EasyBill.UI.Controllers
             return View(viewModel);
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Create(OfferVM VM)
         {
             if (VM != null)
@@ -71,6 +74,8 @@ namespace EasyBill.UI.Controllers
                     CompanyId = VM.CompanyId,
                     CategoryId = VM.CategoryId,
                     ItemId = VM.ItemId,
+                    BuyQty = VM.BuyQty,
+                    FreeQty = VM.FreeQty,
                     IsActive = VM.IsActive,
                     OfferItems = VM.OfferItems?.Select(x => new OfferItem
                     {
@@ -87,6 +92,7 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpGet]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(int Id)
         {
             Offer model = await _offerrepo.GetById(Id);
@@ -106,6 +112,8 @@ namespace EasyBill.UI.Controllers
                 VM.CompanyId = model.CompanyId;
                 VM.CategoryId = model.CategoryId;
                 VM.ItemId = model.ItemId;
+                VM.BuyQty = model.BuyQty;
+                VM.FreeQty = model.FreeQty;
                 VM.IsActive = model.IsActive;
                 VM.OfferItems = model.OfferItems.Select(x => new OfferItemVM
                 {
@@ -139,6 +147,7 @@ namespace EasyBill.UI.Controllers
             return View(VM);
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(OfferVM VM)
         {
             Offer model = await _offerrepo.GetById(VM.Id);
@@ -157,6 +166,8 @@ namespace EasyBill.UI.Controllers
                 model.CompanyId = VM.CompanyId;
                 model.CategoryId = VM.CategoryId;
                 model.ItemId = VM.ItemId;
+                model.BuyQty = VM.BuyQty;
+                model.FreeQty = VM.FreeQty;
                 model.IsActive = VM.IsActive;
                 var removedItems = model.OfferItems.Where(dbItem => !VM.OfferItems.Any(vmItem => vmItem.Id == dbItem.Id)).ToList();
                 foreach (var item in removedItems)
@@ -196,6 +207,7 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
+        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try

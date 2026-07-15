@@ -1,4 +1,4 @@
-﻿using AOne.Models.Entity;
+using AOne.Models.Entity;
 using EasyBill.DataAccess.Repository;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
@@ -390,7 +390,7 @@ namespace AOne.Web.Controllers
                 .Sum(x => x.TotalPayable);
 
 
-            
+
             var latestPurchaseCost = purchase
                        .Where(p => p.Deleted == null && p.BillDate.HasValue)
                        .SelectMany(p => p.PurchaseItems)
@@ -399,13 +399,13 @@ namespace AOne.Web.Controllers
                        .Select(g => new {
                            ItemId = g.Key,
                            CostRate = g
-                               .OrderByDescending(x => x.Purchases?.BillDate) // ✅ FIX
-                               .Select(x => x.BatchWiseCose)               // ✅ FIX
+                               .OrderByDescending(x => x.Id)
+                               .Select(x => x.BatchWiseCose)
                                .FirstOrDefault()
                        })
-                       .ToList(); 
-            
-             
+                       .ToList();
+
+
             var latestPurchaseCostDict = latestPurchaseCost.ToDictionary(x => x.ItemId, x => x.CostRate);
 
 
@@ -414,20 +414,22 @@ namespace AOne.Web.Controllers
                  .Where(s => s.BillDate.HasValue
                           && s.BillDate.Value.Date >= thisMonthStart
                           && s.BillDate.Value.Date <= thisMonthEnd
-                          && s.Deleted == null)
-                 .SelectMany(s => s.SalesItems ?? new List<SalesItem>(), (s, si) => new { s, si })
-                 .Where(x => x.si.Deleted == null)
-                 .Sum(x => CalculateSalesProfitAmount(x.s, x.si, isTabletWise, latestPurchaseCostDict));
+                          && s.Deleted == null
+                          && s.TotalPayable > 0)
+                 .Sum(s => s.TotalPayable - (s.SalesItems ?? new List<SalesItem>())
+                     .Where(si => si.Deleted == null)
+                     .Sum(si => CalculateSalesCostAmount(si, isTabletWise, latestPurchaseCostDict)));
 
-             
+
             var lastMonthProfit = sales
                      .Where(s => s.BillDate.HasValue
                               && s.BillDate.Value.Date >= lastMonthStart
                               && s.BillDate.Value.Date <= lastMonthEnd
-                              && s.Deleted == null)
-                     .SelectMany(s => s.SalesItems ?? new List<SalesItem>(), (s, si) => new { s, si })
-                     .Where(x => x.si.Deleted == null)
-                     .Sum(x => CalculateSalesProfitAmount(x.s, x.si, isTabletWise, latestPurchaseCostDict));
+                              && s.Deleted == null
+                              && s.TotalPayable > 0)
+                     .Sum(s => s.TotalPayable - (s.SalesItems ?? new List<SalesItem>())
+                         .Where(si => si.Deleted == null)
+                         .Sum(si => CalculateSalesCostAmount(si, isTabletWise, latestPurchaseCostDict)));
 
             #region STOCK OVERVIEW
             // ================================================================
@@ -612,7 +614,7 @@ namespace AOne.Web.Controllers
                 {
                     SupplierName = p.Suppliers?.FirstName ?? "",
                     PhoneNo = p.Suppliers?.PhoneNO ?? "",
-                    ChequeNo = p.ChequeNo ?? "",
+                    ChequeNo = "",
                     ChequeDate = p.ChequeDate.Value,
                     //BankName = p.BankName ?? "",
                     BankName = "",
@@ -827,8 +829,12 @@ namespace AOne.Web.Controllers
                     .Where(x => x.si.Deleted == null)
                     .ToList();
 
-                var monthSales = monthlyItems.Sum(x => CalculateFinalSalesAmount(x.sale, x.si, isTabletWise));
-                var monthProfit = monthlyItems.Sum(x => CalculateSalesProfitAmount(x.sale, x.si, isTabletWise, latestPurchaseCostDict));
+                var monthSales = g.Where(s => s.TotalPayable > 0).Sum(s => s.TotalPayable);
+                var monthProfit = g
+                    .Where(s => s.TotalPayable > 0)
+                    .Sum(s => s.TotalPayable - (s.SalesItems ?? new List<SalesItem>())
+                        .Where(si => si.Deleted == null)
+                        .Sum(si => CalculateSalesCostAmount(si, isTabletWise, latestPurchaseCostDict)));
 
                 return new SalesProfitVM
                 {
