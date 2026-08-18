@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
@@ -15,7 +15,7 @@ namespace EasyBill.Models.Entity
         public string Name { get; set; }
         public int CountryId { get; set; }
         [ForeignKey(nameof(CountryId))]
-        public Country Country { get; set; }
+        public Country? Country { get; set; }
         public string? Zone { get; set; }
 
     }

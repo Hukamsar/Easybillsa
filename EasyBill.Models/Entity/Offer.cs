@@ -32,6 +32,9 @@ namespace EasyBill.Models.Entity
         public int? CategoryId {  get; set; }
         [ForeignKey(nameof(CategoryId))]
         public CategoryMaster? CategoryMaster { get; set; }
+        public int? SubCategoryId { get; set; }
+        [ForeignKey(nameof(SubCategoryId))]
+        public SubCategory? SubCategory { get; set; }
         public int? ItemId { get; set; }
         [ForeignKey(nameof(ItemId))]
         public ItemMaster? ItemMaster { get; set; }

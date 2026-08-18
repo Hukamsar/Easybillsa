@@ -57,8 +57,7 @@
 </style>
 
 <!-- ===== ADD STATE FORM ===== -->
-@if (isHo)
-{
+
 <div class="card mb-3">
     <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
         Add State
@@ -74,13 +73,10 @@
                     <select asp-for="CountryId" asp-items="@ViewBag.Country" class="form-control form-control-sm">
                         <option value="" disabled>select</option>
                     </select>
-                    @if (isHo)
-                    {
                         <div class="shortcut-box">
                             <span id="btnF2Country" class="shortcut-link">F2 - New</span>
                             <span id="btnF3Country" class="shortcut-link text-danger">F3 - Mod</span>
                         </div>
-                    }
                     <span asp-validation-for="CountryId" class="text-danger small"></span>
                 </div>
 
@@ -96,7 +92,7 @@
         </form>
     </div>
 </div>
-}
+
 
 <!-- ===== STATE TABLE ===== -->
 <table class="table">
@@ -115,8 +111,6 @@
                 <td>@Html.DisplayFor(modelItem => item.Country.Name)</td>
                 <td>
                     <div class="btn-group" role="group" style="float:right">
-                        @if (isHo)
-                        {
                             <a asp-controller="State" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
@@ -128,7 +122,6 @@
                                data-controller="@ViewContext.RouteData.Values["controller"]">
                                 <i class="bi bi-trash-fill text-danger p-1"></i>
                             </a>
-                        }
                     </div>
                 </td>
             </tr>

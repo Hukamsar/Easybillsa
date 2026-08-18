@@ -6,7 +6,6 @@ using System.Text.Json;
 
 namespace EasyBill.UI.Controllers
 {
-    [HeadOfficeOnly]
     public class StateController : Controller
     {
         private readonly ICountryRepository _countryservice;

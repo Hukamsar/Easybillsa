@@ -278,6 +278,12 @@
                 {
                     <div style="margin-top: 4px;"><b>Doctor:</b> Dr. @Model.PharmacyDoctor.Name @(!string.IsNullOrEmpty(Model.PharmacyDoctor.RegistrationNo) ? $"({Model.PharmacyDoctor.RegistrationNo})" : "")</div>
                 }
+                @if (ViewBag.AppliedOfferName != null)
+                {
+                    <div style="margin-top: 4px; color: #166534; font-weight: bold; border: 1px dashed #166534; padding: 2px 4px; display: inline-block;">
+                        Offer Applied: @ViewBag.AppliedOfferName
+                    </div>
+                }
             </div>
         </div>
 
@@ -303,7 +309,13 @@
                         decimal lineGross = item.Qty * displayRate;
                         decimal lineDiscAmt = (lineGross * item.Discount) / 100m;
                         <tr>
-                            <td><b>@(item.ItemMaster?.Name ?? "Item Name")</b></td>
+                            <td>
+                                <b>@(item.ItemMaster?.Name ?? "Item Name")</b>
+                                @if (item.Rate == 0)
+                                {
+                                    <span style="font-size: 10px; color: #166534; font-weight: bold; margin-left: 5px;">(Free Item)</span>
+                                }
+                            </td>
                             @if(showHsn){ <td>@(item.ItemMaster?.Hsn?.HsnCode ?? "-")</td> }
                             
                             <td style="text-align:center;">@item.Qty</td>

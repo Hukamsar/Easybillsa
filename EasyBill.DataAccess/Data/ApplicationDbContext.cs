@@ -30,6 +30,7 @@ namespace AOne.DataAccess.Data
             _serviceProvider = serviceProvider;
         }
         public DbSet<Tenant> Tenants { get; set; }
+        public DbSet<EasyBill.Models.Entity.DailyFootfall> DailyFootfalls { get; set; }
         public DbSet<ItemMaster> ItemMasters { get; set; }
         public DbSet<ItemImage> ItemImages { get; set; }
         public DbSet<CategoryMaster> CategoryMasters { get; set; }
@@ -283,4 +284,6 @@ namespace AOne.DataAccess.Data
 
     }
 }
+
+
 

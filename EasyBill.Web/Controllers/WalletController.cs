@@ -1,6 +1,7 @@
 using AOne.DataAccess.ProfileService;
 using EasyBill.DataAccess.Repository.IRepository;
 using EasyBill.Models.Entity;
+using EasyBill.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -840,67 +841,5 @@ namespace EasyBill.UI.Controllers
             return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
         }
 
-        public class WalletSettingsRequest
-        {
-            public decimal? WalletBalance { get; set; }
-            public decimal? WhatsAppMessageCharge { get; set; }
-            public decimal? SmsMessageCharge { get; set; }
-            public decimal? EmailMessageCharge { get; set; }
-            public string? PaymentGatewayProvider { get; set; }
-            public string? PaymentGatewayKey { get; set; }
-            public string? PaymentGatewaySecret { get; set; }
-            public bool? IsPaymentGatewayActive { get; set; }
-            public bool? IsWalletActive { get; set; }
-            public bool IsSmsChargeActive { get; set; } 
-            public bool IsEmailChargeActive { get; set; } 
-            public bool IsWhatsAppChargeActive { get; set; }
-        }
-
-        public class WalletRechargeRequest
-        {
-            public decimal Amount { get; set; }
-            public string? ReferenceNo { get; set; }
-            public string? Remarks { get; set; }
-            public string? ServiceType { get; set; }
-            public decimal? ServiceCharge { get; set; }
-        }
-
-        public class GatewayRechargeConfirmRequest
-        {
-            public string? GatewayOrderId { get; set; }
-            public string? GatewayTransactionId { get; set; }
-            public string? GatewaySignature { get; set; }
-        }
-
-        public class PendingGatewayOrder
-        {
-            public decimal Amount { get; set; }
-            public DateTime CreatedOnUtc { get; set; }
-            public string? ServiceType { get; set; }
-            public decimal? ServiceCharge { get; set; }
-            public string? Remarks { get; set; }
-            public string? ReferenceNo { get; set; }
-        }
-
-        private sealed class GatewayConfig
-        {
-            public string Provider { get; set; } = string.Empty;
-            public string Key { get; set; } = string.Empty;
-            public string Secret { get; set; } = string.Empty;
-            public bool IsConfigured { get; set; }
-        }
-
-        public sealed class RechargeHistoryRow
-        {
-            public int Id { get; set; }
-            public DateTime TransactionDateTime { get; set; }
-            public decimal Amount { get; set; }
-            public bool IsDebit { get; set; }
-            public string? PaymentMode { get; set; }
-            public string? ReferenceNo { get; set; }
-            public string? ServiceType { get; set; }
-            public decimal? ServiceCharge { get; set; }
-            public string? Note { get; set; }
-        }
     }
 }

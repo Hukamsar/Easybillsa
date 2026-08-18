@@ -41,13 +41,13 @@ namespace EasyBill.Web.Controllers.API
 
             if (!string.IsNullOrEmpty(currentTenantId))
             {
-                query = query.Where(o => o.TenantId == currentTenantId);
+                query = query.Where(o => o.TenantId == currentTenantId || o.Tenant.ParentTenantId == currentTenantId);
             }
 
             var offers = await query.ToListAsync();
 
             var mappings = await _dbContext.OfferStoreMappings.ToListAsync();
-            var tenants = await _tenantRepo.GetAll();
+            var tenants = await _dbContext.Tenants.IgnoreQueryFilters().AsNoTracking().ToListAsync();
 
             var result = offers.Select(o => new
             {
@@ -106,6 +106,7 @@ namespace EasyBill.Web.Controllers.API
                 IsActive = request.IsActive,
                 CompanyId = request.CompanyId,
                 CategoryId = request.CategoryId,
+                SubCategoryId = request.SubCategoryId,
                 ItemId = request.ItemId,
                 TenantId = currentTenantId
             };
@@ -172,7 +173,7 @@ namespace EasyBill.Web.Controllers.API
 
             if (!string.IsNullOrEmpty(currentTenantId))
             {
-                query = query.Where(o => o.TenantId == currentTenantId);
+                query = query.Where(o => o.TenantId == currentTenantId || o.Tenant.ParentTenantId == currentTenantId);
             }
 
             var offer = await query.FirstOrDefaultAsync(o => o.Id == request.Id);
@@ -188,6 +189,7 @@ namespace EasyBill.Web.Controllers.API
             offer.IsActive = request.IsActive;
             offer.CompanyId = request.CompanyId;
             offer.CategoryId = request.CategoryId;
+            offer.SubCategoryId = request.SubCategoryId;
             offer.ItemId = request.ItemId;
 
             // Parse enums
@@ -256,7 +258,7 @@ namespace EasyBill.Web.Controllers.API
 
             if (!string.IsNullOrEmpty(currentTenantId))
             {
-                query = query.Where(o => o.TenantId == currentTenantId);
+                query = query.Where(o => o.TenantId == currentTenantId || o.Tenant.ParentTenantId == currentTenantId);
             }
 
             var offer = await query.FirstOrDefaultAsync(o => o.Id == id);
@@ -296,6 +298,7 @@ namespace EasyBill.Web.Controllers.API
         public int? FreeQty { get; set; }
         public int? CompanyId { get; set; }
         public int? CategoryId { get; set; }
+        public int? SubCategoryId { get; set; }
         public int? ItemId { get; set; }
         public List<HoOfferItemDto> OfferItems { get; set; }
         public List<string> TenantIds { get; set; }

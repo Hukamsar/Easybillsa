@@ -195,7 +195,6 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Create(PurchaseChallanVM VM)
         {
             NormalizeCollections(VM);
@@ -247,7 +246,6 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(PurchaseChallanVM VM)
         {
             NormalizeCollections(VM);

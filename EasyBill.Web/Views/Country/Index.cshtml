@@ -56,8 +56,7 @@
         }
 </style>
 
-@if (isHo)
-{
+
 <div class="card mb-3">
         <div class="card-header text-white py-2" style="background-color: #2b6ac9 !important;">
             Add Country
@@ -81,7 +80,7 @@
 
     </div>
 </div>
-}
+
 <table class="table table-bordered table-striped">
     <thead class="custom-header">
         <tr>
@@ -100,8 +99,7 @@
                 </td>
                 <td>
                     <div class="btn-group" role="group" style="float:right">
-                        @if (isHo)
-                        {
+
                             <a asp-controller="Country" asp-action="Edit" asp-route-id="@item.Id" title="Edit">
                                 <i class="bi bi-pencil-square"></i>
                             </a>
@@ -113,7 +111,7 @@
                                data-controller="@ViewContext.RouteData.Values["controller"]">
                                 <i class="bi bi-trash-fill text-danger p-1"></i>
                             </a>
-                        }
+
                     </div>
                 </td>
             </tr>

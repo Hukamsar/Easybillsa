@@ -904,6 +904,13 @@
                         <div class="meta-row"><span>Due Date</span><strong class="txtDueDateClass">@dueDate.ToString("dd-MMM-yyyy")</strong></div>
                         <div class="meta-row"><span>Payment Mode</span><strong class="txtPaymentModeClass">@paymentMode</strong></div>
                         <div class="meta-row"><span>Total Items</span><strong>@rows.Count</strong></div>
+                        @if (ViewBag.AppliedOfferName != null)
+                        {
+                            <div class="meta-row" style="margin-top: 4px; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
+                                <span style="color: #166534; font-weight: bold;">Offer Applied:</span>
+                                <strong style="color: #166534; text-align: right;">@ViewBag.AppliedOfferName</strong>
+                            </div>
+                        }
                     </div>
 
                     <div class="meta-card">
@@ -961,7 +968,13 @@
                                 {
                                     <tr>
                                         <td class="text-center">@row.Sr</td>
-                                        <td class="item-name" title="@row.ItemName">@row.ItemName</td>
+                                        <td class="item-name" title="@row.ItemName">
+                                            @row.ItemName
+                                            @if(row.Rate == 0m)
+                                            {
+                                                <span style="font-size: 8px; color: #166534; font-weight: bold; margin-left: 3px;">(Free Item)</span>
+                                            }
+                                        </td>
                                         @if (showHsn)
                                         {
                                             <td class="col-hsn">@row.Hsn</td>

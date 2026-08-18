@@ -32,6 +32,7 @@ namespace EasyBill.Models.ViewModels
         public bool IsActive { get; set; }
         public int? CompanyId { get; set; }
         public int? CategoryId { get; set; }
+        public int? SubCategoryId { get; set; }
         public int? ItemId { get; set; }
         public int? BuyQty { get; set; }
         public int? FreeQty { get; set; }

@@ -36,6 +36,13 @@ namespace AOne.Models.Entity
         public decimal? Latitude { get; set; }
         public decimal? Longitude { get; set; }
 
+        // Store Reporting Metadata
+        public string? Zone { get; set; }
+        public string? Region { get; set; }
+        public string? Cluster { get; set; }
+        public string? StoreType { get; set; }
+        public int? EmployeeCount { get; set; }
+
         #region Headoffice 
         public string? ParentTenantId { get; set; }
         public bool IsHeadOffice { get; set; }
@@ -114,6 +121,7 @@ namespace AOne.Models.Entity
         public string? BillingModel { get; set; }
         public string? InventoryMode { get; set; }
         public int OutletCount { get; set; }
+        public decimal StoreArea { get; set; } = 0M; // Area in Sq.Ft. for HO Reports
         public string? SupportTier { get; set; }
         public string? TenantCode { get; set; }
         public bool IsAuditLocked { get; set; }
@@ -124,4 +132,5 @@ namespace AOne.Models.Entity
         public SubscriptionPlan? SubscriptionPlan { get; set; }
     }
 }
+
 

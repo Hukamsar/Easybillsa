@@ -144,7 +144,6 @@ namespace EasyBill.UI.Controllers
 
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Create(PurchaseVM VM)
         {
             if (HasCollectionIndexGap(nameof(PurchaseVM.PurchaseItemVms)) ||
@@ -443,7 +442,6 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> PreviewImportItems(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -826,7 +824,6 @@ namespace EasyBill.UI.Controllers
 
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(PurchaseVM VM)
         {
             if (HasCollectionIndexGap(nameof(PurchaseVM.PurchaseItemVms)) ||
@@ -1102,7 +1099,6 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try

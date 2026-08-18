@@ -115,7 +115,6 @@ namespace EasyBill.UI.Controllers
 
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Create(PurchaseReturnVM VM)
         {
             if (VM != null)
@@ -284,7 +283,6 @@ namespace EasyBill.UI.Controllers
             return View(purchaseVM);
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(PurchaseReturnVM VM)
         {
             Models.Entity.PurchaseReturn model = await _purchasereturnservice.GetById(VM.Id);
@@ -416,7 +414,6 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try

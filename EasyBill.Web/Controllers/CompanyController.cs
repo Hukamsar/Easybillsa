@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EasyBill.UI.Controllers
 {
-    [HeadOfficeOnly]
     public class CompanyController : Controller
     {
         private readonly ICompanyRepository _companyservice;

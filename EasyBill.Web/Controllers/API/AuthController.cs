@@ -18,9 +18,8 @@ namespace AOneWeb.Controllers.API
         private readonly AuthService _authService;
         private readonly UserLoginAuthService _userLoginAuthService;
         private readonly EasyBill.DataAccess.Repository.IRepository.ITenantRepository _tenantRepo;
-        private readonly RoleManager<IdentityRole> _roleManager;
-
-        public AuthController(
+        private readonly RoleManager<IdentityRole> _roleManager;    
+        public AuthController(  
             UserManager<ApplicationUsers> userManager,
             SignInManager<ApplicationUsers> signInManager,
             AuthService authService,
@@ -44,6 +43,8 @@ namespace AOneWeb.Controllers.API
                 return BadRequest(new { Message = "Invalid data", Errors = ModelState });
 
             var registerResult = await _userLoginAuthService.RegisterCompanyAsync(request);
+
+
             if (!registerResult.Success)
                 return BadRequest(new { Message = registerResult.Message });
 
@@ -64,7 +65,8 @@ namespace AOneWeb.Controllers.API
 
             if (model.LoginType.Equals(LoginTypes.EmailPassword, StringComparison.OrdinalIgnoreCase))
             {
-                var user = await _userManager.FindByEmailAsync(model.Email ?? string.Empty);
+                var email = model.Email?.Trim() ?? string.Empty;
+                var user = await _userManager.FindByEmailAsync(email);
                 if (user == null)
                     return Unauthorized(new { Message = "Invalid Email or Password" });
 

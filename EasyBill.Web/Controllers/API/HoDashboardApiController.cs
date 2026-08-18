@@ -10,6 +10,11 @@ using System.Collections.Generic;
 
 namespace EasyBill.Web.Controllers.API
 {
+    public class DashboardFilterDto
+    {
+        public string? hoTenantId { get; set; }
+    }
+
     [Route("api/[controller]")]
     [ApiController]
     public class HoDashboardApiController : ControllerBase
@@ -31,9 +36,37 @@ namespace EasyBill.Web.Controllers.API
             _cache = cache;
         }
 
-        [HttpGet("summary-report")]
-        public async Task<IActionResult> GetSummaryReport(string hoTenantId)
+        private string GetTenantId()
         {
+            var tenantId = Request.Headers["TenantId"].FirstOrDefault();
+            if (string.IsNullOrEmpty(tenantId) || tenantId == "undefined" || tenantId == "null")
+            {
+                tenantId = User.FindFirst("TenantId")?.Value 
+                        ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value
+                        ?? User.FindFirst("sub")?.Value;
+            }
+            
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                var firstTenant = _dbContext.Tenants.IgnoreQueryFilters().AsNoTracking().FirstOrDefault(t => t.ParentTenantId == null || t.ParentTenantId == "");
+                if (firstTenant != null) tenantId = firstTenant.Id;
+            }
+
+            return tenantId ?? "";
+        }
+
+        [HttpPost("summary")]
+        public async Task<IActionResult> GetSummaryReport([FromBody] DashboardFilterDto? filter = null, string? hoTenantId = null)
+        {
+            if (string.IsNullOrEmpty(hoTenantId) || hoTenantId == "undefined" || hoTenantId == "null")
+            {
+                hoTenantId = filter?.hoTenantId;
+            }
+            if (string.IsNullOrEmpty(hoTenantId) || hoTenantId == "undefined" || hoTenantId == "null")
+            {
+                hoTenantId = GetTenantId();
+            }
+
             if (string.IsNullOrEmpty(hoTenantId))
                 return BadRequest(new { success = false, message = "HO TenantId is required." });
 
@@ -41,11 +74,11 @@ namespace EasyBill.Web.Controllers.API
             
             var responseData = await _cache.GetOrCreateAsync<object>(cacheKey, async entry =>
             {
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(10);
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(5);
 
-                var allTenants = await _tenantRepo.GetAll();
+                var allTenants = await _dbContext.Tenants.IgnoreQueryFilters().AsNoTracking().ToListAsync();
                 var branches = allTenants
-                    .Where(t => t.ParentTenantId == hoTenantId || t.Id == hoTenantId) // Includes HO itself and its branches
+                    .Where(t => t.ParentTenantId == hoTenantId)
                     .Select(t => t.Id)
                     .ToList();
 
@@ -75,18 +108,23 @@ namespace EasyBill.Web.Controllers.API
                     };
                 }
 
-                var today = DateTime.Today;
+                var actualToday = DateTime.Today;
+                var maxBillDate = await _dbContext.Saless.IgnoreQueryFilters().Where(s => branches.Contains(s.TenantId)).MaxAsync(s => (DateTime?)s.BillDate);
+                var today = (maxBillDate.HasValue && maxBillDate.Value < actualToday) ? maxBillDate.Value.Date : actualToday;
+
                 var startOfYear = new DateTime(today.Year, 1, 1);
                 var startOfLastYear = new DateTime(today.Year - 1, 1, 1);
-                var endOfLastYear = new DateTime(today.Year - 1, 12, 31);
+                var endOfLastYear = new DateTime(today.Year - 1, 12, 31, 23, 59, 59);
 
                 var thisMonthStart = new DateTime(today.Year, today.Month, 1).Date;
-                var thisMonthEnd = thisMonthStart.AddMonths(1).AddDays(-1).Date;
+                var thisMonthEnd = thisMonthStart.AddMonths(1).AddTicks(-1);
                 var lastMonthStart = thisMonthStart.AddMonths(-1).Date;
-                var lastMonthEnd = thisMonthStart.AddDays(-1).Date;
+                var lastMonthEnd = thisMonthStart.AddTicks(-1);
 
-                // 1. Fetch sales within the 2-month window
+                // 1. Fetch sales within recent window
                 var salesRecent = await _dbContext.Saless
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
                     .Where(s => branches.Contains(s.TenantId) && s.Deleted == null && s.BillDate >= lastMonthStart && s.BillDate <= thisMonthEnd)
                     .Select(s => new {
                         s.TenantId,
@@ -100,9 +138,31 @@ namespace EasyBill.Web.Controllers.API
                     })
                     .ToListAsync();
 
-                // 2. Fetch sales totals from start of last year
+                if (!salesRecent.Any())
+                {
+                    // Fallback to all sales in database if recent month window has zero records
+                    salesRecent = await _dbContext.Saless
+                        .IgnoreQueryFilters()
+                        .AsNoTracking()
+                        .Where(s => branches.Contains(s.TenantId) && s.Deleted == null)
+                        .Select(s => new {
+                            s.TenantId,
+                            s.BillDate,
+                            s.TotalPayable,
+                            s.Totaldiscount,
+                            s.CustomerId,
+                            SalesItems = s.SalesItems
+                                .Where(si => si.Deleted == null)
+                                .Select(si => new { si.ItemMasterId, si.Qty })
+                        })
+                        .ToListAsync();
+                }
+
+                // 2. Fetch all sales totals for branch & HO summaries
                 var salesTotals = await _dbContext.Saless
-                    .Where(s => branches.Contains(s.TenantId) && s.Deleted == null && s.BillDate >= startOfLastYear)
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .Where(s => branches.Contains(s.TenantId) && s.Deleted == null)
                     .Select(s => new {
                         s.TenantId,
                         s.BillDate,
@@ -118,6 +178,8 @@ namespace EasyBill.Web.Controllers.API
                     .ToList();
 
                 var purchaseCostsList = await _dbContext.PurchaseItems
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
                     .Where(pi => branches.Contains(pi.TenantId) && pi.Deleted == null && soldItemIds.Contains(pi.ItemId))
                     .Select(pi => new { pi.ItemId, pi.Id, pi.BatchWiseCose })
                     .ToListAsync();
@@ -131,12 +193,16 @@ namespace EasyBill.Web.Controllers.API
 
                 // 4. Fetch purchases within the 2-month window
                 var allPurchases = await _dbContext.Purchases
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
                     .Where(p => branches.Contains(p.TenantId) && p.Deleted == null && p.BillDate >= lastMonthStart && p.BillDate <= thisMonthEnd)
                     .Select(p => new { p.TenantId, p.BillDate, p.TotalPayable })
                     .ToListAsync();
 
                 // 5. Fetch stock returns within the 2-month window
                 var salesReturns = await _dbContext.StockReturns
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
                     .Where(x => branches.Contains(x.TenantId) && x.ChallanDate >= lastMonthStart && x.ChallanDate <= thisMonthEnd)
                     .Select(x => new { x.ChallanDate, x.TotalPayable })
                     .ToListAsync();
@@ -256,7 +322,10 @@ namespace EasyBill.Web.Controllers.API
                                 DateName = date.ToString("dd MMM"),
                                 Amount = branchSalesTotals
                                     .Where(s => s.BillDate.HasValue && s.BillDate.Value.Date == date)
-                                    .Sum(s => s.TotalPayable)
+                                    .Sum(s => s.TotalPayable),
+                                PurchaseAmount = allPurchases
+                                    .Where(p => p.TenantId == branchId && p.BillDate.HasValue && p.BillDate.Value.Date == date)
+                                    .Sum(p => p.TotalPayable)
                             })
                             .ToList(),
 
@@ -309,9 +378,9 @@ namespace EasyBill.Web.Controllers.API
         [HttpGet("analytical-report")]
         public async Task<IActionResult> GetAnalyticalReport(string hoTenantId)
         {
-            var allTenants = await _tenantRepo.GetAll();
+            var allTenants = await _dbContext.Tenants.IgnoreQueryFilters().AsNoTracking().ToListAsync();
             var branches = allTenants
-                .Where(t => t.ParentTenantId == hoTenantId) // Excludes HO itself
+                .Where(t => t.ParentTenantId == hoTenantId || t.Id == hoTenantId)
                 .Select(t => t.Id)
                 .ToList();
 
@@ -320,6 +389,8 @@ namespace EasyBill.Web.Controllers.API
 
             // Fetch sales from database
             var salesList = await _dbContext.Saless
+                .IgnoreQueryFilters()
+                .AsNoTracking()
                 .Where(s => branches.Contains(s.TenantId) && s.Deleted == null)
                 .ToListAsync();
 
@@ -353,6 +424,8 @@ namespace EasyBill.Web.Controllers.API
 
             // 3. Top Selling Items
             var topItems = await _dbContext.SalesItems
+                .IgnoreQueryFilters()
+                .AsNoTracking()
                 .Include(si => si.ItemMaster)
                 .Where(si => branches.Contains(si.TenantId) && si.Deleted == null)
                 .GroupBy(si => si.ItemMaster.Name)
@@ -368,6 +441,8 @@ namespace EasyBill.Web.Controllers.API
 
             // 4. Low Stock Alerts
             var lowStockDbList = await _dbContext.Stocks
+                .IgnoreQueryFilters()
+                .AsNoTracking()
                 .Include(st => st.ItemMaster)
                 .Where(st => branches.Contains(st.ItemMaster.TenantId) && st.Stocks <= st.ItemMaster.MinimumQty)
                 .Take(10)
@@ -396,9 +471,9 @@ namespace EasyBill.Web.Controllers.API
         [HttpGet("sales-list")]
         public async Task<IActionResult> GetSalesList(string hoTenantId)
         {
-            var allTenants = await _tenantRepo.GetAll();
+            var allTenants = await _dbContext.Tenants.IgnoreQueryFilters().AsNoTracking().ToListAsync();
             var branches = allTenants
-                .Where(t => t.ParentTenantId == hoTenantId) // Excludes HO itself
+                .Where(t => t.ParentTenantId == hoTenantId || t.Id == hoTenantId)
                 .Select(t => t.Id)
                 .ToList();
 
@@ -406,6 +481,8 @@ namespace EasyBill.Web.Controllers.API
                 return NotFound(new { message = "No branches found for this Head Office." });
 
             var salesList = await _dbContext.Saless
+                .IgnoreQueryFilters()
+                .AsNoTracking()
                 .Where(s => branches.Contains(s.TenantId) && s.Deleted == null)
                 .OrderByDescending(s => s.BillDate)
                 .Take(50)

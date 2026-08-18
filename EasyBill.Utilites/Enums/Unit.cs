@@ -90,7 +90,8 @@ namespace AOne.Utility.Enums
         AllProduct = 1,
         Companies = 2,
         Categories = 3,
-        Selected = 4
+        Selected = 4,
+        SubCategories = 5
     }
     public enum Initials
     {

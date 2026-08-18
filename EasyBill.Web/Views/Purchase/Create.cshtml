@@ -4699,7 +4699,7 @@
         function fixDecimalFields() {
             $("#PurchaseItemBody tr").each(function () {
                 const row = $(this);
-                const decimalFields = ['.mrp', '.salserateA', '.salserateB', '.discount', '.rate', '.freeqty'];
+                const decimalFields = ['.mrp', '.salserateA', '.salserateB', '.discount', '.rate', '.freeqty', '.qty', '.discount-amt', '.gst', '.gstamt', '.cgst', '.cgstamt', '.sgst', '.sgstamt', '.scgst', '.cess', '.total', '.batch-wise'];
 
                 decimalFields.forEach(field => {
                     const $input = row.find(field);

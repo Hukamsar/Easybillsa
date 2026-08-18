@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace EasyBill.Web.Controllers.API
 {
@@ -16,10 +17,12 @@ namespace EasyBill.Web.Controllers.API
     public class HoBranchApiController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMemoryCache _memoryCache;
 
-        public HoBranchApiController(ApplicationDbContext context)
+        public HoBranchApiController(ApplicationDbContext context, IMemoryCache memoryCache)
         {
             _context = context;
+            _memoryCache = memoryCache;
         }
 
         // 1. GET: api/HoBranchApi/branches?hoTenantId=XYZ
@@ -34,14 +37,26 @@ namespace EasyBill.Web.Controllers.API
                 return NotFound(new { success = false, message = "Head Office tenant not found." });
 
             var branches = await _context.Tenants
+                .IgnoreQueryFilters()
+                .Include(t => t.State)
+                .Include(t => t.City)
                 .Where(t => t.ParentTenantId == hoTenantId && t.CompanyType == AOne.Utility.Enums.CompanyType.Branch)
                 .ToListAsync();
+
+            var allStates = await _context.States.IgnoreQueryFilters().Where(s => s.Name != null).ToDictionaryAsync(s => s.Id, s => s.Name);
+            var allCities = await _context.Cities.IgnoreQueryFilters().Where(c => c.Name != null).ToDictionaryAsync(c => c.Id, c => c.Name);
 
             var branchList = branches.Select(b => new {
                 b.Id,
                 b.Name,
                 b.Email,
                 b.MobileNo,
+                b.Zone,
+                b.Region,
+                StateId = b.StateId,
+                StateName = b.State != null ? b.State.Name : (b.StateId.HasValue && allStates.ContainsKey(b.StateId.Value) ? allStates[b.StateId.Value] : (b.StateCode != null ? b.StateCode.ToString() : null)),
+                CityId = b.CityId,
+                CityName = b.City != null ? b.City.Name : (b.CityId.HasValue && allCities.ContainsKey(b.CityId.Value) ? allCities[b.CityId.Value] : (b.Location ?? null)),
                 Address = b.FullAddress
             }).ToList();
 
@@ -108,6 +123,9 @@ namespace EasyBill.Web.Controllers.API
             }
 
             await _context.SaveChangesAsync();
+
+            // Clear the cache for this specific branch so they immediately see the new items
+            _memoryCache.Remove($"ItemMasters_Tenant_{request.BranchTenantId}");
 
             return Ok(new { success = true, message = "Items assigned to branch successfully." });
         }

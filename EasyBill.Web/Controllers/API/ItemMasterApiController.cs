@@ -194,6 +194,7 @@ namespace EasyBill.UI.Controllers.API
             }
 
             var result = await _itemmasterrepository.Create(model);
+            _itemmasterrepository.ClearItemMasterCache(); // Fix: Clear cache so new item shows in UI
             return Ok(new { success = true, message = "Item created successfully.", data = result });
         }
 
@@ -245,6 +246,7 @@ namespace EasyBill.UI.Controllers.API
 
             }
             await _itemmasterrepository.Update(model);
+            _itemmasterrepository.ClearItemMasterCache(); // Fix: Clear cache so updated item shows in UI
 
             return Ok(new { success = true, message = "Item updated successfully." });
         }
@@ -263,6 +265,7 @@ namespace EasyBill.UI.Controllers.API
                 return NotFound(new { success = false, message = "Item not found." });
 
             await _itemmasterrepository.Delete(model);
+            _itemmasterrepository.ClearItemMasterCache(); // Fix: Clear cache so deleted item is removed from UI
 
             return Ok(new { success = true, message = "Item deleted successfully." });
         }

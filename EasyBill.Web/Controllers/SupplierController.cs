@@ -85,7 +85,6 @@ namespace EasyBill.UI.Controllers
             return View(supplierVM);
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Create(SupplierVM supplierVM)
         {
             if (!ModelState.IsValid)
@@ -172,7 +171,6 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<JsonResult> CreateSupplier(SupplierVM model)
         {
             var supplierData = await _supplierRepo.GetALL();
@@ -281,7 +279,6 @@ namespace EasyBill.UI.Controllers
             return View(supplierVM);
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(SupplierVM VM)
         {
 
@@ -362,7 +359,6 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -415,7 +411,6 @@ namespace EasyBill.UI.Controllers
             return View();
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> ImportSupplier(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -662,7 +657,6 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> QuickSaveAccountGroup(int id, string name, int? parentId, bool isActive)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -707,7 +701,6 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> QuickSaveCountry(int id, string name)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -739,7 +732,6 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> QuickSaveState(int id, string name, int countryId)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -775,7 +767,6 @@ namespace EasyBill.UI.Controllers
         }
 
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> QuickSaveCity(int id, string name, int stateId, int countryId)
         {
             if (string.IsNullOrWhiteSpace(name))

@@ -282,6 +282,22 @@
                             <span asp-validation-for="ParentTenantId" class="text-danger"></span>
                         </div>
                     </div>
+                    <div id="regionZoneContainer" style="display: none;">
+                        <div class="row mb-2">
+                            <label asp-for="Region" class="col-md-4 col-form-label text-start">Region <span class="text-danger">*</span></label>
+                            <div class="col-md-8">
+                                <input asp-for="Region" id="RegionInput" type="text" class="form-control form-control-sm" placeholder="e.g. North India" />
+                                <span asp-validation-for="Region" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <label asp-for="Zone" class="col-md-4 col-form-label text-start">Zone <span class="text-danger">*</span></label>
+                            <div class="col-md-8">
+                                <input asp-for="Zone" id="ZoneInput" type="text" class="form-control form-control-sm" placeholder="e.g. Delhi NCR" />
+                                <span asp-validation-for="Zone" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
                     <div class="row mb-2">
                         <label asp-for="BranchCode" class="col-md-4 col-form-label text-start">Branch Code</label>
                         <div class="col-md-8">
@@ -669,6 +685,7 @@
                             if (currentValue) {
                                 dropdown.val(currentValue);
                             }
+                            toggleRegionZone();
                         },
                         error: function() {
                             console.error("Failed to load head offices");
@@ -678,11 +695,28 @@
                 } else {
                     $("#parentTenantContainer").hide();
                     $("#ParentTenantSelect").val("").prop("disabled", true).prop("required", false);
+                    toggleRegionZone();
+                }
+            }
+
+            function toggleRegionZone() {
+                var compType = $("#CompanyTypeSelect").val();
+                var parentHo = $("#ParentTenantSelect").val();
+                if (compType === "2" && parentHo !== "" && parentHo !== null && parentHo !== undefined) {
+                    $("#regionZoneContainer").show();
+                    $("#RegionInput, #ZoneInput").prop("required", true);
+                } else {
+                    $("#regionZoneContainer").hide();
+                    if (compType !== "2") {
+                        $("#RegionInput, #ZoneInput").val("").prop("required", false);
+                    }
                 }
             }
 
             $("#CompanyTypeSelect").on("change", toggleParentTenant);
+            $("#ParentTenantSelect").on("change", toggleRegionZone);
             toggleParentTenant(); // Initialize on page load
+            toggleRegionZone();
 
             // Checkbox Tree Logic for Tenant Module Access Override
             $(".tenant-parent-chk").on("change", function () {
@@ -794,6 +828,21 @@
 
                     Swal.fire("Error", "Please enter Company Name!", "error");
                     return false;
+                }
+
+                let compTypeVal = $("#CompanyTypeSelect").val();
+                if (compTypeVal === "2") {
+                    let parentHoVal = $("#ParentTenantSelect").val();
+                    if (!parentHoVal) {
+                        Swal.fire("Error", "Please select Parent Head Office for Branch!", "error");
+                        return false;
+                    }
+                    let regionVal = $("#RegionInput").val()?.trim();
+                    let zoneVal = $("#ZoneInput").val()?.trim();
+                    if (!regionVal || !zoneVal) {
+                        Swal.fire("Error", "Please provide both Region and Zone when creating a Branch!", "error");
+                        return false;
+                    }
                 }
 
                 $.ajax({
@@ -1422,8 +1471,9 @@
         // ==========================================
         $(document).ready(function () {
             function toggleParentTenant() {
+                var compType = $("#CompanyTypeSelect").val();
                 // 2 is Branch enum value
-                if ($("#CompanyTypeSelect").val() == "2") {
+                if (compType == "2") {
                     $("#parentTenantContainer").show();
                     $("#ParentTenantSelect").prop('required', true);
                     $("#subscriptionPlanId").prop('disabled', true);
@@ -1437,6 +1487,17 @@
                     $("#ParentTenantSelect").val('');
                     $("#subscriptionPlanId").prop('disabled', false);
                     $(".branch-plan-info").remove();
+
+                    // 1 is Head Office enum value
+                    if (compType == "1") {
+                        // Pre-select "Supreme Plan" by default for Head Office
+                        $("#subscriptionPlanId option").filter(function() {
+                            return $(this).text().trim() === 'Supreme Plan';
+                        }).prop('selected', true);
+                    } else {
+                        // For other types (e.g. Standalone), clear the selection so they must choose
+                        $("#subscriptionPlanId").val('');
+                    }
                 }
             }
 

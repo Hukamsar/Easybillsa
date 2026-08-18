@@ -253,7 +253,7 @@ namespace EasyBill.UI.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var setting = await _salsesettingservice.GetByUserId(userId);
             bool isTabletWise = setting != null && setting.ItemConversion == "TabletWise";
-            var itemMasters = (await _itemmasterservice.GetAll()).Where(x => x.IsActive).ToList();
+            var itemMasters = await _itemmasterservice.GetAll();
 
             // 4. Mapping View-Model to Entity
             var model = new StockIssue
@@ -286,7 +286,7 @@ namespace EasyBill.UI.Controllers
 
                 StockIssuesItems = Vm.StockIssuesItemVMs?.Where(x => x.ItemMasterId > 0).Select(x =>
                 {
-                    var item = itemMasters.FirstOrDefault(i => i.Id == x.ItemMasterId);
+                    var item = itemMasters.FirstOrDefault(i => i.IsActive && i.Id == x.ItemMasterId);
                     decimal finalQty = x.Qty;
                     if (isTabletWise && item != null && item.Conversion > 0)
                     {
@@ -648,7 +648,7 @@ namespace EasyBill.UI.Controllers
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var setting = await _salsesettingservice.GetByUserId(userId);
             bool isTabletWise = setting != null && setting.ItemConversion == "TabletWise";
-            var itemMasters = (await _itemmasterservice.GetAll()).Where(x => x.IsActive).ToList();
+            var itemMasters = await _itemmasterservice.GetAll();
 
             StockIssue model = await _stockissueservice.GetById(VM.Id);
             if (model == null) return Json(new { success = false, message = "Record not found." });
@@ -711,7 +711,7 @@ namespace EasyBill.UI.Controllers
             // 2. Update/Add Items
             foreach (var item in VM.StockIssuesItemVMs)
             {
-                var itemMaster = itemMasters.FirstOrDefault(i => i.Id == item.ItemMasterId);
+                var itemMaster = itemMasters.FirstOrDefault(i => i.IsActive && i.Id == item.ItemMasterId);
                 decimal finalQty = item.Qty;
                 if (isTabletWise && itemMaster != null && itemMaster.Conversion > 0)
                 {

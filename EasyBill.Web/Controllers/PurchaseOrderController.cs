@@ -76,7 +76,6 @@ namespace EasyBill.UI.Controllers
             return View(model);
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Create(PurchaseOrderVM VM)
         {
             if (!ModelState.IsValid)
@@ -293,7 +292,6 @@ namespace EasyBill.UI.Controllers
             return View(purchaseVM);
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(PurchaseOrderVM VM)
         {
             PurchaseOrder model = await _purchaseOrderRepo.GetById(VM.Id);
@@ -434,7 +432,6 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -514,7 +511,6 @@ namespace EasyBill.UI.Controllers
             return View(model);
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public IActionResult GenerateReorder(POWithAIVM VM)
         {
             if (!ModelState.IsValid)

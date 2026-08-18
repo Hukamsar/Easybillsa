@@ -70,6 +70,12 @@ namespace EasyBill.Models.ViewModels
 
         [Display(Name = "Parent Head Office")]
         public string? ParentTenantId { get; set; }
+
+        [Display(Name = "Region")]
+        public string? Region { get; set; }
+
+        [Display(Name = "Zone")]
+        public string? Zone { get; set; }
     }
 
     public class MergeTenantsRequest

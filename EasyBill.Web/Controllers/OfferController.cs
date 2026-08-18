@@ -11,16 +11,19 @@ namespace EasyBill.UI.Controllers
         private readonly IItemMasterRepository _itemmasterrepo;
         private readonly ICompanyRepository _companyrepo;
         private readonly ICategoryMasterRepository _categorymasterrepo;
+        private readonly ISubCategoryRepository _subcategoryrepo;
         public OfferController(
             IOfferRepository offerrepo, 
             IItemMasterRepository itemmasterrepo,
             ICompanyRepository companyrepo,
-            ICategoryMasterRepository categorymasterrepo)
+            ICategoryMasterRepository categorymasterrepo,
+            ISubCategoryRepository subcategoryrepo)
         {
             _offerrepo = offerrepo;
             _itemmasterrepo = itemmasterrepo;
             _companyrepo = companyrepo;
             _categorymasterrepo = categorymasterrepo;
+            _subcategoryrepo = subcategoryrepo;
         }
         public async Task<IActionResult> Index()
         {
@@ -28,16 +31,17 @@ namespace EasyBill.UI.Controllers
             return View(data);
         }
         [HttpGet]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Create()
         {
             var viewModel = new OfferVM();
             var itemdata = await _itemmasterrepo.GetAll();
             var companydata = await _companyrepo.GetAll();
             var categorydata = await _categorymasterrepo.GetAll();
+            var subcategorydata = await _subcategoryrepo.GetAll();
             ViewBag.Item = new SelectList(itemdata, "Id", "Name");
             ViewBag.Company = new SelectList(companydata, "Id", "Name");
             ViewBag.Category = new SelectList(categorydata, "Id", "CategoryName");
+            ViewBag.SubCategory = new SelectList(subcategorydata, "Id", "Name");
             ViewBag.OfferType = Enum.GetValues(typeof(OfferType)) .Cast<OfferType>()
                              .Select(s => new SelectListItem
                              {
@@ -55,13 +59,14 @@ namespace EasyBill.UI.Controllers
             return View(viewModel);
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Create(OfferVM VM)
         {
+            var currentTenantId = User.FindFirst("TenantId")?.Value;
             if (VM != null)
             {
                 var model = new Offer
                 {
+                    TenantId = currentTenantId,
                     OfferName = VM.OfferName,
                     OfferType = VM.OfferType,
                     Applicable = VM.Applicable,
@@ -73,6 +78,7 @@ namespace EasyBill.UI.Controllers
                     EndTime = VM.EndTime,
                     CompanyId = VM.CompanyId,
                     CategoryId = VM.CategoryId,
+                    SubCategoryId = VM.SubCategoryId,
                     ItemId = VM.ItemId,
                     BuyQty = VM.BuyQty,
                     FreeQty = VM.FreeQty,
@@ -92,10 +98,15 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpGet]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(int Id)
         {
             Offer model = await _offerrepo.GetById(Id);
+            var currentTenantId = User.FindFirst("TenantId")?.Value;
+            if (model != null && model.TenantId != currentTenantId && model.Tenant?.ParentTenantId != currentTenantId)
+            {
+                return Unauthorized();
+            }
+            
             OfferVM VM = new OfferVM();
             if (model != null)
             {
@@ -111,6 +122,7 @@ namespace EasyBill.UI.Controllers
                 VM.EndTime = model.EndTime;
                 VM.CompanyId = model.CompanyId;
                 VM.CategoryId = model.CategoryId;
+                VM.SubCategoryId = model.SubCategoryId;
                 VM.ItemId = model.ItemId;
                 VM.BuyQty = model.BuyQty;
                 VM.FreeQty = model.FreeQty;
@@ -129,9 +141,11 @@ namespace EasyBill.UI.Controllers
             var itemdata = await _itemmasterrepo.GetAll();
             var companydata = await _companyrepo.GetAll();
             var categorydata = await _categorymasterrepo.GetAll();
+            var subcategorydata = await _subcategoryrepo.GetAll();
             ViewBag.Item = new SelectList(itemdata, "Id", "Name");
             ViewBag.Company = new SelectList(companydata, "Id", "Name");
             ViewBag.Category = new SelectList(categorydata, "Id", "CategoryName");
+            ViewBag.SubCategory = new SelectList(subcategorydata, "Id", "Name");
             ViewBag.OfferType = Enum.GetValues(typeof(OfferType)).Cast<OfferType>()
                              .Select(s => new SelectListItem
                              {
@@ -147,10 +161,15 @@ namespace EasyBill.UI.Controllers
             return View(VM);
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Edit(OfferVM VM)
         {
             Offer model = await _offerrepo.GetById(VM.Id);
+            var currentTenantId = User.FindFirst("TenantId")?.Value;
+            if (model != null && model.TenantId != currentTenantId && model.Tenant?.ParentTenantId != currentTenantId)
+            {
+                return Unauthorized();
+            }
+
             if (model != null)
             {
                 model.Id = VM.Id;
@@ -165,6 +184,7 @@ namespace EasyBill.UI.Controllers
                 model.EndTime = VM.EndTime;
                 model.CompanyId = VM.CompanyId;
                 model.CategoryId = VM.CategoryId;
+                model.SubCategoryId = VM.SubCategoryId;
                 model.ItemId = VM.ItemId;
                 model.BuyQty = VM.BuyQty;
                 model.FreeQty = VM.FreeQty;
@@ -207,7 +227,6 @@ namespace EasyBill.UI.Controllers
             return RedirectToAction("Index");
         }
         [HttpPost]
-        [HeadOfficeOnly]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -217,6 +236,11 @@ namespace EasyBill.UI.Controllers
                     return Json(new { success = false, message = "Invalid Id for deletion." });
                 }
                 var model = await _offerrepo.GetById(id);
+                var currentTenantId = User.FindFirst("TenantId")?.Value;
+                if (model != null && model.TenantId != currentTenantId && model.Tenant?.ParentTenantId != currentTenantId)
+                {
+                    return Json(new { success = false, message = "Unauthorized to delete this offer." });
+                }
 
                 if (model == null)
                 {

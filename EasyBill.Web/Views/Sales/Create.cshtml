@@ -6021,7 +6021,22 @@
         }
 
         window.currentFreeItems.forEach(item => {
-            window.addNewRow(item.itemMasterId, item.itemName, item.qty, item.rate);
+            let formattedExpiry = "";
+            if (item.expirydate) {
+                const d = new Date(item.expirydate);
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const yyyy = d.getFullYear();
+                formattedExpiry = `${mm}/${yyyy}`;
+            }
+            window.addNewRow(
+                item.itemMasterId, 
+                item.itemName, 
+                item.qty, 
+                item.rate, 
+                item.batch || "", 
+                formattedExpiry, 
+                item.mrp || 0
+            );
             toastr.success(`Added free item: ${item.itemName} (Qty: ${item.qty})`);
         });
         

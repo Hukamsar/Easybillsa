@@ -1,4 +1,4 @@
-﻿@* @model EasyBill.Models.Entity.Sales
+@* @model EasyBill.Models.Entity.Sales
 
 @{
     // यह लेआउट को कॉल करेगा जो हमने ऊपर फिक्स किया है
@@ -199,6 +199,12 @@
             {
                 <div class="info-text"><strong>Type:</strong> <span style="text-transform: capitalize;">@Model.billingType</span></div>
             }
+            @if (ViewBag.AppliedOfferName != null)
+            {
+                <div class="info-text" style="margin-top: 4px; border: 1px dashed #166534; padding: 2px 4px; display: inline-block; color: #166534; background-color: #f0fdf4;">
+                    <strong>Offer Applied:</strong> @ViewBag.AppliedOfferName
+                </div>
+            }
             <div>
                 @if (balance <= 0)
                 {
@@ -234,7 +240,13 @@
                         <tr>
                             <td style="text-align: left; color: #64748b; font-weight: 700;">@slNo</td>
                             <td>
-                                <div class="item-primary-text">@(item.ItemMaster?.Name ?? "Item Code: " + item.ItemMasterId)</div>
+                                <div class="item-primary-text">
+                                    @(item.ItemMaster?.Name ?? "Item Code: " + item.ItemMasterId)
+                                    @if(item.Rate == 0)
+                                    {
+                                        <span style="font-size: 10px; color: #166534; font-weight: bold; margin-left: 5px;">(Free Item)</span>
+                                    }
+                                </div>
                                 @if (!string.IsNullOrEmpty(item.Batch) || item.Expirydate.HasValue)
                                 {
                                     <div class="item-secondary-text">

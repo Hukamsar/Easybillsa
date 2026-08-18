@@ -100,6 +100,18 @@
                             </div>
                     </div>
                 
+                    <div id="subCategorySection" class="col-md-6 d-flex align-items-center mb-1 border-radious d-none">
+                        <div class="col-md-5 ">
+                            <label>Sub Category</label>
+                        </div>
+                        <div class="col-md-5 ">
+                            <select asp-for="SubCategoryId" asp-items="@ViewBag.SubCategory" class="form-select form-select-sm">
+                                <option value="">select</option>
+                            </select>
+                            <span asp-validation-for="SubCategoryId" class="text-danger small"></span>
+                        </div>
+                    </div>
+                
                     <div id="categorySection" class="col-md-6 d-flex align-items-center mb-1 border-radious d-none">
                         <div class="col-md-5 ">
                             <label>Category</label>
@@ -111,32 +123,38 @@
                             <span asp-validation-for="CategoryId" class="text-danger small"></span>
                         </div>
                     </div>
+                </div>
 
-                   
+                <!-- Always force StartDate and EndDate into their own perfectly aligned row -->
+                <div class="row">
                     <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
                         <div class="col-md-5 ">
                             <label asp-for="StartDate"></label>
                         </div>
                         <div class="col-md-5">
-                            <input type="date" asp-for="StartDate" class="form-control form-control-sm" />
+                            <input asp-for="StartDate" type="date" class="form-control form-control-sm" />
                             <span asp-validation-for="StartDate" class="text-danger small"></span>
                         </div>
                     </div>
+
                     <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
                         <div class="col-md-5 ">
                             <label asp-for="EndDate"></label>
                         </div>
                         <div class="col-md-5">
-                            <input type="date" asp-for="EndDate" class="form-control form-control-sm" />
+                            <input asp-for="EndDate" type="date" class="form-control form-control-sm" />
                             <span asp-validation-for="EndDate" class="text-danger small"></span>
                         </div>
                     </div>
+                </div>
+
+                <div class="row">
                     <div class="col-md-6 d-flex align-items-center mb-1 border-radious ">
                         <div class="col-md-5 ">
                             <label asp-for="IsActive"></label>
                         </div>
                         <div class="col-md-5">
-                            <input type="checkbox" asp-for="IsActive" class="form-check form-control-sm" /> 
+                            <input asp-for="IsActive" type="checkbox" />
                         </div>
                     </div>
                 </div>
@@ -230,11 +248,17 @@
                 if (applicable === "Companies") {
                     $('#companySection').removeClass('d-none');
                     $('#categorySection').addClass('d-none');
+                    $('#subCategorySection').addClass('d-none');
                 } else if (applicable === "Categories") {
                     $('#companySection').addClass('d-none');
                     $('#categorySection').removeClass('d-none');
+                    $('#subCategorySection').addClass('d-none');
+                } else if (applicable === "SubCategories") {
+                    $('#companySection').addClass('d-none');
+                    $('#categorySection').addClass('d-none');
+                    $('#subCategorySection').removeClass('d-none');
                 } else {
-                    $('#companySection, #categorySection').addClass('d-none');
+                    $('#companySection, #categorySection, #subCategorySection').addClass('d-none');
                 }
             }
 

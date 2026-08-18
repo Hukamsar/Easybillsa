@@ -105,11 +105,7 @@ namespace AOne.DataAccess.Repository
                                 {
                                     if (hasParent)
                                     {
-                                        if (k.Equals("Master.Area", StringComparison.OrdinalIgnoreCase) ||
-                                            k.Equals("Master.Offers", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            continue;
-                                        }
+
 
                                         if (parentAllowedFeatures.Contains(k))
                                         {
@@ -131,11 +127,7 @@ namespace AOne.DataAccess.Repository
                     {
                         foreach (var pk in parentAllowedFeatures)
                         {
-                            if (pk.Equals("Master.Area", StringComparison.OrdinalIgnoreCase) ||
-                                pk.Equals("Master.Offers", StringComparison.OrdinalIgnoreCase))
-                            {
-                                continue;
-                            }
+
                             _allowedFeatures.Add(pk);
                         }
                         return;

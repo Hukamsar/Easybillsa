@@ -224,7 +224,7 @@ namespace EasyBill.UI.Controllers
             bool isTabletWise = setting != null && setting.ItemConversion == "TabletWise";
 
 
-            var itemMasters = (await _itemmasterservice.GetAll()).Where(x => x.IsActive).OrderBy(x => x.Name);
+            var itemMasters = await _itemmasterservice.GetAll();
 
             if (Vm != null)
             {
@@ -301,7 +301,7 @@ namespace EasyBill.UI.Controllers
                     TotalCessAmount = Vm.TotalCessAmount,
                     SalesItems = Vm.SalesItemVMs?.Select(x =>
                     {
-                        var item = itemMasters.FirstOrDefault(i => i.Id == x.ItemMasterId);
+                        var item = itemMasters.FirstOrDefault(i => i.IsActive && i.Id == x.ItemMasterId);
 
                         decimal finalQty = x.Qty;
                         if (isTabletWise && item != null && item.Conversion > 0)
@@ -721,7 +721,9 @@ namespace EasyBill.UI.Controllers
                 VM.Balance = model.Balance;
 
                 // GET ALL ITEMS FOR CONVERSION LOOKUP
-                var itemMasters = (await _itemmasterservice.GetAll()).ToDictionary(x => x.Id, x => x);
+                var neededIds = model.SalesItems?.Select(si => si.ItemMasterId).ToHashSet() ?? new HashSet<int>();
+                var allItems = await _itemmasterservice.GetAll();
+                var itemMasters = allItems.Where(i => neededIds.Contains(i.Id)).ToDictionary(i => i.Id, i => i);
 
                 // CHECK IF TABLET-WISE MODE
                 bool isTabletWiseMode = setting != null && setting.ItemConversion == "TabletWise";
@@ -896,9 +898,7 @@ namespace EasyBill.UI.Controllers
             var setting = await _salsesettingservice.GetByUserId(userId);
             bool isTabletWise = setting != null && setting.ItemConversion == "TabletWise";
 
-            var itemMasters = (await _itemmasterservice.GetAll())
-                .Where(x => x.IsActive)
-                .OrderBy(x => x.Name);
+            var itemMasters = await _itemmasterservice.GetAll();
 
             Models.Entity.Sales model = await _salesservice.GetById(VM.Id);
             if (model != null)
@@ -970,7 +970,7 @@ namespace EasyBill.UI.Controllers
                 foreach (var item in VM.SalesItemVMs)
                 {
                     // GET ITEM MASTER FOR CONVERSION
-                    var itemMaster = itemMasters.FirstOrDefault(i => i.Id == item.ItemMasterId);
+                    var itemMaster = itemMasters.FirstOrDefault(i => i.IsActive && i.Id == item.ItemMasterId);
 
                     // CALCULATE FINAL QTY (STRIP-BASED, SAME AS CREATE)
                     decimal finalQty = item.Qty;
@@ -5850,7 +5850,10 @@ namespace EasyBill.UI.Controllers
                                         ItemMasterId = cartItem.ItemMasterId,
                                         ItemName = itemObj?.Name ?? "Free Item",
                                         Qty = multiples * freeQty,
-                                        Rate = 0
+                                        Rate = 0,
+                                        Batch = cartItem.Batch,
+                                        Expirydate = cartItem.Expirydate,
+                                        Mrp = cartItem.Mrp
                                     });
                                     currentOfferDiscountValue += (multiples * freeQty * cartItem.Rate); 
 
@@ -5875,12 +5878,23 @@ namespace EasyBill.UI.Controllers
                                 if (match != null && match.Qty >= offerItem.BuyQty)
                                 {
                                     int multiples = (int)(match.Qty / offerItem.BuyQty);
+                                    
+                                    var freeItemObj = await _itemmasterservice.GetByItemMasterId(offerItem.FreeItemId ?? 0);
+                                    
+                                    // Optionally try to find a valid stock batch for the free item
+                                    var allStock = await _currenstockService.GetAll();
+                                    var freeStock = allStock.FirstOrDefault(s => s.ItemId == offerItem.FreeItemId && s.Qty > 0) 
+                                                    ?? allStock.FirstOrDefault(s => s.ItemId == offerItem.FreeItemId);
+
                                     currentResult.FreeItems.Add(new SalesItemVM
                                     {
                                         ItemMasterId = offerItem.FreeItemId ?? 0,
-                                        ItemName = offerItem.FreeItem?.Name ?? "Free Item",
+                                        ItemName = freeItemObj?.Name ?? "Free Item",
                                         Qty = multiples * offerItem.FreeQty,
-                                        Rate = 0
+                                        Rate = 0,
+                                        Batch = freeStock?.Batch ?? "",
+                                        Expirydate = freeStock?.ExpiryDate,
+                                        Mrp = freeStock?.Mrp ?? freeItemObj?.Mrp ?? 0
                                     });
                                     currentOfferDiscountValue += (multiples * offerItem.FreeQty * match.Rate); 
 
@@ -9024,6 +9038,16 @@ namespace EasyBill.UI.Controllers
             // 1. Fetch Actual Sales Data
             var salesData = await _salesService.GetById(id);
 
+            if (salesData != null && salesData.OfferId.HasValue)
+            {
+                var offer = await _offerrepo.GetById(salesData.OfferId.Value);
+                if (offer != null)
+                {
+                    ViewBag.AppliedOfferName = offer.OfferName;
+                    ViewBag.AppliedOfferType = offer.OfferType.ToString();
+                }
+            }
+
             if (salesData != null && salesData.CustomerId.HasValue)
             {
                 var pointSettings = await _unitofwork.GetRepository<PointSetting>().Query()
@@ -10667,6 +10691,16 @@ namespace EasyBill.UI.Controllers
             try
             {
                 var saleData = await _salesService.GetById(id);
+                
+                if (saleData != null && saleData.OfferId.HasValue)
+                {
+                    var offer = await _offerrepo.GetById(saleData.OfferId.Value);
+                    if (offer != null)
+                    {
+                        ViewBag.AppliedOfferName = offer.OfferName;
+                        ViewBag.AppliedOfferType = offer.OfferType.ToString();
+                    }
+                }
 
                 if (saleData != null && saleData.CustomerId.HasValue)
                 {

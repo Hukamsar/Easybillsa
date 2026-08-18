@@ -127,11 +127,7 @@ namespace EasyBill.UI.Helpers
                             {
                                 if (hasParent)
                                 {
-                                    if (k.Equals("Master.Area", StringComparison.OrdinalIgnoreCase) ||
-                                        k.Equals("Master.Offers", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        continue;
-                                    }
+
 
                                     if (parentAllowedFeatures.Contains(k))
                                     {
@@ -153,11 +149,7 @@ namespace EasyBill.UI.Helpers
                 {
                     foreach (var pk in parentAllowedFeatures)
                     {
-                        if (pk.Equals("Master.Area", StringComparison.OrdinalIgnoreCase) ||
-                            pk.Equals("Master.Offers", StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
+
                         allowedFeatures.Add(pk);
                     }
                     return allowedFeatures;

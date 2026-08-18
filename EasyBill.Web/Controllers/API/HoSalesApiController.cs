@@ -28,14 +28,35 @@ namespace EasyBill.Web.Controllers.API
             _dbContext = dbContext;
         }
 
+        private string GetTenantId()
+        {
+            var tenantId = Request.Headers["TenantId"].FirstOrDefault();
+            if (string.IsNullOrEmpty(tenantId) || tenantId == "undefined" || tenantId == "null")
+            {
+                tenantId = User.FindFirst("TenantId")?.Value 
+                        ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value
+                        ?? User.FindFirst("sub")?.Value;
+            }
+
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                var firstTenant = _dbContext.Tenants.IgnoreQueryFilters().AsNoTracking().FirstOrDefault(t => t.ParentTenantId == null || t.ParentTenantId == "");
+                if (firstTenant != null) tenantId = firstTenant.Id;
+            }
+
+            return tenantId ?? "";
+        }
+
         [HttpGet("GetBranches")]
         public async Task<IActionResult> GetBranches()
         {
-            var hoTenantId = User.FindFirst("TenantId")?.Value;
+            var hoTenantId = GetTenantId();
             if (string.IsNullOrEmpty(hoTenantId))
-                return Unauthorized(new { success = false, message = "HO Tenant ID missing in token." });
+                return Unauthorized(new { success = false, message = "HO Tenant ID missing." });
 
             var branches = await _dbContext.Tenants
+                .IgnoreQueryFilters()
+                .AsNoTracking()
                 .Where(t => t.ParentTenantId == hoTenantId)
                 .Select(t => new { t.Id, t.Name, t.BranchCode })
                 .ToListAsync();
@@ -46,11 +67,13 @@ namespace EasyBill.Web.Controllers.API
         [HttpGet("GetSalesLog")]
         public async Task<IActionResult> GetSalesLog(DateTime? fromDate, DateTime? toDate, string? branchId)
         {
-            var hoTenantId = User.FindFirst("TenantId")?.Value;
+            var hoTenantId = GetTenantId();
             if (string.IsNullOrEmpty(hoTenantId))
-                return Unauthorized(new { success = false, message = "HO Tenant ID missing in token." });
+                return Unauthorized(new { success = false, message = "HO Tenant ID missing." });
 
             var branchTenantIds = await _dbContext.Tenants
+                .IgnoreQueryFilters()
+                .AsNoTracking()
                 .Where(t => t.ParentTenantId == hoTenantId)
                 .Select(t => t.Id)
                 .ToListAsync();
@@ -85,7 +108,7 @@ namespace EasyBill.Web.Controllers.API
                     s.Id,
                     s.BillNo,
                     s.BillDate,
-                    TotalQty = s.SalesItems.Sum(si => si.Qty),
+                    TotalQty = s.SalesItems.Sum(si => (decimal?)si.Qty) ?? 0,
                     s.Total,
                     TotalDiscount = s.Totaldiscount,
                     GstAmt = s.TotalGstAmt,
@@ -100,6 +123,8 @@ namespace EasyBill.Web.Controllers.API
                 .ToListAsync();
 
             var tenantNames = await _dbContext.Tenants
+                .IgnoreQueryFilters()
+                .AsNoTracking()
                 .Where(t => branchTenantIds.Contains(t.Id) || t.Id == hoTenantId)
                 .ToDictionaryAsync(t => t.Id, t => t.Name);
 
@@ -135,6 +160,8 @@ namespace EasyBill.Web.Controllers.API
                 return Unauthorized(new { success = false, message = "HO Tenant ID missing in token." });
 
             var branchTenantIds = await _dbContext.Tenants
+                .IgnoreQueryFilters()
+                .AsNoTracking()
                 .Where(t => t.ParentTenantId == hoTenantId)
                 .Select(t => t.Id)
                 .ToListAsync();
@@ -153,10 +180,12 @@ namespace EasyBill.Web.Controllers.API
 
             var itemMasterIds = sale.SalesItems?.Select(si => si.ItemMasterId).Distinct().ToList() ?? new List<int>();
             var items = await _dbContext.ItemMasters
+                .IgnoreQueryFilters()
+                .AsNoTracking()
                 .Where(im => itemMasterIds.Contains(im.Id))
                 .ToDictionaryAsync(im => im.Id, im => im.Name);
 
-            var tenant = await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == sale.TenantId);
+            var tenant = await _dbContext.Tenants.IgnoreQueryFilters().AsNoTracking().FirstOrDefaultAsync(t => t.Id == sale.TenantId);
 
             var result = new
             {

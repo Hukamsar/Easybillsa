@@ -606,6 +606,13 @@
                 <span><b>Time:</b> @DateTime.Now.ToString("hh:mm tt")</span>
             </div>
 
+            @if (ViewBag.AppliedOfferName != null)
+            {
+                <div style="margin-top: 4px; border-top: 1px dashed #000; padding-top: 4px; padding-bottom: 2px;">
+                    <span style="font-weight: 800;">Offer Applied:</span> @ViewBag.AppliedOfferName
+                </div>
+            }
+
             <div class="line" style="margin: 5px 0;"></div>
 
             <div style="margin-bottom: 2px;"><b>Customer:</b> @(Model?.Customers?.Name ?? "Walk-in")</div>
@@ -657,7 +664,13 @@
                         var itemSubText = string.Join(" | ", subParts);
                         <tr>
                             <td class="item-name">
-                                <span class="item-main">@(item.ItemMaster?.Name ?? "Item")</span>
+                                <span class="item-main">
+                                    @(item.ItemMaster?.Name ?? "Item")
+                                    @if(item.Rate == 0)
+                                    {
+                                        <span style="font-size: 8px; color: #166534; margin-left: 2px;">(Free)</span>
+                                    }
+                                </span>
                                 <span class="item-sub">@itemRateLine</span>
                                 @if (!string.IsNullOrWhiteSpace(itemSubText))
                                 {

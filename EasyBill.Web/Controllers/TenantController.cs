@@ -193,6 +193,8 @@ namespace AOneWeb.Controllers
                      CompanyType = viewMode.CompanyType ?? CompanyType.HeadOffice,
                      IsHeadOffice = (viewMode.CompanyType == CompanyType.HeadOffice || viewMode.CompanyType == CompanyType.Standalone),
                      ParentTenantId = (viewMode.CompanyType == CompanyType.Branch) ? viewMode.ParentTenantId : null,
+                     Region = (viewMode.CompanyType == CompanyType.Branch) ? viewMode.Region : null,
+                     Zone = (viewMode.CompanyType == CompanyType.Branch) ? viewMode.Zone : null,
                      Branch = viewMode.Branch,
                      Logo = viewMode.Logo,
                      Description = viewMode.Description,
@@ -315,6 +317,8 @@ namespace AOneWeb.Controllers
                 Vm.TaxType = model.TaxType;
                 Vm.SubscriptionPlanId = model.SubscriptionPlanId;
                 Vm.ParentTenantId = model.ParentTenantId;
+                Vm.Region = model.Region;
+                Vm.Zone = model.Zone;
 
                 if (!string.IsNullOrEmpty(model.AllowedModulesJson))
                 {
@@ -403,6 +407,8 @@ namespace AOneWeb.Controllers
                 model.CompanyType = Vm.CompanyType ?? CompanyType.HeadOffice;
                 model.IsHeadOffice = (model.CompanyType == CompanyType.HeadOffice || model.CompanyType == CompanyType.Standalone);
                 model.ParentTenantId = model.IsHeadOffice ? null : Vm.ParentTenantId;
+                model.Region = model.IsHeadOffice ? null : Vm.Region;
+                model.Zone = model.IsHeadOffice ? null : Vm.Zone;
                 model.Branch = Vm.Branch;
                 model.Logo = Vm.Logo;
                 model.Description = Vm.Description;

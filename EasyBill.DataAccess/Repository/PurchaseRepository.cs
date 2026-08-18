@@ -19,6 +19,7 @@ namespace EasyBill.DataAccess.Repository
     {
         private readonly IStockService _stockService;
         private readonly IUnitOfWork _unitofwork;
+        private readonly ITenantAccessor _tenantAccessor;
         public PurchaseRepository(
             IUnitOfWork unitofwork,
             ApplicationDbContext dbContext,
@@ -29,6 +30,7 @@ namespace EasyBill.DataAccess.Repository
         {
             _unitofwork = unitofwork;
             _stockService = stockService;
+            _tenantAccessor = tenantAccessor;
         }
 
         #region Create Purchase
@@ -673,19 +675,8 @@ namespace EasyBill.DataAccess.Repository
 
         public async Task<bool> IsBillNoDuplicateAsync(string billNo, int id = 0)
         {
-            return await WithStoredProcedureCommandAsync("dbo.usp_Purchase_IsBillNoDuplicate", async command =>
-            {
-                // Parameters
-                AddParameter(command, "@BillNo", billNo);
-                AddParameter(command, "@Id", id, DbType.Int32);
-
-                // Tenant filter (IMPORTANT)
-                AddFilterParameters(command);
-
-                var result = await command.ExecuteScalarAsync();
-
-                return result != null && Convert.ToBoolean(result);
-            });
+            var tenantid = _tenantAccessor.GetCurrentTenantId();
+            return await DbContext.Purchases.AnyAsync(s => s.BillNo == billNo && s.Id != id && s.TenantId == tenantid);
         }
     }
 
