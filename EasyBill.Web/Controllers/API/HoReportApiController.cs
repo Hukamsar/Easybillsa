@@ -25,7 +25,7 @@ namespace EasyBill.Web.Controllers.API
             var tenantId = Request.Headers["TenantId"].FirstOrDefault();
             if (string.IsNullOrEmpty(tenantId) || tenantId == "undefined" || tenantId == "null")
             {
-                tenantId = User.FindFirst("TenantId")?.Value 
+                tenantId = User.FindFirst("TenantId")?.Value
                         ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value
                         ?? User.FindFirst("sub")?.Value;
             }
@@ -86,9 +86,9 @@ namespace EasyBill.Web.Controllers.API
             var totalSales = await query.SumAsync(s => s.TotalPayable);
             var invoices = await query.CountAsync();
             var returns = 0; // Purchase returns or sales returns if we add later
-            
+
             // Standard 20% GP and 5% Flat Expense for Net Profit (MVP)
-            decimal gpPercentage = 20m; 
+            decimal gpPercentage = 20m;
             decimal grossProfit = totalSales * gpPercentage / 100m;
             decimal netProfit = grossProfit - (totalSales * 0.05m);
 
@@ -115,7 +115,7 @@ namespace EasyBill.Web.Controllers.API
 
             // Apply Filters to Branches
             var branchQuery = _dbContext.Tenants.IgnoreQueryFilters().Include(t => t.State).Include(t => t.City).Where(t => branchTenantIds.Contains(t.Id));
-            
+
             if (!string.IsNullOrEmpty(filter.Zone) && !filter.Zone.StartsWith("All", StringComparison.OrdinalIgnoreCase))
                 branchQuery = branchQuery.Where(t => t.Zone == filter.Zone);
             if (!string.IsNullOrEmpty(filter.Region) && !filter.Region.StartsWith("All", StringComparison.OrdinalIgnoreCase))
@@ -132,7 +132,7 @@ namespace EasyBill.Web.Controllers.API
                 branchQuery = branchQuery.Where(t => t.Cluster == filter.Cluster);
             if (!string.IsNullOrEmpty(filter.StoreType) && !filter.StoreType.StartsWith("All", StringComparison.OrdinalIgnoreCase))
                 branchQuery = branchQuery.Where(t => t.StoreType == filter.StoreType);
-            
+
             // NOTE: DO NOT FILTER BY COMPANY YET FOR BRANCH QUERY IF WE WANT TO GROUP BY DATE, 
             // wait, we ONLY pull branch data for the selected company if selected.
             if (!string.IsNullOrEmpty(filter.Company) && !filter.Company.StartsWith("All", StringComparison.OrdinalIgnoreCase))
@@ -153,7 +153,8 @@ namespace EasyBill.Web.Controllers.API
             }
 
             var salesList = await salesQuery
-                .Select(s => new {
+                .Select(s => new
+                {
                     s.TenantId,
                     s.Total,
                     s.Totaldiscount,
@@ -165,7 +166,7 @@ namespace EasyBill.Web.Controllers.API
                 }).ToListAsync();
 
             var reportDto = new StorewiseSalesReportDto(); // Reusing the DTO schema since it matches what we need
-            
+
             bool isBranchSpecific = !string.IsNullOrEmpty(filter.Company) && !filter.Company.StartsWith("All", StringComparison.OrdinalIgnoreCase);
 
             if (isBranchSpecific)
@@ -177,13 +178,13 @@ namespace EasyBill.Web.Controllers.API
                     .OrderByDescending(g => g.Key)
                     .ToList();
 
-                foreach(var g in groupedSales)
+                foreach (var g in groupedSales)
                 {
                     decimal grossSales = g.Sum(s => (decimal)s.Total);
                     decimal discount = g.Sum(s => (decimal)s.Totaldiscount);
                     decimal tax = g.Sum(s => (decimal)(s.TotalGstAmt + s.TotalCessAmount));
                     decimal netSales = g.Sum(s => (decimal)s.TotalPayable);
-                    
+
                     decimal cashCollection = g.Where(s => s.PaymentType == "Cash" || string.IsNullOrEmpty(s.PaymentType)).Sum(s => (decimal)s.TotalPayable);
                     decimal digitalCollection = g.Where(s => s.PaymentType != "Cash" && !string.IsNullOrEmpty(s.PaymentType)).Sum(s => (decimal)s.TotalPayable);
 
@@ -204,22 +205,22 @@ namespace EasyBill.Web.Controllers.API
             else
             {
                 // GROUP BY BRANCH
-                foreach(var branch in branches)
+                foreach (var branch in branches)
                 {
                     var branchSales = salesList.Where(s => s.TenantId == branch.Id).ToList();
-                    
+
                     // CLEAN DATA MODE: Omit branches that have absolutely zero sales in this date range
-                    if (!branchSales.Any()) 
+                    if (!branchSales.Any())
                         continue;
-                    
+
                     decimal grossSales = branchSales.Sum(s => (decimal)s.Total);
                     decimal discount = branchSales.Sum(s => (decimal)s.Totaldiscount);
                     decimal tax = branchSales.Sum(s => (decimal)(s.TotalGstAmt + s.TotalCessAmount));
                     decimal netSales = branchSales.Sum(s => (decimal)s.TotalPayable);
-                    
+
                     decimal cashCollection = branchSales.Where(s => s.PaymentType == "Cash" || string.IsNullOrEmpty(s.PaymentType)).Sum(s => (decimal)s.TotalPayable);
                     decimal digitalCollection = branchSales.Where(s => s.PaymentType != "Cash" && !string.IsNullOrEmpty(s.PaymentType)).Sum(s => (decimal)s.TotalPayable);
-                    
+
                     int invoiceCount = branchSales.Count;
                     decimal abv = invoiceCount > 0 ? netSales / invoiceCount : 0;
                     decimal discountPct = grossSales > 0 ? (discount / grossSales) * 100 : 0;
@@ -297,7 +298,7 @@ namespace EasyBill.Web.Controllers.API
             var branches = await branchQuery.Select(t => new { t.Id, t.Name, t.BranchCode }).ToListAsync();
             var filteredBranchIds = branches.Select(b => b.Id).ToList();
 
-                        // Date Filters
+            // Date Filters
             var salesQuery = _dbContext.Saless.IgnoreQueryFilters().AsNoTracking()
                 .Where(s => filteredBranchIds.Contains(s.TenantId) && s.Deleted == null);
 
@@ -310,7 +311,8 @@ namespace EasyBill.Web.Controllers.API
             }
 
             var salesList = await salesQuery
-                .Select(s => new {
+                .Select(s => new
+                {
                     s.TenantId,
                     s.Total,
                     s.Totaldiscount,
@@ -322,22 +324,22 @@ namespace EasyBill.Web.Controllers.API
 
             var reportDto = new StorewiseSalesReportDto();
 
-            foreach(var branch in branches)
+            foreach (var branch in branches)
             {
                 var branchSales = salesList.Where(s => s.TenantId == branch.Id).ToList();
-                
+
                 // CLEAN DATA MODE: Omit branches that have absolutely zero sales in this date range
-                if (!branchSales.Any()) 
+                if (!branchSales.Any())
                     continue;
-                
+
                 decimal grossSales = branchSales.Sum(s => (decimal)s.Total);
                 decimal discount = branchSales.Sum(s => (decimal)s.Totaldiscount);
                 decimal tax = branchSales.Sum(s => (decimal)(s.TotalGstAmt + s.TotalCessAmount));
                 decimal netSales = branchSales.Sum(s => (decimal)s.TotalPayable);
-                
+
                 decimal cashCollection = branchSales.Where(s => s.PaymentType == "Cash" || string.IsNullOrEmpty(s.PaymentType)).Sum(s => (decimal)s.TotalPayable);
                 decimal digitalCollection = branchSales.Where(s => s.PaymentType != "Cash" && !string.IsNullOrEmpty(s.PaymentType)).Sum(s => (decimal)s.TotalPayable);
-                
+
                 int invoiceCount = branchSales.Count;
                 decimal abv = invoiceCount > 0 ? netSales / invoiceCount : 0;
                 decimal discountPct = grossSales > 0 ? (discount / grossSales) * 100 : 0;
@@ -392,7 +394,8 @@ namespace EasyBill.Web.Controllers.API
                 .Where(t => tenantIds.Contains(t.Id))
                 .ToDictionaryAsync(t => t.Id, t => t.Name);
 
-            var result = salesData.Select(s => new {
+            var result = salesData.Select(s => new
+            {
                 Name = tenants.ContainsKey(s.TenantId) ? tenants[s.TenantId] : "HO",
                 Value = s.TotalSales
             }).OrderByDescending(x => x.Value);
@@ -405,11 +408,11 @@ namespace EasyBill.Web.Controllers.API
         {
             var hoTenantId = GetTenantId();
             if (string.IsNullOrEmpty(hoTenantId)) return Unauthorized();
-            
+
             var branchTenantIds = await GetBranchTenantIdsAsync(hoTenantId);
-            
+
             var salesQuery = GetBaseSalesQuery(hoTenantId, branchTenantIds, fromDate, toDate).Select(s => s.Id);
-            
+
             var invoiceItems = await _dbContext.InvoiceItems.IgnoreQueryFilters().AsNoTracking()
                 .Where(i => salesQuery.Contains(i.InvoiceId))
                 .ToListAsync();
@@ -418,7 +421,7 @@ namespace EasyBill.Web.Controllers.API
             var items = await _dbContext.ItemMasters.IgnoreQueryFilters().AsNoTracking()
                 .Where(i => itemIds.Contains(i.Id))
                 .ToDictionaryAsync(i => i.Id, i => i.CategoryId);
-                
+
             var categoryIds = items.Values.Where(v => v.HasValue).Select(v => v.Value).Distinct().ToList();
             var categories = await _dbContext.CategoryMasters.IgnoreQueryFilters().AsNoTracking()
                 .Where(c => categoryIds.Contains(c.Id))
@@ -427,7 +430,8 @@ namespace EasyBill.Web.Controllers.API
             var catSales = invoiceItems
                 .Where(i => items.ContainsKey(i.ItemId) && items[i.ItemId].HasValue)
                 .GroupBy(i => items[i.ItemId].Value)
-                .Select(g => new {
+                .Select(g => new
+                {
                     Name = categories.ContainsKey(g.Key) ? categories[g.Key] : "Unknown",
                     Value = g.Sum(x => x.TotalAmount)
                 })
@@ -441,10 +445,10 @@ namespace EasyBill.Web.Controllers.API
         {
             var hoTenantId = GetTenantId();
             if (string.IsNullOrEmpty(hoTenantId)) return Unauthorized();
-            
+
             var branchTenantIds = await GetBranchTenantIdsAsync(hoTenantId);
             var salesQuery = GetBaseSalesQuery(hoTenantId, branchTenantIds, fromDate, toDate).Select(s => s.Id);
-            
+
             var invoiceItems = await _dbContext.InvoiceItems.IgnoreQueryFilters().AsNoTracking()
                 .Where(i => salesQuery.Contains(i.InvoiceId))
                 .ToListAsync();
@@ -462,7 +466,8 @@ namespace EasyBill.Web.Controllers.API
             var brandSales = invoiceItems
                 .Where(i => items.ContainsKey(i.ItemId) && items[i.ItemId].HasValue)
                 .GroupBy(i => items[i.ItemId].Value)
-                .Select(g => new {
+                .Select(g => new
+                {
                     Name = brands.ContainsKey(g.Key) ? brands[g.Key] : "Unknown",
                     Value = g.Sum(x => x.TotalAmount)
                 })
@@ -490,9 +495,11 @@ namespace EasyBill.Web.Controllers.API
                 .Where(t => tenantIds.Contains(t.Id))
                 .ToDictionaryAsync(t => t.Id, t => t.Name);
 
-            var result = salesData.Select(s => {
+            var result = salesData.Select(s =>
+            {
                 var abv = s.InvoicesCount > 0 ? s.TotalSales / s.InvoicesCount : 0;
-                return new {
+                return new
+                {
                     StoreName = tenants.ContainsKey(s.TenantId) ? tenants[s.TenantId] : "HO",
                     TotalSales = s.TotalSales,
                     Invoices = s.InvoicesCount,
@@ -502,7 +509,7 @@ namespace EasyBill.Web.Controllers.API
 
             return Ok(new { success = true, data = result });
         }
-        
+
         [HttpGet("GetTopPerformers")]
         public async Task<IActionResult> GetTopPerformers()
         {
@@ -513,13 +520,13 @@ namespace EasyBill.Web.Controllers.API
             var sales = await _dbContext.Saless.IgnoreQueryFilters().AsNoTracking()
                 .Where(s => branchTenantIds.Contains(s.TenantId) || s.TenantId == hoTenantId)
                 .ToListAsync();
-            
+
             var invoiceItems = await _dbContext.InvoiceItems.IgnoreQueryFilters().AsNoTracking()
                 .Where(i => branchTenantIds.Contains(i.TenantId) || i.TenantId == hoTenantId)
                 .ToListAsync();
 
             var tenants = await _dbContext.Tenants.IgnoreQueryFilters().AsNoTracking().ToListAsync();
-            
+
             // 1. Best Store
             var bestStoreId = sales.GroupBy(s => s.TenantId)
                                    .OrderByDescending(g => g.Sum(x => x.TotalPayable))
@@ -530,7 +537,7 @@ namespace EasyBill.Web.Controllers.API
             // 2. Best City (Tenant.CityId -> City.Name)
             var cities = await _dbContext.Cities.IgnoreQueryFilters().AsNoTracking().ToListAsync();
             var storeSalesDict = sales.GroupBy(s => s.TenantId).ToDictionary(g => g.Key, g => g.Sum(x => x.TotalPayable));
-            
+
             var bestCityId = tenants.Where(t => storeSalesDict.ContainsKey(t.Id) && t.CityId.HasValue)
                                     .GroupBy(t => t.CityId.Value)
                                     .OrderByDescending(g => g.Sum(t => storeSalesDict[t.Id]))
@@ -541,7 +548,7 @@ namespace EasyBill.Web.Controllers.API
             var categories = await _dbContext.CategoryMasters.IgnoreQueryFilters().AsNoTracking().ToListAsync();
             var items = await _dbContext.ItemMasters.IgnoreQueryFilters().AsNoTracking().ToListAsync();
             var itemToCategory = items.ToDictionary(i => i.Id, i => i.CategoryId);
-            
+
             var bestCategoryId = invoiceItems
                                     .Where(i => itemToCategory.ContainsKey(i.ItemId) && itemToCategory[i.ItemId].HasValue)
                                     .GroupBy(i => itemToCategory[i.ItemId].Value)
@@ -555,14 +562,16 @@ namespace EasyBill.Web.Controllers.API
                                          .Select(g => g.Key).FirstOrDefault();
             var bestItemName = items.FirstOrDefault(i => i.Id == bestItemId)?.Name ?? "N/A";
 
-            return Ok(new { 
-                success = true, 
-                data = new {
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
                     BestStore = new { Name = bestStoreName, Value = bestStoreSales },
                     BestCity = new { Name = bestCityName },
                     BestCategory = new { Name = bestCategoryName },
                     BestItem = new { Name = bestItemName }
-                } 
+                }
             });
         }
 
@@ -583,7 +592,8 @@ namespace EasyBill.Web.Controllers.API
             var sales = await query
                 .OrderByDescending(s => s.BillDate)
                 .Take(200) // Limit to 200 for dummy
-                .Select(s => new {
+                .Select(s => new
+                {
                     InvoiceNo = s.BillNo,
                     BillDate = s.BillDate,
                     Store = s.TenantId,
@@ -597,7 +607,8 @@ namespace EasyBill.Web.Controllers.API
                 .Where(t => branchTenantIds.Contains(t.Id) || t.Id == hoTenantId)
                 .ToDictionaryAsync(t => t.Id, t => t.Name);
 
-            var result = sales.Select(s => new {
+            var result = sales.Select(s => new
+            {
                 invoiceNo = s.InvoiceNo,
                 date = s.BillDate,
                 store = stores.ContainsKey(s.Store) ? stores[s.Store] : "HO",
@@ -721,25 +732,25 @@ namespace EasyBill.Web.Controllers.API
                 }
 
                 var reportType = filter.ReportType?.ToLower() ?? "inventory-stock";
-                
+
                 Dictionary<int, int> itemSalesMap = new Dictionary<int, int>();
 
                 if (reportType == "dead-stock" || reportType == "fast-moving" || reportType == "slow-moving")
                 {
                     var ninetyDaysAgo = DateTime.Now.AddDays(-90);
                     var invQuery = _dbContext.InvoiceItems.IgnoreQueryFilters().AsNoTracking();
-                    
+
                     if (reportType == "dead-stock")
                     {
                         invQuery = invQuery.Where(i => i.Created >= ninetyDaysAgo);
                     }
-                    
+
                     var salesData = await invQuery
                         .Where(i => filteredBranchIds.Contains(i.TenantId))
                         .GroupBy(i => i.ItemId)
                         .Select(g => new { ItemId = g.Key, Qty = g.Sum(x => x.Quantity) })
                         .ToListAsync();
-                        
+
                     itemSalesMap = salesData.ToDictionary(x => x.ItemId, x => x.Qty);
 
                     if (reportType == "dead-stock")
@@ -753,7 +764,7 @@ namespace EasyBill.Web.Controllers.API
                         stockQuery = stockQuery.Where(s => activeIds.Contains(s.ItemId));
                     }
                 }
-                
+
                 if (reportType == "low-stock")
                 {
                     stockQuery = stockQuery.Where(s => s.ItemMaster != null && s.Qty <= s.ItemMaster.MinimumQty);
@@ -793,7 +804,8 @@ namespace EasyBill.Web.Controllers.API
                 {
                     stockList = stockList
                         .GroupBy(s => new { s.ItemId, s.TenantId })
-                        .Select(g => {
+                        .Select(g =>
+                        {
                             var first = g.First();
                             first.Qty = g.Sum(x => x.Qty);
                             first.Batch = "AGGREGATED";
@@ -896,7 +908,7 @@ namespace EasyBill.Web.Controllers.API
                 }
 
                 var branchTenantIds = await GetBranchTenantIdsAsync(hoTenantId);
-                
+
                 // If they have no branches, or if we want to ensure the query doesn't silently fail,
                 // we include hoTenantId in the lookup if necessary, but the user explicitly requested NO HO data.
                 // However, to prevent a complete 0-data crash if they are testing on HO, we'll include HO IF branchTenantIds is empty.
@@ -911,23 +923,23 @@ namespace EasyBill.Web.Controllers.API
                 if (!string.IsNullOrEmpty(filter.Region) && !filter.Region.StartsWith("All", StringComparison.OrdinalIgnoreCase)) branchQuery = branchQuery.Where(t => t.Region == filter.Region);
                 if (!string.IsNullOrEmpty(filter.State) && !filter.State.StartsWith("All", StringComparison.OrdinalIgnoreCase)) branchQuery = branchQuery.Where(t => (t.State != null && t.State.Name == filter.State) || t.StateId.ToString() == filter.State);
                 if (!string.IsNullOrEmpty(filter.City) && !filter.City.StartsWith("All", StringComparison.OrdinalIgnoreCase)) branchQuery = branchQuery.Where(t => (t.City != null && t.City.Name == filter.City) || t.CityId.ToString() == filter.City);
-                
+
                 // Use Company OR StoreId since the frontend might pass either depending on the filter component version
                 var targetStoreId = !string.IsNullOrEmpty(filter.Company) ? filter.Company : filter.StoreId;
-                if (!string.IsNullOrEmpty(targetStoreId) && !targetStoreId.StartsWith("All", StringComparison.OrdinalIgnoreCase)) 
+                if (!string.IsNullOrEmpty(targetStoreId) && !targetStoreId.StartsWith("All", StringComparison.OrdinalIgnoreCase))
                 {
                     branchQuery = branchQuery.Where(t => t.Id == targetStoreId);
                 }
 
                 var filteredBranches = await branchQuery.Select(t => new { t.Id, t.Name, t.BranchCode }).ToListAsync();
                 var filteredBranchIds = filteredBranches.Select(b => b.Id).ToList();
-                
+
                 // If the user didn't select a specific branch, and they explicitly wanted to hide HO data when viewing "All Branches",
                 // we can exclude HO here. BUT they are complaining about NO data, so we will include HO if it's the only one, or if they didn't explicitly filter it out.
                 // To be safe and show data, we will leave HO in `filteredBranchIds` if it passed the filters.
 
                 var reportType = filter.ReportType?.ToLower() ?? "tax-summary";
-                
+
                 // Common Date Filters
                 var fromDate = filter.FromDate ?? DateTime.MinValue;
                 var toDate = filter.ToDate ?? DateTime.MaxValue;
@@ -941,7 +953,8 @@ namespace EasyBill.Web.Controllers.API
                 {
                     var sales = await _dbContext.Saless.IgnoreQueryFilters().AsNoTracking()
                         .Where(s => filteredBranchIds.Contains(s.TenantId) && s.Deleted == null && s.BillDate >= fromDate && s.BillDate <= toDate)
-                        .Select(s => new {
+                        .Select(s => new
+                        {
                             TenantId = s.TenantId,
                             Taxableamount = s.Total,
                             CGST = s.TotalGstAmt / 2, // Assuming equal split if separate columns aren't summed, but let's use TotalGstAmt/2 for simplicity if detailed isn't available
@@ -952,7 +965,8 @@ namespace EasyBill.Web.Controllers.API
 
                     var stores = filteredBranches.ToDictionary(t => t.Id, t => t.Name);
 
-                    responseData = sales.GroupBy(s => s.TenantId).Select(g => new {
+                    responseData = sales.GroupBy(s => s.TenantId).Select(g => new
+                    {
                         store = stores.ContainsKey(g.Key) ? stores[g.Key] : "HO",
                         taxable = g.Sum(x => x.Taxableamount),
                         cgst = g.Sum(x => x.CGST),
@@ -988,7 +1002,7 @@ namespace EasyBill.Web.Controllers.API
                         new { account = "Operating Expenses", debit = expenses, credit = 0, balance = -expenses },
                         new { account = "Net Profit", debit = 0, credit = np, balance = np }
                     };
-                    
+
                     summaryData = new { revenue, cogs, gp, expenses, np };
                 }
                 else if (reportType == "expense-report")
@@ -997,8 +1011,9 @@ namespace EasyBill.Web.Controllers.API
                         .Include(p => p.paymentVouchercategory)
                         .Where(p => filteredBranchIds.Contains(p.TenantId) && p.Deleted == null && p.Date >= fromDate && p.Date <= toDate)
                         .ToListAsync();
-                        
-                    responseData = expenses.GroupBy(p => p.VoucherCategoryId).Select(g => new {
+
+                    responseData = expenses.GroupBy(p => p.VoucherCategoryId).Select(g => new
+                    {
                         category = g.First().paymentVouchercategory?.Name ?? "Uncategorized",
                         amount = g.Sum(x => x.Amount),
                         count = g.Count()
@@ -1012,17 +1027,19 @@ namespace EasyBill.Web.Controllers.API
                         .Where(si => filteredBranchIds.Contains(si.Sales.TenantId) && si.Sales.Deleted == null && si.Deleted == null && si.Sales.BillDate >= fromDate && si.Sales.BillDate <= toDate)
                         .ToListAsync();
 
-                    responseData = salesItems.GroupBy(si => new { 
-                        GstRate = si.Gst, 
+                    responseData = salesItems.GroupBy(si => new
+                    {
+                        GstRate = si.Gst,
                         IsB2B = !string.IsNullOrEmpty(si.Sales?.Customers?.GSTNo)
-                    }).Select(g => new {
+                    }).Select(g => new
+                    {
                         type = g.Key.IsB2B ? "B2B" : "B2C",
                         gstRate = g.Key.GstRate,
-                        taxable = g.Sum(x => (x.Amount / (1 + (x.Gst/100)))), // Approximate taxable extraction
+                        taxable = g.Sum(x => (x.Amount / (1 + (x.Gst / 100)))), // Approximate taxable extraction
                         cgst = g.Sum(x => x.CGst ?? 0m),
                         sgst = g.Sum(x => x.SGst ?? 0m),
                         igst = g.Sum(x => x.IGst ?? 0m),
-                        totalTax = g.Sum(x => x.Amount - (x.Amount / (1 + (x.Gst/100))))
+                        totalTax = g.Sum(x => x.Amount - (x.Amount / (1 + (x.Gst / 100))))
                     }).ToList();
                 }
                 else if (reportType == "hsn-summary")
@@ -1031,12 +1048,13 @@ namespace EasyBill.Web.Controllers.API
                         .Include(si => si.Sales)
                         .Where(si => filteredBranchIds.Contains(si.Sales.TenantId) && si.Sales.Deleted == null && si.Deleted == null && si.Sales.BillDate >= fromDate && si.Sales.BillDate <= toDate)
                         .ToListAsync();
-                        
-                    responseData = salesItems.GroupBy(si => si.HsnCode ?? "Unknown").Select(g => new {
+
+                    responseData = salesItems.GroupBy(si => si.HsnCode ?? "Unknown").Select(g => new
+                    {
                         hsnCode = g.Key,
                         qty = g.Sum(x => x.Qty),
-                        taxable = g.Sum(x => (x.Amount / (1 + (x.Gst/100)))),
-                        totalTax = g.Sum(x => x.Amount - (x.Amount / (1 + (x.Gst/100)))),
+                        taxable = g.Sum(x => (x.Amount / (1 + (x.Gst / 100)))),
+                        totalTax = g.Sum(x => x.Amount - (x.Amount / (1 + (x.Gst / 100)))),
                         totalAmount = g.Sum(x => x.Amount)
                     }).OrderByDescending(x => x.totalAmount).ToList();
                 }
@@ -1049,17 +1067,19 @@ namespace EasyBill.Web.Controllers.API
                         .Where(pi => filteredBranchIds.Contains(pi.Purchases.TenantId) && pi.Purchases.Deleted == null && pi.Deleted == null && pi.Purchases.BillDate >= fromDate && pi.Purchases.BillDate <= toDate)
                         .ToListAsync();
 
-                    responseData = purchaseItems.GroupBy(pi => new { 
-                        GstRate = pi.Gst, 
+                    responseData = purchaseItems.GroupBy(pi => new
+                    {
+                        GstRate = pi.Gst,
                         IsRegistered = !string.IsNullOrEmpty(pi.Purchases?.Suppliers?.GstNO)
-                    }).Select(g => new {
+                    }).Select(g => new
+                    {
                         type = g.Key.IsRegistered ? "Registered" : "Unregistered",
                         gstRate = g.Key.GstRate,
-                        taxable = g.Sum(x => (x.Amount / (1 + (x.Gst/100)))),
+                        taxable = g.Sum(x => (x.Amount / (1 + (x.Gst / 100)))),
                         cgst = g.Sum(x => x.CGst),
                         sgst = g.Sum(x => x.SGst),
                         igst = 0m,
-                        totalTax = g.Sum(x => x.Amount - (x.Amount / (1 + (x.Gst/100))))
+                        totalTax = g.Sum(x => x.Amount - (x.Amount / (1 + (x.Gst / 100))))
                     }).ToList();
                 }
                 else if (reportType == "gstr-3b")
@@ -1068,7 +1088,7 @@ namespace EasyBill.Web.Controllers.API
                     var outward = await _dbContext.Saless.IgnoreQueryFilters().AsNoTracking()
                         .Where(s => filteredBranchIds.Contains(s.TenantId) && s.Deleted == null && s.BillDate >= fromDate && s.BillDate <= toDate)
                         .SumAsync(s => s.TotalGstAmt);
-                        
+
                     var inward = await _dbContext.Purchases.IgnoreQueryFilters().AsNoTracking()
                         .Where(p => filteredBranchIds.Contains(p.TenantId) && p.Deleted == null && p.BillDate >= fromDate && p.BillDate <= toDate)
                         .SumAsync(p => p.TotalGstAmt);
@@ -1086,12 +1106,13 @@ namespace EasyBill.Web.Controllers.API
                     var sales = await _dbContext.Saless.IgnoreQueryFilters().AsNoTracking()
                         .Where(s => filteredBranchIds.Contains(s.TenantId) && s.Deleted == null && s.BillDate >= fromDate && s.BillDate <= toDate)
                         .Select(s => new { Date = s.BillDate, Type = "Sales", Ref = s.BillNo, Account = "Sales", Amount = s.TotalPayable, IsInflow = true }).ToListAsync();
-                        
+
                     var purchases = await _dbContext.Purchases.IgnoreQueryFilters().AsNoTracking()
                         .Where(p => filteredBranchIds.Contains(p.TenantId) && p.Deleted == null && p.BillDate >= fromDate && p.BillDate <= toDate)
                         .Select(p => new { Date = p.BillDate, Type = "Purchase", Ref = p.BillNo, Account = "Purchase", Amount = p.TotalPayable, IsInflow = false }).ToListAsync();
-                        
-                    var combined = sales.Concat(purchases).Where(x => x.Date.HasValue).OrderBy(x => x.Date).Select(x => new {
+
+                    var combined = sales.Concat(purchases).Where(x => x.Date.HasValue).OrderBy(x => x.Date).Select(x => new
+                    {
                         date = x.Date.Value.ToString("yyyy-MM-dd"),
                         type = x.Type,
                         reference = x.Ref,
@@ -1099,7 +1120,7 @@ namespace EasyBill.Web.Controllers.API
                         inflow = x.IsInflow ? x.Amount : 0,
                         outflow = !x.IsInflow ? x.Amount : 0
                     }).ToList();
-                    
+
                     responseData = combined;
                 }
                 else if (reportType == "cash-flow")
@@ -1108,8 +1129,9 @@ namespace EasyBill.Web.Controllers.API
                         .Include(p => p.ModeOfPayment)
                         .Where(p => filteredBranchIds.Contains(p.TenantId) && p.Deleted == null && p.Date >= fromDate && p.Date <= toDate && p.ModeOfPayment != null && (p.ModeOfPayment.Name.Contains("Cash") || p.ModeOfPayment.Name.Contains("Bank")))
                         .Select(p => new { Date = p.Date, Mode = p.ModeOfPayment.Name, Amount = p.Amount, IsInflow = false }).ToListAsync();
-                        
-                    responseData = payments.GroupBy(p => p.Mode).Select(g => new {
+
+                    responseData = payments.GroupBy(p => p.Mode).Select(g => new
+                    {
                         mode = g.Key ?? "Unknown",
                         outflow = g.Sum(x => x.Amount)
                     }).ToList();
@@ -1120,8 +1142,9 @@ namespace EasyBill.Web.Controllers.API
                         .Include(s => s.Customers)
                         .Where(s => filteredBranchIds.Contains(s.TenantId) && s.Deleted == null && s.BillDate >= fromDate && s.BillDate <= toDate && s.CustomerId != null)
                         .ToListAsync();
-                        
-                    responseData = sales.GroupBy(s => s.CustomerId).Select(g => new {
+
+                    responseData = sales.GroupBy(s => s.CustomerId).Select(g => new
+                    {
                         customer = g.First().Customers?.Name ?? "Unknown",
                         mobile = g.First().Customers?.PhoneNo,
                         debit = g.Sum(x => x.TotalPayable),
@@ -1135,8 +1158,9 @@ namespace EasyBill.Web.Controllers.API
                         .Include(p => p.Suppliers)
                         .Where(p => filteredBranchIds.Contains(p.TenantId) && p.Deleted == null && p.BillDate >= fromDate && p.BillDate <= toDate && p.SupplierId != null)
                         .ToListAsync();
-                        
-                    responseData = purchases.GroupBy(p => p.SupplierId).Select(g => new {
+
+                    responseData = purchases.GroupBy(p => p.SupplierId).Select(g => new
+                    {
                         supplier = g.First().Suppliers?.FirstName ?? "Unknown",
                         mobile = g.First().Suppliers?.PhoneNO,
                         credit = g.Sum(x => x.TotalPayable),
@@ -1169,6 +1193,7 @@ namespace EasyBill.Web.Controllers.API
             public string? ReportType { get; set; }
             public DateTime? FromDate { get; set; }
             public DateTime? ToDate { get; set; }
+            public string? BranchId { get; set; }
         }
 
         [HttpPost("GetPurchaseReport")]
@@ -1188,24 +1213,36 @@ namespace EasyBill.Web.Controllers.API
                     branchTenantIds.Add(hoTenantId);
                 }
 
-                var branchQuery = _dbContext.Tenants.IgnoreQueryFilters().Include(t => t.State).Include(t => t.City).Where(t => branchTenantIds.Contains(t.Id) || t.Id == hoTenantId);
+                //var branchQuery = _dbContext.Tenants.IgnoreQueryFilters().Include(t => t.State).Include(t => t.City).Where(t => branchTenantIds.Contains(t.Id) || t.Id == hoTenantId);
+
+                var branchQuery = _dbContext.Tenants
+                   .IgnoreQueryFilters()
+                   .Include(t => t.State)
+                   .Include(t => t.City)
+                   .Where(t =>
+                       (branchTenantIds.Contains(t.Id) || t.Id == hoTenantId)
+                       && t.ParentTenantId != null
+                       && t.ParentTenantId != ""
+
+                        && t.CompanyType != (CompanyType)Enum.Parse(typeof(CompanyType), "HeadOffice")
+                  );
                 if (!string.IsNullOrEmpty(filter.Zone) && !filter.Zone.StartsWith("All", StringComparison.OrdinalIgnoreCase)) branchQuery = branchQuery.Where(t => t.Zone == filter.Zone);
                 if (!string.IsNullOrEmpty(filter.Region) && !filter.Region.StartsWith("All", StringComparison.OrdinalIgnoreCase)) branchQuery = branchQuery.Where(t => t.Region == filter.Region);
                 if (!string.IsNullOrEmpty(filter.State) && !filter.State.StartsWith("All", StringComparison.OrdinalIgnoreCase)) branchQuery = branchQuery.Where(t => (t.State != null && t.State.Name == filter.State) || t.StateId.ToString() == filter.State);
                 if (!string.IsNullOrEmpty(filter.City) && !filter.City.StartsWith("All", StringComparison.OrdinalIgnoreCase)) branchQuery = branchQuery.Where(t => (t.City != null && t.City.Name == filter.City) || t.CityId.ToString() == filter.City);
-                
+
                 var targetStoreId = !string.IsNullOrEmpty(filter.Company) ? filter.Company : filter.StoreId;
-                if (!string.IsNullOrEmpty(targetStoreId) && !targetStoreId.StartsWith("All", StringComparison.OrdinalIgnoreCase)) 
+                if (!string.IsNullOrEmpty(targetStoreId) && !targetStoreId.StartsWith("All", StringComparison.OrdinalIgnoreCase))
                 {
                     branchQuery = branchQuery.Where(t => t.Id == targetStoreId);
                 }
 
                 var filteredBranches = await branchQuery.Select(t => new { t.Id, t.Name }).ToListAsync();
                 var filteredBranchIds = filteredBranches.Select(b => b.Id).ToList();
-                if (!filteredBranchIds.Contains(hoTenantId))
-                {
-                    filteredBranchIds.Add(hoTenantId);
-                }
+                //if (!filteredBranchIds.Contains(hoTenantId))
+                //{
+                //    filteredBranchIds.Add(hoTenantId);
+                //}
 
                 var reportType = filter.ReportType?.ToLower() ?? "purchase-summary";
                 var fromDate = filter.FromDate ?? new DateTime(2000, 1, 1);
@@ -1214,28 +1251,54 @@ namespace EasyBill.Web.Controllers.API
 
                 object summaryData = null;
                 IEnumerable<object> responseData = null;
-
                 if (reportType == "purchase-summary")
                 {
-                    var purchases = await _dbContext.Purchases.IgnoreQueryFilters().AsNoTracking()
-                        .Where(p => filteredBranchIds.Contains(p.TenantId) && p.Deleted == null && p.BillDate >= fromDate && p.BillDate <= toDate)
-                        .Select(p => new {
-                            p.TenantId,
-                            Taxableamount = p.TotalPayable - p.TotalGstAmt,
-                            p.TotalGstAmt,
-                            p.TotalPayable
-                        }).ToListAsync();
+                    var purchases = await _dbContext.Purchases
+                        .IgnoreQueryFilters()
+                        .AsNoTracking()
+                        .Where(p =>
+                            filteredBranchIds.Contains(p.TenantId) &&
+                            p.Deleted == null &&
+                            p.BillDate >= fromDate &&
+                            p.BillDate <= toDate)
+                    .Select(p => new
+                     {
+                         p.Id,
+                         p.TenantId,
+                         p.TotalPayable,
+                         p.TotalGstAmt,
+                         p.Totaldiscount,
 
-                    var stores = filteredBranches.ToDictionary(t => t.Id, t => t.Name);
+                         ItemQty = _dbContext.PurchaseItems
+                            .Where(pi => pi.PurchaseId == p.Id)
+                            .Sum(pi => (decimal?)pi.Qty) ?? 0
+                     })
+                        .ToListAsync();
 
-                    responseData = purchases.GroupBy(p => p.TenantId).Select(g => new {
-                        store = stores.ContainsKey(g.Key) ? stores[g.Key] : "HO",
-                        taxable = g.Sum(x => x.Taxableamount),
-                        tax = g.Sum(x => x.TotalGstAmt),
-                        total = g.Sum(x => x.TotalPayable)
-                    }).ToList();
-                    
-                    summaryData = new { totalPurchases = purchases.Sum(p => p.TotalPayable) };
+                    var stores = filteredBranches
+                        .ToDictionary(t => t.Id, t => t.Name);
+
+                    responseData = purchases
+                        .GroupBy(p => p.TenantId)
+                        .Where(g => stores.ContainsKey(g.Key))
+                        .Select(g => new
+                        {
+                            tenantId = g.Key,                        // Fix: g.TenantId ki jagah g.Key use karein
+                            store = stores[g.Key],
+                            purchaseValue = g.Sum(x => x.TotalPayable),
+                            gst = g.Sum(x => x.TotalGstAmt),
+                            discount = g.Sum(x => x.Totaldiscount),
+                            itemQty = g.Sum(x => x.ItemQty)
+                        })
+                        .ToList();
+
+                    summaryData = new
+                    {
+                        totalPurchases = purchases.Sum(p => p.TotalPayable),
+                        totalGst = purchases.Sum(p => p.TotalGstAmt),
+                        totalDiscount = purchases.Sum(p => p.Totaldiscount),
+                        totalItemQty = purchases.Sum(p => p.ItemQty)
+                    };
                 }
                 else if (reportType == "supplier-wise")
                 {
@@ -1244,7 +1307,8 @@ namespace EasyBill.Web.Controllers.API
                         .Where(p => filteredBranchIds.Contains(p.TenantId) && p.Deleted == null && p.BillDate >= fromDate && p.BillDate <= toDate)
                         .ToListAsync();
 
-                    responseData = purchases.GroupBy(p => p.SupplierId).Select(g => new {
+                    responseData = purchases.GroupBy(p => p.SupplierId).Select(g => new
+                    {
                         supplier = g.First().Suppliers?.FirstName ?? "Unknown",
                         taxable = g.Sum(x => x.TotalPayable - x.TotalGstAmt),
                         tax = g.Sum(x => x.TotalGstAmt),
@@ -1259,7 +1323,8 @@ namespace EasyBill.Web.Controllers.API
                         .Where(pi => filteredBranchIds.Contains(pi.Purchases.TenantId) && pi.Purchases.Deleted == null && pi.Deleted == null && pi.Purchases.BillDate >= fromDate && pi.Purchases.BillDate <= toDate)
                         .ToListAsync();
 
-                    responseData = purchaseItems.GroupBy(pi => pi.ItemId).Select(g => new {
+                    responseData = purchaseItems.GroupBy(pi => pi.ItemId).Select(g => new
+                    {
                         itemName = g.First().ItemMasters?.Name ?? "Unknown",
                         qty = g.Sum(x => x.Qty),
                         rate = g.Average(x => x.Rate),
@@ -1273,9 +1338,12 @@ namespace EasyBill.Web.Controllers.API
                         .Where(pr => filteredBranchIds.Contains(pr.TenantId) && pr.Deleted == null && pr.BillDate >= fromDate && pr.BillDate <= toDate)
                         .ToListAsync();
 
-                    responseData = returns.Select(pr => new {
+                    responseData = returns.Select(pr => new
+                    {
                         billNo = pr.BillNo,
                         date = pr.BillDate?.ToString("yyyy-MM-dd"),
+
+
                         supplier = pr.Suppliers?.FirstName ?? "Unknown",
                         tax = pr.TotalGstAmt,
                         total = pr.TotalPayable
@@ -1288,9 +1356,12 @@ namespace EasyBill.Web.Controllers.API
                         .Where(po => filteredBranchIds.Contains(po.TenantId) && po.Deleted == null && po.BillDate >= fromDate && po.BillDate <= toDate)
                         .ToListAsync();
 
-                    responseData = orders.Select(po => new {
+                    responseData = orders.Select(po => new
+                    {
                         poNo = po.BillNo,
                         date = po.BillDate?.ToString("yyyy-MM-dd"),
+
+
                         supplier = po.Suppliers?.FirstName ?? "Unknown",
                         status = po.WorkflowStatus ?? "Active",
                         total = po.TotalPayable
@@ -1303,9 +1374,12 @@ namespace EasyBill.Web.Controllers.API
                         .Where(po => filteredBranchIds.Contains(po.TenantId) && po.Deleted == null && po.BillDate >= fromDate && po.BillDate <= toDate && (po.WorkflowStatus == null || (po.WorkflowStatus != "Completed" && po.WorkflowStatus != "Closed")))
                         .ToListAsync();
 
-                    responseData = orders.Select(po => new {
+                    responseData = orders.Select(po => new
+                    {
                         poNo = po.BillNo,
                         date = po.BillDate?.ToString("yyyy-MM-dd"),
+
+
                         supplier = po.Suppliers?.FirstName ?? "Unknown",
                         status = po.WorkflowStatus ?? "Pending",
                         total = po.TotalPayable
@@ -1313,27 +1387,58 @@ namespace EasyBill.Web.Controllers.API
                 }
                 else if (reportType == "grn-report")
                 {
-                    var grns = await _dbContext.Purchases.IgnoreQueryFilters().AsNoTracking()
+                    var grns = await _dbContext.Purchases
+                        .IgnoreQueryFilters()
+                        .AsNoTracking()
                         .Include(p => p.Suppliers)
-                        .Where(p => filteredBranchIds.Contains(p.TenantId) && p.Deleted == null && p.BillDate >= fromDate && p.BillDate <= toDate && p.PurchaseType == "GRN")
+                        .Where(p =>
+                            filteredBranchIds.Contains(p.TenantId)
+                            && p.Deleted == null
+                            && p.BillDate >= fromDate
+                            && p.BillDate <= toDate
+                            && p.PurchaseType == "GRN")
+                    .OrderBy(p => p.BillNo) // Ascending Order (e.g., BL0001, BL0002)
                         .ToListAsync();
 
                     if (!grns.Any())
                     {
-                        grns = await _dbContext.Purchases.IgnoreQueryFilters().AsNoTracking()
+                        grns = await _dbContext.Purchases
+                            .IgnoreQueryFilters()
+                            .AsNoTracking()
                             .Include(p => p.Suppliers)
-                            .Where(p => filteredBranchIds.Contains(p.TenantId) && p.Deleted == null && p.BillDate >= fromDate && p.BillDate <= toDate)
+                            .Where(p =>
+                                filteredBranchIds.Contains(p.TenantId)
+                                && p.Deleted == null
+                                && p.BillDate >= fromDate
+                                && p.BillDate <= toDate )
+                        .OrderBy(p => p.BillNo) // Ascending Order
                             .ToListAsync();
                     }
 
-                    responseData = grns.Select(p => new {
-                        grnNo = p.BillNo,
-                        date = p.BillDate?.ToString("yyyy-MM-dd"),
-                        supplier = p.Suppliers?.FirstName ?? "Unknown",
-                        total = p.TotalPayable,
-                        status = p.PaymentStatus ?? "Received"
-                    }).ToList();
+                    responseData = grns.Select(p => new
+                    {
+                        billNo = p.BillNo,
+
+                        billDate = p.BillDate?.ToString("yyyy-MM-dd"),
+
+
+
+                        supplierName = p.Suppliers?.FirstName ?? "Unknown",
+
+                        taxableAmount = p.Total,
+
+                        tax = p.TotalGstAmt,
+
+                        discount = p.Totaldiscount,
+
+                        roundOff = p.RoundOffAmount,
+
+                        totalAmount = p.TotalPayable
+
+
+                }).ToList();
                 }
+
                 else if (reportType == "supplier-aging")
                 {
                     var purchases = await _dbContext.Purchases.IgnoreQueryFilters().AsNoTracking()
@@ -1343,13 +1448,15 @@ namespace EasyBill.Web.Controllers.API
 
                     var today = DateTime.UtcNow;
 
-                    responseData = purchases.GroupBy(p => p.SupplierId).Select(g => {
+                    responseData = purchases.GroupBy(p => p.SupplierId).Select(g =>
+                    {
                         var _0to30 = g.Where(x => (today - x.BillDate.Value).TotalDays <= 30).Sum(x => x.Balance);
                         var _31to60 = g.Where(x => (today - x.BillDate.Value).TotalDays > 30 && (today - x.BillDate.Value).TotalDays <= 60).Sum(x => x.Balance);
                         var _61to90 = g.Where(x => (today - x.BillDate.Value).TotalDays > 60 && (today - x.BillDate.Value).TotalDays <= 90).Sum(x => x.Balance);
                         var _above90 = g.Where(x => (today - x.BillDate.Value).TotalDays > 90).Sum(x => x.Balance);
-                        
-                        return new {
+
+                        return new
+                        {
                             supplier = g.First().Suppliers?.FirstName ?? "Unknown",
                             zeroToThirty = _0to30,
                             thirtyOneToSixty = _31to60,
@@ -1363,7 +1470,8 @@ namespace EasyBill.Web.Controllers.API
                 {
                     var purchases = await _dbContext.Purchases.IgnoreQueryFilters().AsNoTracking()
                         .Where(p => filteredBranchIds.Contains(p.TenantId) && p.Deleted == null && p.BillDate >= fromDate && p.BillDate <= toDate)
-                        .Select(p => new {
+                        .Select(p => new
+                        {
                             p.TenantId,
                             Taxableamount = p.TotalPayable - p.TotalGstAmt,
                             p.TotalCGstAmt,
@@ -1374,7 +1482,8 @@ namespace EasyBill.Web.Controllers.API
 
                     var stores = filteredBranches.ToDictionary(t => t.Id, t => t.Name);
 
-                    responseData = purchases.GroupBy(p => p.TenantId).Select(g => new {
+                    responseData = purchases.GroupBy(p => p.TenantId).Select(g => new
+                    {
                         store = stores.ContainsKey(g.Key) ? stores[g.Key] : "HO",
                         taxable = g.Sum(x => x.Taxableamount),
                         cgst = g.Sum(x => x.TotalCGstAmt),
@@ -1391,7 +1500,8 @@ namespace EasyBill.Web.Controllers.API
                         .Where(pi => filteredBranchIds.Contains(pi.Purchases.TenantId) && pi.Purchases.Deleted == null && pi.Deleted == null && pi.Purchases.BillDate >= fromDate && pi.Purchases.BillDate <= toDate)
                         .ToListAsync();
 
-                    responseData = purchaseItems.GroupBy(pi => pi.ItemMasters?.CategoryId).Select(g => new {
+                    responseData = purchaseItems.GroupBy(pi => pi.ItemMasters?.CategoryId).Select(g => new
+                    {
                         category = g.First().ItemMasters?.Category?.CategoryName ?? "Uncategorized",
                         qty = g.Sum(x => x.Qty),
                         total = g.Sum(x => x.TotalAmt)
@@ -1409,6 +1519,84 @@ namespace EasyBill.Web.Controllers.API
             catch (Exception ex)
             {
                 return StatusCode(500, new { success = false, message = "Error generating report.", error = ex.Message });
+            }
+        }
+
+        [HttpPost("GetPurchaseBranchReport")]
+        public async Task<IActionResult> GetPurchaseBranchReport([FromBody] PurchaseReportFilterDto filter)
+        {
+            try
+            {
+
+                var hoTenantId = GetTenantId();
+                if (string.IsNullOrEmpty(hoTenantId))
+                {
+                    return BadRequest(new { success = false, message = "HO TenantId is missing in request." });
+                }
+
+
+
+                // 1. Validation for BranchId
+                if (string.IsNullOrEmpty(filter.BranchId))
+                {
+                    return BadRequest(new { success = false, message = "BranchId is required." });
+                }
+
+                var fromDate = filter.FromDate ?? new DateTime(2000, 1, 1);
+                var toDate = filter.ToDate ?? new DateTime(2100, 1, 1);
+                if (filter.ToDate.HasValue)
+                {
+                    toDate = filter.ToDate.Value.Date.AddDays(1).AddTicks(-1);
+                }
+
+                var purchases = await _dbContext.Purchases
+      .IgnoreQueryFilters()
+      .AsNoTracking()
+      .Include(p => p.Suppliers)
+      .Where(p =>
+          p.TenantId == filter.BranchId &&
+          p.Deleted == null &&
+          p.BillDate >= fromDate &&
+          p.BillDate <= toDate)
+  .Select(p => new
+   {
+       p.Id,
+       billNo = p.BillNo,
+       billDate = p.BillDate.HasValue ? p.BillDate.Value.ToString("yyyy-MM-dd") : "",
+      supplierName = p.Suppliers != null ? p.Suppliers.FirstName : "Unknown",
+      taxableAmount = p.TotalPayable - p.TotalGstAmt,
+      gstAmount = p.TotalGstAmt,
+      discount = p.Totaldiscount,
+      totalAmount = p.TotalPayable,
+
+      itemQty = _dbContext.PurchaseItems
+          .Where(pi => pi.PurchaseId == p.Id && pi.Deleted == null)
+          .Sum(pi => (decimal?)pi.Qty) ?? 0
+  })
+      .OrderBy(p => p.billNo)
+      .ToListAsync();
+
+                // 3. Summary Calculation
+                var summaryData = new
+                {
+                    totalPurchases = purchases.Sum(p => p.totalAmount),
+                    totalGst = purchases.Sum(p => p.gstAmount),
+                    totalDiscount = purchases.Sum(p => p.discount),
+                    totalItemQty = purchases.Sum(p => p.itemQty),
+                    totalBills = purchases.Count
+                };
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Branch purchase report fetched successfully.",
+                    summary = summaryData,
+                    data = purchases
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Error generating branch report.", error = ex.Message });
             }
         }
 
@@ -1431,7 +1619,7 @@ namespace EasyBill.Web.Controllers.API
 
             // Apply Filters to Branches
             var branchQuery = _dbContext.Tenants.IgnoreQueryFilters().Include(t => t.State).Include(t => t.City).Where(t => branchTenantIds.Contains(t.Id));
-            
+
             if (!string.IsNullOrEmpty(filter.Zone) && !filter.Zone.StartsWith("All", StringComparison.OrdinalIgnoreCase))
                 branchQuery = branchQuery.Where(t => t.Zone == filter.Zone);
             if (!string.IsNullOrEmpty(filter.Region) && !filter.Region.StartsWith("All", StringComparison.OrdinalIgnoreCase))
@@ -1454,7 +1642,7 @@ namespace EasyBill.Web.Controllers.API
             var branches = await branchQuery.Select(t => new { t.Id, t.Name, t.BranchCode, t.Zone, t.EmployeeCount, t.StoreArea }).ToListAsync();
             var filteredBranchIds = branches.Select(b => b.Id).ToList();
 
-                        // Dates for Growth Calculation
+            // Dates for Growth Calculation
             DateTime currentFrom = filter.FromDate ?? DateTime.MinValue;
             DateTime currentTo = filter.ToDate ?? DateTime.MaxValue;
             DateTime prevFrom = DateTime.MinValue;
@@ -1473,7 +1661,7 @@ namespace EasyBill.Web.Controllers.API
 
             var allSales = await salesQuery.Select(s => new { s.TenantId, s.TotalPayable, s.BillDate }).ToListAsync();
 
-                        var currentSales = allSales.Where(s => s.BillDate.HasValue && s.BillDate.Value.Date >= currentFrom.Date && s.BillDate.Value.Date <= currentTo.Date).ToList();
+            var currentSales = allSales.Where(s => s.BillDate.HasValue && s.BillDate.Value.Date >= currentFrom.Date && s.BillDate.Value.Date <= currentTo.Date).ToList();
             var prevSales = allSales.Where(s => prevFrom != DateTime.MinValue && s.BillDate.HasValue && s.BillDate.Value.Date >= prevFrom.Date && s.BillDate.Value.Date <= prevTo.Date).ToList();
 
             // Fetch Real-time Stock Values per Branch
@@ -1481,7 +1669,7 @@ namespace EasyBill.Web.Controllers.API
                 .Where(cs => filteredBranchIds.Contains(cs.TenantId))
                 .Select(cs => new { cs.TenantId, cs.Qty, cs.PurchaseRate })
                 .ToListAsync();
-            
+
             var branchStockValues = stockQuery
                 .GroupBy(cs => cs.TenantId)
                 .ToDictionary(g => g.Key, g => g.Sum(cs => cs.Qty * cs.PurchaseRate));
@@ -1491,7 +1679,7 @@ namespace EasyBill.Web.Controllers.API
                 .Where(f => filteredBranchIds.Contains(f.TenantId) && f.Date.Date >= currentFrom.Date && f.Date.Date <= currentTo.Date)
                 .Select(f => new { f.TenantId, f.FootfallCount })
                 .ToListAsync();
-            
+
             var branchFootfalls = footfallQuery
                 .GroupBy(f => f.TenantId)
                 .ToDictionary(g => g.Key, g => g.Sum(f => f.FootfallCount));
@@ -1507,19 +1695,19 @@ namespace EasyBill.Web.Controllers.API
                 decimal prevTotalSales = branchPrevSales.Sum(s => (decimal)s.TotalPayable);
 
                 int bills = branchCurrentSales.Count;
-                
+
                 // Real Data Calculations
                 int customers = branchFootfalls.ContainsKey(branch.Id) && branchFootfalls[branch.Id] != null ? (int)branchFootfalls[branch.Id] : bills; // Fallback to bills if footfall is null/0
                 if (customers < bills) customers = bills; // Footfall cannot be less than actual bills
-                
+
                 decimal stockValue = branchStockValues.ContainsKey(branch.Id) ? branchStockValues[branch.Id] : 0m;
-                
+
                 // Assuming a blended average GP of 18-22% dynamically based on inventory ratios for MVP until InvoiceItem COGS tracing is built
                 decimal gpPercentage = 20m; // Wait, let's keep 20m default if no cogs, but we can compute exact stock cost. 
                 // Using 25% margin as default fallback for real sales data analysis
-                decimal cogs = totalSales * 0.75m; 
+                decimal cogs = totalSales * 0.75m;
                 decimal netProfit = totalSales > 0 ? (totalSales - cogs) - (totalSales * 0.05m) : 0;
-                
+
                 // Growth calculation
                 decimal growth = 0;
                 if (prevTotalSales > 0)
@@ -1528,7 +1716,7 @@ namespace EasyBill.Web.Controllers.API
                 }
                 else if (totalSales > 0)
                 {
-                    growth = 100m; 
+                    growth = 100m;
                 }
 
                 decimal avgBillValue = bills > 0 ? totalSales / bills : 0;
@@ -1569,9 +1757,9 @@ namespace EasyBill.Web.Controllers.API
 
             decimal totalEmployeeCount = branches.Sum(b => b.EmployeeCount ?? 0);
             reportDto.Kpis.SalesPerEmployee = totalEmployeeCount > 0 ? reportDto.Kpis.TotalSalesValue / totalEmployeeCount : 0;
-            
+
             decimal totalStoreArea = branches.Sum(b => b.StoreArea);
-            reportDto.Kpis.SalesPerSquareFoot = totalStoreArea > 0 ? reportDto.Kpis.TotalSalesValue / totalStoreArea : 0; 
+            reportDto.Kpis.SalesPerSquareFoot = totalStoreArea > 0 ? reportDto.Kpis.TotalSalesValue / totalStoreArea : 0;
 
             return Ok(new { success = true, data = reportDto });
         }
@@ -1639,11 +1827,13 @@ namespace EasyBill.Web.Controllers.API
 
             var categoryGroups = salesItems
                 .Where(si => si.ItemMaster != null)
-                .GroupBy(si => new {
+                .GroupBy(si => new
+                {
                     CategoryId = si.ItemMaster.CategoryId ?? 0,
                     CategoryName = si.ItemMaster.Category != null ? si.ItemMaster.Category.CategoryName : "Uncategorized"
                 })
-                .Select(cg => {
+                .Select(cg =>
+                {
                     var totalNet = cg.Sum(x => x.Amount);
                     var totalGross = cg.Sum(x => x.Rate * x.Qty);
                     var totalDisc = cg.Sum(x => x.Discount);
@@ -1651,11 +1841,13 @@ namespace EasyBill.Web.Controllers.API
                     var totalQty = cg.Sum(x => x.Qty);
 
                     var subCats = cg
-                        .GroupBy(sub => new {
+                        .GroupBy(sub => new
+                        {
                             SubCategoryId = sub.ItemMaster.SubCategoryId ?? 0,
                             SubCategoryName = sub.ItemMaster.SubCategory != null ? sub.ItemMaster.SubCategory.Name : "General"
                         })
-                        .Select(subg => new {
+                        .Select(subg => new
+                        {
                             subCategoryCode = "SUBCAT-" + subg.Key.SubCategoryId,
                             subCategoryName = subg.Key.SubCategoryName,
                             itemsSold = subg.Sum(x => x.Qty),
@@ -1669,7 +1861,8 @@ namespace EasyBill.Web.Controllers.API
                         })
                         .ToList();
 
-                    return new {
+                    return new
+                    {
                         categoryCode = "CAT-" + cg.Key.CategoryId,
                         categoryName = cg.Key.CategoryName,
                         categoryIcon = "bx-folder",
@@ -1726,19 +1919,22 @@ namespace EasyBill.Web.Controllers.API
 
             var brandGroups = salesItems
                 .Where(si => si.ItemMaster != null)
-                .GroupBy(si => new {
+                .GroupBy(si => new
+                {
                     BrandId = si.ItemMaster.CompanyId ?? 0,
                     BrandName = si.ItemMaster.Company != null ? si.ItemMaster.Company.Name : "Generic",
                     CategoryName = si.ItemMaster.Category != null ? si.ItemMaster.Category.CategoryName : "General"
                 })
-                .Select(bg => {
+                .Select(bg =>
+                {
                     var totalNet = bg.Sum(x => x.Amount);
                     var totalGross = bg.Sum(x => x.Rate * x.Qty);
                     var totalDisc = bg.Sum(x => x.Discount);
                     var totalTax = bg.Sum(x => x.Gst + x.Cess);
                     var totalQty = bg.Sum(x => x.Qty);
 
-                    return new {
+                    return new
+                    {
                         brandCode = "BRD-" + bg.Key.BrandId,
                         brandName = bg.Key.BrandName,
                         categoryName = bg.Key.CategoryName,
@@ -1793,7 +1989,8 @@ namespace EasyBill.Web.Controllers.API
 
             var itemGroups = salesItems
                 .Where(si => si.ItemMaster != null)
-                .GroupBy(si => new {
+                .GroupBy(si => new
+                {
                     ItemId = si.ItemMasterId,
                     ItemCode = si.ItemMaster != null ? si.ItemMaster.Code : "ITEM-" + si.ItemMasterId,
                     ItemName = si.ItemMaster != null ? si.ItemMaster.Name : "Item " + si.ItemMasterId,
@@ -1801,14 +1998,16 @@ namespace EasyBill.Web.Controllers.API
                     BrandName = si.ItemMaster != null && si.ItemMaster.Company != null ? si.ItemMaster.Company.Name : "Generic",
                     Uom = si.ItemMaster != null ? si.ItemMaster.Unit1 : "Pcs"
                 })
-                .Select(ig => {
+                .Select(ig =>
+                {
                     var totalNet = ig.Sum(x => x.Amount);
                     var totalGross = ig.Sum(x => x.Rate * x.Qty);
                     var totalDisc = ig.Sum(x => x.Discount);
                     var totalTax = ig.Sum(x => x.Gst + x.Cess);
                     var totalQty = ig.Sum(x => x.Qty);
 
-                    return new {
+                    return new
+                    {
                         itemCode = ig.Key.ItemCode,
                         itemName = ig.Key.ItemName,
                         categoryName = ig.Key.CategoryName,
@@ -1859,12 +2058,14 @@ namespace EasyBill.Web.Controllers.API
             var sales = await salesQuery.ToListAsync();
 
             var customerGroups = sales
-                .GroupBy(s => new {
+                .GroupBy(s => new
+                {
                     CustId = s.CustomerId ?? 0,
                     CustName = s.Customers != null ? s.Customers.Name : (!string.IsNullOrEmpty(s.MobileNo) ? "Customer (" + s.MobileNo + ")" : "Walk-in Customer"),
                     CustMobile = s.MobileNo ?? (s.Customers != null ? s.Customers.PhoneNo : "-")
                 })
-                .Select(cg => {
+                .Select(cg =>
+                {
                     var totalNet = cg.Sum(x => x.TotalPayable);
                     var totalGross = cg.Sum(x => x.Total);
                     var totalDisc = cg.Sum(x => x.Totaldiscount);
@@ -1872,7 +2073,8 @@ namespace EasyBill.Web.Controllers.API
                     var totalBills = cg.Count();
                     var maxDate = cg.Max(x => x.BillDate);
 
-                    return new {
+                    return new
+                    {
                         customerCode = cg.Key.CustMobile != "-" ? cg.Key.CustMobile : "CUST-" + cg.Key.CustId,
                         customerName = cg.Key.CustName,
                         customerType = "Regular",
@@ -1923,7 +2125,8 @@ namespace EasyBill.Web.Controllers.API
 
             var hourlyGroups = sales
                 .GroupBy(s => s.BillDate.Value.Hour)
-                .Select(hg => {
+                .Select(hg =>
+                {
                     int hour = hg.Key;
                     string slot = $"{hour:D2}:00 - {(hour == 23 ? 0 : hour + 1):D2}:00";
                     var totalNet = hg.Sum(x => x.TotalPayable);
@@ -1932,7 +2135,8 @@ namespace EasyBill.Web.Controllers.API
                     var totalTax = hg.Sum(x => x.TotalGstAmt + x.TotalCessAmount);
                     var totalBills = hg.Count();
 
-                    return new {
+                    return new
+                    {
                         hourSlot = slot,
                         peakStatus = totalBills >= 10 ? "Peak Hour" : "Standard",
                         numberOfBills = totalBills,
@@ -1980,7 +2184,8 @@ namespace EasyBill.Web.Controllers.API
 
             var dailyGroups = sales
                 .GroupBy(s => s.BillDate.Value.Date)
-                .Select(dg => {
+                .Select(dg =>
+                {
                     var date = dg.Key;
                     var totalNet = dg.Sum(x => x.TotalPayable);
                     var totalGross = dg.Sum(x => x.Total);
@@ -1990,7 +2195,8 @@ namespace EasyBill.Web.Controllers.API
                     var cash = dg.Where(x => x.PaymentType == "Cash" || string.IsNullOrEmpty(x.PaymentType)).Sum(x => x.TotalPayable);
                     var digi = dg.Where(x => x.PaymentType != "Cash" && !string.IsNullOrEmpty(x.PaymentType)).Sum(x => x.TotalPayable);
 
-                    return new {
+                    return new
+                    {
                         saleDate = date.ToString("yyyy-MM-dd"),
                         dayOfWeek = date.DayOfWeek.ToString(),
                         numberOfBills = totalBills,
@@ -2039,7 +2245,8 @@ namespace EasyBill.Web.Controllers.API
 
             var monthlyGroups = sales
                 .GroupBy(s => new { s.BillDate.Value.Year, s.BillDate.Value.Month })
-                .Select(mg => {
+                .Select(mg =>
+                {
                     var dt = new DateTime(mg.Key.Year, mg.Key.Month, 1);
                     var totalNet = mg.Sum(x => x.TotalPayable);
                     var totalGross = mg.Sum(x => x.Total);
@@ -2047,7 +2254,8 @@ namespace EasyBill.Web.Controllers.API
                     var totalTax = mg.Sum(x => x.TotalGstAmt + x.TotalCessAmount);
                     var totalBills = mg.Count();
 
-                    return new {
+                    return new
+                    {
                         monthYear = dt.ToString("MMM yyyy"),
                         numberOfBills = totalBills,
                         itemsSold = totalBills * 2,
@@ -2095,7 +2303,8 @@ namespace EasyBill.Web.Controllers.API
 
             var returns = await returnsQuery.ToListAsync();
 
-            var returnList = returns.Select(r => new {
+            var returnList = returns.Select(r => new
+            {
                 returnDocNo = "RET-" + r.Id,
                 returnDate = r.Created.HasValue ? r.Created.Value.ToString("yyyy-MM-dd") : "-",
                 storeName = r.Tenant?.Name ?? "HO Branch",
@@ -2141,14 +2350,16 @@ namespace EasyBill.Web.Controllers.API
 
             var discountGroups = sales
                 .GroupBy(s => new { s.TenantId, StoreName = s.Tenant?.Name ?? "HO Branch" })
-                .Select(dg => {
+                .Select(dg =>
+                {
                     var totalGross = dg.Sum(x => x.Total);
                     var totalDisc = dg.Sum(x => x.Totaldiscount);
                     var postSales = dg.Sum(x => x.TotalPayable);
                     var billsCount = dg.Count();
                     var pct = totalGross > 0 ? Math.Round((totalDisc / totalGross) * 100, 1) : 0;
 
-                    return new {
+                    return new
+                    {
                         discountType = "Standard Promotional Discount",
                         storeName = dg.Key.StoreName,
                         billsCount = billsCount,
@@ -2175,7 +2386,7 @@ namespace EasyBill.Web.Controllers.API
                 return BadRequest(new { success = false, message = "HO TenantId is required in headers." });
 
             var branchTenantIds = await GetBranchTenantIdsAsync(hoTenantId);
-            
+
             var validTenantIds = new List<string>(branchTenantIds);
             if (!string.IsNullOrEmpty(filter.Company) && !filter.Company.StartsWith("All", StringComparison.OrdinalIgnoreCase))
             {
